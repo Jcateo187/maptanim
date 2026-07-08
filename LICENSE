@@ -1,0 +1,15 @@
+# MapTanim
+
+A mobile-based Decision Support System (DSS) for vegetable farmers developed by Nexoria.
+
+## Technologies
+
+- Kotlin
+- Jetpack Compose
+- Firebase Authentication
+- PostgreSQL
+- Supabase Storage
+- REST API
+
+Status:
+🚧 Under Development
