@@ -12,13 +12,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import com.maptanim.app.R
-import com.maptanim.app.ui.components.auth.LoginCard
+import com.maptanim.app.ui.components.auth.WelcomeGuideCard
 
 @Composable
-fun LoginScreen(
-
+fun WelcomeGuideScreen(
     navController: NavController
-
 ) {
 
     Box(
@@ -26,37 +24,24 @@ fun LoginScreen(
     ) {
 
         Image(
-
             painter = painterResource(R.drawable.onboarding_background),
-
             contentDescription = null,
-
             modifier = Modifier.fillMaxSize(),
-
             contentScale = ContentScale.Crop
-
         )
 
         Box(
-
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.45f))
-
         )
 
         Box(
-
             modifier = Modifier.fillMaxSize(),
-
             contentAlignment = Alignment.Center
-
         ) {
 
-            LoginCard(
-                navController = navController,
-
-            )
+            WelcomeGuideCard(navController)
 
         }
 
