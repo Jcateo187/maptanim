@@ -3,24 +3,31 @@ package com.maptanim.app.ui.components.layout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.maptanim.app.ui.components.floating.FloatingEditButton
+import androidx.navigation.NavController
+import com.maptanim.app.ui.components.floating.FloatingViewButton
 
 @Composable
-fun BottomToolbar(
+fun EditBottomToolbar(
 
     modifier: Modifier = Modifier,
 
-    onEditClick: () -> Unit
+    navController: NavController
 
 ) {
 
     Box(
+
         modifier = modifier
+
     ) {
 
-        FloatingEditButton(
+        FloatingViewButton(
 
-            onClick = onEditClick
+            onClick = {
+
+                navController.popBackStack()
+
+            }
 
         )
 
