@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.Routes
-import com.maptanim.app.ui.components.buttons.GoogleButton
 import com.maptanim.app.ui.components.buttons.GuestButton
 import com.maptanim.app.ui.components.buttons.PrimaryButton
 import com.maptanim.app.ui.components.checkbox.TermsCheckbox
@@ -211,14 +210,6 @@ fun RegisterCard(
             HorizontalDivider()
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            GoogleButton(
-                onClick = {
-
-                }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             GuestButton(
                 onClick = {
