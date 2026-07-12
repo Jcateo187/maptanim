@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.maptanim.app.ui.components.editcomponents.floating.BedFloatingButton
-import com.maptanim.app.ui.components.editcomponents.floating.DeleteFloatingButton
 import com.maptanim.app.ui.components.editcomponents.floating.PlantFloatingButton
 import com.maptanim.app.ui.components.editcomponents.floating.SelectFloatingButton
 
@@ -19,9 +18,7 @@ fun EditRightToolbar(
 
     onPlantClick: () -> Unit = {},
 
-    onSelectClick: () -> Unit = {},
-
-    onDeleteClick: () -> Unit = {}
+    onSelectClick: () -> Unit = {}
 
 ) {
 
@@ -43,10 +40,6 @@ fun EditRightToolbar(
 
         SelectFloatingButton(
             onClick = onSelectClick
-        )
-
-        DeleteFloatingButton(
-            onClick = onDeleteClick
         )
 
     }

@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.maptanim.app.ui.components.background.HomeBackground
 import com.maptanim.app.ui.components.editcomponents.layout.EditBottomLayout
+import com.maptanim.app.ui.components.editcomponents.layout.EditLeftToolbar
 import com.maptanim.app.ui.components.editcomponents.layout.EditRightToolbar
 import com.maptanim.app.ui.components.editcomponents.layout.EditTopLayout
 
@@ -37,6 +38,14 @@ fun FarmEditorScreen(
         EditTopLayout(
 
             modifier = Modifier.align(Alignment.TopCenter)
+
+        )
+
+        EditLeftToolbar(
+
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 18.dp)
 
         )
 

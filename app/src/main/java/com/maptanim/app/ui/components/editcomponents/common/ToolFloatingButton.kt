@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -22,25 +23,25 @@ fun ToolFloatingButton(
 
     label: String,
 
+    modifier: Modifier = Modifier,
+
     onClick: () -> Unit
 
 ) {
 
     Column(
 
-        modifier = Modifier.clickable(
-
-            interactionSource = remember { MutableInteractionSource() },
-
-            indication = null,
-
-            onClick = onClick
-
-        ),
+        modifier = modifier
+            .size(width = 64.dp, height = 72.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
 
         horizontalAlignment = Alignment.CenterHorizontally,
 
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.Center
 
     ) {
 
@@ -50,7 +51,7 @@ fun ToolFloatingButton(
 
             contentDescription = label,
 
-            modifier = Modifier.size(30.dp),
+            modifier = Modifier.size(32.dp),
 
             tint = MaterialTheme.colorScheme.onBackground
 
@@ -62,7 +63,9 @@ fun ToolFloatingButton(
 
             style = MaterialTheme.typography.labelSmall,
 
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+
+            textAlign = TextAlign.Center
 
         )
 

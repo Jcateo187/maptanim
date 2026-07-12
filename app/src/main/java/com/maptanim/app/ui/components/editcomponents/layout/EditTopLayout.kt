@@ -25,22 +25,18 @@ fun EditTopLayout(
 
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(horizontal = 30.dp, vertical = 8.dp),
 
         horizontalArrangement = Arrangement.SpaceBetween
 
     ) {
 
         GuideFloatingButton(
-
             onClick = onGuideClick
-
         )
 
         SaveFloatingButton(
-
             onClick = onSaveClick
-
         )
 
     }
