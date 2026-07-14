@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.components.background.HomeBackground
+import com.maptanim.app.ui.components.isometric.layout.IsometricLayout
 import com.maptanim.app.ui.components.layout.BottomToolbar
 import com.maptanim.app.ui.components.layout.LeftToolbar
 import com.maptanim.app.ui.components.layout.RightToolbar
@@ -27,6 +28,10 @@ fun HomeScreen(
     ) {
 
         HomeBackground()
+
+        IsometricLayout(
+            modifier = Modifier.fillMaxSize()
+        )
 
         TopBar(
             modifier = Modifier.align(Alignment.TopCenter)
@@ -59,7 +64,10 @@ fun HomeScreen(
 
             }
 
+
         )
+
+
 
     }
 

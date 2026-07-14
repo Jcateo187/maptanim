@@ -13,6 +13,7 @@ import com.maptanim.app.ui.components.editcomponents.layout.EditBottomLayout
 import com.maptanim.app.ui.components.editcomponents.layout.EditLeftToolbar
 import com.maptanim.app.ui.components.editcomponents.layout.EditRightToolbar
 import com.maptanim.app.ui.components.editcomponents.layout.EditTopLayout
+import com.maptanim.app.ui.components.isometric.layout.IsometricLayout
 
 @Composable
 fun FarmEditorScreen(
@@ -28,12 +29,9 @@ fun FarmEditorScreen(
         // Background
         HomeBackground()
 
-        // Future Isometric Grid goes here
-        /*
-        FarmCanvas(
+        IsometricLayout(
             modifier = Modifier.fillMaxSize()
         )
-        */
 
         EditTopLayout(
 
