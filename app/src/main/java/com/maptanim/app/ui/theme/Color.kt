@@ -2,45 +2,34 @@ package com.maptanim.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// -----------------------------
-// Primary (Nature Green)
-// -----------------------------
-val Green80 = Color(0xFFA5D6A7)
-val Green40 = Color(0xFF2E7D32)
+// ======================================================
+// MAPTANIM COLOR SYSTEM
+// ======================================================
 
-// -----------------------------
-// Secondary (Leaf Green)
-// -----------------------------
-val LeafGreen80 = Color(0xFFC8E6C9)
-val LeafGreen40 = Color(0xFF4CAF50)
+// Primary Nature
+val ForestGreen = Color(0xFF3C7A3F)
+val LeafGreen = Color(0xFF6FAF5A)
+val FreshGreen = Color(0xFF9FD87C)
 
-// -----------------------------
-// Tertiary (Soil Brown)
-// -----------------------------
-val SoilBrown80 = Color(0xFFD7CCC8)
-val SoilBrown40 = Color(0xFF795548)
-
-// -----------------------------
 // Background
-// -----------------------------
-val BackgroundLight = Color(0xFFF8FAF5)
-val BackgroundDark = Color(0xFF121212)
+val NightBlue = Color(0xFF24323F)
+val SlateBlue = Color(0xFF314756)
+val Charcoal = Color(0xFF222629)
 
-// -----------------------------
 // Surface
-// -----------------------------
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceDark = Color(0xFF1E1E1E)
+val CardDark = Color(0xFF2B3136)
+val CardLight = Color(0xFFF6F7F8)
 
-// -----------------------------
-// Error
-// -----------------------------
-val ErrorLight = Color(0xFFD32F2F)
-val ErrorDark = Color(0xFFEF5350)
+// Accent
+val Sunlight = Color(0xFFF2C14E)
+val White = Color(0xFFFFFFFF)
 
-// -----------------------------
+// Status
+val Success = Color(0xFF52B788)
+val Warning = Color(0xFFF4A261)
+val Danger = Color(0xFFE76F51)
+
 // Text
-// -----------------------------
-val OnPrimary = Color(0xFFFFFFFF)
-val OnBackground = Color(0xFF1C1B1F)
-val OnSurface = Color(0xFF1C1B1F)
+val TextPrimary = Color(0xFFF4F4F4)
+val TextSecondary = Color(0xFFC7D0D8)
+val TextDark = Color(0xFF1F2933)
