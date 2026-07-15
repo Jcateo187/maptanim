@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
 import com.maptanim.app.ui.components.isometric.camera.CameraState
 import com.maptanim.app.ui.components.isometric.math.IsoMath
@@ -90,13 +90,31 @@ fun GrassRenderer(
         // Draw World
         //------------------------------------
 
-        translate(
+        withTransform({
 
-            left = cameraState.offsetX,
+            translate(
 
-            top = cameraState.offsetY
+                left = cameraState.offsetX,
 
-        ) {
+                top = cameraState.offsetY
+
+            )
+
+            scale(
+
+                scaleX = cameraState.zoom,
+
+                scaleY = cameraState.zoom,
+
+                pivot = center
+
+            )
+
+        }) {
+
+            // draw world
+
+
 
             for (row in startRow..endRow) {
 

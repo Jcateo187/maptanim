@@ -1,17 +1,33 @@
 package com.maptanim.app.ui.components.isometric.camera
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import com.maptanim.app.ui.components.isometric.world.terrain.GrassDimensions
 
 class CameraState {
 
-    var cameraRow = GrassDimensions.START_ROW
+    //--------------------------------------
+    // Camera Position (World)
+    //--------------------------------------
 
-    var cameraColumn = GrassDimensions.START_COLUMN
+    var cameraRow by mutableIntStateOf(
+        GrassDimensions.START_ROW
+    )
 
-    var zoom = 1f
+    var cameraColumn by mutableIntStateOf(
+        GrassDimensions.START_COLUMN
+    )
 
-    var offsetX = 0f
+    //--------------------------------------
+    // Camera Transform
+    //--------------------------------------
 
-    var offsetY = 0f
+    var zoom by mutableFloatStateOf(1f)
+
+    var offsetX by mutableFloatStateOf(0f)
+
+    var offsetY by mutableFloatStateOf(0f)
 
 }
