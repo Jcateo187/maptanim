@@ -1,0 +1,7 @@
+﻿# CODEOWNERS
+# These owners are automatically requested for review on PRs.
+
+* @maptanim-team
+/mobile/ @maptanim-android-team
+/backend/ @maptanim-backend-team
+/admin/ @maptanim-web-team

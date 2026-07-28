@@ -1,0 +1,269 @@
+package com.maptanim.app.ui.screens.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import com.maptanim.app.domain.model.TaskType
+import com.maptanim.app.navigation.Routes
+import com.maptanim.app.ui.components.background.HomeBackground
+import com.maptanim.app.ui.components.isometric.layout.IsometricLayout
+import com.maptanim.app.ui.components.layout.BottomToolbar
+import com.maptanim.app.ui.components.layout.LeftToolbar
+import com.maptanim.app.ui.components.layout.RightToolbar
+import com.maptanim.app.ui.components.layout.TopBar
+
+import com.maptanim.app.domain.model.CanvasMode
+import com.maptanim.app.renderer.canvas.FarmCanvas
+import com.maptanim.app.ui.screens.edit.EditViewModel
+
+/**
+ * HomeScreen — Clash of Clans inspired HUD design with shared 2D Isometric Scenery.
+ */
+@Composable
+fun HomeScreen(
+    navController: NavHostController,
+    homeViewModel: HomeViewModel = viewModel(),
+    editViewModel: EditViewModel = viewModel()
+) {
+    val uiState by homeViewModel.uiState.collectAsState()
+    val editUiState by editViewModel.uiState.collectAsState()
+
+    var showMonitoringOverlay by remember { mutableStateOf(false) }
+    var showTasksOverlay by remember { mutableStateOf(false) }
+    var showSummaryOverlay by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // 2D Isometric Map Canvas Background (Same scenery engine as EditScreen)
+        HomeBackground()
+        FarmCanvas(
+            modifier = Modifier.fillMaxSize(),
+            uiState = editUiState,
+            editViewModel = editViewModel,
+            canvasMode = CanvasMode.VIEW
+        )
+
+        // Top Bar HUD
+        TopBar(
+            modifier = Modifier.align(Alignment.TopCenter),
+            totalCrops = uiState.farmSummary.totalPlants.let { if (it > 0) it else 186 },
+            readyToHarvest = uiState.farmSummary.readyToHarvest.let { if (it > 0) it else 4 },
+            notificationCount = uiState.notificationCount,
+            farmName = uiState.activeFarm?.farmName ?: "Murcia Farm",
+            location = uiState.activeFarm?.location ?: "Murcia, Negros Occidental",
+            onProfileClick = { navController.navigate(Routes.PROFILE) },
+            onSettingsClick = { navController.navigate(Routes.PROFILE) }
+        )
+
+        // Left Side HUD Buttons (Monitoring, Today's Tasks)
+        LeftToolbar(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 16.dp),
+            uiState = uiState,
+            onMonitoringClick = { showMonitoringOverlay = true },
+            onTasksClick = { showTasksOverlay = true }
+        )
+
+        // Right Side HUD Buttons (Library, Community)
+        RightToolbar(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp),
+            onLibraryClick = { navController.navigate(Routes.LIBRARY) },
+            onCommunityClick = { /* open community forum */ }
+        )
+
+        // Bottom Floating Single Edit Button
+        BottomToolbar(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp),
+            onEditClick = { navController.navigate(Routes.EDIT) }
+        )
+
+        // ── 1. Fullscreen Monitoring Overlay ──────────────────────────────
+        if (showMonitoringOverlay) {
+            Dialog(
+                onDismissRequest = { showMonitoringOverlay = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.Black.copy(alpha = 0.85f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Sensors, "Monitoring", tint = Color(0xFF43A047))
+                                Text("Farm Monitoring Dashboard", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
+                            }
+                            IconButton(onClick = { showMonitoringOverlay = false }) {
+                                Icon(Icons.Default.Close, "Close", tint = Color.White)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Fullscreen monitoring stats
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            MonitoringCard("Soil Moisture", "68%", "Optimal", Color(0xFF1E88E5), Modifier.weight(1f))
+                            MonitoringCard("Temperature", "28°C", "Normal", Color(0xFFFFA000), Modifier.weight(1f))
+                            MonitoringCard("Sunlight", "8.2 hrs", "Good", Color(0xFF43A047), Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 2. Today's Tasks Overlay Sheet ───────────────────────────────
+        if (showTasksOverlay) {
+            Dialog(onDismissRequest = { showTasksOverlay = false }) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .padding(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Today's Tasks", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1B5E20))
+                            IconButton(onClick = { showTasksOverlay = false }) {
+                                Icon(Icons.Default.Close, "Close", tint = Color.Gray)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TaskItemRow("Water Plot 3", "Tomato", TaskType.WATER)
+                        TaskItemRow("Fertilize Eggplant", "Plot 1", TaskType.FERTILIZE)
+                        TaskItemRow("Harvest Lettuce", "Plot R", TaskType.HARVEST)
+                        TaskItemRow("Check Pest Alert", "Cucumber", TaskType.PEST_ALERT)
+                    }
+                }
+            }
+        }
+
+        // ── 3. Farm Summary Overlay Sheet ─────────────────────────────────
+        if (showSummaryOverlay) {
+            Dialog(onDismissRequest = { showSummaryOverlay = false }) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .padding(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Farm Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1B5E20))
+                            IconButton(onClick = { showSummaryOverlay = false }) {
+                                Icon(Icons.Default.Close, "Close", tint = Color.Gray)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            SummaryCard("12", "Total Plots", Color(0xFF43A047), Modifier.weight(1f))
+                            SummaryCard("186", "Total Plants", Color(0xFF43A047), Modifier.weight(1f))
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            SummaryCard("4", "Ready Harvest", Color(0xFFFFA000), Modifier.weight(1f))
+                            SummaryCard("2", "Active Alerts", Color(0xFFE53935), Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitoringCard(title: String, value: String, status: String, color: Color, modifier: Modifier = Modifier) {
+    Surface(shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.15f), modifier = modifier) {
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(status, fontSize = 10.sp, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun TaskItemRow(title: String, subtext: String, type: TaskType) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Default.CheckCircleOutline, null, tint = Color.Gray)
+            Column {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+                Text(subtext, fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryCard(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
+    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFF5F5F5), modifier = modifier) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(label, fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+}

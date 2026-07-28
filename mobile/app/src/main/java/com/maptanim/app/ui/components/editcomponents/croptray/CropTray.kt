@@ -1,0 +1,456 @@
+package com.maptanim.app.ui.components.editcomponents.croptray
+
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+data class CropOption(
+    val id: String,
+    val name: String,
+    val emoji: String,
+    val category: String, // "Root", "Podded", "Leafy", "Bulb", "Stem", "Flower", "Tuber", "Fruit"
+    val lifeType: String = "Seasonal", // "Seasonal", "Permanent", "Semi Permanent"
+    val hasAsset: Boolean = true
+)
+
+// Available Asset Crops (2 crops only: Carrot & String Beans)
+val AVAILABLE_CROP_CATALOG = listOf(
+    CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", hasAsset = true),
+    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", hasAsset = true)
+)
+
+val CATEGORY_OPTIONS = listOf(
+    "All", "Leafy", "Root", "Bulb", "Stem", "Flower", "Podded", "Tuber", "Fruit"
+)
+
+val TAB_OPTIONS = listOf(
+    "All", "Seasonal", "Permanent", "Semi Permanent"
+)
+
+/**
+ * CropTray — Right-side crop selection panel matching system architecture flow.
+ *
+ * Features:
+ *   - 4 Life-type Tabs (All, Seasonal, Permanent, Semi Permanent)
+ *   - Category Icon Dropdown (Leafy, Root, Bulb, Stem, Flower, Podded, Tuber, Fruit)
+ *   - Search Bar + Search Button for future plant additions
+ *   - 2 Active Asset Crops (Carrot, String Beans)
+ *   - Close (X) button to hide side panel
+ */
+@Composable
+fun CropTray(
+    modifier: Modifier = Modifier,
+    selectedCropName: String? = null,
+    availableCrops: List<CropOption> = AVAILABLE_CROP_CATALOG,
+    onCropSelected: (cropName: String, cropId: String) -> Unit = { _, _ -> },
+    onClose: () -> Unit = {}
+) {
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedCategory by remember { mutableStateOf("All") }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var activeSearchQuery by remember { mutableStateOf("") }
+
+    var isSearchFocused by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    val searchScale by animateFloatAsState(
+        targetValue = if (isSearchFocused) 1.05f else 1.0f,
+        label = "searchScale"
+    )
+    val searchElevation by animateDpAsState(
+        targetValue = if (isSearchFocused) 6.dp else 1.dp,
+        label = "searchElevation"
+    )
+
+    val filteredCrops = remember(selectedTabIndex, selectedCategory, activeSearchQuery, availableCrops) {
+        val selectedTabName = TAB_OPTIONS[selectedTabIndex]
+        availableCrops.filter { crop ->
+            // Tab filter
+            val tabMatch = selectedTabName == "All" || crop.lifeType.equals(selectedTabName, ignoreCase = true)
+            // Category filter
+            val categoryMatch = selectedCategory == "All" || crop.category.equals(selectedCategory, ignoreCase = true)
+            // Search filter
+            val searchMatch = activeSearchQuery.isBlank() || crop.name.contains(activeSearchQuery, ignoreCase = true)
+
+            tabMatch && categoryMatch && searchMatch
+        }
+    }
+
+    Surface(
+        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+        color = Color.White.copy(alpha = 0.98f),
+        shadowElevation = 12.dp,
+        modifier = modifier
+            .fillMaxHeight()
+            .width(300.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // ── 1. Header with Close Button ─────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "SELECT CROPS",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        color = Color(0xFF1B5E20)
+                    )
+                    Text(
+                        text = "(${filteredCrops.size})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF43A047)
+                    )
+                }
+
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Panel",
+                        tint = Color.DarkGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // ── 2. 4 Tabs (All, Seasonal, Permanent, Semi Permanent) ───────
+            ScrollableTabRow(
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 0.dp,
+                containerColor = Color(0xFFF1F8E9),
+                contentColor = Color(0xFF1B5E20),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+            ) {
+                TAB_OPTIONS.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = {
+                            Text(
+                                text = title,
+                                fontSize = 11.sp,
+                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTabIndex == index) Color(0xFF1B5E20) else Color.DarkGray
+                            )
+                        }
+                    )
+                }
+            }
+
+            // ── 3. Category Dropdown & Search Bar ───────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Category Icon Button with Dropdown Menu
+                Box {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (selectedCategory != "All") Color(0xFF1B5E20) else Color(0xFFE0E0E0),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clickable { categoryMenuExpanded = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Category Filter",
+                                tint = if (selectedCategory != "All") Color.White else Color.Black,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (selectedCategory == "All") "Cat." else selectedCategory,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedCategory != "All") Color.White else Color.Black
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = categoryMenuExpanded,
+                        onDismissRequest = { categoryMenuExpanded = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        Surface(
+                            color = Color(0xFFE8F5E9),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "PLANT CATEGORIES",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF1B5E20),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        Divider(color = Color.LightGray.copy(alpha = 0.5f))
+
+                        CATEGORY_OPTIONS.forEach { category ->
+                            val isCatSelected = selectedCategory == category
+                            DropdownMenuItem(
+                                modifier = Modifier.background(
+                                    if (isCatSelected) Color(0xFFE8F5E9) else Color.White
+                                ),
+                                text = {
+                                    Text(
+                                        text = category,
+                                        fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isCatSelected) Color(0xFF1B5E20) else Color(0xFF212121),
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    selectedCategory = category
+                                    categoryMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Search Bar Field with Auto-Focus & Animated Zoom/Scale on Focus
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    shadowElevation = searchElevation,
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            scaleX = searchScale
+                            scaleY = searchScale
+                        }
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = {
+                            searchQuery = it
+                            activeSearchQuery = it
+                        },
+                        textStyle = LocalTextStyle.current.copy(
+                            color = Color.Black,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 16.sp
+                        ),
+                        placeholder = {
+                            Text(
+                                text = "Search crops...",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
+                            .focusRequester(searchFocusRequester)
+                            .onFocusChanged { focusState ->
+                                isSearchFocused = focusState.isFocused
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color(0xFFFAFAFA),
+                            focusedBorderColor = Color(0xFF1B5E20),
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = Color(0xFF1B5E20)
+                        ),
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        searchQuery = ""
+                                        activeSearchQuery = ""
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear search",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = {
+                                        searchFocusRequester.requestFocus()
+                                        activeSearchQuery = searchQuery
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = Color(0xFF1B5E20),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Drag & Drop Instruction Subtitle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                Text(
+                    text = "💡 Hold & drag or tap crop to plant on farm area",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2E7D32)
+                )
+            }
+
+            // Active Category Badge indicator
+            if (selectedCategory != "All") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Category:", fontSize = 11.sp, color = Color.DarkGray, fontWeight = FontWeight.Medium)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF1B5E20)
+                    ) {
+                        Text(
+                            text = selectedCategory,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            // ── 4. Plant Cards Grid ──────────────────────────────────────────
+            if (filteredCrops.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No crops found",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(filteredCrops) { crop ->
+                        val isSelected = selectedCropName.equals(crop.name, ignoreCase = true)
+                        CropChipCard(
+                            crop = crop,
+                            isSelected = isSelected,
+                            onClick = { onCropSelected(crop.name, crop.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CropChipCard(
+    crop: CropOption,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFF8F9FA)
+    val borderColor = if (isSelected) Color(0xFF1B5E20) else Color.LightGray.copy(alpha = 0.5f)
+
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = bgColor,
+        border = androidx.compose.foundation.BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+        shadowElevation = if (isSelected) 4.dp else 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(crop.emoji, fontSize = 22.sp)
+            Column {
+                Text(
+                    text = crop.name,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    fontSize = 11.sp,
+                    color = if (isSelected) Color(0xFF1B5E20) else Color.Black
+                )
+                Text(
+                    text = "${crop.category} • Drag/Tap",
+                    fontSize = 8.sp,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}

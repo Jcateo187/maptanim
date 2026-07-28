@@ -1,0 +1,20 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Kotlin
+*.kt text eol=lf
+*.kts text eol=lf
+
+# XML
+*.xml text eol=lf
+
+# Gradle
+*.gradle text eol=lf
+gradlew text eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.apk binary

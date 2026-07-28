@@ -23,4 +23,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MapTanim"
-include(":app")
+include(":mobile:app")
+include(":backend")
+project(":mobile:app").projectDir = file("mobile/app")
+project(":backend").projectDir = file("backend")

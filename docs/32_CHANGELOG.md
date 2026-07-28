@@ -1,0 +1,49 @@
+# 32. Changelog
+
+All notable changes to the **MapTanim** project are documented in this file.
+
+---
+
+## 📅 [1.1.0-RELEASE] — 2026-07-28
+
+### 🌟 Added
+- **Direct Soil Planting System**:
+  - Replaced raised wooden bed frames and path tiles with direct soil planting plots on the 2D isometric canvas.
+  - Crops are planted directly onto soil at exact tapped/dragged world coordinates.
+- **High-Resolution Crop PNG Sprites**:
+  - Integrated high-res crop PNG sprites for **Carrot** 🥕 (`crop_carrot_*.png`) and **String Beans** 🫘 (`crop_stringbeans_*.png`) with growth stage scaling.
+- **Hold-to-Drag Crop Positioning**:
+  - Holding any crop plot enables direct drag-and-drop repositioning anywhere on the soil grid.
+- **Outer Crop Selection & Resize Handles**:
+  - Selecting a crop plot renders an outer dashed blue boundary with 8 corner/edge resize handles.
+  - Delete tool removes selected crop plot from layout.
+- **Synchronized 2D Isometric Scenery**:
+  - Unified `FarmCanvasRenderer` between **HomeScreen (View Mode)** and **FarmEditorScreen (Edit Mode)** for identical 2D isometric scenery.
+- **70% Min Zoom Limit & Left-Side Camera Pan Bounds**:
+  - Enforced 70% min zoom (`minZoom = 0.70f`) and expanded camera pan bounds (`maxPanX/Y = 2500f * zoom`) for smooth left-side map navigation.
+- **Edit Scene Layout Streamlining & Control Removal**:
+  - Removed left panel (`EditLeftToolbar`) including `Select / Move` and `Delete` tool choices.
+  - Deleted right toolbar controls for **Undo**, **Redo**, **Grid**, **Snap**, and **Zoom** (`EditRightToolbar`).
+  - Made **Add Plant / Crops** a single standalone floating button on the right side.
+  - Placed **Save** and **Exit** as single action buttons located side-by-side in the top-right corner.
+- **UI Terminology Migration**:
+  - Replaced user-facing "Bed" and "Beds" strings across app UI overlays (Task list, MiniStatistics, Summary cards, CropPickerDialog) with **Plot** / **Plots**.
+- **HUD Top Bar & Right Toolbar Refinement**:
+  - Removed Beds card from top bar center resource statistics; now displays **Crops** and **Ready to Harvest** cards.
+  - Added **Settings** icon pill adjacent to the Notification icon pill in the top bar right HUD section (`Notification Icon - Settings Icon`).
+  - Removed **Center** button from the right floating toolbar.
+- **Save Farm Dialog & Confirmation Flow**:
+  - Save action opens "Save Farm Layout" dialog prompting `Type farm name`.
+  - Saves to Supabase (logged-in farmer) or Room Local Storage (guest farmer).
+  - Displays on-screen alert message: `"Excellent Successful set up the farm"`.
+  - Navigates to HomeScreen on clicking `Okay`.
+
+---
+
+## 📅 [1.0.0-BETA] — 2026-07-24
+
+### 🌟 Added
+- **Clean MVVM + Clean Architecture Core**: Domain models, domain interfaces, and use cases.
+- **Live Supabase Data Repositories**: Remote PostgREST API integration.
+- **Decision Support System (DSS Engine)**: Growth stage calculator & Dynamic task generator.
+- **Interactive 2D Isometric Canvas**: Viewport clipping & pre-warmed soil bitmap rendering.
