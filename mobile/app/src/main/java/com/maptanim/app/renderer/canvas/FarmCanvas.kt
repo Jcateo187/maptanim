@@ -1,14 +1,16 @@
 package com.maptanim.app.renderer.canvas
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import com.maptanim.app.domain.model.CanvasMode
 import com.maptanim.app.renderer.gesture.CanvasGestureHandler
 import com.maptanim.app.renderer.gesture.HandleType
@@ -19,9 +21,6 @@ import com.maptanim.app.ui.screens.edit.EditViewModel
 
 /**
  * FarmCanvas — High-performance 2D Isometric Farm Canvas Composable.
- *
- * Connected to float-based CameraState and CanvasGestureHandler.
- * Renders back-to-front: Grass ground -> Paths -> Beds -> Crop Zones & Plants -> Labels -> Trellises/Fences -> Handles/Pins -> Grid.
  */
 @Composable
 fun FarmCanvas(
@@ -31,24 +30,33 @@ fun FarmCanvas(
     canvasMode: CanvasMode = CanvasMode.EDIT,
     activeCropName: String = "Carrot",
     activeCropId: String = "carrot",
+    hoverWorldPos: Offset? = null,
+    onCameraStateChanged: (CameraState) -> Unit = {},
     onOpenCropPicker: (() -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val resources = context.resources
     var cameraState by remember { mutableStateOf(CameraState()) }
     var currentHandles by remember { mutableStateOf<HandlePositions?>(null) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val gestureHandler = remember(editViewModel, activeCropName, activeCropId, onOpenCropPicker) {
+    val currentPlots by rememberUpdatedState(uiState.plots)
+    val currentSelectedPlotId by rememberUpdatedState(uiState.selectedPlotId)
+    val currentActiveTool by rememberUpdatedState(uiState.activeTool)
+    val currentCropZones by rememberUpdatedState(uiState.cropZones)
+
+    LaunchedEffect(cameraState) {
+        onCameraStateChanged(cameraState)
+    }
+
+    val gestureHandler = remember(editViewModel, activeCropName, activeCropId, onOpenCropPicker, canvasSize) {
         CanvasGestureHandler(
-            onBedTapped = { bedId ->
+            onPlotTapped = { plotId ->
                 when (uiState.activeTool) {
-                    com.maptanim.app.domain.model.EditTool.SELECT_MOVE -> editViewModel.selectBed(bedId)
-                    com.maptanim.app.domain.model.EditTool.ADD_PLANT   -> {
-                        editViewModel.selectBed(bedId)
-                        onOpenCropPicker?.invoke()
-                    }
-                    com.maptanim.app.domain.model.EditTool.DELETE      -> editViewModel.deleteBed(bedId)
-                    else -> editViewModel.selectBed(bedId)
+                    com.maptanim.app.domain.model.EditTool.SELECT_MOVE -> editViewModel.selectPlot(plotId)
+                    com.maptanim.app.domain.model.EditTool.ADD_PLANT   -> editViewModel.selectPlot(plotId)
+                    com.maptanim.app.domain.model.EditTool.DELETE      -> editViewModel.deletePlot(plotId)
+                    else -> editViewModel.selectPlot(plotId)
                 }
             },
             onCanvasTapped = { worldPos ->
@@ -60,58 +68,49 @@ fun FarmCanvas(
                     targetY = snapped.y
                 }
                 if (uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT ||
-                    uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_BED) {
+                    uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT) {
                     editViewModel.addDirectPlantingPlot(targetX, targetY, activeCropName, activeCropId)
                 } else {
                     editViewModel.deselect()
                 }
             },
-            onBedDragStart = { },
-            onBedDragging = { bedId, worldDelta ->
-                editViewModel.moveBed(bedId, worldDelta)
+            onPlotDragStart = { plotId -> editViewModel.selectPlot(plotId) },
+            onPlotDragging = { plotId, worldDelta ->
+                editViewModel.movePlot(plotId, worldDelta)
             },
-            onBedDragEnd = { },
+            onPlotDragEnd = { },
             onHandleDragStart = { _, _ -> },
             onHandleDragging = { handle, worldDelta ->
-                uiState.selectedBedId?.let { bedId ->
-                    val bed = uiState.editedBeds.firstOrNull { it.id == bedId }
-                    if (bed != null) {
+                uiState.selectedPlotId?.let { plotId ->
+                    val plot = uiState.editedPlots.firstOrNull { it.id == plotId }
+                    if (plot != null) {
                         when (handle) {
-                            // Mid-edge handles: resize in one axis only
-                            HandleType.MID_RIGHT -> editViewModel.resizeBed(bedId, bed.widthM + worldDelta.x, bed.heightM)
-                            HandleType.MID_LEFT  -> editViewModel.resizeBed(bedId, bed.widthM - worldDelta.x, bed.heightM)
-                            HandleType.MID_BOTTOM -> editViewModel.resizeBed(bedId, bed.widthM, bed.heightM + worldDelta.y)
-                            HandleType.MID_TOP   -> editViewModel.resizeBed(bedId, bed.widthM, bed.heightM - worldDelta.y)
-                            // Corner handles: resize both axes
-                            HandleType.CORNER_BR -> editViewModel.resizeBed(bedId, bed.widthM + worldDelta.x, bed.heightM + worldDelta.y)
-                            HandleType.CORNER_BL -> editViewModel.resizeBed(bedId, bed.widthM - worldDelta.x, bed.heightM + worldDelta.y)
-                            HandleType.CORNER_TR -> editViewModel.resizeBed(bedId, bed.widthM + worldDelta.x, bed.heightM - worldDelta.y)
-                            HandleType.CORNER_TL -> editViewModel.resizeBed(bedId, bed.widthM - worldDelta.x, bed.heightM - worldDelta.y)
-                            // Drag handle: move
-                            HandleType.DRAG -> editViewModel.moveBed(bedId, worldDelta)
+                            HandleType.MID_RIGHT  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM)
+                            HandleType.MID_LEFT   -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM)
+                            HandleType.MID_BOTTOM -> editViewModel.resizePlot(plotId, plot.widthM, plot.heightM + worldDelta.y)
+                            HandleType.MID_TOP    -> editViewModel.resizePlot(plotId, plot.widthM, plot.heightM - worldDelta.y)
+                            HandleType.CORNER_BR  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM + worldDelta.y)
+                            HandleType.CORNER_BL  -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM + worldDelta.y)
+                            HandleType.CORNER_TR  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM - worldDelta.y)
+                            HandleType.CORNER_TL  -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM - worldDelta.y)
+                            HandleType.DRAG       -> editViewModel.movePlot(plotId, worldDelta)
                             else -> {}
                         }
                     }
                 }
             },
             onHandleDragEnd = { },
-            onDeleteQuickTapped = { bedId -> editViewModel.deleteBed(bedId) },
-            onActionBtnTapped = { bedId ->
-                editViewModel.selectBed(bedId)
-                onOpenCropPicker?.invoke()
-            },
+            onDeleteQuickTapped = { plotId -> editViewModel.deletePlot(plotId) },
+            onActionBtnTapped = { plotId -> editViewModel.selectPlot(plotId) },
             onCameraPan = { dx, dy ->
-                cameraState = cameraState.pan(dx, dy)
+                cameraState = cameraState.pan(dx, dy, canvasSize.width.toFloat(), canvasSize.height.toFloat())
             },
             onCameraZoom = { scaleFactor, _ ->
-                cameraState = cameraState.clampZoom(cameraState.zoom * scaleFactor)
+                cameraState = cameraState.clampZoom(cameraState.zoom * scaleFactor, canvasSize.width.toFloat(), canvasSize.height.toFloat())
                 editViewModel.updateZoom(cameraState.zoom)
             },
-            onLongPress = { bedId ->
-                editViewModel.selectBed(bedId)
-                onOpenCropPicker?.invoke()
-            },
-            onAddTrellisTapped = { bedId -> editViewModel.addTrellis(bedId) },
+            onLongPress = { plotId -> editViewModel.selectPlot(plotId) },
+            onAddTrellisTapped = { plotId -> editViewModel.addTrellis(plotId) },
             onCropZoneTapped = { zoneId -> editViewModel.selectCropZone(zoneId) }
         )
     }
@@ -119,52 +118,99 @@ fun FarmCanvas(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(gestureHandler) {
-                detectTapGestures(
-                    onTap = { offset ->
-                        gestureHandler.onTap(
-                            screenPos = offset,
-                            beds = uiState.beds,
-                            cropZones = uiState.cropZones,
-                            camera = cameraState,
-                            handles = currentHandles,
-                            activeTool = uiState.activeTool,
-                            selectedBedId = uiState.selectedBedId
-                        )
-                    },
-                    onLongPress = { offset ->
-                        gestureHandler.onLongPress(offset, uiState.beds, cameraState)
+            .onSizeChanged { canvasSize = it }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    var downPos = Offset.Zero
+                    var totalDragDistance = 0f
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val changes = event.changes
+
+                        // ── 1. Multi-touch (2+ pointers -> Pinch Zoom & 2-finger Pan) ─
+                        if (changes.size >= 2) {
+                            val p1 = changes[0]
+                            val p2 = changes[1]
+                            if (p1.pressed && p2.pressed) {
+                                val prevP1 = p1.previousPosition
+                                val prevP2 = p2.previousPosition
+                                val currentP1 = p1.position
+                                val currentP2 = p2.position
+
+                                val prevDist = (prevP1 - prevP2).getDistance()
+                                val currentDist = (currentP1 - currentP2).getDistance()
+
+                                if (prevDist > 0f && currentDist > 0f) {
+                                    val scaleFactor = currentDist / prevDist
+                                    val centroid = (currentP1 + currentP2) / 2f
+                                    gestureHandler.onPinchZoom(scaleFactor, centroid)
+                                }
+
+                                val prevCentroid = (prevP1 + prevP2) / 2f
+                                val currentCentroid = (currentP1 + currentP2) / 2f
+                                val panDelta = currentCentroid - prevCentroid
+                                if (panDelta.getDistance() > 0.5f) {
+                                    gestureHandler.onDrag(
+                                        currentPos = currentCentroid,
+                                        previousPos = prevCentroid,
+                                        plots = currentPlots,
+                                        camera = cameraState,
+                                        handles = currentHandles,
+                                        selectedPlotId = currentSelectedPlotId,
+                                        activeTool = currentActiveTool
+                                    )
+                                }
+                                p1.consume()
+                                p2.consume()
+                            }
+                        }
+                        // ── 2. Single-touch (1 pointer -> Crop drag / Camera pan) ──────
+                        else if (changes.size == 1) {
+                            val change = changes[0]
+
+                            if (change.changedToDown()) {
+                                downPos = change.position
+                                totalDragDistance = 0f
+                                gestureHandler.onDragStart(
+                                    startPos = change.position,
+                                    plots = currentPlots,
+                                    camera = cameraState,
+                                    handles = currentHandles,
+                                    selectedPlotId = currentSelectedPlotId,
+                                    activeTool = currentActiveTool
+                                )
+                            } else if (change.pressed && change.positionChange() != Offset.Zero) {
+                                val delta = change.positionChange()
+                                totalDragDistance += delta.getDistance()
+                                gestureHandler.onDrag(
+                                    currentPos = change.position,
+                                    previousPos = change.previousPosition,
+                                    plots = currentPlots,
+                                    camera = cameraState,
+                                    handles = currentHandles,
+                                    selectedPlotId = currentSelectedPlotId,
+                                    activeTool = currentActiveTool
+                                )
+                                change.consume()
+                            } else if (change.changedToUp()) {
+                                if (totalDragDistance < 8f) {
+                                    // Tap event (minimal movement)
+                                    gestureHandler.onTap(
+                                        screenPos = downPos,
+                                        plots = currentPlots,
+                                        cropZones = currentCropZones,
+                                        camera = cameraState,
+                                        handles = currentHandles,
+                                        activeTool = currentActiveTool,
+                                        selectedPlotId = currentSelectedPlotId
+                                    )
+                                }
+                                gestureHandler.onDragEnd()
+                            }
+                        }
                     }
-                )
-            }
-            .pointerInput(gestureHandler) {
-                detectDragGestures(
-                    onDragStart = { startOffset ->
-                        gestureHandler.onDragStart(
-                            startPos = startOffset,
-                            beds = uiState.beds,
-                            camera = cameraState,
-                            handles = currentHandles,
-                            selectedBedId = uiState.selectedBedId,
-                            activeTool = uiState.activeTool
-                        )
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        gestureHandler.onDrag(
-                            currentPos = change.position,
-                            previousPos = change.previousPosition,
-                            beds = uiState.beds,
-                            camera = cameraState,
-                            handles = currentHandles,
-                            selectedBedId = uiState.selectedBedId,
-                            activeTool = uiState.activeTool
-                        )
-                    },
-                    onDragEnd = {
-                        gestureHandler.onDragEnd()
-                    }
-                )
+                }
             }
     ) {
         if (cameraState.panX == 0f && size.width > 0f) {
@@ -173,13 +219,14 @@ fun FarmCanvas(
 
         with(FarmCanvasRenderer) {
             render(
-                beds = uiState.beds,
+                plots = uiState.plots,
                 cropZones = uiState.cropZones,
                 farmObjects = uiState.farmObjects,
                 camera = cameraState,
                 canvasMode = canvasMode,
-                selectedBedId = uiState.selectedBedId,
+                selectedPlotId = uiState.selectedPlotId,
                 selectedZoneId = uiState.selectedZoneId,
+                hoverWorldPos = hoverWorldPos,
                 isGridEnabled = uiState.isGridEnabled,
                 isSnapEnabled = uiState.isSnapEnabled,
                 resources = resources,

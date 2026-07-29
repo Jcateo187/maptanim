@@ -16,7 +16,7 @@ data class FarmObjectEntity(
     @ColumnInfo(name = "width_m") val widthM: Float,
     @ColumnInfo(name = "height_m") val heightM: Float,
     @ColumnInfo(name = "rotation_deg") val rotationDeg: Float,
-    @ColumnInfo(name = "attached_bed_id") val attachedBedId: String?,
+    @ColumnInfo(name = "attached_plot_id") val attachedPlotId: String?,
     @ColumnInfo(name = "created_at") val createdAt: String,
     @ColumnInfo(name = "updated_at") val updatedAt: String
 )
@@ -30,7 +30,7 @@ fun FarmObjectEntity.toDomain() = FarmObject(
     widthM = widthM,
     heightM = heightM,
     rotationDeg = rotationDeg,
-    attachedBedId = attachedBedId,
+    attachedPlotId = attachedPlotId,
     createdAt = createdAt,
     updatedAt = updatedAt
 )
@@ -44,7 +44,7 @@ fun FarmObject.toEntity() = FarmObjectEntity(
     widthM = widthM,
     heightM = heightM,
     rotationDeg = rotationDeg,
-    attachedBedId = attachedBedId,
+    attachedPlotId = attachedPlotId,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

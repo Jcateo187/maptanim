@@ -27,29 +27,19 @@ import com.maptanim.app.ui.theme.TextSecondary
 
 @Composable
 fun MiniStatistics(
-
-    beds: Int = 0,
-
+    plots: Int = 0,
     crops: Int = 0,
-
     harvest: Int = 0
-
 ) {
-
     Row(
-
         modifier = Modifier.padding(horizontal = 8.dp),
-
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-
         verticalAlignment = Alignment.CenterVertically
-
     ) {
-
         StatisticCard(
             icon = Icons.Default.Agriculture,
             title = "Plots",
-            value = beds.toString()
+            value = plots.toString()
         )
 
         StatisticCard(
@@ -63,86 +53,51 @@ fun MiniStatistics(
             title = "Harvest",
             value = harvest.toString()
         )
-
     }
-
 }
 
 @Composable
 private fun StatisticCard(
-
     icon: ImageVector,
-
     title: String,
-
     value: String
-
 ) {
-
     Surface(
-
         modifier = Modifier.height(34.dp),
-
         shape = RoundedCornerShape(18.dp),
-
         color = Color(0xFF2D3B45).copy(alpha = 0.78f),
-
         shadowElevation = 2.dp,
-
         border = BorderStroke(
             1.dp,
             ForestGreen.copy(alpha = 0.18f)
         )
-
     ) {
-
         Row(
-
             modifier = Modifier.padding(
                 horizontal = 8.dp,
                 vertical = 4.dp
             ),
-
             verticalAlignment = Alignment.CenterVertically,
-
             horizontalArrangement = Arrangement.spacedBy(4.dp)
-
         ) {
-
             Icon(
-
                 imageVector = icon,
-
                 contentDescription = null,
-
                 tint = ForestGreen,
-
                 modifier = Modifier.size(14.dp)
-
             )
 
             Text(
-
                 text = value,
-
                 style = MaterialTheme.typography.labelLarge,
-
                 color = TextPrimary
-
             )
 
             Text(
-
                 text = title,
-
                 style = MaterialTheme.typography.bodySmall,
-
                 color = TextSecondary
-
             )
-
         }
-
     }
-
 }

@@ -14,7 +14,10 @@ object Routes {
     const val CALENDAR = "calendar"
     const val LIBRARY = "library"
     const val PROFILE = "profile"
+    const val PROFILE_WITH_TAB = "profile?tab={tab}"
 
     // Edit Mode
     const val EDIT = "edit"
+
+    fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
 }

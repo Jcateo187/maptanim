@@ -4,30 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maptanim.app.domain.model.*
 import com.maptanim.app.domain.usecase.*
-import com.maptanim.app.renderer.model.BedRenderData
+import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.renderer.model.TaskPinData
+import com.maptanim.app.renderer.model.toRenderData
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 // ─── HomeUiState ─────────────────────────────────────────────────────────
 
-/**
- * All data the HomeScreen needs to render.
- * Every field is populated from Room DB — never from hardcoded values.
- *
- * todayTasks       → TaskDao.observeTodayTasks()  (drives TODAY'S TASKS panel)
- * farmSummary      → Computed from beds + tasks    (drives FARM SUMMARY panel)
- * beds             → BedDao.observeBeds()          (drives isometric canvas)
- * notificationCount → NotificationDao.observeUnreadCount() (drives 🔔 badge)
- * weatherInfo      → WeatherRepository (live API) or null while loading
- */
 data class HomeUiState(
     val isLoading: Boolean = true,
     val activeFarm: Farm? = null,
     val todayTasks: List<FarmTask> = emptyList(),
     val farmSummary: FarmSummary = FarmSummary(),
-    val beds: List<BedRenderData> = emptyList(),
+    val plots: List<PlotRenderData> = emptyList(),
     val notificationCount: Int = 0,
     val canvasMode: CanvasMode = CanvasMode.VIEW,
     val weatherInfo: WeatherInfo? = null,
@@ -45,7 +36,7 @@ data class WeatherInfo(
 class HomeViewModel(
     private val getTodayTasksUseCase: GetTodayTasksUseCase? = null,
     private val getFarmSummaryUseCase: GetFarmSummaryUseCase? = null,
-    private val getFarmBedsUseCase: GetFarmBedsUseCase? = null,
+    private val getFarmPlotsUseCase: GetFarmPlotsUseCase? = null,
     private val getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase? = null,
     private val getFarmsUseCase: GetFarmsUseCase? = null
 ) : ViewModel() {
@@ -56,10 +47,6 @@ class HomeViewModel(
     private var activeFarmId: String = ""
     private var currentFarmerId: String = ""
 
-    /**
-     * Called when HomeScreen is composed with the authenticated user's ID.
-     * Starts all live data flows from Room — no network call on every frame.
-     */
     fun initialize(farmerId: String) {
         if (currentFarmerId == farmerId) return
         currentFarmerId = farmerId
@@ -75,31 +62,15 @@ class HomeViewModel(
                             _uiState.update { it.copy(activeFarm = farm) }
                             loadFarmData(farm.id)
                         } else {
-                            _uiState.update { it.copy(isLoading = false) }
+                            _uiState.update { it.copy(isLoading = false, error = "No farm found.") }
                         }
                     }
-            }
-        }
-
-        getUnreadNotificationCountUseCase?.let { useCase ->
-            viewModelScope.launch {
-                useCase(farmerId).collect { count ->
-                    _uiState.update { it.copy(notificationCount = count) }
-                }
             }
         }
     }
 
     private fun loadFarmData(farmId: String) {
         val today = LocalDate.now().toString()
-
-        getTodayTasksUseCase?.let { useCase ->
-            viewModelScope.launch {
-                useCase(farmId, today).collect { tasks ->
-                    _uiState.update { it.copy(todayTasks = tasks, isLoading = false) }
-                }
-            }
-        }
 
         getFarmSummaryUseCase?.let { useCase ->
             viewModelScope.launch {
@@ -109,26 +80,42 @@ class HomeViewModel(
             }
         }
 
-        if (getFarmBedsUseCase != null && getTodayTasksUseCase != null) {
+        getTodayTasksUseCase?.let { useCase ->
+            viewModelScope.launch {
+                useCase(farmId, today).collect { tasks ->
+                    _uiState.update { it.copy(todayTasks = tasks) }
+                }
+            }
+        }
+
+        getUnreadNotificationCountUseCase?.let { useCase ->
+            viewModelScope.launch {
+                useCase(currentFarmerId).collect { count ->
+                    _uiState.update { it.copy(notificationCount = count) }
+                }
+            }
+        }
+
+        if (getFarmPlotsUseCase != null && getTodayTasksUseCase != null) {
             viewModelScope.launch {
                 combine(
-                    getFarmBedsUseCase.invoke(farmId),
+                    getFarmPlotsUseCase.invoke(farmId),
                     getTodayTasksUseCase.invoke(farmId, today)
-                ) { beds, tasks ->
-                    beds.map { bed ->
-                        val bedTasks = tasks.filter { it.bedId == bed.id }
-                        bed.toRenderData(
-                            activeTasks = bedTasks.map { task ->
+                ) { plots, tasks ->
+                    plots.map { plot ->
+                        val plotTasks = tasks.filter { it.plotId == plot.id }
+                        plot.toRenderData(
+                            activeTasks = plotTasks.map { task ->
                                 TaskPinData(
                                     taskId   = task.id,
                                     taskType = task.taskType,
-                                    bedId    = task.bedId
+                                    plotId   = task.plotId
                                 )
                             }
                         )
                     }
-                }.collect { renderBeds ->
-                    _uiState.update { it.copy(beds = renderBeds) }
+                }.collect { renderPlots ->
+                    _uiState.update { it.copy(plots = renderPlots) }
                 }
             }
         }
@@ -136,33 +123,15 @@ class HomeViewModel(
 
     fun toggleEditMode() {
         _uiState.update { state ->
-            state.copy(
-                canvasMode = if (state.canvasMode == CanvasMode.VIEW)
-                    CanvasMode.EDIT else CanvasMode.VIEW
-            )
+            val nextMode = if (state.canvasMode == CanvasMode.VIEW) CanvasMode.EDIT else CanvasMode.VIEW
+            state.copy(canvasMode = nextMode)
         }
     }
 
-    fun selectFarm(farm: Farm) {
-        activeFarmId = farm.id
-        _uiState.update { it.copy(activeFarm = farm, isLoading = true) }
-        loadFarmData(farm.id)
+    fun completeTask(taskId: String) {
+        viewModelScope.launch {
+            val updatedTasks = _uiState.value.todayTasks.filter { it.id != taskId }
+            _uiState.update { it.copy(todayTasks = updatedTasks) }
+        }
     }
 }
-
-// ─── Extension: Bed → BedRenderData ──────────────────────────────────────
-
-fun Bed.toRenderData(activeTasks: List<TaskPinData> = emptyList()): BedRenderData =
-    BedRenderData(
-        id            = id,
-        bedLabel      = bedLabel,
-        cropName      = cropName,
-        soilType      = soilType,
-        posX          = posX,
-        posY          = posY,
-        widthM        = widthM,
-        heightM       = heightM,
-        rotationDeg   = rotationDeg,
-        hasActiveTasks = activeTasks.isNotEmpty(),
-        activeTasks   = activeTasks
-    )

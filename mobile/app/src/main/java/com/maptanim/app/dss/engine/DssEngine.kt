@@ -7,13 +7,10 @@ import java.time.temporal.ChronoUnit
 // ─── GrowthStageCalculator ─────────────────────────────────────────────────
 
 /**
- * Calculates the current growth stage for a bed's crop.
+ * Calculates the current growth stage for a plot's crop.
  *
- * Input:  beds.planted_date (Room DB) + crops.days_to_harvest (Room DB)
+ * Input:  crop_plots.planted_date (Room DB) + crops.days_to_harvest (Room DB)
  * Output: GrowthStage enum value
- *
- * No hardcoded stage thresholds per crop — uses the generic vegetable
- * growth model validated against BPI/DA planting guides.
  */
 class GrowthStageCalculator {
 
@@ -36,11 +33,10 @@ class GrowthStageCalculator {
 // ─── SoilSuitabilityScorer ─────────────────────────────────────────────────
 
 /**
- * Scores how well a crop's soil requirements match the bed's actual soil type.
+ * Scores how well a crop's soil requirements match the plot's actual soil type.
  * Returns a float 0.0–1.0 (0% = poor match, 100% = optimal).
  *
- * Input:  beds.soil_type + crops.ideal_soils / suitable_soils / tolerated_soils (Room DB)
- * Never hardcodes soil-crop pairs in the scorer — all data driven from Room.
+ * Input:  crop_plots.soil_type + crops.ideal_soils / suitable_soils / tolerated_soils (Room DB)
  */
 class SoilSuitabilityScorer {
 
@@ -55,27 +51,21 @@ class SoilSuitabilityScorer {
 // ─── CompanionPlantsMatrix ─────────────────────────────────────────────────
 
 /**
- * Evaluates companion planting relationships between all adjacent beds.
+ * Evaluates companion planting relationships between all adjacent plots.
  *
  * Data source: dss_rules table in Room DB (synced from Supabase on first launch).
- * Rules are loaded at runtime — never hardcoded in the app.
- * Adjacent beds = beds whose bounding boxes are within 1.5m of each other.
+ * Adjacent plots = plots whose bounding boxes are within 1.5m of each other.
  */
 class CompanionPlantsMatrix {
 
-    /**
-     * @param beds   All active beds for the farm (from BedRepository.observeBeds())
-     * @param rules  All DSS rules from Room DssRuleDao.observeAllRules()
-     * @return       List of companion alerts for adjacent antagonist pairs
-     */
-    fun evaluate(beds: List<Bed>, rules: List<DssRule>): List<CompanionAlert> {
+    fun evaluate(plots: List<CropPlot>, rules: List<DssRule>): List<CompanionAlert> {
         val alerts = mutableListOf<CompanionAlert>()
 
-        val adjacentPairs = findAdjacentBeds(beds)
+        val adjacentPairs = findAdjacentPlots(plots)
 
-        adjacentPairs.forEach { (bedA, bedB) ->
-            val cropA = bedA.cropName ?: return@forEach
-            val cropB = bedB.cropName ?: return@forEach
+        adjacentPairs.forEach { (plotA, plotB) ->
+            val cropA = plotA.cropName ?: return@forEach
+            val cropB = plotB.cropName ?: return@forEach
 
             val rule = rules.firstOrNull { r ->
                 (r.cropA == cropA && r.cropB == cropB) ||
@@ -85,8 +75,8 @@ class CompanionPlantsMatrix {
             if (rule.relationship == CompanionRelation.ANTAGONIST) {
                 alerts.add(
                     CompanionAlert(
-                        bedALabel = bedA.bedLabel,
-                        bedBLabel = bedB.bedLabel,
+                        plotALabel = plotA.plotLabel,
+                        plotBLabel = plotB.plotLabel,
                         cropA = cropA,
                         cropB = cropB,
                         relationship = CompanionRelation.ANTAGONIST,
@@ -99,13 +89,13 @@ class CompanionPlantsMatrix {
         return alerts
     }
 
-    /** Beds within 1.5m of each other are considered adjacent. */
-    private fun findAdjacentBeds(beds: List<Bed>): List<Pair<Bed, Bed>> {
-        val pairs = mutableListOf<Pair<Bed, Bed>>()
-        for (i in beds.indices) {
-            for (j in i + 1 until beds.size) {
-                val a = beds[i]
-                val b = beds[j]
+    /** Plots within 1.5m of each other are considered adjacent. */
+    private fun findAdjacentPlots(plots: List<CropPlot>): List<Pair<CropPlot, CropPlot>> {
+        val pairs = mutableListOf<Pair<CropPlot, CropPlot>>()
+        for (i in plots.indices) {
+            for (j in i + 1 until plots.size) {
+                val a = plots[i]
+                val b = plots[j]
                 val gapX = maxOf(0f, b.posX - (a.posX + a.widthM))
                     .coerceAtLeast(maxOf(0f, a.posX - (b.posX + b.widthM)))
                 val gapY = maxOf(0f, b.posY - (a.posY + a.heightM))
@@ -121,7 +111,6 @@ class CompanionPlantsMatrix {
 
 // ─── DSS Rule Domain Model ─────────────────────────────────────────────────
 
-/** Loaded from Room dss_rules table — never hardcoded. */
 data class DssRule(
     val id: String,
     val cropA: String,
@@ -131,8 +120,8 @@ data class DssRule(
 )
 
 data class CompanionAlert(
-    val bedALabel: String,
-    val bedBLabel: String,
+    val plotALabel: String,
+    val plotBLabel: String,
     val cropA: String,
     val cropB: String,
     val relationship: CompanionRelation,
@@ -140,22 +129,13 @@ data class CompanionAlert(
 )
 
 data class SoilScore(
-    val bedLabel: String,
+    val plotLabel: String,
     val soilType: SoilType,
-    val score: Float?   // null if bed has no crop
+    val score: Float?
 )
 
 // ─── DssEngine ────────────────────────────────────────────────────────────
 
-/**
- * Core DSS evaluation engine.
- *
- * All input data comes from Room DB (offline-first, synced from Supabase).
- * No hardcoded rules — task generation thresholds come from crops table.
- * No hardcoded companion pairs — come from dss_rules table.
- *
- * Output is also written to Room (tasks + notifications) and queued for Supabase sync.
- */
 class DssEngine(
     private val growthCalculator: GrowthStageCalculator = GrowthStageCalculator(),
     private val companionMatrix: CompanionPlantsMatrix = CompanionPlantsMatrix(),
@@ -168,8 +148,8 @@ class DssEngine(
     )
 
     data class GeneratedTask(
-        val bedId: String,
-        val bedLabel: String,
+        val plotId: String,
+        val plotLabel: String,
         val cropName: String,
         val taskType: TaskType,
         val title: String,
@@ -178,35 +158,35 @@ class DssEngine(
     )
 
     fun evaluate(
-        beds: List<Bed>,
+        plots: List<CropPlot>,
         crops: List<Crop>,
         rules: List<DssRule>,
         activities: List<Activity>,
         today: LocalDate
     ): DssResult {
-        val tasks = beds.flatMap { bed ->
-            val crop = crops.firstOrNull { it.name == bed.cropName } ?: return@flatMap emptyList()
-            val plantedDate = bed.plantedDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@flatMap emptyList()
+        val tasks = plots.flatMap { plot ->
+            val crop = crops.firstOrNull { it.name == plot.cropName } ?: return@flatMap emptyList()
+            val plantedDate = plot.plantedDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@flatMap emptyList()
             val stage = growthCalculator.calculate(plantedDate, crop.daysToHarvest, today)
-            generateTasksForBed(bed, crop, stage, activities, today)
+            generateTasksForPlot(plot, crop, stage, activities, today)
         }
 
-        val companionAlerts = companionMatrix.evaluate(beds, rules)
+        val companionAlerts = companionMatrix.evaluate(plots, rules)
 
-        val soilScores = beds.map { bed ->
-            val crop = crops.firstOrNull { it.name == bed.cropName }
+        val soilScores = plots.map { plot ->
+            val crop = crops.firstOrNull { it.name == plot.cropName }
             SoilScore(
-                bedLabel = bed.bedLabel,
-                soilType = bed.soilType,
-                score = crop?.let { soilScorer.score(bed.soilType, it) }
+                plotLabel = plot.plotLabel,
+                soilType = plot.soilType,
+                score = crop?.let { soilScorer.score(plot.soilType, it) }
             )
         }
 
         return DssResult(tasks, companionAlerts, soilScores)
     }
 
-    private fun generateTasksForBed(
-        bed: Bed,
+    private fun generateTasksForPlot(
+        plot: CropPlot,
         crop: Crop,
         stage: GrowthStage,
         activities: List<Activity>,
@@ -216,7 +196,7 @@ class DssEngine(
 
         // ── WATER task ────────────────────────────────────────────────────
         val lastWatered = activities
-            .filter { it.bedId == bed.id && it.type == TaskType.WATER }
+            .filter { it.plotId == plot.id && it.type == TaskType.WATER }
             .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
             .maxOrNull()
 
@@ -225,9 +205,9 @@ class DssEngine(
 
         if (daysSinceWater >= crop.wateringIntervalDays) {
             generated.add(GeneratedTask(
-                bedId = bed.id, bedLabel = bed.bedLabel, cropName = crop.name,
+                plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                 taskType = TaskType.WATER,
-                title = "Water ${bed.bedLabel}",
+                title = "Water ${plot.plotLabel}",
                 subLabel = crop.name,
                 dueDate = today.toString()
             ))
@@ -236,7 +216,7 @@ class DssEngine(
         // ── FERTILIZE task ────────────────────────────────────────────────
         if (stage in listOf(GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE, GrowthStage.FLOWERING)) {
             val lastFertilized = activities
-                .filter { it.bedId == bed.id && it.type == TaskType.FERTILIZE }
+                .filter { it.plotId == plot.id && it.type == TaskType.FERTILIZE }
                 .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
                 .maxOrNull()
 
@@ -245,10 +225,10 @@ class DssEngine(
 
             if (daysSinceFert >= crop.fertilizeIntervalDays) {
                 generated.add(GeneratedTask(
-                    bedId = bed.id, bedLabel = bed.bedLabel, cropName = crop.name,
+                    plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                     taskType = TaskType.FERTILIZE,
                     title = "Fertilize ${crop.name}",
-                    subLabel = bed.bedLabel,
+                    subLabel = plot.plotLabel,
                     dueDate = today.toString()
                 ))
             }
@@ -257,10 +237,10 @@ class DssEngine(
         // ── HARVEST task ──────────────────────────────────────────────────
         if (stage == GrowthStage.HARVEST_READY || stage == GrowthStage.OVERDUE) {
             generated.add(GeneratedTask(
-                bedId = bed.id, bedLabel = bed.bedLabel, cropName = crop.name,
+                plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                 taskType = TaskType.HARVEST,
                 title = "Harvest ${crop.name}",
-                subLabel = bed.bedLabel,
+                subLabel = plot.plotLabel,
                 dueDate = today.toString()
             ))
         }
@@ -268,14 +248,14 @@ class DssEngine(
         // ── PEST_ALERT task ───────────────────────────────────────────────
         val currentSeason = deriveSeason(today)
         val lastPestCheck = activities
-            .filter { it.bedId == bed.id && it.type == TaskType.PEST_ALERT }
+            .filter { it.plotId == plot.id && it.type == TaskType.PEST_ALERT }
             .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
             .maxOrNull()
         val daysSincePestCheck = lastPestCheck?.let { ChronoUnit.DAYS.between(it, today).toInt() } ?: 8
 
         if (currentSeason.name in crop.pestRiskSeason && daysSincePestCheck >= 7) {
             generated.add(GeneratedTask(
-                bedId = bed.id, bedLabel = bed.bedLabel, cropName = crop.name,
+                plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                 taskType = TaskType.PEST_ALERT,
                 title = "Check Pest Alert",
                 subLabel = crop.name,

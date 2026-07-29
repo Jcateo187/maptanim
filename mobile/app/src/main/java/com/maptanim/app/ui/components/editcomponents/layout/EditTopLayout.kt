@@ -149,7 +149,7 @@ fun EditTopLayout(
                     }
                 }
                 Text(
-                    text = "Tap a bed or item to edit",
+                    text = "Tap a plot or item to edit",
                     fontSize = 10.sp,
                     color = Color.Gray
                 )

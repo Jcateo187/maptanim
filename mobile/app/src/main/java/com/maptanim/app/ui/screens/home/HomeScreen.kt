@@ -68,8 +68,9 @@ fun HomeScreen(
             notificationCount = uiState.notificationCount,
             farmName = uiState.activeFarm?.farmName ?: "Murcia Farm",
             location = uiState.activeFarm?.location ?: "Murcia, Negros Occidental",
-            onProfileClick = { navController.navigate(Routes.PROFILE) },
-            onSettingsClick = { navController.navigate(Routes.PROFILE) }
+            onProfileClick = { navController.navigate(Routes.profileRoute(0)) },
+            onNotificationClick = { navController.navigate(Routes.profileRoute(1)) },
+            onSettingsClick = { navController.navigate(Routes.profileRoute(2)) }
         )
 
         // Left Side HUD Buttons (Monitoring, Today's Tasks)
@@ -101,83 +102,16 @@ fun HomeScreen(
 
         // ── 1. Fullscreen Monitoring Overlay ──────────────────────────────
         if (showMonitoringOverlay) {
-            Dialog(
-                onDismissRequest = { showMonitoringOverlay = false },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Black.copy(alpha = 0.85f)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(Icons.Default.Sensors, "Monitoring", tint = Color(0xFF43A047))
-                                Text("Farm Monitoring Dashboard", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
-                            }
-                            IconButton(onClick = { showMonitoringOverlay = false }) {
-                                Icon(Icons.Default.Close, "Close", tint = Color.White)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Fullscreen monitoring stats
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            MonitoringCard("Soil Moisture", "68%", "Optimal", Color(0xFF1E88E5), Modifier.weight(1f))
-                            MonitoringCard("Temperature", "28°C", "Normal", Color(0xFFFFA000), Modifier.weight(1f))
-                            MonitoringCard("Sunlight", "8.2 hrs", "Good", Color(0xFF43A047), Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
+            com.maptanim.app.ui.components.monitoring.MonitoringDashboardOverlay(
+                onDismiss = { showMonitoringOverlay = false }
+            )
         }
 
         // ── 2. Today's Tasks Overlay Sheet ───────────────────────────────
         if (showTasksOverlay) {
-            Dialog(onDismissRequest = { showTasksOverlay = false }) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .padding(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Today's Tasks", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1B5E20))
-                            IconButton(onClick = { showTasksOverlay = false }) {
-                                Icon(Icons.Default.Close, "Close", tint = Color.Gray)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TaskItemRow("Water Plot 3", "Tomato", TaskType.WATER)
-                        TaskItemRow("Fertilize Eggplant", "Plot 1", TaskType.FERTILIZE)
-                        TaskItemRow("Harvest Lettuce", "Plot R", TaskType.HARVEST)
-                        TaskItemRow("Check Pest Alert", "Cucumber", TaskType.PEST_ALERT)
-                    }
-                }
-            }
+            com.maptanim.app.ui.components.tasks.TodaysTasksOverlay(
+                onDismiss = { showTasksOverlay = false }
+            )
         }
 
         // ── 3. Farm Summary Overlay Sheet ─────────────────────────────────
