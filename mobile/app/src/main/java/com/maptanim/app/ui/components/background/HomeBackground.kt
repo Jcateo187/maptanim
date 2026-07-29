@@ -13,6 +13,9 @@ import com.maptanim.app.ui.theme.NightBlue
 import com.maptanim.app.ui.theme.SlateBlue
 import com.maptanim.app.ui.theme.Sunlight
 
+/**
+ * HomeBackground — Ambient gradient background for 2D Isometric Map canvas.
+ */
 @Composable
 fun HomeBackground() {
 

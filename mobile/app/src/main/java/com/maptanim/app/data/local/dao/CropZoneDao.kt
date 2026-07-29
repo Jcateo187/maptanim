@@ -6,15 +6,14 @@ import androidx.room.Upsert
 import com.maptanim.app.data.local.entity.CropZoneEntity
 import kotlinx.coroutines.flow.Flow
 
-
 @Dao
 interface CropZoneDao {
 
-    @Query("SELECT * FROM crop_zones WHERE bed_id = :bedId")
-    fun observeZonesByBedId(bedId: String): Flow<List<CropZoneEntity>>
+    @Query("SELECT * FROM crop_zones WHERE plot_id = :plotId")
+    fun observeZonesByPlotId(plotId: String): Flow<List<CropZoneEntity>>
 
-    @Query("SELECT * FROM crop_zones WHERE bed_id IN (:bedIds)")
-    fun observeZonesByBedIds(bedIds: List<String>): Flow<List<CropZoneEntity>>
+    @Query("SELECT * FROM crop_zones WHERE plot_id IN (:plotIds)")
+    fun observeZonesByPlotIds(plotIds: List<String>): Flow<List<CropZoneEntity>>
 
     @Upsert
     suspend fun upsertZone(zone: CropZoneEntity)
@@ -25,6 +24,6 @@ interface CropZoneDao {
     @Query("DELETE FROM crop_zones WHERE id = :zoneId")
     suspend fun deleteZone(zoneId: String)
 
-    @Query("DELETE FROM crop_zones WHERE bed_id = :bedId")
-    suspend fun deleteZonesByBedId(bedId: String)
+    @Query("DELETE FROM crop_zones WHERE plot_id = :plotId")
+    suspend fun deleteZonesByPlotId(plotId: String)
 }

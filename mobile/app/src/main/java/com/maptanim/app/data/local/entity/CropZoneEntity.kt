@@ -8,7 +8,7 @@ import com.maptanim.app.domain.model.CropZone
 @Entity(tableName = "crop_zones")
 data class CropZoneEntity(
     @PrimaryKey val id: String,
-    @ColumnInfo(name = "bed_id") val bedId: String,
+    @ColumnInfo(name = "plot_id") val plotId: String,
     @ColumnInfo(name = "crop_name") val cropName: String?,
     @ColumnInfo(name = "crop_id") val cropId: String?,
     @ColumnInfo(name = "offset_x") val offsetX: Float,
@@ -22,7 +22,7 @@ data class CropZoneEntity(
 
 fun CropZoneEntity.toDomain() = CropZone(
     id = id,
-    bedId = bedId,
+    plotId = plotId,
     cropName = cropName,
     cropId = cropId,
     offsetX = offsetX,
@@ -36,7 +36,7 @@ fun CropZoneEntity.toDomain() = CropZone(
 
 fun CropZone.toEntity() = CropZoneEntity(
     id = id,
-    bedId = bedId,
+    plotId = plotId,
     cropName = cropName,
     cropId = cropId,
     offsetX = offsetX,

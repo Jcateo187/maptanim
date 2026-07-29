@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -18,12 +19,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,12 +36,11 @@ data class CropOption(
     val id: String,
     val name: String,
     val emoji: String,
-    val category: String, // "Root", "Podded", "Leafy", "Bulb", "Stem", "Flower", "Tuber", "Fruit"
-    val lifeType: String = "Seasonal", // "Seasonal", "Permanent", "Semi Permanent"
+    val category: String,
+    val lifeType: String = "Seasonal",
     val hasAsset: Boolean = true
 )
 
-// Available Asset Crops (2 crops only: Carrot & String Beans)
 val AVAILABLE_CROP_CATALOG = listOf(
     CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", hasAsset = true),
     CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", hasAsset = true)
@@ -52,14 +55,7 @@ val TAB_OPTIONS = listOf(
 )
 
 /**
- * CropTray — Right-side crop selection panel matching system architecture flow.
- *
- * Features:
- *   - 4 Life-type Tabs (All, Seasonal, Permanent, Semi Permanent)
- *   - Category Icon Dropdown (Leafy, Root, Bulb, Stem, Flower, Podded, Tuber, Fruit)
- *   - Search Bar + Search Button for future plant additions
- *   - 2 Active Asset Crops (Carrot, String Beans)
- *   - Close (X) button to hide side panel
+ * CropTray — Right-side crop selection panel with CoC-style Drag & Drop support.
  */
 @Composable
 fun CropTray(
@@ -67,6 +63,9 @@ fun CropTray(
     selectedCropName: String? = null,
     availableCrops: List<CropOption> = AVAILABLE_CROP_CATALOG,
     onCropSelected: (cropName: String, cropId: String) -> Unit = { _, _ -> },
+    onCropDragStart: (cropName: String, cropId: String, screenOffset: Offset) -> Unit = { _, _, _ -> },
+    onCropDragging: (screenOffset: Offset) -> Unit = { _ -> },
+    onCropDragEnd: (screenOffset: Offset) -> Unit = { _ -> },
     onClose: () -> Unit = {}
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -90,11 +89,8 @@ fun CropTray(
     val filteredCrops = remember(selectedTabIndex, selectedCategory, activeSearchQuery, availableCrops) {
         val selectedTabName = TAB_OPTIONS[selectedTabIndex]
         availableCrops.filter { crop ->
-            // Tab filter
             val tabMatch = selectedTabName == "All" || crop.lifeType.equals(selectedTabName, ignoreCase = true)
-            // Category filter
             val categoryMatch = selectedCategory == "All" || crop.category.equals(selectedCategory, ignoreCase = true)
-            // Search filter
             val searchMatch = activeSearchQuery.isBlank() || crop.name.contains(activeSearchQuery, ignoreCase = true)
 
             tabMatch && categoryMatch && searchMatch
@@ -115,7 +111,7 @@ fun CropTray(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ── 1. Header with Close Button ─────────────────────────────────
+            // Header Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,7 +148,7 @@ fun CropTray(
                 }
             }
 
-            // ── 2. 4 Tabs (All, Seasonal, Permanent, Semi Permanent) ───────
+            // 4 Tabs
             ScrollableTabRow(
                 selectedTabIndex = selectedTabIndex,
                 edgePadding = 0.dp,
@@ -178,13 +174,12 @@ fun CropTray(
                 }
             }
 
-            // ── 3. Category Dropdown & Search Bar ───────────────────────────
+            // Category Dropdown & Search Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Category Icon Button with Dropdown Menu
                 Box {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
@@ -256,7 +251,6 @@ fun CropTray(
                     }
                 }
 
-                // Search Bar Field with Auto-Focus & Animated Zoom/Scale on Focus
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     shadowElevation = searchElevation,
@@ -341,43 +335,21 @@ fun CropTray(
                 }
             }
 
-            // Drag & Drop Instruction Subtitle
+            // Drag Subtitle
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
                 Text(
-                    text = "💡 Hold & drag or tap crop to plant on farm area",
+                    text = "💡 Hold & drag crop card onto farm area to plant",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF2E7D32)
                 )
             }
 
-            // Active Category Badge indicator
-            if (selectedCategory != "All") {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("Category:", fontSize = 11.sp, color = Color.DarkGray, fontWeight = FontWeight.Medium)
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF1B5E20)
-                    ) {
-                        Text(
-                            text = selectedCategory,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-            }
-
-            // ── 4. Plant Cards Grid ──────────────────────────────────────────
+            // Plant Cards Grid
             if (filteredCrops.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -404,7 +376,10 @@ fun CropTray(
                         CropChipCard(
                             crop = crop,
                             isSelected = isSelected,
-                            onClick = { onCropSelected(crop.name, crop.id) }
+                            onClick = { onCropSelected(crop.name, crop.id) },
+                            onDragStart = { offset -> onCropDragStart(crop.name, crop.id, offset) },
+                            onDragging = onCropDragging,
+                            onDragEnd = onCropDragEnd
                         )
                     }
                 }
@@ -417,10 +392,15 @@ fun CropTray(
 private fun CropChipCard(
     crop: CropOption,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDragStart: (Offset) -> Unit,
+    onDragging: (Offset) -> Unit,
+    onDragEnd: (Offset) -> Unit
 ) {
     val bgColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFF8F9FA)
     val borderColor = if (isSelected) Color(0xFF1B5E20) else Color.LightGray.copy(alpha = 0.5f)
+    var cardRootOffset by remember { mutableStateOf(Offset.Zero) }
+    var currentTouchOffset by remember { mutableStateOf(Offset.Zero) }
 
     Surface(
         shape = RoundedCornerShape(10.dp),
@@ -429,6 +409,28 @@ private fun CropChipCard(
         shadowElevation = if (isSelected) 4.dp else 1.dp,
         modifier = Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                cardRootOffset = coordinates.positionInRoot()
+            }
+            .pointerInput(crop.id) {
+                detectDragGestures(
+                    onDragStart = { localOffset ->
+                        currentTouchOffset = cardRootOffset + localOffset
+                        onDragStart(currentTouchOffset)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        currentTouchOffset = cardRootOffset + change.position
+                        onDragging(currentTouchOffset)
+                    },
+                    onDragEnd = {
+                        onDragEnd(currentTouchOffset)
+                    },
+                    onDragCancel = {
+                        onDragEnd(currentTouchOffset)
+                    }
+                )
+            }
             .clickable { onClick() }
     ) {
         Row(

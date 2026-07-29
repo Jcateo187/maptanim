@@ -17,7 +17,12 @@ import androidx.compose.ui.unit.sp
 import com.maptanim.app.ui.screens.edit.EditUiState
 
 /**
- * EditBottomLayout — Contextual floating bottom bar for selected bed.
+ * EditBottomLayout — Contextual floating bottom bar for selected crop.
+ *
+ * Direct Crop Planting Tools per System Architecture Diagram:
+ *   - Duplicate: Spawns 1 duplicate crop instance on farm area
+ *   - Resize: Shows 8 bounding box edges for precision resizing
+ *   - Delete: Removes selected crop from farm area
  */
 @Composable
 fun EditBottomLayout(
@@ -29,7 +34,7 @@ fun EditBottomLayout(
     onChangeSoilClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {}
 ) {
-    if (uiState.selectedBedId != null) {
+    if (uiState.selectedPlotId != null) {
         Surface(
             modifier = modifier
                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -44,8 +49,6 @@ fun EditBottomLayout(
             ) {
                 ActionChip(Icons.Default.ContentCopy, "Duplicate", onClick = onDuplicateClick)
                 ActionChip(Icons.Default.AspectRatio, "Resize", onClick = onResizeClick)
-                ActionChip(Icons.Default.Eco, "Crop", onClick = onChangeCropClick)
-                ActionChip(Icons.Default.Landscape, "Soil", onClick = onChangeSoilClick)
                 ActionChip(Icons.Default.Delete, "Delete", isDestructive = true, onClick = onDeleteClick)
             }
         }

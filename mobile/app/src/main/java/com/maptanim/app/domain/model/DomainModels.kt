@@ -14,15 +14,15 @@ data class Farm(
     val updatedAt: String
 )
 
-// ─── Bed ───────────────────────────────────────────────────────────────────
+// ─── CropPlot ─────────────────────────────────────────────────────────────
 
-data class Bed(
+data class CropPlot(
     val id: String,
     val farmId: String,
-    val bedLabel: String,       // "BED 1", "BED A", etc.
+    val plotLabel: String,      // "PLOT 1", "PLOT A", etc.
     val cropName: String?,      // null = no crop assigned
     val cropId: String?,
-    val soilType: SoilType,     // loaded from beds.soil_type via Room
+    val soilType: SoilType,     // loaded from crop_plots.soil_type via Room
     val posX: Float,            // meters from farm origin
     val posY: Float,
     val widthM: Float,
@@ -64,21 +64,21 @@ data class Crop(
 data class FarmTask(
     val id: String,
     val farmId: String,
-    val bedId: String,
-    val bedLabel: String,       // denormalized from beds.bed_label
-    val cropName: String?,      // denormalized from beds.crop_name
+    val plotId: String,
+    val plotLabel: String,      // denormalized from crop_plots.plot_label
+    val cropName: String?,      // denormalized from crop_plots.crop_name
     val taskType: TaskType,
-    val title: String,          // "Water Bed 3"
+    val title: String,          // "Water Plot 3"
     val subLabel: String?,      // "Tomato"
     val dueDate: String,        // ISO-8601 date
     val isCompleted: Boolean,
     val completedAt: String?
 )
 
-// ─── FarmSummary (derived from beds + tasks via UseCases) ─────────────────
+// ─── FarmSummary (derived from plots + tasks via UseCases) ────────────────
 
 data class FarmSummary(
-    val totalBeds: Int = 0,
+    val totalPlots: Int = 0,
     val totalPlants: Int = 0,
     val readyToHarvest: Int = 0,
     val activeAlerts: Int = 0
@@ -88,7 +88,7 @@ data class FarmSummary(
 
 data class HarvestRecord(
     val id: String,
-    val bedId: String,
+    val plotId: String,
     val farmId: String,
     val cropName: String,
     val yieldKg: Float,
@@ -101,7 +101,7 @@ data class HarvestRecord(
 
 data class Activity(
     val id: String,
-    val bedId: String,
+    val plotId: String,
     val farmId: String,
     val type: TaskType,
     val notes: String?,
@@ -132,14 +132,14 @@ data class Profile(
     val createdAt: String
 )
 
-// ─── CropZone (sub-region of a Bed) ────────────────────────────────────────
+// ─── CropZone (sub-region of a CropPlot) ──────────────────────────────────
 
 data class CropZone(
     val id: String,
-    val bedId: String,
+    val plotId: String,
     val cropName: String?,          // null = empty zone (shows + placeholder)
     val cropId: String?,
-    val offsetX: Float,             // meters from bed origin (top-left)
+    val offsetX: Float,             // meters from plot origin (top-left)
     val offsetY: Float,
     val widthM: Float,              // zone width in meters
     val heightM: Float,             // zone height in meters
@@ -168,8 +168,7 @@ data class FarmObject(
     val widthM: Float,
     val heightM: Float,
     val rotationDeg: Float = 0f,
-    val attachedBedId: String? = null,
+    val attachedPlotId: String? = null,
     val createdAt: String = "",
     val updatedAt: String = ""
 )
-

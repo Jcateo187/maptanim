@@ -18,34 +18,34 @@ interface FarmRepository {
     suspend fun deleteFarm(farmId: String)
 }
 
-// ─── BedRepository ─────────────────────────────────────────────────────────
+// ─── CropPlotRepository ───────────────────────────────────────────────────
 
 /**
- * Contract for bed (planting plot) data operations.
- * Source of truth: Room DB (synced from Supabase beds table).
+ * Contract for crop plot (planting area) data operations.
+ * Source of truth: Room DB (synced from Supabase crop_plots table).
  * Write path: Room → SyncQueue → SyncWorker → Supabase PATCH/POST/DELETE.
  */
-interface BedRepository {
-    /** Live stream of all active beds for a farm. Sourced from Room. */
-    fun observeBeds(farmId: String): Flow<List<Bed>>
+interface CropPlotRepository {
+    /** Live stream of all active crop plots for a farm. Sourced from Room. */
+    fun observePlots(farmId: String): Flow<List<CropPlot>>
 
-    /** Live stream of a single bed by ID. */
-    fun observeBed(bedId: String): Flow<Bed?>
+    /** Live stream of a single crop plot by ID. */
+    fun observePlot(plotId: String): Flow<CropPlot?>
 
-    /** Observe all beds across all farms for the current farmer (used by Calendar). */
-    fun observeAllBedsWithCrop(farmerId: String): Flow<List<Bed>>
+    /** Observe all plots across all farms for the current farmer (used by Calendar). */
+    fun observeAllPlotsWithCrop(farmerId: String): Flow<List<CropPlot>>
 
     /**
-     * Persist updated beds (positions, soil, crop) to Room and enqueue sync.
+     * Persist updated plots (positions, soil, crop) to Room and enqueue sync.
      * Called by SaveFarmLayoutUseCase after SAVE CHANGES in Edit Mode.
      */
-    suspend fun saveBeds(beds: List<Bed>)
+    suspend fun savePlots(plots: List<CropPlot>)
 
-    /** Soft-delete a bed (isActive = false) and enqueue Supabase DELETE. */
-    suspend fun deleteBed(bedId: String)
+    /** Soft-delete a plot (isActive = false) and enqueue Supabase DELETE. */
+    suspend fun deletePlot(plotId: String)
 
-    /** Upsert a single bed (used after Add Bed in Edit Mode). */
-    suspend fun upsertBed(bed: Bed)
+    /** Upsert a single plot (used after Add Plot in Edit Mode). */
+    suspend fun upsertPlot(plot: CropPlot)
 }
 
 // ─── TaskRepository ────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ interface HarvestRepository {
 // ─── ActivityRepository ────────────────────────────────────────────────────
 
 interface ActivityRepository {
-    fun observeActivities(bedId: String): Flow<List<Activity>>
+    fun observeActivities(plotId: String): Flow<List<Activity>>
     suspend fun logActivity(activity: Activity)
 }
 
@@ -150,8 +150,8 @@ data class SyncQueueItem(
 // ─── CropZoneRepository ───────────────────────────────────────────────────
 
 interface CropZoneRepository {
-    fun observeZonesByBedId(bedId: String): Flow<List<CropZone>>
-    fun observeZonesByBedIds(bedIds: List<String>): Flow<List<CropZone>>
+    fun observeZonesByPlotId(plotId: String): Flow<List<CropZone>>
+    fun observeZonesByPlotIds(plotIds: List<String>): Flow<List<CropZone>>
     suspend fun saveZones(zones: List<CropZone>)
     suspend fun deleteZone(zoneId: String)
 }
@@ -163,4 +163,3 @@ interface FarmObjectRepository {
     suspend fun saveObjects(objects: List<FarmObject>)
     suspend fun deleteObject(objectId: String)
 }
-

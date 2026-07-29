@@ -22,76 +22,76 @@ class GetTodayTasksUseCase(
 
 /**
  * Returns a live aggregated FarmSummary.
- * Drives the FARM SUMMARY panel (Beds count, Plants count, Ready to Harvest, Active Alerts).
+ * Drives the FARM SUMMARY panel (Plots count, Plants count, Ready to Harvest, Active Alerts).
  * All 4 values computed from Room DB — never hardcoded.
  */
 class GetFarmSummaryUseCase(
-    private val bedRepository: BedRepository,
+    private val plotRepository: CropPlotRepository,
     private val taskRepository: TaskRepository
 ) {
     operator fun invoke(farmId: String): Flow<FarmSummary> = combine(
-        bedRepository.observeBeds(farmId),
+        plotRepository.observePlots(farmId),
         taskRepository.observeHarvestReady(farmId),
         taskRepository.observeActiveAlerts(farmId)
-    ) { beds, harvestReady, alerts ->
+    ) { plots, harvestReady, alerts ->
         FarmSummary(
-            totalBeds = beds.size,
-            totalPlants = beds.sumOf { estimatePlantCount(it) },
+            totalPlots = plots.size,
+            totalPlants = plots.sumOf { estimatePlantCount(it) },
             readyToHarvest = harvestReady.size,
             activeAlerts = alerts.size
         )
     }
 
-    /** Estimates plant count from bed area and crop density. No hardcoded counts. */
-    private fun estimatePlantCount(bed: Bed): Int {
-        val areaSqm = bed.widthM * bed.heightM
+    /** Estimates plant count from plot area and crop density. No hardcoded counts. */
+    private fun estimatePlantCount(plot: CropPlot): Int {
+        val areaSqm = plot.widthM * plot.heightM
         return (areaSqm / 0.5f).toInt().coerceAtLeast(1)
     }
 }
 
 /**
- * Returns a live stream of all active beds for the farm canvas.
- * Drives isometric canvas rendering — bed positions, soil, crop come from Room.
+ * Returns a live stream of all active crop plots for the farm canvas.
+ * Drives isometric canvas rendering — plot positions, soil, crop come from Room.
  */
-class GetFarmBedsUseCase(
-    private val bedRepository: BedRepository
+class GetFarmPlotsUseCase(
+    private val plotRepository: CropPlotRepository
 ) {
-    operator fun invoke(farmId: String): Flow<List<Bed>> =
-        bedRepository.observeBeds(farmId)
+    operator fun invoke(farmId: String): Flow<List<CropPlot>> =
+        plotRepository.observePlots(farmId)
 }
 
 // ─── Edit Mode Use Cases ───────────────────────────────────────────────────
 
 /**
- * Persists the full set of edited beds after SAVE CHANGES is tapped.
+ * Persists the full set of edited crop plots after SAVE CHANGES is tapped.
  */
 class SaveFarmLayoutUseCase(
-    private val bedRepository: BedRepository,
+    private val plotRepository: CropPlotRepository,
     private val syncRepository: SyncRepository
 ) {
-    suspend operator fun invoke(beds: List<Bed>) {
-        bedRepository.saveBeds(beds)
+    suspend operator fun invoke(plots: List<CropPlot>) {
+        plotRepository.savePlots(plots)
     }
 }
 
 /**
- * Soft-deletes a bed from the farm layout.
+ * Soft-deletes a crop plot from the farm layout.
  */
-class DeleteBedUseCase(
-    private val bedRepository: BedRepository
+class DeletePlotUseCase(
+    private val plotRepository: CropPlotRepository
 ) {
-    suspend operator fun invoke(bedId: String) =
-        bedRepository.deleteBed(bedId)
+    suspend operator fun invoke(plotId: String) =
+        plotRepository.deletePlot(plotId)
 }
 
 /**
- * Inserts a new bed created in Edit Mode (Add Bed tool).
+ * Inserts a new crop plot created in Edit Mode (Add Plot tool).
  */
-class AddBedUseCase(
-    private val bedRepository: BedRepository
+class AddPlotUseCase(
+    private val plotRepository: CropPlotRepository
 ) {
-    suspend operator fun invoke(bed: Bed) =
-        bedRepository.upsertBed(bed)
+    suspend operator fun invoke(plot: CropPlot) =
+        plotRepository.upsertPlot(plot)
 }
 
 // ─── Notification Use Cases ────────────────────────────────────────────────

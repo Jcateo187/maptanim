@@ -49,9 +49,9 @@ enum class GrowthStage {
  */
 enum class EditTool {
     SELECT_MOVE,    // Default — tap to select, drag handle to move
-    ADD_BED,        // Tap empty space → place bed
-    ADD_PLANT,      // Tap bed → select & add plant/crop
-    DELETE          // Tap bed → confirm dialog → soft-delete
+    ADD_PLOT,       // Tap empty space → place crop plot
+    ADD_PLANT,      // Tap plot → select & add plant/crop
+    DELETE          // Tap plot → confirm dialog → soft-delete
 }
 
 /**

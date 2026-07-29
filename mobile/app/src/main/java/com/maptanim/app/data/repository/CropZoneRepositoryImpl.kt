@@ -14,29 +14,29 @@ class CropZoneRepositoryImpl(
 
     private val inMemoryCache = mutableMapOf<String, List<CropZone>>()
 
-    override fun observeZonesByBedId(bedId: String): Flow<List<CropZone>> {
-        return cropZoneDao?.observeZonesByBedId(bedId)?.map { entities ->
+    override fun observeZonesByPlotId(plotId: String): Flow<List<CropZone>> {
+        return cropZoneDao?.observeZonesByPlotId(plotId)?.map { entities ->
             entities.map { it.toDomain() }
-        } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache[bedId] ?: emptyList())
+        } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache[plotId] ?: emptyList())
     }
 
-    override fun observeZonesByBedIds(bedIds: List<String>): Flow<List<CropZone>> {
-        return cropZoneDao?.observeZonesByBedIds(bedIds)?.map { entities ->
+    override fun observeZonesByPlotIds(plotIds: List<String>): Flow<List<CropZone>> {
+        return cropZoneDao?.observeZonesByPlotIds(plotIds)?.map { entities ->
             entities.map { it.toDomain() }
-        } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache.filterKeys { it in bedIds }.values.flatten())
+        } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache.filterKeys { it in plotIds }.values.flatten())
     }
 
     override suspend fun saveZones(zones: List<CropZone>) {
         cropZoneDao?.upsertZones(zones.map { it.toEntity() })
-        zones.groupBy { it.bedId }.forEach { (bedId, bedZones) ->
-            inMemoryCache[bedId] = bedZones
+        zones.groupBy { it.plotId }.forEach { (plotId, plotZones) ->
+            inMemoryCache[plotId] = plotZones
         }
     }
 
     override suspend fun deleteZone(zoneId: String) {
         cropZoneDao?.deleteZone(zoneId)
-        inMemoryCache.keys.forEach { bedId ->
-            inMemoryCache[bedId] = inMemoryCache[bedId]?.filter { it.id != zoneId } ?: emptyList()
+        inMemoryCache.keys.forEach { plotId ->
+            inMemoryCache[plotId] = inMemoryCache[plotId]?.filter { it.id != zoneId } ?: emptyList()
         }
     }
 }

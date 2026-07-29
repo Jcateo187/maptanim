@@ -2,6 +2,7 @@ package com.maptanim.app.renderer.model
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.FarmObjectType
 import com.maptanim.app.domain.model.SoilType
 
@@ -16,26 +17,76 @@ import com.maptanim.app.domain.model.SoilType
 data class CameraState(
     val panX: Float = 0f,       // Horizontal pan offset in screen pixels
     val panY: Float = 0f,       // Vertical pan offset in screen pixels
-    val zoom: Float = 1.0f,     // Scale factor — 70% min zoom (0.70f)
-    val minZoom: Float = 0.70f, // 70% minimum zoom limit as requested
-    val maxZoom: Float = 4.0f   // 400% maximum zoom
+    val zoom: Float = 0.72f,     // Scale factor — default 0.72f (fits full farm diamond cleanly on screen)
+    val minZoom: Float = 0.72f,  // Max zoom out (72% - 100% full farm visibility)
+    val maxZoom: Float = 4.0f    // Max zoom in (400%)
 ) {
-    fun clampZoom(newZoom: Float) = copy(zoom = newZoom.coerceIn(minZoom, maxZoom))
+    /**
+     * Clamps zoom and ensures camera pan offset stays within valid map boundaries.
+     * When zoomed out to minZoom, resets pan offsets back to dead center.
+     */
+    fun clampZoom(newZoom: Float, screenWidth: Float = 1920f, screenHeight: Float = 1080f): CameraState {
+        val clampedZ = newZoom.coerceIn(minZoom, maxZoom)
+        val centerPanX = if (screenWidth > 0f) screenWidth / 2f else 960f
+        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * clampedZ) else 150f
 
-    /** Pans the camera with expanded boundaries to reach the left side and all corners of the map. */
-    fun pan(dx: Float, dy: Float): CameraState {
-        val maxPanX = 2500f * zoom
-        val maxPanY = 2500f * zoom
+        if (clampedZ <= minZoom * 1.001f) {
+            return copy(zoom = clampedZ, panX = centerPanX, panY = centerPanY)
+        }
+
+        val zoomRatio = ((clampedZ / minZoom) - 1.0f).coerceAtLeast(0f)
+        val halfMapW = 44f * (IsometricProjection.TILE_W / 2f) * minZoom
+        val halfMapH = 44f * (IsometricProjection.TILE_H / 2f) * minZoom
+
+        val maxPanH = halfMapW * zoomRatio
+        val maxPanV = halfMapH * zoomRatio
+
+        val clampedPanX = panX.coerceIn(centerPanX - maxPanH, centerPanX + maxPanH)
+        val clampedPanY = panY.coerceIn(centerPanY - maxPanV, centerPanY + maxPanV)
+
+        return copy(zoom = clampedZ, panX = clampedPanX, panY = clampedPanY)
+    }
+
+    /**
+     * Strict Bounded Camera Panning:
+     * - At max zoom out (zoom <= minZoom * 1.001f), panning is 100% locked to center (cannot pan past edges).
+     * - When zoomed in (zoom > minZoom), panning is allowed but strictly clamped so the camera
+     *   cannot pan outside the outer limits visible at max zoom out.
+     */
+    fun pan(dx: Float, dy: Float, screenWidth: Float = 1920f, screenHeight: Float = 1080f): CameraState {
+        val centerPanX = if (screenWidth > 0f) screenWidth / 2f else 960f
+        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * zoom) else 150f
+
+        // At max zoom out, lock camera completely to center
+        if (zoom <= minZoom * 1.001f) {
+            return copy(panX = centerPanX, panY = centerPanY)
+        }
+
+        // When zoomed in, allow panning strictly within the max-zoom-out bounding frame
+        val zoomRatio = ((zoom / minZoom) - 1.0f).coerceAtLeast(0f)
+        val halfMapW = 44f * (IsometricProjection.TILE_W / 2f) * minZoom
+        val halfMapH = 44f * (IsometricProjection.TILE_H / 2f) * minZoom
+
+        val maxPanH = halfMapW * zoomRatio
+        val maxPanV = halfMapH * zoomRatio
+
+        val minPanX = centerPanX - maxPanH
+        val maxPanX = centerPanX + maxPanH
+        val minPanY = centerPanY - maxPanV
+        val maxPanY = centerPanY + maxPanV
+
         return copy(
-            panX = (panX + dx).coerceIn(-maxPanX, maxPanX),
-            panY = (panY + dy).coerceIn(-maxPanY, maxPanY)
+            panX = (panX + dx).coerceIn(minPanX, maxPanX),
+            panY = (panY + dy).coerceIn(minPanY, maxPanY)
         )
     }
 
-    fun centered(screenWidth: Float, screenHeight: Float) = copy(
-        panX = screenWidth / 2f,
-        panY = screenHeight * 0.15f
-    )
+    /** Centers world coordinate (15, 15) dead-center on screen. */
+    fun centered(screenWidth: Float, screenHeight: Float): CameraState {
+        val centerPanX = screenWidth / 2f
+        val centerPanY = (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * zoom)
+        return copy(panX = centerPanX, panY = centerPanY)
+    }
 
     /** Returns the farm world bounds visible at current pan/zoom with buffer padding. */
     fun getVisibleWorldBounds(screenWidth: Float, screenHeight: Float): Rect {
@@ -58,77 +109,54 @@ data class CameraState(
 /**
  * Converts between world coordinates (meters, from farm origin) and
  * screen coordinates (pixels, from canvas top-left).
- *
- * Projection type: Cabinet isometric, 2:1 pixel ratio, ~30° elevation.
- *
- * World coordinate system:
- *   - Origin (0, 0) = top-left corner of farm
- *   - X axis = goes right-and-down in screen space
- *   - Y axis = goes right-and-up in screen space
- *
- * Formula:
- *   screenX = (worldX - worldY) * (TILE_W / 2)
- *   screenY = (worldX + worldY) * (TILE_H / 2)
  */
 object IsometricProjection {
-    const val TILE_W = 128f   // 1 world meter → 128px wide tile
-    const val TILE_H = 64f    // 1 world meter → 64px tall tile (2:1 ratio)
+    const val TILE_W = 64f
+    const val TILE_H = 32f
 
     fun toScreen(worldX: Float, worldY: Float, camera: CameraState): Offset {
-        val rawX = (worldX - worldY) * (TILE_W / 2f)
-        val rawY = (worldX + worldY) * (TILE_H / 2f)
-        return Offset(
-            x = rawX * camera.zoom + camera.panX,
-            y = rawY * camera.zoom + camera.panY
-        )
+        val screenX = (worldX - worldY) * (TILE_W / 2f) * camera.zoom + camera.panX
+        val screenY = (worldX + worldY) * (TILE_H / 2f) * camera.zoom + camera.panY
+        return Offset(screenX, screenY)
     }
 
     fun toWorld(screenX: Float, screenY: Float, camera: CameraState): Offset {
-        val rawX = (screenX - camera.panX) / camera.zoom
-        val rawY = (screenY - camera.panY) / camera.zoom
-        return Offset(
-            x = (rawX / (TILE_W / 2f) + rawY / (TILE_H / 2f)) / 2f,
-            y = (rawY / (TILE_H / 2f) - rawX / (TILE_W / 2f)) / 2f
-        )
+        val unpannedX = (screenX - camera.panX) / camera.zoom
+        val unpannedY = (screenY - camera.panY) / camera.zoom
+        val worldX = (unpannedX / TILE_W) + (unpannedY / TILE_H)
+        val worldY = (unpannedY / TILE_H) - (unpannedX / TILE_W)
+        return Offset(worldX, worldY)
     }
 }
 
-// ─── BedRenderData ────────────────────────────────────────────────────────
+// ─── PlotRenderData ───────────────────────────────────────────────────────
 
-/**
- * Render-ready view of a Bed.
- * Built from Bed domain model + computed screen coordinates.
- * Populated by BedRenderMapper from Room data — no hardcoded positions.
- */
-data class BedRenderData(
+data class PlotRenderData(
     val id: String,
-    val bedLabel: String,       // From beds.bed_label (Room)
-    val cropName: String?,      // From beds.crop_name (Room) — null shows + placeholder
-    val soilType: SoilType,     // From beds.soil_type (Room) — drives soil texture tile
-    val growthStage: GrowthStage? = null,  // Computed by GrowthStageCalculator
-    val posX: Float,            // From beds.pos_x (Room)
-    val posY: Float,            // From beds.pos_y (Room)
-    val widthM: Float,          // From beds.width_m (Room)
-    val heightM: Float,         // From beds.height_m (Room)
-    val rotationDeg: Float,     // From beds.rotation_deg (Room)
-    val hasActiveTasks: Boolean,  // Derived from today's tasks list
+    val farmId: String,
+    val plotLabel: String,
+    val cropName: String?,
+    val cropId: String?,
+    val soilType: SoilType,
+    val posX: Float,
+    val posY: Float,
+    val widthM: Float,
+    val heightM: Float,
+    val rotationDeg: Float = 0f,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
-    /** 4 isometric corners of this bed in world space. */
-    val worldCorners: BedWorldCorners get() = BedWorldCorners(
-        topLeft     = Offset(posX, posY),
+    val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
+
+    fun worldCorners(): PlotWorldCorners = PlotWorldCorners(
+        topLeft     = Offset(posX,          posY),
         topRight    = Offset(posX + widthM, posY),
-        bottomLeft  = Offset(posX, posY + heightM),
+        bottomLeft  = Offset(posX,          posY + heightM),
         bottomRight = Offset(posX + widthM, posY + heightM)
     )
 
-    /** Center of bed in world space. */
-    val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
-
-    /** All 4 corners in screen space. Used for hit testing and selection drawing. */
-    fun screenCorners(camera: CameraState): BedScreenCorners {
-        val w = worldCorners
-        return BedScreenCorners(
+    fun screenCorners(camera: CameraState): PlotScreenCorners {
+        val w = worldCorners()
+        return PlotScreenCorners(
             topLeft     = IsometricProjection.toScreen(w.topLeft.x,     w.topLeft.y,     camera),
             topRight    = IsometricProjection.toScreen(w.topRight.x,    w.topRight.y,    camera),
             bottomLeft  = IsometricProjection.toScreen(w.bottomLeft.x,  w.bottomLeft.y,  camera),
@@ -136,7 +164,6 @@ data class BedRenderData(
         )
     }
 
-    /** Screen-space center of top edge — anchor for drag handle and status pins. */
     fun topEdgeCenter(camera: CameraState): Offset {
         val sc = screenCorners(camera)
         return Offset(
@@ -145,33 +172,59 @@ data class BedRenderData(
         )
     }
 
-    /** Screen-space center of the bed. Anchor for the green ⊕ action button. */
     fun centerScreen(camera: CameraState): Offset =
         IsometricProjection.toScreen(worldCenter.x, worldCenter.y, camera)
 
-    /** Front-bottom center of the isometric bed. Anchor for the bed label chip. */
     fun labelAnchor(camera: CameraState): Offset =
         IsometricProjection.toScreen(posX + widthM / 2f, posY + heightM, camera)
 
-    /** Status pin anchor — floats above the top edge of the bed. */
     fun pinAnchor(camera: CameraState): Offset {
         val top = topEdgeCenter(camera)
         return top.copy(y = top.y - PIN_FLOAT_OFFSET_DP * camera.zoom)
     }
 
     companion object {
-        const val PIN_FLOAT_OFFSET_DP = 32f   // How high pins float above the bed top edge
+        const val PIN_FLOAT_OFFSET_DP = 32f
     }
 }
 
-data class BedWorldCorners(
+fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData = PlotRenderData(
+    id = id,
+    farmId = farmId,
+    plotLabel = plotLabel,
+    cropName = cropName,
+    cropId = cropId,
+    soilType = soilType,
+    posX = posX,
+    posY = posY,
+    widthM = widthM,
+    heightM = heightM,
+    rotationDeg = rotationDeg,
+    activeTasks = activeTasks
+)
+
+data class HandlePositions(
+    val dragHandle: Offset = Offset.Zero,
+    val deleteQuick: Offset = Offset.Zero,
+    val cornerTL: Offset = Offset.Zero,
+    val cornerTR: Offset = Offset.Zero,
+    val cornerBL: Offset = Offset.Zero,
+    val cornerBR: Offset = Offset.Zero,
+    val midTop: Offset = Offset.Zero,
+    val midBottom: Offset = Offset.Zero,
+    val midLeft: Offset = Offset.Zero,
+    val midRight: Offset = Offset.Zero,
+    val actionBtn: Offset = Offset.Zero
+)
+
+data class PlotWorldCorners(
     val topLeft: Offset,
     val topRight: Offset,
     val bottomLeft: Offset,
     val bottomRight: Offset
 )
 
-data class BedScreenCorners(
+data class PlotScreenCorners(
     val topLeft: Offset,
     val topRight: Offset,
     val bottomLeft: Offset,
@@ -185,48 +238,20 @@ data class BedScreenCorners(
 
 // ─── TaskPinData ──────────────────────────────────────────────────────────
 
-/**
- * Lightweight model for a status badge pin rendered above a bed.
- * Populated from TaskRepository.observeTodayTasks() — no static pins.
- */
 data class TaskPinData(
     val taskId: String,
-    val taskType: TaskType,   // Determines pin color and icon
-    val bedId: String
+    val taskType: TaskType,
+    val plotId: String
 )
 
-// ─── HandlePositions ──────────────────────────────────────────────────────
-
-/**
- * Screen-space positions of all selection handles for a selected bed.
- * Reported back to CanvasGestureHandler so gesture hit-tests know
- * which handle was touched.
- */
-data class HandlePositions(
-    val dragHandle: Offset,
-    val deleteQuick: Offset,
-    val cornerTL: Offset,
-    val cornerTR: Offset,
-    val cornerBL: Offset,
-    val cornerBR: Offset,
-    val midTop: Offset,
-    val midBottom: Offset,
-    val midLeft: Offset,
-    val midRight: Offset,
-    val actionBtn: Offset
-)
-
-// ─── GrowthStage import alias ─────────────────────────────────────────────
-// (imported from domain.model — re-exported here for renderer package convenience)
-typealias GrowthStage     = com.maptanim.app.domain.model.GrowthStage
-typealias TaskType        = com.maptanim.app.domain.model.TaskType
+typealias GrowthStage = com.maptanim.app.domain.model.GrowthStage
+typealias TaskType    = com.maptanim.app.domain.model.TaskType
 
 // ─── CropZoneRenderData ──────────────────────────────────────────────────
 
-
 data class CropZoneRenderData(
     val id: String,
-    val bedId: String,
+    val plotId: String,
     val cropName: String?,
     val offsetX: Float,
     val offsetY: Float,
@@ -253,6 +278,5 @@ data class FarmObjectRenderData(
     val widthM: Float,
     val heightM: Float,
     val rotationDeg: Float = 0f,
-    val attachedBedId: String? = null
+    val attachedPlotId: String? = null
 )
-
