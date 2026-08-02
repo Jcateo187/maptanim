@@ -43,7 +43,20 @@ data class CropOption(
 
 val AVAILABLE_CROP_CATALOG = listOf(
     CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", hasAsset = true),
-    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", hasAsset = true)
+    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", hasAsset = true),
+    CropOption("eggplant", "Eggplant", "🍆", "Fruit", lifeType = "Permanent", hasAsset = true),
+    CropOption("tomato", "Tomato", "🍅", "Fruit", lifeType = "Semi Permanent", hasAsset = true),
+    CropOption("onion", "Onion", "🧅", "Bulb", lifeType = "Seasonal", hasAsset = true),
+    CropOption("pumpkin", "Squash", "🎃", "Fruit", lifeType = "Seasonal", hasAsset = true),
+    CropOption("corn", "Corn", "🌽", "Stem", lifeType = "Seasonal", hasAsset = true),
+    CropOption("cabbage", "Cabbage", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
+    CropOption("pechay", "Pechay", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
+    CropOption("ampalaya", "Ampalaya", "🥒", "Fruit", lifeType = "Seasonal", hasAsset = true),
+    CropOption("okra", "Okra", "🌿", "Fruit", lifeType = "Seasonal", hasAsset = true),
+    CropOption("sili", "Chili Pepper", "🌶️", "Fruit", lifeType = "Permanent", hasAsset = true),
+    CropOption("cucumber", "Cucumber", "🥒", "Fruit", lifeType = "Seasonal", hasAsset = true),
+    CropOption("kangkong", "Kangkong", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
+    CropOption("lettuce", "Lettuce", "🥗", "Leafy", lifeType = "Seasonal", hasAsset = true)
 )
 
 val CATEGORY_OPTIONS = listOf(
@@ -342,7 +355,7 @@ fun CropTray(
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
                 Text(
-                    text = "💡 Hold & drag crop card onto farm area to plant",
+                    text = "💡 Tap a crop to select it, then drag or tap farm map to plant",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF2E7D32)
@@ -412,26 +425,30 @@ private fun CropChipCard(
             .onGloballyPositioned { coordinates ->
                 cardRootOffset = coordinates.positionInRoot()
             }
-            .pointerInput(crop.id) {
-                detectDragGestures(
-                    onDragStart = { localOffset ->
-                        currentTouchOffset = cardRootOffset + localOffset
-                        onDragStart(currentTouchOffset)
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        currentTouchOffset = cardRootOffset + change.position
-                        onDragging(currentTouchOffset)
-                    },
-                    onDragEnd = {
-                        onDragEnd(currentTouchOffset)
-                    },
-                    onDragCancel = {
-                        onDragEnd(currentTouchOffset)
-                    }
-                )
-            }
             .clickable { onClick() }
+            .then(
+                if (isSelected) {
+                    Modifier.pointerInput(crop.id) {
+                        detectDragGestures(
+                            onDragStart = { localOffset ->
+                                currentTouchOffset = cardRootOffset + localOffset
+                                onDragStart(currentTouchOffset)
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                currentTouchOffset = cardRootOffset + change.position
+                                onDragging(currentTouchOffset)
+                            },
+                            onDragEnd = {
+                                onDragEnd(currentTouchOffset)
+                            },
+                            onDragCancel = {
+                                onDragEnd(currentTouchOffset)
+                            }
+                        )
+                    }
+                } else Modifier
+            )
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
@@ -447,10 +464,10 @@ private fun CropChipCard(
                     color = if (isSelected) Color(0xFF1B5E20) else Color.Black
                 )
                 Text(
-                    text = "${crop.category} • Drag/Tap",
+                    text = if (isSelected) "${crop.category} • Drag or Tap Map" else "${crop.category} • Tap to Select",
                     fontSize = 8.sp,
-                    color = Color(0xFF2E7D32),
-                    fontWeight = FontWeight.Bold
+                    color = if (isSelected) Color(0xFF1B5E20) else Color.Gray,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }

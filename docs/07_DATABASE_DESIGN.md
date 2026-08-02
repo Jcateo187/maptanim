@@ -12,10 +12,12 @@ MapTanim uses **PostgreSQL** via Supabase as its cloud database, with **Room SQL
 ```
 users
   ├── farms (farmer_id → users.id)
-  │     ├── beds (farm_id → farms.id)
-  │     │     ├── tasks (bed_id → beds.id)
-  │     │     └── activities (bed_id → beds.id)
-  │     │     └── harvest_records (bed_id → beds.id)
+  │     ├── crop_plots (farm_id → farms.id)
+  │     │     ├── crop_zones (plot_id → crop_plots.id)
+  │     │     ├── tasks (plot_id → crop_plots.id)
+  │     │     ├── activities (plot_id → crop_plots.id)
+  │     │     └── harvest_records (plot_id → crop_plots.id)
+  │     ├── farm_objects (farm_id → farms.id, attached_plot_id → crop_plots.id)
   │     └── tasks (farm_id → farms.id)
   └── notifications (user_id → users.id)
 
@@ -40,11 +42,14 @@ CREATE TYPE season_enum AS ENUM ('DRY', 'WET', 'YEAR_ROUND');
 -- Plant-part category (DA/PSA 8 classifications)
 CREATE TYPE category_enum AS ENUM ('BULB', 'STEM', 'SHOOT', 'LEAFY', 'FLOWER', 'FRUIT', 'ROOT', 'TUBER');
 
--- Task types (matching badge pins in View Mode)
-CREATE TYPE task_type_enum AS ENUM ('WATER', 'FERTILIZE', 'HARVEST', 'PEST_ALERT', 'APPLY_PESTICIDE', 'SOIL_AMENDMENT', 'PRUNING', 'OBSERVATION');
+-- Task types (matching badge pins & TaskType enum in View Mode)
+CREATE TYPE task_type_enum AS ENUM ('WATER', 'FERTILIZE', 'HARVEST', 'PEST_ALERT', 'APPLY_PESTICIDE');
 
 -- DSS relationship types (companion planting)
 CREATE TYPE companion_relation_enum AS ENUM ('BENEFICIAL', 'ANTAGONIST', 'NEUTRAL');
+
+-- Canvas farm object types (support structures, fences, boundary elements)
+CREATE TYPE farm_object_type_enum AS ENUM ('TRELLIS', 'FENCE_SEGMENT', 'TREE', 'DECORATION');
 ```
 
 ---
@@ -94,16 +99,16 @@ CREATE POLICY "farmers_own_farms" ON public.farms
 
 ---
 
-## 🔹 Table: `beds`
+## 🔹 Table: `crop_plots`
 
-Beds represent individual planting plot beds on the farm canvas. All position and size values are in **meters** relative to farm origin (0, 0).
+`crop_plots` represent individual planting beds on the 2D farm canvas. All position and size values are in **meters** relative to farm origin (0, 0).
 
 ```sql
-CREATE TABLE public.beds (
+CREATE TABLE public.crop_plots (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_label       VARCHAR(20)     NOT NULL,       -- e.g., "BED 1", "BED A", "BED R"
-    crop_name       VARCHAR(100),                   -- e.g., "Eggplant", "Tomato", "Mixed Veg"
+    plot_label      VARCHAR(20)     NOT NULL,       -- e.g., "PLOT 1", "PLOT A"
+    crop_name       VARCHAR(100),                   -- e.g., "Eggplant", "Tomato"
     crop_id         UUID            REFERENCES public.crops(id),
     soil_type       soil_type_enum  NOT NULL DEFAULT 'LOAM',
     pos_x           FLOAT           NOT NULL DEFAULT 0.0,    -- meters from farm origin X
@@ -112,20 +117,100 @@ CREATE TABLE public.beds (
     height_m        FLOAT           NOT NULL DEFAULT 3.0,    -- height in meters
     rotation_deg    FLOAT           NOT NULL DEFAULT 0.0,    -- rotation in degrees
     notes           TEXT,
-    planted_date    DATE,
+    planted_date    TIMESTAMPTZ,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 -- RLS
-ALTER TABLE public.beds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "farmers_own_beds" ON public.beds
+CREATE POLICY "farmers_own_plots" ON public.crop_plots
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM public.farms f
-            WHERE f.id = beds.farm_id AND f.farmer_id = auth.uid()
+            WHERE f.id = crop_plots.farm_id AND f.farmer_id = auth.uid()
+        )
+    );
+```
+
+### Demo Farm Crop Plots
+
+| plot_label | crop_name | soil_type | Notes |
+|------------|-----------|-----------|-------|
+| PLOT 1 | Eggplant | LOAM | Fertilize task active |
+| PLOT 2 | Cucumber | LOAM | Pest alert active |
+| PLOT 3 | Tomato | LOAM | Water + Fertilize tasks active |
+| PLOT A | Lettuce | CLAY | Warning pin |
+| PLOT E | Cabbage | LOAM | |
+| PLOT F | Carrot | SANDY | |
+| PLOT G | String Beans | LOAM | |
+| PLOT R | Mixed Veg | LOAM | Harvest ready |
+
+---
+
+## 🔹 Table: `crop_zones`
+
+`crop_zones` represent sub-regions within a planting plot bed for multi-crop intercropping or grid organization.
+
+```sql
+CREATE TABLE public.crop_zones (
+    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    plot_id         UUID            NOT NULL REFERENCES public.crop_plots(id) ON DELETE CASCADE,
+    crop_name       VARCHAR(100),                   -- null = empty placeholder zone
+    crop_id         UUID            REFERENCES public.crops(id),
+    offset_x        FLOAT           NOT NULL DEFAULT 0.0,    -- offset X from plot origin (meters)
+    offset_y        FLOAT           NOT NULL DEFAULT 0.0,    -- offset Y from plot origin (meters)
+    width_m         FLOAT           NOT NULL DEFAULT 1.0,    -- zone width in meters
+    height_m        FLOAT           NOT NULL DEFAULT 1.0,    -- zone height in meters
+    spacing_m       FLOAT           NOT NULL DEFAULT 0.3,    -- plant spacing in meters
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+-- RLS
+ALTER TABLE public.crop_zones ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "farmers_own_crop_zones" ON public.crop_zones
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.crop_plots p
+            JOIN public.farms f ON f.id = p.farm_id
+            WHERE p.id = crop_zones.plot_id AND f.farmer_id = auth.uid()
+        )
+    );
+```
+
+---
+
+## 🔹 Table: `farm_objects`
+
+`farm_objects` represent non-crop farm features, boundary fences, trellises, exterior trees, or decorative elements on the 2D canvas.
+
+```sql
+CREATE TABLE public.farm_objects (
+    id              UUID                  PRIMARY KEY DEFAULT gen_random_uuid(),
+    farm_id         UUID                  NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
+    object_type     farm_object_type_enum NOT NULL,
+    world_x         FLOAT                 NOT NULL DEFAULT 0.0,
+    world_y         FLOAT                 NOT NULL DEFAULT 0.0,
+    width_m         FLOAT                 NOT NULL DEFAULT 1.0,
+    height_m        FLOAT                 NOT NULL DEFAULT 1.0,
+    rotation_deg    FLOAT                 NOT NULL DEFAULT 0.0,
+    attached_plot_id UUID                 REFERENCES public.crop_plots(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ           NOT NULL DEFAULT NOW()
+);
+
+-- RLS
+ALTER TABLE public.farm_objects ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "farmers_own_farm_objects" ON public.farm_objects
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.farms f
+            WHERE f.id = farm_objects.farm_id AND f.farmer_id = auth.uid()
         )
     );
 ```
@@ -198,10 +283,10 @@ Generated by the DSS rule engine. Displayed as TODAY'S TASKS in View Mode.
 CREATE TABLE public.tasks (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_id          UUID            REFERENCES public.beds(id) ON DELETE CASCADE,
+    plot_id         UUID            REFERENCES public.crop_plots(id) ON DELETE CASCADE,
     task_type       task_type_enum  NOT NULL,
-    title           VARCHAR(200)    NOT NULL,   -- e.g., "Water Bed 3"
-    sub_label       VARCHAR(200),               -- e.g., "Tomato" or "Bed 1"
+    title           VARCHAR(200)    NOT NULL,   -- e.g., "Water PLOT 3"
+    sub_label       VARCHAR(200),               -- e.g., "Tomato" or "PLOT 1"
     due_date        DATE            NOT NULL,
     is_completed    BOOLEAN         NOT NULL DEFAULT FALSE,
     completed_at    TIMESTAMPTZ,
@@ -231,7 +316,7 @@ Manual farming activity log.
 CREATE TABLE public.activities (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_id          UUID            REFERENCES public.beds(id),
+    plot_id         UUID            REFERENCES public.crop_plots(id) ON DELETE SET NULL,
     activity_type   task_type_enum  NOT NULL,
     performed_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     amount          FLOAT,          -- e.g., liters of water applied
@@ -248,7 +333,7 @@ CREATE TABLE public.activities (
 ```sql
 CREATE TABLE public.harvest_records (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    bed_id          UUID            NOT NULL REFERENCES public.beds(id) ON DELETE CASCADE,
+    plot_id         UUID            NOT NULL REFERENCES public.crop_plots(id) ON DELETE CASCADE,
     crop_name       VARCHAR(100)    NOT NULL,
     yield_kg        FLOAT,
     yield_units     INT,
@@ -322,7 +407,9 @@ Each Supabase table has a corresponding Room `@Entity`. Key Room configuration:
     entities = [
         UserEntity::class,
         FarmEntity::class,
-        BedEntity::class,
+        CropPlotEntity::class,
+        CropZoneEntity::class,
+        FarmObjectEntity::class,
         CropEntity::class,
         TaskEntity::class,
         ActivityEntity::class,
@@ -336,8 +423,12 @@ Each Supabase table has a corresponding Room `@Entity`. Key Room configuration:
 @TypeConverters(Converters::class)
 abstract class MapTanimDatabase : RoomDatabase() {
     abstract fun farmDao(): FarmDao
-    abstract fun bedDao(): BedDao
+    abstract fun cropPlotDao(): CropPlotDao
+    abstract fun cropZoneDao(): CropZoneDao
+    abstract fun farmObjectDao(): FarmObjectDao
     abstract fun taskDao(): TaskDao
     abstract fun cropDao(): CropDao
+    abstract fun userDao(): UserDao
+    abstract fun notificationDao(): NotificationDao
 }
 ```

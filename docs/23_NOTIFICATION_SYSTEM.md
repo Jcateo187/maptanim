@@ -1,90 +1,104 @@
 # 23. Notification System
 
 ## 📌 Overview
-The Notification System drives the `🔔 3` badge visible in the top bar of **both** View Mode and Edit Mode screenshots. All notification data is sourced **live from the `notifications` table in Supabase** — no hardcoded alerts or static badge counts.
+The **Notification System** powers the top bar `🔔` bell badge and the in-app Notification Center. It serves strictly as an **informational alert, reminder, and system broadcast channel**. All notification records are stored in Room SQLite (`notifications` table) and synchronized with Supabase PostgREST — no static alerts or hardcoded badge values are used.
 
 ---
 
-## 🔹 Notification Count in Top Bar
+## 🔹 Component Boundaries: Notifications vs. Today's Tasks
 
-The badge count `3` seen in both PNGs represents **unread notifications** fetched from Supabase:
+To maintain clean system architecture and avoid duplicate functionality, MapTanim enforces a strict separation of concerns between **Today's Tasks** and the **Notification System**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       MAPTANIM COMPONENT BOUNDARIES                         │
+├──────────────────────────────────────┬──────────────────────────────────────┤
+│ TODAY'S TASKS (`TodaysTasksOverlay`) │ NOTIFICATION SYSTEM (`Notification`) │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ • Interactive daily execution queue  │ • Read/unread informational alerts    │
+│ • Actionable: Water, Fertilize, etc. │ • Top bar `🔔` badge counter         │
+│ • Completing task updates plot state │ • Deep-link navigation triggers      │
+│ • Floating 2D canvas pins            │ • Pest warnings, system sync updates │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+```
+
+> 💡 **Key Rule**: The Notification System does **NOT** manage or complete daily farming tasks (which belong strictly to `tasks` and `TodaysTasksOverlay.kt`). Instead, notifications deliver timely alerts (e.g., high-risk pest advisories, upcoming harvest milestones, system sync status) and provide quick navigation shortcuts to the appropriate screen.
+
+---
+
+## 🔹 Notification Count & Top Bar Badge
+
+The unread count badge on the top bar `🔔` icon is computed dynamically from Room DB:
 
 ```kotlin
 // NotificationRepository.kt
 fun observeUnreadCount(farmerId: String): Flow<Int> =
-    notificationDao.observeUnreadCount(farmerId)   // Room Flow — auto-updates
-
-// NotificationDao.kt
-@Query("SELECT COUNT(*) FROM notifications WHERE user_id = :userId AND is_read = 0")
-fun observeUnreadCount(userId: String): Flow<Int>
+    notificationDao.observeUnreadCount(farmerId)   // Reactive Room Flow
 ```
 
-This `Flow<Int>` is collected in the `HomeViewModel` and passed to `MapTanimTopBar` via `uiState.notificationCount`. The badge appears/disappears based on the live count — **no hardcoded value of `3`**.
+```sql
+-- NotificationDao query
+SELECT COUNT(*) FROM notifications WHERE user_id = :userId AND is_read = 0;
+```
+
+This `Flow<Int>` is collected in `HomeViewModel` and passed to `MapTanimTopBar` via `uiState.notificationCount`. When all notifications are marked as read, the badge automatically hides — **no hardcoded count value**.
 
 ---
 
-## 🔹 Notification Types
+## 🔹 Notification Categories & Triggers
 
-All notification types mirror the 4 task/badge types from the View Mode canvas:
-
-| Type | Icon | Trigger |
-|------|------|---------|
-| WATER | 💧 | Watering overdue for a bed |
-| FERTILIZE | 🌿 | Fertilization due per growth stage |
-| HARVEST | 🌾 | `planted_date + days_to_harvest` reached |
-| PEST_ALERT | 🐛 | Pest calendar risk window active for crop/season |
-| SYSTEM | 🔔 | App updates, sync status, admin messages |
+| Category | Icon | Trigger Event | Destination Screen / Target |
+|---|---|---|---|
+| **PEST_ADVISORY** | 🐛 | High pest/disease risk detected for active crop | AgriLibrary Pest Guide / Monitoring Hub |
+| **HARVEST_REMINDER** | 🌾 | Plot approaching target harvest window | Monitoring Hub / Plot Details |
+| **WEATHER_ALERT** | 🌧️ | Seasonal climate advisory (heavy rainfall/dry spell) | DSS Advisory Panel |
+| **SYSTEM_SYNC** | 🔔 | Database synchronization status / account security | Profile / Settings |
 
 ---
 
 ## 🔹 Notification Generation Flow
 
 ```
-DSS evaluate-dss Edge Function runs
-        │
-        ▼
-Generates task records (tasks table)
-        │
-        ▼
-For each new/overdue task → inserts notification record
-        │
-        ▼
-Supabase Realtime pushes INSERT event to subscribed app
-        │
-        ▼
-Room notifications table updated via WorkManager / Realtime
-        │
-        ▼
-notificationDao.observeUnreadCount() emits new count
-        │
-        ▼
-HomeViewModel uiState.notificationCount updates
-        │
-        ▼
-NotificationBell badge recomposes with new count
+DSS Rule Engine / Edge Function / System Event
+                      │
+                      ▼
+        Inserts notification record (notifications table)
+                      │
+                      ▼
+Supabase Realtime pushes INSERT event to Room SQLite
+                      │
+                      ▼
+   notificationDao.observeUnreadCount() emits new count
+                      │
+                      ▼
+    Top Bar `🔔` Badge recomposes automatically
+                      │
+                      ▼
+   Farmer taps notification → Deep-links to target screen
 ```
 
 ---
 
-## 🔹 Notification Entity
+## 🔹 Notification Entity Schema
 
 ```kotlin
 // NotificationEntity.kt
 @Entity(tableName = "notifications")
 data class NotificationEntity(
-    @PrimaryKey val id: String,
-    val userId: String,
-    val title: String,
-    val body: String?,
-    val taskType: String?,       // matches TaskType enum name
-    val isRead: Boolean,
-    val createdAt: String
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "title") val title: String,
+    @ColumnInfo(name = "body") val body: String?,
+    @ColumnInfo(name = "category") val category: String,       // PEST_ADVISORY, HARVEST_REMINDER, etc.
+    @ColumnInfo(name = "target_plot_id") val targetPlotId: String?,
+    @ColumnInfo(name = "is_read") val isRead: Boolean = false,
+    @ColumnInfo(name = "created_at") val createdAt: String
 )
 ```
 
 ---
 
-## 🔹 NotificationDao
+## 🔹 NotificationDao (Room SQLite)
 
 ```kotlin
 @Dao
@@ -108,72 +122,20 @@ interface NotificationDao {
 
 ---
 
-## 🔹 Supabase Realtime — Notification Subscription
-
-```kotlin
-// In HomeViewModel or NotificationManager
-val notificationChannel = supabaseClient.realtime.createChannel("notifications-$userId")
-
-notificationChannel
-    .on<NotificationEntity>(
-        PostgresAction.Insert,
-        schema = "public",
-        table = "notifications"
-    ) { change ->
-        viewModelScope.launch {
-            notificationDao.upsertNotifications(listOf(change.record))
-            // Flow updates automatically — no manual refresh needed
-        }
-    }
-    .subscribe()
-```
-
----
-
-## 🔹 Local AlarmManager Scheduling
-
-For offline/background alerts (when Realtime is unavailable), `WorkManager` schedules a daily evaluation job:
-
-```kotlin
-// NotificationScheduler.kt
-object NotificationScheduler {
-    fun scheduleDailyEvaluation(context: Context) {
-        val request = PeriodicWorkRequestBuilder<DssEvaluationWorker>(24, TimeUnit.HOURS)
-            .setInitialDelay(calculateDelayUntil6AM(), TimeUnit.MILLISECONDS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            "daily_dss_evaluation",
-            ExistingPeriodicWorkPolicy.KEEP,
-            request
-        )
-    }
-}
-```
-
-The `DssEvaluationWorker` calls the `evaluate-dss` Edge Function, receives task output, inserts notifications into Room, and queues sync. No notification data is ever created from hardcoded rules in the app.
-
----
-
-## 🔹 Notification Center Screen
+## 🔹 Notification Center Overlay
 
 Accessed by tapping the `🔔` bell icon in the top bar:
 
 ```
 Notification Center
-────────────────────────────────────
-[💧] Water BED 3 overdue       2h ago  ○
-[🌿] Fertilize Eggplant today  5h ago  ○
-[🌾] Lettuce ready to harvest  1d ago  ●  ← unread
-────────────────────────────────────
-[Mark All Read]
+────────────────────────────────────────────────────────────
+[🐛] High Fruit Borer risk for PLOT 1 (Tomato)   2h ago  ○
+[🌾] PLOT R (Lettuce) target harvest date in 3d 5h ago  ○
+[🔔] Offline Sync Complete — 4 records uploaded  1d ago  ●  ← read
+────────────────────────────────────────────────────────────
+[Mark All as Read]
 ```
 
-- `○` = unread (filled circle indicator)
-- `●` = read
-- Tapping a notification: marks as read + navigates to relevant bed/task
+- `○` = Unread alert indicator (increments top bar badge counter).
+- `●` = Read alert.
+- **Tapping an Item**: Marks the notification as read and navigates directly to the associated plot, AgriLibrary guide, or monitoring screen.

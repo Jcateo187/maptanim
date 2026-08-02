@@ -12,23 +12,23 @@ All code in MapTanim must follow these standards. The most critical rule: **no s
 ```kotlin
 // FORBIDDEN — hardcoded task list in ViewModel
 val todayTasks = listOf(
-    FarmTask(title = "Water Bed 3", taskType = TaskType.WATER),  // ← STATIC DATA
+    FarmTask(title = "Water PLOT 3", taskType = TaskType.WATER),  // ← STATIC DATA
     FarmTask(title = "Fertilize Eggplant", taskType = TaskType.FERTILIZE)
 )
 
 // FORBIDDEN — hardcoded farm summary stats
-val farmSummary = FarmSummary(totalBeds = 12, totalPlants = 186)  // ← STATIC
+val farmSummary = FarmSummary(totalPlots = 12, totalPlants = 186)  // ← STATIC
 
-// FORBIDDEN — hardcoded bed positions
-val beds = listOf(
-    BedUiModel(id = "1", bedLabel = "BED 1", posX = 1.0f, posY = 2.0f)  // ← STATIC
+// FORBIDDEN — hardcoded plot positions
+val plots = listOf(
+    CropPlot(id = "1", plotLabel = "PLOT 1", posX = 1.0f, posY = 2.0f, ...)  // ← STATIC
 )
 
 // FORBIDDEN — mock DSS tasks not from DB
 fun getMockTasks() = listOf(...)  // ← MOCK
 
-// FORBIDDEN — fake bed for preview used in production
-val previewBed = BedUiModel(bedLabel = "PREVIEW", cropName = "Test Crop")  // ← never call outside @Preview
+// FORBIDDEN — fake plot for preview used in production
+val previewPlot = CropPlot(plotLabel = "PREVIEW", cropName = "Test Crop", ...)  // ← never call outside @Preview
 ```
 
 ### ✅ Required Patterns
@@ -74,8 +74,8 @@ GlobalScope.launch { ... }
 viewModelScope.launch { ... }
 
 // CORRECT — use suspend functions in coroutine scope
-suspend fun fetchBeds(farmId: String): List<BedEntity> = withContext(Dispatchers.IO) {
-    bedDao.getBeds(farmId)
+suspend fun fetchPlots(farmId: String): List<CropPlotEntity> = withContext(Dispatchers.IO) {
+    cropPlotDao.getPlots(farmId)
 }
 ```
 
@@ -108,11 +108,11 @@ fun EditToolsPanel(
 | Composable | `PascalCase` | `TodayTasksPanel` |
 | Screen | `XScreen` suffix | `HomeScreen`, `EditScreen` |
 | ViewModel | `XViewModel` suffix | `HomeViewModel`, `EditViewModel` |
-| Route | lowercase, underscore | `"home"`, `"bed_detail/{bedId}"` |
-| Repository | `XRepository` interface + `XRepositoryImpl` | `BedRepository`, `BedRepositoryImpl` |
+| Route | lowercase, underscore | `"home"`, `"plot_detail/{plotId}"` |
+| Repository | `XRepository` interface + `XRepositoryImpl` | `CropPlotRepository`, `CropPlotRepositoryImpl` |
 | Use Case | `VerbNounUseCase` | `GetTodayTasksUseCase`, `SaveFarmLayoutUseCase` |
-| Entity | `XEntity` suffix | `BedEntity`, `TaskEntity` |
-| Domain model | No suffix | `Bed`, `FarmTask`, `FarmSummary` |
+| Entity | `XEntity` suffix | `CropPlotEntity`, `TaskEntity` |
+| Domain model | No suffix | `CropPlot`, `FarmTask`, `FarmSummary` |
 
 ### Test Tags
 All interactive Compose elements must have `Modifier.testTag()` for UI tests:
@@ -130,7 +130,7 @@ Button(
 // CORRECT — UPPER_SNAKE_CASE for enum values
 enum class SoilType { LOAM, CLAY, SANDY, SILTY, PEATY, CHALKY }
 enum class TaskType { WATER, FERTILIZE, HARVEST, PEST_ALERT, APPLY_PESTICIDE }
-enum class EditTool { SELECT_MOVE, ADD_BED, PAINT_SOIL, ADD_TRELLIS, ADD_FENCE, DELETE }
+enum class EditTool { SELECT_MOVE, ADD_PLOT, ADD_PLANT, DELETE }
 enum class GrowthStage { GERMINATION, EARLY_VEGETATIVE, MID_VEGETATIVE, FLOWERING, FRUITING, HARVEST_READY, OVERDUE }
 ```
 

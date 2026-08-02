@@ -36,6 +36,11 @@ import com.maptanim.app.ui.components.background.HomeBackground
 import com.maptanim.app.ui.components.editcomponents.croptray.CropTray
 import com.maptanim.app.ui.components.editcomponents.layout.EditBottomLayout
 
+import com.maptanim.app.core.audio.BackgroundTrack
+import com.maptanim.app.core.audio.LocalSoundManager
+import com.maptanim.app.core.audio.SoundEffect
+import com.maptanim.app.core.audio.TrackBgmEffect
+
 /**
  * FarmEditorScreen — Streamlined Edit Mode screen with live CoC-style Drag & Drop Planting.
  */
@@ -44,11 +49,14 @@ fun FarmEditorScreen(
     navController: NavController,
     editViewModel: EditViewModel = viewModel()
 ) {
+    TrackBgmEffect(BackgroundTrack.EDITOR_FOCUS)
+
+    val soundManager = LocalSoundManager.current
     val context = LocalContext.current
     val uiState by editViewModel.uiState.collectAsState()
-    var activeCropName by remember { mutableStateOf("Carrot") }
-    var activeCropId by remember { mutableStateOf("carrot") }
-    var isRightPanelVisible by remember { mutableStateOf(true) }
+    var activeCropName by remember { mutableStateOf("") }
+    var activeCropId by remember { mutableStateOf("") }
+    var isRightPanelVisible by remember { mutableStateOf(false) }
 
     // Live Camera State tracked from FarmCanvas for accurate drop conversion
     var liveCameraState by remember { mutableStateOf(CameraState()) }
@@ -64,7 +72,7 @@ fun FarmEditorScreen(
         if (isDraggingCrop) {
             val rawWorld = IsometricProjection.toWorld(dragTouchPos.x, dragTouchPos.y, liveCameraState)
             val snapped = FarmCanvasRenderer.snapToGrid(rawWorld)
-            Offset(snapped.x.coerceIn(0f, 27.5f), snapped.y.coerceIn(0f, 28.0f))
+            Offset(snapped.x.coerceIn(0f, 29.0f), snapped.y.coerceIn(0f, 29.0f))
         } else if (uiState.selectedPlotId != null) {
             val selectedPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
             if (selectedPlot != null) {
@@ -74,6 +82,30 @@ fun FarmEditorScreen(
                 Offset(snapped.x.coerceIn(0f, maxX), snapped.y.coerceIn(0f, maxY))
             } else null
         } else null
+    }
+
+    val isValidPlacement = remember(isDraggingCrop, hoverWorldPos, uiState.plots, uiState.selectedPlotId) {
+        if (hoverWorldPos != null) {
+            val (w, h) = if (isDraggingCrop) {
+                1.0f to 1.0f
+            } else {
+                val selPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
+                (selPlot?.widthM ?: 1.0f) to (selPlot?.heightM ?: 1.0f)
+            }
+
+            val hx = hoverWorldPos.x
+            val hy = hoverWorldPos.y
+            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 30.0f && (hy + h) <= 30.0f
+
+            val overlaps = uiState.plots.any { plot ->
+                if (plot.id == uiState.selectedPlotId) false
+                else {
+                    hx < (plot.posX + plot.widthM) && (hx + w) > plot.posX &&
+                    hy < (plot.posY + plot.heightM) && (hy + h) > plot.posY
+                }
+            }
+            inBounds && !overlaps
+        } else true
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -94,6 +126,7 @@ fun FarmEditorScreen(
             activeCropName = activeCropName,
             activeCropId = activeCropId,
             hoverWorldPos = hoverWorldPos,
+            isValidPlacement = isValidPlacement,
             onCameraStateChanged = { liveCameraState = it }
         )
 
@@ -201,8 +234,14 @@ fun FarmEditorScreen(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 selectedCropName = activeCropName,
                 onCropSelected = { newCropName, newCropId ->
-                    activeCropName = newCropName
-                    activeCropId = newCropId
+                    if (activeCropName.equals(newCropName, ignoreCase = true)) {
+                        activeCropName = ""
+                        activeCropId = ""
+                    } else {
+                        activeCropName = newCropName
+                        activeCropId = newCropId
+                    }
+                    editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.ADD_PLANT)
                 },
                 onCropDragStart = { cropName, cropId, startOffset ->
                     isDraggingCrop = true
@@ -215,17 +254,21 @@ fun FarmEditorScreen(
                 },
                 onCropDragEnd = { dropOffset ->
                     if (isDraggingCrop) {
+                        val wasValid = isValidPlacement
                         isDraggingCrop = false
-                        val rawWorldPos = IsometricProjection.toWorld(dropOffset.x, dropOffset.y, liveCameraState)
-                        val snapped = FarmCanvasRenderer.snapToGrid(rawWorldPos)
-                        val targetX = snapped.x.coerceIn(0f, 27.5f)
-                        val targetY = snapped.y.coerceIn(0f, 28.0f)
-
-                        editViewModel.addDirectPlantingPlot(targetX, targetY, dragCropName, dragCropId)
+                        val dropWorld = com.maptanim.app.renderer.model.IsometricProjection.toWorld(dropOffset.x, dropOffset.y, liveCameraState)
+                        val snapped = com.maptanim.app.renderer.canvas.FarmCanvasRenderer.snapToGrid(dropWorld)
+                        val safeX = snapped.x.coerceIn(0f, 29.0f)
+                        val safeY = snapped.y.coerceIn(0f, 29.0f)
+                        if (wasValid) {
+                            editViewModel.addDirectPlantingPlot(safeX, safeY, dragCropName, dragCropId)
+                        }
                     }
                 },
                 onClose = {
                     isRightPanelVisible = false
+                    activeCropName = ""
+                    activeCropId = ""
                     editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.SELECT_MOVE)
                 }
             )
@@ -235,10 +278,16 @@ fun FarmEditorScreen(
         if (isDraggingCrop) {
             val cropClean = when (dragCropName.lowercase().replace(" ", "")) {
                 "stringbeans", "sitaw", "beans" -> "crop_stringbeans"
+                "eggplant", "talong" -> "crop_eggplant"
+                "tomato", "kamatis" -> "crop_tomato"
+                "onion", "sibuyas" -> "crop_onion"
+                "pumpkin", "kalabasa" -> "crop_pumpkin"
+                "corn", "mais" -> "crop_corn"
                 else -> "crop_carrot"
             }
             val assetBitmap = remember(cropClean) {
                 AssetLoader.loadFromAssets(context, "crops/${cropClean}_1.png")
+                    ?: AssetLoader.loadFromAssets(context, "crops/crop_carrot_1.png")
             }
 
             Box(
@@ -262,8 +311,17 @@ fun FarmEditorScreen(
                         modifier = Modifier.size(56.dp)
                     )
                 } else {
+                    val emoji = when (cropClean) {
+                        "crop_stringbeans" -> "🫘"
+                        "crop_eggplant" -> "🍆"
+                        "crop_tomato" -> "🍅"
+                        "crop_onion" -> "🧅"
+                        "crop_pumpkin" -> "🎃"
+                        "crop_corn" -> "🌽"
+                        else -> "🥕"
+                    }
                     Text(
-                        text = if (cropClean.contains("carrot")) "🥕" else "🫘",
+                        text = emoji,
                         fontSize = 32.sp
                     )
                 }
@@ -277,7 +335,9 @@ fun FarmEditorScreen(
             onDuplicateClick = {
                 uiState.selectedPlotId?.let { editViewModel.duplicatePlot(it) }
             },
-            onResizeClick = { /* highlight corner handles for precision resize */ },
+            onResizeClick = {
+                editViewModel.toggleResizeMode()
+            },
             onChangeCropClick = { },
             onChangeSoilClick = {
                 uiState.selectedPlotId?.let { editViewModel.paintSoil(it) }

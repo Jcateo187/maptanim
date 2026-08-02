@@ -10,6 +10,7 @@ import com.maptanim.app.renderer.model.toRenderData
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.maptanim.app.data.repository.RepositoryProvider
 
 // ─── HomeUiState ─────────────────────────────────────────────────────────
 
@@ -34,18 +35,22 @@ data class WeatherInfo(
 // ─── HomeViewModel ────────────────────────────────────────────────────────
 
 class HomeViewModel(
-    private val getTodayTasksUseCase: GetTodayTasksUseCase? = null,
-    private val getFarmSummaryUseCase: GetFarmSummaryUseCase? = null,
-    private val getFarmPlotsUseCase: GetFarmPlotsUseCase? = null,
-    private val getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase? = null,
-    private val getFarmsUseCase: GetFarmsUseCase? = null
+    private val getTodayTasksUseCase: GetTodayTasksUseCase = GetTodayTasksUseCase(RepositoryProvider.taskRepository),
+    private val getFarmSummaryUseCase: GetFarmSummaryUseCase = GetFarmSummaryUseCase(RepositoryProvider.cropPlotRepository, RepositoryProvider.taskRepository),
+    private val getFarmPlotsUseCase: GetFarmPlotsUseCase = GetFarmPlotsUseCase(RepositoryProvider.cropPlotRepository),
+    private val getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(RepositoryProvider.notificationRepository),
+    private val getFarmsUseCase: GetFarmsUseCase = GetFarmsUseCase(RepositoryProvider.farmRepository)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private var activeFarmId: String = ""
-    private var currentFarmerId: String = ""
+    private var activeFarmId: String = "farm-1"
+    private var currentFarmerId: String = "farmer-1"
+
+    init {
+        loadFarmData("farm-1")
+    }
 
     fun initialize(farmerId: String) {
         if (currentFarmerId == farmerId) return
@@ -72,51 +77,43 @@ class HomeViewModel(
     private fun loadFarmData(farmId: String) {
         val today = LocalDate.now().toString()
 
-        getFarmSummaryUseCase?.let { useCase ->
-            viewModelScope.launch {
-                useCase(farmId).collect { summary ->
-                    _uiState.update { it.copy(farmSummary = summary) }
-                }
+        viewModelScope.launch {
+            getFarmSummaryUseCase(farmId).collect { summary ->
+                _uiState.update { it.copy(farmSummary = summary) }
             }
         }
 
-        getTodayTasksUseCase?.let { useCase ->
-            viewModelScope.launch {
-                useCase(farmId, today).collect { tasks ->
-                    _uiState.update { it.copy(todayTasks = tasks) }
-                }
+        viewModelScope.launch {
+            getTodayTasksUseCase(farmId, today).collect { tasks ->
+                _uiState.update { it.copy(todayTasks = tasks) }
             }
         }
 
-        getUnreadNotificationCountUseCase?.let { useCase ->
-            viewModelScope.launch {
-                useCase(currentFarmerId).collect { count ->
-                    _uiState.update { it.copy(notificationCount = count) }
-                }
+        viewModelScope.launch {
+            getUnreadNotificationCountUseCase(currentFarmerId).collect { count ->
+                _uiState.update { it.copy(notificationCount = count) }
             }
         }
 
-        if (getFarmPlotsUseCase != null && getTodayTasksUseCase != null) {
-            viewModelScope.launch {
-                combine(
-                    getFarmPlotsUseCase.invoke(farmId),
-                    getTodayTasksUseCase.invoke(farmId, today)
-                ) { plots, tasks ->
-                    plots.map { plot ->
-                        val plotTasks = tasks.filter { it.plotId == plot.id }
-                        plot.toRenderData(
-                            activeTasks = plotTasks.map { task ->
-                                TaskPinData(
-                                    taskId   = task.id,
-                                    taskType = task.taskType,
-                                    plotId   = task.plotId
-                                )
-                            }
-                        )
-                    }
-                }.collect { renderPlots ->
-                    _uiState.update { it.copy(plots = renderPlots) }
+        viewModelScope.launch {
+            combine(
+                getFarmPlotsUseCase(farmId),
+                getTodayTasksUseCase(farmId, today)
+            ) { plots, tasks ->
+                plots.map { plot ->
+                    val plotTasks = tasks.filter { it.plotId == plot.id }
+                    plot.toRenderData(
+                        activeTasks = plotTasks.map { task ->
+                            TaskPinData(
+                                taskId   = task.id,
+                                taskType = task.taskType,
+                                plotId   = task.plotId
+                            )
+                        }
+                    )
                 }
+            }.collect { renderPlots ->
+                _uiState.update { it.copy(plots = renderPlots) }
             }
         }
     }

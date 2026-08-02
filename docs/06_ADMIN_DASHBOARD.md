@@ -38,7 +38,7 @@ The **MapTanim Admin Dashboard** is a web-based management panel accessible to u
 
 ### 4. Farm Monitoring (Read-Only)
 - View any registered farm (read-only, RLS bypass via `service_role` key)
-- View farm canvas layout data
+- View farm canvas layout data (`crop_plots`, `crop_zones`, `farm_objects` tables)
 - View harvest records and yield analytics
 
 ### 5. Analytics & Reports

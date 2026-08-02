@@ -1,65 +1,58 @@
 # 19. Edit Mode — Farm Editor
 
 ## 📌 Overview
-**Edit Mode** is the interactive direct soil farm layout editor in MapTanim. It features Clash of Clans (CoC) inspired drag-and-drop crop placement, live CoC-style glowing green isometric tile highlighting, 1:1 finger tracking, clean selection outlines, and streamlined contextual bottom editing tools (**Duplicate**, **Resize**, **Delete**).
+**Edit Mode** is the interactive direct soil farm layout editor in MapTanim. It features Clash of Clans (CoC) inspired drag-and-drop plot placement, live glowing green/red isometric tile collision highlighting, 1:1 finger tracking, clean selection handles, and streamlined bottom editing tools (`SELECT_MOVE`, `ADD_PLOT`, `ADD_PLANT`, `DELETE`).
 
 ---
 
 ## 🖼️ User Interface Specifications
 
-### 1. Top Right Navigation Bar
-- **Save Button**: Green rounded pill button (`Color(0xFF2E7D32)`) with white save icon + `"Save"` label. Triggers the **Save Farm Layout** modal dialog.
-- **Exit Button**: Red rounded pill button (`Color(0xFFC62828)`) with white exit icon + `"Exit"` label. Discards unsaved changes and returns to `HomeScreen`.
+### 1. Top Navigation Bar
+- **Save Button**: Green rounded pill button (`Color(0xFF2E7D32)`) with white save icon + `"Save"` label. Saves layout changes to Room SQLite and triggers background Supabase sync via `SyncWorker`.
+- **Exit Button**: Red rounded pill button (`Color(0xFFC62828)`) with white exit icon + `"Exit"` label. Discards unsaved changes and returns to View Mode (`HomeScreen`).
 
-### 2. Right Floating Action Button
-- **Add Plant / Crops Button**: Dark floating pill button with green flower icon + `"Add Plant / Crops"` label. Toggles the `CropTray` drawer.
+### 2. Left Edit Tools Toolbar (`LeftToolbar.kt`)
+- **Select & Move (`SELECT_MOVE`)**: Tap plot to select, drag to reposition on soil grid.
+- **Add Plot (`ADD_PLOT`)**: Tap empty soil grid space to instantiate a new `CropPlot`.
+- **Add Plant (`ADD_PLANT`)**: Tap plot to open `CropTray` drawer and assign vegetable crops.
+- **Delete (`DELETE`)**: Tap plot or object to delete with confirmation dialog.
 
-### 3. Right Crop Selection Drawer (`CropTray`)
-- **Header**: Title `"SELECT CROPS (2)"` with a close `✕` button.
-- **Filter Tabs**: `All`, `Seasonal`, `Permanent` with green active underline indicator.
-- **Search & Category**: Search input field (`"Search crops..."`) with search icon and category filter button.
-- **Drag Hint**: Light green hint box: `💡 Hold & drag crop card onto farm area to plant`.
-- **Crop Cards**:
-  - **Carrot Card**: Light green card with carrot graphic, titled **"Carrot"**, subtitle `Root • Drag/Tap`.
-  - **String Beans Card**: Light gray card with beans graphic, titled **"String Beans"**, subtitle `Podded • Drag/Tap`.
-
----
-
-## 🎮 Interactivity & Placement Mechanics
-
-### 1. CoC-Style Floating Drag & Drop (Right Panel)
-- **Floating Preview**: Dragging a crop card from `CropTray` spawns an elevated floating circular preview layer containing the single crop Stage 1 PNG sprite (`crop_carrot_1.png` / `crop_stringbeans_1.png`) right beneath your finger.
-- **Live Green Tile Highlight**: An isometric glowing green rhombus (`Color(0x554CAF50)` fill, `Color(0xFF4CAF50)` border) glides along the farm soil, snapping smoothly to the nearest grid tile in real-time.
-- **Drop Placement**: Releasing the crop calculates exact world coordinates via `IsometricProjection.toWorld` + camera pan/zoom and places the Stage 1 PNG sprite directly on the soil tile.
-
-### 2. Placed Crop Drag & Re-positioning
-- **Touch & Drag**: Pressing and dragging any placed crop on the farm area locks onto it instantly with 1:1 touch-to-world position tracking (`Math.round` nearest grid rounding).
-- **Live Tile Highlight**: While dragging a placed crop across ground tiles, the glowing green isometric tile highlight glides beneath it in real-time.
-- **No Drifting**: Zero sliding or top-drifting. Crops follow your finger 1:1 in all directions.
-
-### 3. Strict 30m x 30m Farm Boundary Containment
-- **Edge Clamping**: All crop drops, drag re-positioning, and hover tile highlights are strictly clamped to `[0.0, 30.0 - cropSize]` meters.
-- Crops and green tile highlights stop cleanly at the perimeter fences and can never be dragged into outer grass or scenery areas.
+### 3. Right Crop Selection Drawer (`CropTray.kt`)
+- **Header**: Dynamic title `SELECT CROPS (${crops.size})` with a close `✕` button.
+- **Filter Tabs**: `All`, `Bulb`, `Stem`, `Shoot`, `Leafy`, `Flower`, `Fruit`, `Root`, `Tuber`.
+- **Search & Category Filter**: Interactive search input field with category filter dropdown.
+- **Drag Hint**: Light green hint card: `💡 Hold & drag crop card onto farm area to plant`.
+- **Crop Cards**: Populated dynamically from Room SQLite `crops` table (13 High-Value Philippine crops).
 
 ---
 
-## 🛠️ Clean Selection & Contextual Bottom Tools
+## 🎮 Interactivity & Placement Mechanics (MD 34 Architecture)
 
-### 1. Clean Dashed Selection Outline
-- Tapping a placed crop highlights it with a clean dashed blue selection border (`Color(0xFF1E88E5)`) around the crop bounds.
-- All cluttering corner handle circles, midpoint dots, and center green buttons are hidden for a clean, uncluttered visual aesthetic.
+### 1. Drag & Drop Crop Placement (Right Panel)
+- **Floating Preview**: Dragging a crop card from `CropTray` spawns an elevated floating circular preview layer containing the single crop Stage 1 PNG sprite right beneath your finger.
+- **Live Tile Preview**:
+  - **Blue/Green Border (Valid)**: Glowing isometric rhombus border indicates safe placement on empty soil tiles.
+  - **Red Border (Invalid)**: Red preview border indicates collision with fences, obstacles, structures, or occupied plot bounds.
+- **1×1 Drop Instantiation**: Releasing finger instantiates an initial 1×1 `CropZone` (`width = 1.0m`, `height = 1.0m`) on the farm grid within the targeted `CropPlot`.
 
-### 2. Contextual Bottom Tools (`EditBottomLayout`)
-Selecting a crop displays a dark floating pill toolbar at the bottom center with 3 primary tools:
-- **Duplicate**: Clones the selected crop and places a copy at an adjacent tile (`+1.0m`).
-- **Resize**: Toggles precision corner resize handles for adjusting plot dimensions (`widthM`, `heightM`).
-- **Delete**: Red text button (`Color(0xFFEF5350)`) that removes the selected crop from the farm layout.
+### 2. Plot / Zone Selection & Border Highlight
+- **Selection State**: Tapping an existing plot or zone sets `selectedPlotId`.
+- **Selection Outline**: A clean white border (`Color(0xFFFFFFFF)`) or dashed outline surrounds the active `CropPlot`.
+
+### 3. Contextual Bottom Toolbar & Resizing (`EditBottomBar.kt`)
+Selecting a plot or zone displays the floating bottom toolbar with contextual tools:
+- **Duplicate Plot**: Clones the selected `CropPlot` and places an identical copy on adjacent soil grid coordinates (`+1.0m`).
+- **Resize Plot**: Activates 8 interactive resize handles (Top-Left, Top-Center, Top-Right, Mid-Left, Mid-Right, Bottom-Left, Bottom-Center, Bottom-Right). Dragging handles expands plot `widthM` and `heightM` (meters).
+- **Soil Type Selector**: Dropdown to switch soil classification (`LOAM`, `CLAY`, `SANDY`, `SILTY`, `PEATY`, `CHALKY`).
+- **Delete Plot**: Red action button (`Color(0xFFEF5350)`) that removes the selected plot from Room DB.
+
+### 4. Placed Plot Drag & Re-positioning
+- **Touch & Drag**: Dragging any selected plot tracks 1:1 with world position coordinates (`Math.round` grid snap).
+- **Boundary Containment**: Clamped to `[0.0, 30.0 - widthM]` meters to prevent plots from crossing farm perimeter fences.
 
 ---
 
 ## 💾 Save & Confirmation Flow
-1. Tap **Save** in top right.
-2. **Save Farm Layout Dialog**: Displays input field for farm name (default: `"Murcia Farm"`).
-3. Tap **Okay**: Persists layout to Supabase (authenticated user) or Room local database (guest user).
-4. **Success Dialog**: Displays confirmation icon + message `"Excellent Successful set up the farm"`.
-5. Tap **Okay**: Redirects to `HomeScreen` in View Mode.
+1. Tap **Save** in top bar.
+2. **Save Farm Layout**: Persists layout state (`crop_plots`, `crop_zones`, `farm_objects`) to Room DB and inserts `SyncQueueEntity` records for Supabase sync.
+3. **Success Feedback**: Displays confirmation toast/dialog and returns to View Mode (`HomeScreen`) with live updated HUD counters.

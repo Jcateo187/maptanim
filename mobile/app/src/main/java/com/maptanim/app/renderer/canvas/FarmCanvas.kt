@@ -31,8 +31,10 @@ fun FarmCanvas(
     activeCropName: String = "Carrot",
     activeCropId: String = "carrot",
     hoverWorldPos: Offset? = null,
+    isValidPlacement: Boolean = true,
     onCameraStateChanged: (CameraState) -> Unit = {},
-    onOpenCropPicker: (() -> Unit)? = null
+    onOpenCropPicker: (() -> Unit)? = null,
+    onOpenMonitoring: (() -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val resources = context.resources
@@ -44,32 +46,39 @@ fun FarmCanvas(
     val currentSelectedPlotId by rememberUpdatedState(uiState.selectedPlotId)
     val currentActiveTool by rememberUpdatedState(uiState.activeTool)
     val currentCropZones by rememberUpdatedState(uiState.cropZones)
+    val currentIsResizeMode by rememberUpdatedState(uiState.isResizeMode)
+    val currentIsSnapEnabled by rememberUpdatedState(uiState.isSnapEnabled)
 
     LaunchedEffect(cameraState) {
         onCameraStateChanged(cameraState)
     }
 
-    val gestureHandler = remember(editViewModel, activeCropName, activeCropId, onOpenCropPicker, canvasSize) {
+    val gestureHandler = remember(editViewModel, activeCropName, activeCropId, onOpenCropPicker, onOpenMonitoring, canvasSize) {
         CanvasGestureHandler(
             onPlotTapped = { plotId ->
-                when (uiState.activeTool) {
-                    com.maptanim.app.domain.model.EditTool.SELECT_MOVE -> editViewModel.selectPlot(plotId)
-                    com.maptanim.app.domain.model.EditTool.ADD_PLANT   -> editViewModel.selectPlot(plotId)
-                    com.maptanim.app.domain.model.EditTool.DELETE      -> editViewModel.deletePlot(plotId)
-                    else -> editViewModel.selectPlot(plotId)
+                if (canvasMode == CanvasMode.VIEW) {
+                    onOpenMonitoring?.invoke()
+                } else {
+                    when (currentActiveTool) {
+                        com.maptanim.app.domain.model.EditTool.SELECT_MOVE -> editViewModel.selectPlot(plotId)
+                        com.maptanim.app.domain.model.EditTool.ADD_PLANT   -> editViewModel.selectPlot(plotId)
+                        com.maptanim.app.domain.model.EditTool.DELETE      -> editViewModel.deletePlot(plotId)
+                        else -> editViewModel.selectPlot(plotId)
+                    }
                 }
             },
             onCanvasTapped = { worldPos ->
                 var targetX = worldPos.x
                 var targetY = worldPos.y
-                if (uiState.isSnapEnabled) {
+                if (currentIsSnapEnabled) {
                     val snapped = FarmCanvasRenderer.snapToGrid(worldPos)
                     targetX = snapped.x
                     targetY = snapped.y
                 }
-                if (uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT ||
-                    uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT) {
-                    editViewModel.addDirectPlantingPlot(targetX, targetY, activeCropName, activeCropId)
+                if (activeCropName.isNotEmpty() && 
+                    (currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT ||
+                     currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT)) {
+                    editViewModel.addDirectPlantingPlot(targetX.coerceIn(0f, 29f), targetY.coerceIn(0f, 29f), activeCropName, activeCropId)
                 } else {
                     editViewModel.deselect()
                 }
@@ -79,27 +88,13 @@ fun FarmCanvas(
                 editViewModel.movePlot(plotId, worldDelta)
             },
             onPlotDragEnd = { },
-            onHandleDragStart = { _, _ -> },
+            onHandleDragStart = { _, plotId -> editViewModel.onHandleDragStart(plotId) },
             onHandleDragging = { handle, worldDelta ->
-                uiState.selectedPlotId?.let { plotId ->
-                    val plot = uiState.editedPlots.firstOrNull { it.id == plotId }
-                    if (plot != null) {
-                        when (handle) {
-                            HandleType.MID_RIGHT  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM)
-                            HandleType.MID_LEFT   -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM)
-                            HandleType.MID_BOTTOM -> editViewModel.resizePlot(plotId, plot.widthM, plot.heightM + worldDelta.y)
-                            HandleType.MID_TOP    -> editViewModel.resizePlot(plotId, plot.widthM, plot.heightM - worldDelta.y)
-                            HandleType.CORNER_BR  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM + worldDelta.y)
-                            HandleType.CORNER_BL  -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM + worldDelta.y)
-                            HandleType.CORNER_TR  -> editViewModel.resizePlot(plotId, plot.widthM + worldDelta.x, plot.heightM - worldDelta.y)
-                            HandleType.CORNER_TL  -> editViewModel.resizePlot(plotId, plot.widthM - worldDelta.x, plot.heightM - worldDelta.y)
-                            HandleType.DRAG       -> editViewModel.movePlot(plotId, worldDelta)
-                            else -> {}
-                        }
-                    }
+                currentSelectedPlotId?.let { plotId ->
+                    editViewModel.resizePlotByHandle(plotId, handle, worldDelta)
                 }
             },
-            onHandleDragEnd = { },
+            onHandleDragEnd = { _ -> editViewModel.onHandleDragEnd() },
             onDeleteQuickTapped = { plotId -> editViewModel.deletePlot(plotId) },
             onActionBtnTapped = { plotId -> editViewModel.selectPlot(plotId) },
             onCameraPan = { dx, dy ->
@@ -178,7 +173,8 @@ fun FarmCanvas(
                                     camera = cameraState,
                                     handles = currentHandles,
                                     selectedPlotId = currentSelectedPlotId,
-                                    activeTool = currentActiveTool
+                                    activeTool = currentActiveTool,
+                                    isResizeMode = currentIsResizeMode
                                 )
                             } else if (change.pressed && change.positionChange() != Offset.Zero) {
                                 val delta = change.positionChange()
@@ -227,8 +223,10 @@ fun FarmCanvas(
                 selectedPlotId = uiState.selectedPlotId,
                 selectedZoneId = uiState.selectedZoneId,
                 hoverWorldPos = hoverWorldPos,
+                isValidPlacement = isValidPlacement,
                 isGridEnabled = uiState.isGridEnabled,
                 isSnapEnabled = uiState.isSnapEnabled,
+                isResizeMode = uiState.isResizeMode,
                 resources = resources,
                 context = context,
                 onHandlesReady = { _, handles ->

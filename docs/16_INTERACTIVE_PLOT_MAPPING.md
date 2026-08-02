@@ -1,50 +1,76 @@
 # 16. Interactive Plot Mapping Specifications
 
 ## 📌 Overview
-This document specifies the exact technical interaction model for the **Direct Soil Planting & Drag-and-Drop Crop Mapping Engine** in MapTanim. It details crop selection, hold-and-drag crop positioning, selection handle overlays for resizing, crop deletion, and the complete **Save Farm Layout Flow** (Supabase sync for logged-in farmers / Room Local Storage for guest farmers) with on-screen completion confirmation.
+This document specifies the exact technical interaction model for the **Direct Soil Planting, Crop Zone Expansion & Drag-and-Drop Mapping Engine** in MapTanim, aligned with the **Crop Zone Specifications (MD 34)**. It details initial 1×1 placement, hold-and-drag crop positioning, blue/red drag placement previews, white selection borders, 8-handle bounding box overlays for expanding crop zones, contextual bottom toolbar actions (**Duplicate**, **Resize**, **Delete**), and the complete **Save Farm Layout Flow**.
 
 ---
 
-## 🔹 Finalized User Workflow
+## 🔹 Finalized User Workflow (MD 34 Architecture)
 
-```
-1. Click "Add Plant/Crops" in Edit Tools Left Panel
+```text
+1. Open Crop Tray from EditScreen Floating Button
    │
    ▼
-2. Select Crop from Right Panel (CropTray: Carrot 🥕, String Beans 🫘, etc.)
+2. Select & Hold Crop Card (Carrot 🥕, String Beans 🫘, Eggplant 🍆, etc.)
    │
    ▼
-3. Tap or Drag & Drop crop onto Farm Canvas Soil
+3. Drag across Farm Canvas Soil (Real-time Blue/Green valid or Red invalid preview)
    │
    ▼
-4. Click "Select / Move" -> Displays outer crop selection overlay & resize handles
+4. Release Finger -> Creates Initial 1×1 Crop Zone & Auto-Selects (White Border)
    │
    ▼
-5. Hold & Drag Crop -> Position crop anywhere inside the farm canvas map
+5. Display Bottom Toolbar (Duplicate | Resize | Delete)
+   │
+   ├──> Tap "Resize"    ──> Displays 8 Resize Handles (Top/Mid/Bot Corners & Edges)
+   │                       Drag handle to expand width & height (Generates plant grid)
+   │
+   ├──> Tap "Duplicate" ──> Spawns copy of selected Crop Zone on adjacent tile (+1m)
+   │
+   └──> Tap "Delete"    ──> Removes selected Crop Zone from layout
    │
    ▼
-6. Click "Delete" -> Removes selected crop plot from farm layout
+6. Hold & Drag Crop Zone -> Reposition crop zone anywhere on 30m × 30m farm soil grid
    │
    ▼
-7. Click "Save" in Left Panel
+7. Click "Save" -> Save Farm Dialog ("Type farm name")
    │
-   ├──> Save Farm Dialog: "Type farm name"
-   │    ├── Cancel  ──> Closes dialog, stays in EditScreen
-   │    └── Okay    ──> Saves to Supabase (Logged-in) or Local Storage (Guest)
+   ├──> Cancel ──> Closes dialog, stays in EditScreen
+   └──> Okay   ──> Persists Crop Zone layout to Supabase / Room SQLite
    │
    ▼
-8. On-Screen Message: "Excellent Successful set up the farm"
-   │
-   └──> Click "Okay"  ──> Navigates to HomeScreen
+8. Confirmation Toast / Dialog: "Excellent Successful set up the farm" -> Returns to HomeScreen
 ```
 
 ---
 
-## 🔹 Specifications
-- **No Auto Trellises**: Trellises are excluded from auto-generation; trellises will be manually created as distinct assets when crops need them.
-- **Hold-to-Drag**: Long-pressing / holding any crop plot enables direct drag-and-drop repositioning anywhere on the soil grid.
-- **Selection Overlay**: Tapping **Select / Move** renders an isometric dashed blue boundary with 8 corner/edge resize handles around the selected crop plot.
+## 🔹 Visual States & Validation Rules (MD 34)
+
+| State | Visual Indicator Graphic | Meaning & Rule |
+|---|---|---|
+| **Drag Placement Preview (Valid)** | 🟦 Blue Border / Glowing Green Rhombus | Safe soil grid tile position; zero collision with structures or obstacles. |
+| **Drag Placement Preview (Invalid)** | 🟥 Red Border / Red Rhombus | Collides with outer fences, rocks, structures, or occupied plots. |
+| **Selected Crop Zone** | ⬜ Permanent White Border / Dashed Outline | Currently active selection; displays bottom toolbar (**Duplicate**, **Resize**, **Delete**). |
+| **Resize Mode Active** | ⭕ White Border + 8 Resize Handles | Bounding box active; dragging handles adjusts `width` and `height` without scaling plant sprites. |
+
+---
+
+## 🔹 Core Design & Mechanics (Crop Zone Architecture)
+- **Standardized Asset Datasets**: Pre-made isometric PNG crop sprites are used instead of procedural assets per vegetable.
+- **Crop Zone Expansion (No Sprite Scaling)**: Resizing does **NOT** enlarge individual plant sprites. Resizing expands the **Crop Zone** area (e.g. 1×1 → 2×2 → 3×3), automatically placing duplicate plant instances across all valid tiles in the zone via `PlantInstanceGenerator`.
+- **8-Handle Bounding Box Overlay**: Selecting **Resize** displays 8 editable handles (Top-Left, Top-Center, Top-Right, Mid-Left, Mid-Right, Bottom-Left, Bottom-Center, Bottom-Right).
+- **Single Unit Management**: All plants generated within a `CropZone` share the same crop type, planting date, growth stage, and health status.
+- **Hold-to-Drag**: Long-pressing / holding any crop zone enables direct drag-and-drop repositioning anywhere on the soil grid.
 - **Save & Sync Flow**:
-  - **Authenticated Users**: Synchronizes layout directly to Supabase (`farms` & `beds` tables).
-  - **Guest Users**: Stores layout in Room Local Storage (`PlantingPlotEntity`).
-  - **Confirmation Dialog**: Displays `"Excellent Successful set up the farm"` before proceeding to `HomeScreen`.
+  - **Authenticated Users**: Synchronizes layout directly to Supabase (`farms`, `crop_plots`, `crop_zones`, and `farm_objects` tables).
+  - **Guest Users**: Stores layout locally in Room Database (`CropPlotEntity`, `CropZoneEntity`, `FarmObjectEntity`).
+  - **Confirmation**: Persists changes instantly and returns to `HomeScreen` in View Mode.
+
+---
+
+## 🔹 Scope Clarification: Companion Compatibility Evaluation
+- **Canvas Focus**: The 2D plot canvas focuses exclusively on direct soil planting, crop zone placement, spatial arrangement, and boundary resizing.
+- **Monitoring Hub Overlay**: Evaluation of intercropping compatibility (beneficial vs. antagonistic crop pairings) is executed dynamically inside the **Monitoring Hub / Decision Support Overlay** when reviewing active farm plots.
+- For complete technical specifications, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
+
+

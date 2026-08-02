@@ -262,7 +262,7 @@ fun MonitoringDashboardOverlay(
                                 ) {
                                     items(filteredCrops) { crop ->
                                         when (uiState.selectedNavSection) {
-                                            MonitoringNavSection.MY_PLANTS -> MyPlantsCard(crop)
+                                            MonitoringNavSection.MY_PLANTS -> MyPlantsCard(crop, onStartMonitoring = { viewModel.startMonitoring(it) })
                                             MonitoringNavSection.TIMELINE -> TimelineCard(crop)
                                             MonitoringNavSection.COMPANIONS -> CompanionsCard(crop)
                                             MonitoringNavSection.GROWING_TIPS -> GrowingTipsCard(crop)
@@ -319,7 +319,10 @@ private fun NavSectionItem(
 
 // ── 1. MY PLANTS CARD ────────────────────────────────────────────────────────
 @Composable
-private fun MyPlantsCard(crop: MonitoredPlant) {
+private fun MyPlantsCard(
+    crop: MonitoredPlant,
+    onStartMonitoring: (String) -> Unit = {}
+) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFF1B2317)
@@ -350,18 +353,36 @@ private fun MyPlantsCard(crop: MonitoredPlant) {
                 Text("Location: ${crop.plotLabel} | Category: ${crop.category.label}", fontSize = 11.sp, color = White.copy(alpha = 0.75f))
                 Text("Seasonality: ${crop.seasonality.label}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
             }
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = ForestGreen.copy(alpha = 0.25f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, ForestGreen)
-            ) {
-                Text(
-                    text = crop.healthStatus,
-                    color = White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+
+            if (!crop.isMonitoringStarted) {
+                Button(
+                    onClick = { onStartMonitoring(crop.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, tint = White, modifier = Modifier.size(14.dp))
+                        Text("Start", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = White)
+                    }
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = ForestGreen.copy(alpha = 0.25f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ForestGreen)
+                ) {
+                    Text(
+                        text = crop.healthStatus,
+                        color = White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }

@@ -34,6 +34,7 @@ class CanvasGestureHandler(
 
     private var initialPlotWorldPos: Offset? = null
     private var initialTouchWorldPos: Offset? = null
+    private var initialHandleTouchWorldPos: Offset? = null
 
     /**
      * Called on each pointer tap event.
@@ -76,6 +77,16 @@ class CanvasGestureHandler(
     ) {
         val screenDelta = currentPos - previousPos
 
+        // ── Handle drag (resizing 8 bounding box handles) ──────────────────
+        activeHandleDrag?.let { handle ->
+            val currentTouchWorldPos = IsometricProjection.toWorld(currentPos.x, currentPos.y, camera)
+            val startTouchWorld = initialHandleTouchWorldPos ?: currentTouchWorldPos
+            val totalWorldDelta = currentTouchWorldPos - startTouchWorld
+
+            onHandleDragging(handle, totalWorldDelta)
+            return
+        }
+
         // ── Plot body drag (re-positioning placed crop) ───────────────────
         activePlotDrag?.let { plotId ->
             val currentTouchWorldPos = IsometricProjection.toWorld(currentPos.x, currentPos.y, camera)
@@ -97,21 +108,43 @@ class CanvasGestureHandler(
         camera: CameraState,
         handles: HandlePositions?,
         selectedPlotId: String?,
-        activeTool: EditTool
+        activeTool: EditTool,
+        isResizeMode: Boolean = false
     ) {
-        // Direct hold & drag on any placed crop on farm area with expanded hit radius
+        // 1. If resize mode is active and a plot is selected, check handle hit test first
+        if (isResizeMode && selectedPlotId != null && handles != null) {
+            val handleHit = hitTestHandles(startPos, handles)
+            if (handleHit != null) {
+                activeHandleDrag = handleHit
+                initialHandleTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
+                onHandleDragStart(handleHit, selectedPlotId)
+            }
+            return
+        }
+
+        // 2. Drag placed crop on farm area ONLY IF already selected (Click/tap first before repositioning)
         val tappedPlot = hitTestPlots(startPos, plots, camera)
         if (tappedPlot != null) {
-            onPlotTapped(tappedPlot.id)
-            activePlotDrag = tappedPlot.id
-            initialPlotWorldPos = Offset(tappedPlot.posX, tappedPlot.posY)
-            initialTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
-            onPlotDragStart(tappedPlot.id)
+            if (tappedPlot.id == selectedPlotId) {
+                // Already selected -> allow repositioning/dragging
+                activePlotDrag = tappedPlot.id
+                initialPlotWorldPos = Offset(tappedPlot.posX, tappedPlot.posY)
+                initialTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
+                onPlotDragStart(tappedPlot.id)
+            } else {
+                // Not selected yet -> tap to select first, do not initiate drag
+                onPlotTapped(tappedPlot.id)
+            }
             return
         }
     }
 
     fun onDragEnd() {
+        activeHandleDrag?.let { handle ->
+            onHandleDragEnd(handle)
+            activeHandleDrag = null
+            initialHandleTouchWorldPos = null
+        }
         activePlotDrag?.let { plotId ->
             onPlotDragEnd(plotId)
             activePlotDrag = null
@@ -128,6 +161,29 @@ class CanvasGestureHandler(
     }
 
     // ── Hit Testing ──────────────────────────────────────────────────────
+
+    private fun hitTestHandles(screenPos: Offset, handles: HandlePositions?): HandleType? {
+        if (handles == null) return null
+        val maxRadiusPx = 100f
+
+        val candidateHandles = listOf(
+            HandleType.CORNER_TL to handles.cornerTL,
+            HandleType.CORNER_TR to handles.cornerTR,
+            HandleType.CORNER_BL to handles.cornerBL,
+            HandleType.CORNER_BR to handles.cornerBR,
+            HandleType.MID_TOP to handles.midTop,
+            HandleType.MID_BOTTOM to handles.midBottom,
+            HandleType.MID_LEFT to handles.midLeft,
+            HandleType.MID_RIGHT to handles.midRight
+        )
+
+        val bestMatch = candidateHandles
+            .map { (type, pos) -> type to (screenPos - pos).getDistance() }
+            .filter { it.second <= maxRadiusPx }
+            .minByOrNull { it.second }
+
+        return bestMatch?.first
+    }
 
     private fun hitTestPlots(
         screenPos: Offset,

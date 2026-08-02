@@ -30,6 +30,9 @@ import com.maptanim.app.ui.components.profile.ViewAvatarDialog
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.TextPrimary
 import com.maptanim.app.ui.theme.White
+import com.maptanim.app.core.audio.LocalSoundManager
+import com.maptanim.app.core.audio.SoundEffect
+import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -448,11 +451,58 @@ private fun SettingsTabContent(
     viewModel: ProfileViewModel,
     navController: NavHostController
 ) {
+    var showAudioSettingsModal by remember { mutableStateOf(false) }
+    val soundManager = LocalSoundManager.current
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(6.dp))
+
+        // Audio & Sound Settings Section
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xFF1E261A),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                    showAudioSettingsModal = true
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(
+                        imageVector = if (soundManager.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = ForestGreen
+                    )
+                    Column {
+                        Text("Audio & Sound Settings", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (soundManager.isMuted) "Master Audio Muted" else "Music & SFX Enabled",
+                            color = if (soundManager.isMuted) Color(0xFFEF9A9A) else ForestGreen,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+            }
+        }
+
+        if (showAudioSettingsModal) {
+            AudioSettingsDialog(
+                onDismissRequest = { showAudioSettingsModal = false }
+            )
+        }
 
         // Bind Account Section
         Surface(

@@ -1,10 +1,15 @@
-# 20. Decision Support System (DSS)
+# 20. Decision Support System (DSS) & Crop Monitoring
 
 ## 📌 Overview
-The **DSS Engine** is the intelligence core of MapTanim. It evaluates farm and crop data to generate:
-1. **TODAY'S TASKS** — The task list visible in the View Mode left panel (💧 Water, 🌿 Fertilize, 🌾 Harvest, 🐛 Pest alerts)
-2. **Canvas badge pins** — Visual overlays on farm beds indicating active tasks
-3. **Companion planting alerts** — Warnings when antagonist crops are placed adjacent
+The **DSS Engine** is the intelligence core of MapTanim. It evaluates farm layout, soil conditions, weather, and crop growth timelines to power two primary user-facing systems:
+
+1. **TODAY'S TASKS (`TodaysTasksOverlay.kt`)**:
+   - Real-time daily actionable tasks: 💧 **Water**, 🌿 **Fertilize**, 🌾 **Harvest**, and 🐛 **Pest Alert / Scouting**.
+   - Renders task cards on the left HUD panel and active status pins floating over 2D bed plots on the farm canvas.
+
+2. **MONITORING DASHBOARD SYSTEM (`MonitoringDashboardOverlay.kt`)**:
+   - Comprehensive crop monitoring hub featuring 6 dedicated panels: **My Plants**, **Timeline**, **Calendar**, **Companions**, **Growing Tips**, and **Pest & Disease Control**.
+   - Integrates unmonitored crop tracking with a **Glowing Calendar Badge (`📅`)** floating at the top of crop labels on 2D map beds.
 
 ---
 
@@ -12,28 +17,64 @@ The **DSS Engine** is the intelligence core of MapTanim. It evaluates farm and c
 
 | Input | Source | Example |
 |-------|--------|---------|
-| Bed layout | Room DB → beds table | BED 3 — Tomato, LOAM, planted 2026-06-01 |
-| Crop data | Room DB → crops table | Tomato: 70 days to harvest, watering every 2 days |
-| DSS rules | Room DB → dss_rules table | Tomato + Eggplant = ANTAGONIST |
-| Current date | System clock | 2026-07-24 |
-| Season | Derived from current date | WET season (June–November PH) |
-| Soil type | Bed entity | LOAM |
+| Plot layout | Room DB → `crop_plots` | PLOT 1 — Carrot, LOAM, 3m × 2m |
+| Crop data | Catalog → `AVAILABLE_CROP_CATALOG` | Carrot: 75 days to harvest, weekly watering |
+| DSS rules | `DssEngine.kt` matrix | Tomato + Eggplant = ANTAGONIST alert |
+| Current date | System clock | 2026-08-01 |
+| Seasonality | Derived from system date | SEASONAL (Wet Season PH) |
+| Soil type | `PlotRenderData` entity | LOAM / SANDY / SILTY / CLAY |
 
 ---
 
-## 🔹 DSS Outputs
+## 🔹 DSS Outputs & Navigation Breakdown
 
-| Output | Display Location |
-|--------|-----------------|
-| WATER task | TODAY'S TASKS row (💧 blue) + canvas water pin on bed |
-| FERTILIZE task | TODAY'S TASKS row (🌿 green) + canvas fertilize pin on bed |
-| HARVEST task | TODAY'S TASKS row (🌾 amber) + canvas harvest pin on bed |
-| PEST_ALERT task | TODAY'S TASKS row (🐛 red) + canvas pest pin on bed |
-| Farm Summary | FARM SUMMARY panel (12 Beds, 186 Plants, 4 Ready, 2 Active Alerts) |
+| Output | Component / Display Location | Interactive Behavior |
+|--------|------------------------------|----------------------|
+| **WATER Task** | `TodaysTasksOverlay.kt` (💧 Blue pill) + Canvas Pin | Tapping logs watering event & updates soil moisture |
+| **FERTILIZE Task** | `TodaysTasksOverlay.kt` (🌿 Green pill) + Canvas Pin | Tapping logs fertilizer application |
+| **HARVEST Task** | `TodaysTasksOverlay.kt` (🌾 Amber pill) + Canvas Pin | Tapping opens harvest yield modal |
+| **PEST_ALERT Task** | `TodaysTasksOverlay.kt` (🐛 Red pill) + Canvas Pin | Tapping opens organic treatment guide |
+| **Unstarted Crop Badge** | 2D Canvas (`FarmCanvasRenderer.kt` 📅 Badge) | Floating badge above crop label for unmonitored beds |
+| **Monitoring Hub** | `MonitoringDashboardOverlay.kt` | Opens via Top Bar button or tapping 2D canvas bed/badge |
 
 ---
 
-## 🔹 Task Generation Rules
+## 🔹 Monitoring Dashboard Hub Architecture
+
+The **Monitoring Dashboard Overlay** (`MonitoringDashboardOverlay.kt` & `MonitoringViewModel.kt`) contains 6 intelligent sub-navigation views:
+
+### 1. My Plants Panel
+- Displays cards for all planted crops on active farm plots.
+- Shows Crop Name, Local Name (e.g. *Karot*, *Sitaw*, *Talong*), Plot Location (e.g. `PLOT 1`), Category, and Seasonality.
+- Features the **"📅 Start Monitoring"** action button for pending crops (`isMonitoringStarted == false`).
+
+### 2. Timeline Panel
+- 4-Stage visual growth progress stepper:
+  1. `Seedling` (Stage 1–2)
+  2. `Vegetative` (Stage 3)
+  3. `Flowering / Podding` (Stage 4)
+  4. `Harvest Ready` (Stage 5)
+- Displays current `daysPlanted` vs `daysToHarvest` (e.g. *Day 28 of 75*).
+
+### 3. Calendar Panel
+- Planting calendar mapping crop varieties against Philippine wet and dry seasonal schedules.
+- Highlights unstarted crops with glowing calendar badges requiring farmer activation.
+
+### 4. Companion Planting Panel
+- Evaluates active farm plot crop assignments against the companion matrix.
+- Highlights **BENEFICIAL** pairings (e.g. *Carrot + String Beans*) and flags **ANTAGONIST** conflicts (e.g. *Tomato + Eggplant*).
+- **Scope Specification**: Companion planting compatibility overlays operate within this Monitoring Dashboard Panel (and DSS overlay sheets) rather than being rendered directly over individual 2D canvas soil grid tiles. For complete specifications, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
+
+
+### 5. Growing Tips Panel
+- Delivers variety-tailored advice on soil preparation, sunlight exposure, depth, and organic fertilization.
+
+### 6. Pest & Disease Control Panel
+- Lists common pests (e.g. *Carrot Rust Fly*, *Aphids*, *Pod Borers*) alongside non-chemical Integrated Pest Management (IPM) solutions.
+
+---
+
+## 🔹 Today's Tasks Generation Rules
 
 ### Water Task Rule
 ```
@@ -63,31 +104,47 @@ THEN generate PEST_ALERT task for this bed
 
 ---
 
-## 🔹 Growth Stage Calculator
+## 🔹 Growth Stage Calculator (Variety-Driven)
+
+> [!IMPORTANT]
+> Growth stage durations are computed dynamically based on the specific **Crop Variety** (e.g. *Diamante Max F1* vs *Apollo* Tomato) as defined in **[36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)**. Static hardcoded species-level stage days are no longer used.
 
 ```kotlin
-// GrowthStageCalculator.kt
-enum class GrowthStage {
-    GERMINATION,        // 0–7 days from planting
-    EARLY_VEGETATIVE,   // 8–21 days
-    MID_VEGETATIVE,     // 22–35 days
-    FLOWERING,          // 36–50 days
-    FRUITING,           // 51–70 days
-    HARVEST_READY,      // >= days_to_harvest
-    OVERDUE             // >= days_to_harvest + 7
-}
+// VarietyGrowthCalculator.kt
+fun calculate(
+    plantedDate: LocalDate,
+    today: LocalDate,
+    stage1Days: Int,
+    stage2Days: Int,
+    stage3Days: Int,
+    stage4Days: Int,
+    totalDurationDays: Int
+): VarietyGrowthInfo {
+    val daysPlanted = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
 
-fun calculateGrowthStage(plantedDate: LocalDate, crop: Crop, today: LocalDate): GrowthStage {
-    val daysFromPlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt()
-    return when {
-        daysFromPlanting < 7  -> GrowthStage.GERMINATION
-        daysFromPlanting < 21 -> GrowthStage.EARLY_VEGETATIVE
-        daysFromPlanting < 35 -> GrowthStage.MID_VEGETATIVE
-        daysFromPlanting < 50 -> GrowthStage.FLOWERING
-        daysFromPlanting < crop.daysToHarvest -> GrowthStage.FRUITING
-        daysFromPlanting < crop.daysToHarvest + 7 -> GrowthStage.HARVEST_READY
-        else -> GrowthStage.OVERDUE
+    val stage2Threshold = stage1Days
+    val stage3Threshold = stage1Days + stage2Days
+    val stage4Threshold = stage1Days + stage2Days + stage3Days
+    val stage5Threshold = totalDurationDays
+
+    val (stage, stageName) = when {
+        daysPlanted < stage2Threshold -> 1 to "Stage 1 (Sprout)"
+        daysPlanted < stage3Threshold -> 2 to "Stage 2 (Seedling)"
+        daysPlanted < stage4Threshold -> 3 to "Stage 3 (Vegetative)"
+        daysPlanted < stage5Threshold -> 4 to "Stage 4 (Flowering/Fruiting)"
+        else -> 5 to "Stage 5 (Harvest Ready)"
     }
+
+    val daysRemaining = (totalDurationDays - daysPlanted).coerceAtLeast(0)
+    val progress = (daysPlanted.toFloat() / totalDurationDays.toFloat()).coerceIn(0.0f, 1.0f)
+
+    return VarietyGrowthInfo(
+        currentStage = stage,
+        stageName = stageName,
+        daysPlanted = daysPlanted,
+        daysRemainingToHarvest = daysRemaining,
+        progressPercentage = progress
+    )
 }
 ```
 
@@ -167,20 +224,20 @@ class DssEngine @Inject constructor(
     private val soilScorer: SoilSuitabilityScorer
 ) {
     fun evaluate(
-        beds: List<BedUiModel>,
+        plots: List<CropPlot>,
         crops: List<Crop>,
         activities: List<Activity>,
         today: LocalDate
     ): DssResult {
-        val tasks = beds.flatMap { bed ->
-            val crop = crops.firstOrNull { it.name == bed.cropName } ?: return@flatMap emptyList()
-            generateTasks(bed, crop, activities, today)
+        val tasks = plots.flatMap { plot ->
+            val crop = crops.firstOrNull { it.name == plot.cropName } ?: return@flatMap emptyList()
+            generateTasks(plot, crop, activities, today)
         }
-        val companionAlerts = companionMatrix.evaluate(beds)
-        val soilScores = beds.map { bed ->
-            val crop = crops.firstOrNull { it.name == bed.cropName }
-            SoilScore(bed.bedLabel, bed.soilType,
-                if (crop != null) soilScorer.calculateSoilSuitability(bed.soilType, crop) else null)
+        val companionAlerts = companionMatrix.evaluate(plots)
+        val soilScores = plots.map { plot ->
+            val crop = crops.firstOrNull { it.name == plot.cropName }
+            SoilScore(plot.plotLabel, plot.soilType,
+                if (crop != null) soilScorer.calculateSoilSuitability(plot.soilType, crop) else null)
         }
         return DssResult(tasks = tasks, companionAlerts = companionAlerts, soilScores = soilScores)
     }

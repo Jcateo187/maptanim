@@ -143,6 +143,7 @@ data class PlotRenderData(
     val widthM: Float,
     val heightM: Float,
     val rotationDeg: Float = 0f,
+    val isMonitoringStarted: Boolean = false,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
     val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
@@ -200,6 +201,7 @@ fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRen
     widthM = widthM,
     heightM = heightM,
     rotationDeg = rotationDeg,
+    isMonitoringStarted = !plantedDate.isNullOrBlank(),
     activeTasks = activeTasks
 )
 
@@ -258,6 +260,7 @@ data class CropZoneRenderData(
     val widthM: Float,
     val heightM: Float,
     val spacingM: Float,
+    val growthStage: Int = 1,
     val plantInstances: List<PlantInstanceRender> = emptyList()
 )
 
@@ -265,7 +268,8 @@ data class PlantInstanceRender(
     val worldX: Float,
     val worldY: Float,
     val scaleFactor: Float,
-    val cropName: String
+    val cropName: String,
+    val growthStage: Int = 1
 )
 
 // ─── FarmObjectRenderData (trellis, fence, tree) ─────────────────────────

@@ -35,43 +35,75 @@ fun EditBottomLayout(
     onDeleteClick: () -> Unit = {}
 ) {
     if (uiState.selectedPlotId != null) {
+        val selectedPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
+        val cropTitle = selectedPlot?.cropName ?: "Planted Crop"
+        val dimensionsText = "${selectedPlot?.widthM?.toInt() ?: 1}m × ${selectedPlot?.heightM?.toInt() ?: 1}m"
+
         Surface(
             modifier = modifier
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = Color.Black.copy(alpha = 0.75f),
-            shadowElevation = 6.dp
+            shape = RoundedCornerShape(14.dp),
+            color = Color.Black.copy(alpha = 0.85f),
+            shadowElevation = 8.dp
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Column(modifier = Modifier.padding(end = 4.dp)) {
+                    Text(
+                        text = cropTitle,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF81C784),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = dimensionsText,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp
+                    )
+                }
+
                 ActionChip(Icons.Default.ContentCopy, "Duplicate", onClick = onDuplicateClick)
-                ActionChip(Icons.Default.AspectRatio, "Resize", onClick = onResizeClick)
+                ActionChip(Icons.Default.AspectRatio, "Resize", isActive = uiState.isResizeMode, onClick = onResizeClick)
                 ActionChip(Icons.Default.Delete, "Delete", isDestructive = true, onClick = onDeleteClick)
             }
         }
     }
 }
 
+
 @Composable
 private fun ActionChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
+    isActive: Boolean = false,
     isDestructive: Boolean = false,
     onClick: () -> Unit
 ) {
-    val contentColor = if (isDestructive) Color(0xFFEF5350) else Color.White
-    Row(
+    val contentColor = when {
+        isDestructive -> Color(0xFFEF5350)
+        isActive -> Color.White
+        else -> Color.White
+    }
+    val containerColor = if (isActive) Color(0xFF2E7D32) else Color.Transparent
+
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = containerColor,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
             .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(14.dp))
-        Text(label, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 11.sp)
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(14.dp))
+            Text(label, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 11.sp)
+        }
     }
 }

@@ -33,43 +33,47 @@ class DssEngineTest {
 
     @Test
     fun `water task generated when watering is overdue`() {
-        val bed = BedUiModel(
-            id = "bed-1", bedLabel = "BED 3", cropName = "Tomato",
-            soilType = SoilType.LOAM, plantedDate = LocalDate.now().minusDays(30)
+        val plot = CropPlot(
+            id = "plot-1", plotLabel = "PLOT 3", cropName = "Tomato", cropId = "tomato",
+            soilType = SoilType.LOAM, posX = 0f, posY = 0f, widthM = 2f, heightM = 2f,
+            rotationDeg = 0f, plantedDate = LocalDate.now().minusDays(30).toString(),
+            isActive = true, notes = null, createdAt = "", updatedAt = ""
         )
         val crop = Crop("Tomato", daysToHarvest = 70, wateringIntervalDays = 2)
         val lastWatered = LocalDate.now().minusDays(3) // overdue by 1 day
         val activities = listOf(Activity(type = TaskType.WATER, performedAt = lastWatered.atStartOfDay().toInstant(ZoneOffset.UTC)))
 
-        val result = engine.evaluate(listOf(bed), listOf(crop), activities, LocalDate.now())
+        val result = engine.evaluate(listOf(plot), listOf(crop), activities, LocalDate.now())
 
-        assertTrue(result.tasks.any { it.taskType == TaskType.WATER && it.bedLabel == "BED 3" })
+        assertTrue(result.tasks.any { it.taskType == TaskType.WATER && it.plotLabel == "PLOT 3" })
     }
 
     @Test
     fun `harvest task generated when days to harvest elapsed`() {
-        val bed = BedUiModel(
-            id = "bed-r", bedLabel = "BED R", cropName = "Lettuce",
-            soilType = SoilType.CLAY, plantedDate = LocalDate.now().minusDays(55)
+        val plot = CropPlot(
+            id = "plot-r", plotLabel = "PLOT R", cropName = "Lettuce", cropId = "lettuce",
+            soilType = SoilType.CLAY, posX = 0f, posY = 0f, widthM = 2f, heightM = 2f,
+            rotationDeg = 0f, plantedDate = LocalDate.now().minusDays(55).toString(),
+            isActive = true, notes = null, createdAt = "", updatedAt = ""
         )
         val crop = Crop("Lettuce", daysToHarvest = 50)
 
-        val result = engine.evaluate(listOf(bed), listOf(crop), emptyList(), LocalDate.now())
+        val result = engine.evaluate(listOf(plot), listOf(crop), emptyList(), LocalDate.now())
 
-        assertTrue(result.tasks.any { it.taskType == TaskType.HARVEST && it.bedLabel == "BED R" })
+        assertTrue(result.tasks.any { it.taskType == TaskType.HARVEST && it.plotLabel == "PLOT R" })
     }
 
     @Test
     fun `companion antagonist detected between Tomato and Eggplant`() {
-        val beds = listOf(
-            BedUiModel(id = "b1", bedLabel = "BED 1", cropName = "Eggplant", soilType = SoilType.LOAM),
-            BedUiModel(id = "b3", bedLabel = "BED 3", cropName = "Tomato", soilType = SoilType.LOAM)
+        val plots = listOf(
+            CropPlot(id = "p1", plotLabel = "PLOT 1", cropName = "Eggplant", cropId = "eggplant", soilType = SoilType.LOAM, posX = 0f, posY = 0f, widthM = 2f, heightM = 2f, rotationDeg = 0f, plantedDate = null, isActive = true, notes = null, createdAt = "", updatedAt = ""),
+            CropPlot(id = "p3", plotLabel = "PLOT 3", cropName = "Tomato", cropId = "tomato", soilType = SoilType.LOAM, posX = 3f, posY = 0f, widthM = 2f, heightM = 2f, rotationDeg = 0f, plantedDate = null, isActive = true, notes = null, createdAt = "", updatedAt = "")
         )
-        val result = engine.evaluate(beds, emptyList(), emptyList(), LocalDate.now())
+        val result = engine.evaluate(plots, emptyList(), emptyList(), LocalDate.now())
 
         assertTrue(result.companionAlerts.any {
-            (it.bedALabel == "BED 1" || it.bedBLabel == "BED 1") &&
-            (it.bedALabel == "BED 3" || it.bedBLabel == "BED 3") &&
+            (it.plotALabel == "PLOT 1" || it.plotBLabel == "PLOT 1") &&
+            (it.plotALabel == "PLOT 3" || it.plotBLabel == "PLOT 3") &&
             it.relationship == CompanionRelation.ANTAGONIST
         })
     }
@@ -129,11 +133,11 @@ class HomeScreenTest {
 
     @Test
     fun farmSummary_displaysCorrectCounts() {
-        // Insert 12 beds into Room
-        repeat(12) { i -> bedDao.insert(testBed(i)) }
+        // Insert 12 plots into Room
+        repeat(12) { i -> cropPlotDao.insert(testPlot(i)) }
 
         composeRule.onNodeWithText("12").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Beds").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Plots").assertIsDisplayed()
     }
 }
 ```
@@ -157,12 +161,12 @@ class EditModeTest {
     }
 
     @Test
-    fun saveChangesButton_persistsBedToRoom() {
-        // Move BED 3 then tap SAVE CHANGES
+    fun saveChangesButton_persistsPlotToRoom() {
+        // Move PLOT 3 then tap SAVE CHANGES
         composeRule.onNodeWithTag("save_changes_button").performClick()
-        val savedBed = bedDao.getBedById("bed-3")
-        assertNotNull(savedBed)
-        assertNotEquals(0f, savedBed.posX)
+        val savedPlot = cropPlotDao.getPlotById("plot-3")
+        assertNotNull(savedPlot)
+        assertNotEquals(0f, savedPlot.posX)
     }
 
     @Test
@@ -198,23 +202,23 @@ class EditModeTest {
 **Requires**: `supabase start` running locally
 
 ```kotlin
-// BedSyncIntegrationTest.kt
-class BedSyncIntegrationTest {
+// CropPlotSyncIntegrationTest.kt
+class CropPlotSyncIntegrationTest {
 
     @Test
-    fun saveBed_syncsToLocalSupabase() = runTest {
-        val bed = BedEntity(id = UUID.randomUUID().toString(), farmId = testFarmId, ...)
-        bedRepository.saveBeds(listOf(bed))
+    fun savePlot_syncsToLocalSupabase() = runTest {
+        val plot = CropPlotEntity(id = UUID.randomUUID().toString(), farmId = testFarmId, ...)
+        cropPlotRepository.savePlots(listOf(plot))
 
         // Trigger sync worker
         SyncWorker(...).doWork()
 
-        // Verify bed exists in local Supabase container
-        val remoteBed = supabaseClient.postgrest["beds"]
-            .select { filter { eq("id", bed.id) } }
-            .decodeSingleOrNull<BedEntity>()
-        assertNotNull(remoteBed)
-        assertEquals(bed.bedLabel, remoteBed.bedLabel)
+        // Verify plot exists in local Supabase container
+        val remotePlot = supabaseClient.postgrest["crop_plots"]
+            .select { filter { eq("id", plot.id) } }
+            .decodeSingleOrNull<CropPlotEntity>()
+        assertNotNull(remotePlot)
+        assertEquals(plot.plotLabel, remotePlot.plotLabel)
     }
 }
 ```

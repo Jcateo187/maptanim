@@ -13,6 +13,7 @@ object Routes {
     const val FARMS = "farms"
     const val CALENDAR = "calendar"
     const val LIBRARY = "library"
+    const val COMMUNITY = "community"
     const val PROFILE = "profile"
     const val PROFILE_WITH_TAB = "profile?tab={tab}"
 

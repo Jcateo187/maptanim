@@ -32,6 +32,14 @@ import com.maptanim.app.domain.model.CanvasMode
 import com.maptanim.app.renderer.canvas.FarmCanvas
 import com.maptanim.app.ui.screens.edit.EditViewModel
 
+import com.maptanim.app.core.audio.AmbientSound
+import com.maptanim.app.core.audio.BackgroundTrack
+import com.maptanim.app.core.audio.LocalSoundManager
+import com.maptanim.app.core.audio.SoundEffect
+import com.maptanim.app.core.audio.TrackAmbientEffect
+import com.maptanim.app.core.audio.TrackBgmEffect
+import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
+
 /**
  * HomeScreen — Clash of Clans inspired HUD design with shared 2D Isometric Scenery.
  */
@@ -41,12 +49,27 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
     editViewModel: EditViewModel = viewModel()
 ) {
+    TrackBgmEffect(BackgroundTrack.PEACEFUL_FARM)
+    TrackAmbientEffect(AmbientSound.DAY_BIRDS)
+
+    val soundManager = LocalSoundManager.current
     val uiState by homeViewModel.uiState.collectAsState()
     val editUiState by editViewModel.uiState.collectAsState()
 
     var showMonitoringOverlay by remember { mutableStateOf(false) }
     var showTasksOverlay by remember { mutableStateOf(false) }
     var showSummaryOverlay by remember { mutableStateOf(false) }
+    var showAudioSettingsDialog by remember { mutableStateOf(false) }
+
+    val mergedPlots = remember(editUiState.plots, uiState.plots) {
+        editUiState.plots.map { editPlot ->
+            val homeMatch = uiState.plots.firstOrNull { it.id == editPlot.id }
+            editPlot.copy(
+                activeTasks = homeMatch?.activeTasks ?: editPlot.activeTasks,
+                isMonitoringStarted = homeMatch?.isMonitoringStarted ?: editPlot.isMonitoringStarted
+            )
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -55,22 +78,39 @@ fun HomeScreen(
         HomeBackground()
         FarmCanvas(
             modifier = Modifier.fillMaxSize(),
-            uiState = editUiState,
+            uiState = editUiState.copy(plots = mergedPlots),
             editViewModel = editViewModel,
-            canvasMode = CanvasMode.VIEW
+            canvasMode = CanvasMode.VIEW,
+            onOpenMonitoring = {
+                soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                showMonitoringOverlay = true
+            }
         )
+
+        val currentPlots = editUiState.plots.ifEmpty { uiState.plots }
+        val totalPlotsCount = currentPlots.size
+        val totalCropsCount = currentPlots.count { !it.cropName.isNullOrEmpty() }.let { if (it > 0) it else totalPlotsCount }
 
         // Top Bar HUD
         TopBar(
             modifier = Modifier.align(Alignment.TopCenter),
-            totalCrops = uiState.farmSummary.totalPlants.let { if (it > 0) it else 186 },
-            readyToHarvest = uiState.farmSummary.readyToHarvest.let { if (it > 0) it else 4 },
+            totalCrops = totalCropsCount,
+            readyToHarvest = uiState.farmSummary.readyToHarvest,
             notificationCount = uiState.notificationCount,
             farmName = uiState.activeFarm?.farmName ?: "Murcia Farm",
             location = uiState.activeFarm?.location ?: "Murcia, Negros Occidental",
-            onProfileClick = { navController.navigate(Routes.profileRoute(0)) },
-            onNotificationClick = { navController.navigate(Routes.profileRoute(1)) },
-            onSettingsClick = { navController.navigate(Routes.profileRoute(2)) }
+            onProfileClick = {
+                soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                navController.navigate(Routes.profileRoute(0))
+            },
+            onNotificationClick = {
+                soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                navController.navigate(Routes.profileRoute(1))
+            },
+            onSettingsClick = {
+                soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                showAudioSettingsDialog = true
+            }
         )
 
         // Left Side HUD Buttons (Monitoring, Today's Tasks)
@@ -89,7 +129,7 @@ fun HomeScreen(
                 .align(Alignment.CenterEnd)
                 .padding(end = 16.dp),
             onLibraryClick = { navController.navigate(Routes.LIBRARY) },
-            onCommunityClick = { /* open community forum */ }
+            onCommunityClick = { navController.navigate(Routes.COMMUNITY) }
         )
 
         // Bottom Floating Single Edit Button
@@ -111,6 +151,13 @@ fun HomeScreen(
         if (showTasksOverlay) {
             com.maptanim.app.ui.components.tasks.TodaysTasksOverlay(
                 onDismiss = { showTasksOverlay = false }
+            )
+        }
+
+        // ── 3. Audio & Sound Settings Modal ──────────────────────────────
+        if (showAudioSettingsDialog) {
+            AudioSettingsDialog(
+                onDismissRequest = { showAudioSettingsDialog = false }
             )
         }
 
@@ -142,8 +189,8 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            SummaryCard("12", "Total Plots", Color(0xFF43A047), Modifier.weight(1f))
-                            SummaryCard("186", "Total Plants", Color(0xFF43A047), Modifier.weight(1f))
+                            SummaryCard("$totalPlotsCount", "Total Plots", Color(0xFF43A047), Modifier.weight(1f))
+                            SummaryCard("$totalCropsCount", "Total Crops", Color(0xFF43A047), Modifier.weight(1f))
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -152,8 +199,8 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            SummaryCard("4", "Ready Harvest", Color(0xFFFFA000), Modifier.weight(1f))
-                            SummaryCard("2", "Active Alerts", Color(0xFFE53935), Modifier.weight(1f))
+                            SummaryCard("${uiState.farmSummary.readyToHarvest}", "Ready Harvest", Color(0xFFFFA000), Modifier.weight(1f))
+                            SummaryCard("${uiState.farmSummary.activeAlerts}", "Active Alerts", Color(0xFFE53935), Modifier.weight(1f))
                         }
                     }
                 }

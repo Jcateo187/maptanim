@@ -40,8 +40,8 @@ sealed class Screen(val route: String) {
     object Profile   : Screen("profile")
 
     // Detail routes with args
-    object BedDetail : Screen("bed_detail/{bedId}") {
-        fun route(bedId: String) = "bed_detail/$bedId"
+    object PlotDetail : Screen("plot_detail/{plotId}") {
+        fun route(plotId: String) = "plot_detail/$plotId"
     }
     object CropDetail : Screen("crop_detail/{cropName}") {
         fun route(cropName: String) = "crop_detail/$cropName"
@@ -162,10 +162,10 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Screen.Profile.route) { ProfileScreen(navController) }
 
         composable(
-            route = Screen.BedDetail.route,
-            arguments = listOf(navArgument("bedId") { type = NavType.StringType })
+            route = Screen.PlotDetail.route,
+            arguments = listOf(navArgument("plotId") { type = NavType.StringType })
         ) { backStackEntry ->
-            BedDetailScreen(bedId = backStackEntry.arguments?.getString("bedId") ?: "")
+            PlotDetailScreen(plotId = backStackEntry.arguments?.getString("plotId") ?: "")
         }
 
         composable(Screen.Notifications.route) { NotificationsScreen(navController) }

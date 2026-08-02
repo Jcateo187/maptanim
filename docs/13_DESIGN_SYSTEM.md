@@ -11,7 +11,7 @@ MapTanim's design system defines all visual tokens — colors, typography, shape
 ```kotlin
 // Color.kt
 val PrimaryGreen       = Color(0xFF2E7D32)  // Top bar, active nav, SAVE button, EDIT MODE badge
-val PrimaryGreenDark   = Color(0xFF1B5E20)  // BED label chips, SAVE CHANGES button background
+val PrimaryGreenDark   = Color(0xFF1B5E20)  // PLOT label chips, SAVE CHANGES button background
 val PrimaryGreenLight  = Color(0xFFE8F5E9)  // Active tool row background in Edit Mode
 val PrimaryGreenAccent = Color(0xFF43A047)  // Green ⊕ handle button, Fertilize badge pin
 ```

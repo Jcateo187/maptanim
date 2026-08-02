@@ -14,12 +14,13 @@ import com.maptanim.app.renderer.model.PlantInstanceRender
 object PlantInstanceGenerator {
 
     /**
-     * Generates a grid of plant instances inside the given crop zone.
+     * Generates a grid of plant instances inside the given crop zone using a 2D spatial grid-packing algorithm.
      *
-     * @param zone CropZoneRenderData with offset and dimensions
-     * @param plotPosX Absolute world X of the parent plot origin
-     * @param plotPosY Absolute world Y of the parent plot origin
-     * @return List of PlantInstanceRender with world coordinates and scale factors
+     * Mathematical Formula:
+     * - Columns = floor(Zone Width / S)
+     * - Rows    = floor(Zone Height / S)
+     * - Plant X = col * S + (S / 2)  [Centered horizontally in grid cell]
+     * - Plant Y = row * S + (S / 2)  [Centered vertically in grid cell]
      */
     fun generate(
         zone: CropZoneRenderData,
@@ -27,31 +28,29 @@ object PlantInstanceGenerator {
         plotPosY: Float
     ): List<PlantInstanceRender> {
         val cropName = zone.cropName ?: return emptyList()
-        val spacing = zone.spacingM.coerceAtLeast(0.15f)
-        
-        // Calculate foliage scale factor based on zone area
-        val zoneArea = (zone.widthM * zone.heightM).coerceAtLeast(0.1f)
-        // Area of 1m² = scale 1.0f; scales smoothly between 0.6f and 2.5f
-        val scaleFactor = (Math.sqrt(zoneArea.toDouble()).toFloat() * 0.8f).coerceIn(0.6f, 2.5f)
+        val spacing = if (zone.spacingM > 0f) zone.spacingM else 1.0f
+
+        val columns = Math.floor((zone.widthM / spacing).toDouble()).toInt().coerceAtLeast(1)
+        val rows = Math.floor((zone.heightM / spacing).toDouble()).toInt().coerceAtLeast(1)
 
         val plants = mutableListOf<PlantInstanceRender>()
         val worldOriginX = plotPosX + zone.offsetX
         val worldOriginY = plotPosY + zone.offsetY
 
-        var y = spacing / 2f
-        while (y < zone.heightM) {
-            var x = spacing / 2f
-            while (x < zone.widthM) {
+        for (row in 0 until rows) {
+            val y = row * spacing + (spacing / 2f)
+            for (col in 0 until columns) {
+                val x = col * spacing + (spacing / 2f)
                 plants += PlantInstanceRender(
                     worldX = worldOriginX + x,
                     worldY = worldOriginY + y,
-                    scaleFactor = scaleFactor,
-                    cropName = cropName
+                    scaleFactor = 1.0f,
+                    cropName = cropName,
+                    growthStage = zone.growthStage
                 )
-                x += spacing
             }
-            y += spacing
         }
         return plants
     }
 }
+

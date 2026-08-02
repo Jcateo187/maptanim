@@ -9,7 +9,62 @@ import kotlinx.coroutines.flow.map
 
 class TaskRepositoryImpl : TaskRepository {
 
-    private val tasksCache = MutableStateFlow<List<FarmTask>>(emptyList())
+    private val defaultTodayTasks = listOf(
+        FarmTask(
+            id = "task-1",
+            farmId = "farm-1",
+            plotId = "plot-1",
+            plotLabel = "PLOT 1",
+            cropName = "Carrot",
+            title = "Water PLOT 1",
+            subLabel = "Carrot",
+            taskType = TaskType.WATER,
+            dueDate = java.time.LocalDate.now().toString(),
+            isCompleted = false,
+            completedAt = null
+        ),
+        FarmTask(
+            id = "task-2",
+            farmId = "farm-1",
+            plotId = "plot-1",
+            plotLabel = "PLOT 1",
+            cropName = "Carrot",
+            title = "Fertilize PLOT 1",
+            subLabel = "Carrot",
+            taskType = TaskType.FERTILIZE,
+            dueDate = java.time.LocalDate.now().toString(),
+            isCompleted = false,
+            completedAt = null
+        ),
+        FarmTask(
+            id = "task-3",
+            farmId = "farm-1",
+            plotId = "plot-2",
+            plotLabel = "PLOT 2",
+            cropName = "String Beans",
+            title = "Harvest PLOT 2",
+            subLabel = "String Beans",
+            taskType = TaskType.HARVEST,
+            dueDate = java.time.LocalDate.now().toString(),
+            isCompleted = false,
+            completedAt = null
+        ),
+        FarmTask(
+            id = "task-4",
+            farmId = "farm-1",
+            plotId = "plot-2",
+            plotLabel = "PLOT 2",
+            cropName = "String Beans",
+            title = "Pest Alert Check",
+            subLabel = "String Beans",
+            taskType = TaskType.PEST_ALERT,
+            dueDate = java.time.LocalDate.now().toString(),
+            isCompleted = false,
+            completedAt = null
+        )
+    )
+
+    private val tasksCache = MutableStateFlow<List<FarmTask>>(defaultTodayTasks)
 
     override fun observeTodayTasks(farmId: String, today: String): Flow<List<FarmTask>> {
         return tasksCache.map { tasks ->

@@ -17,6 +17,7 @@ data class EditUiState(
     val farmObjects: List<FarmObjectRenderData> = emptyList(),
     val selectedPlotId: String? = null,
     val selectedZoneId: String? = null,
+    val isResizeMode: Boolean = false,
     val activeTool: EditTool = EditTool.SELECT_MOVE,
     val activeSoilType: SoilType = SoilType.LOAM,
     val isGridEnabled: Boolean = true,

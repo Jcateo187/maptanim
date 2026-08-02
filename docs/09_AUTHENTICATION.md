@@ -3,6 +3,10 @@
 ## 📌 Overview
 MapTanim supports three user access levels: **Authenticated Farmer**, **Guest**, and **Administrator**. Authentication is powered by **Supabase Auth** using Email OTP (One-Time Password).
 
+> [!NOTE]
+> **Authentication Scope Decision**: To eliminate paid service dependencies and recurring carrier gateway fees for Filipino smallholder farmers, MapTanim relies exclusively on **Email OTP** and standard security protocols. Third-party paid SMS Gateways are excluded from the system architecture. For complete details, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
+
+
 ---
 
 ## 🔹 User States (from PNG Screenshots)

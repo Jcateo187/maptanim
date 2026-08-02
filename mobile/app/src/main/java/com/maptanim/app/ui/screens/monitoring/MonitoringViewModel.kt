@@ -50,7 +50,8 @@ data class MonitoredPlant(
     val companionStatus: String,
     val growingTip: String,
     val pestInfo: String,
-    val assetPath: String
+    val assetPath: String,
+    val isMonitoringStarted: Boolean = false
 )
 
 data class MonitoringUiState(
@@ -68,11 +69,11 @@ class MonitoringViewModel : ViewModel() {
     val uiState: StateFlow<MonitoringUiState> = _uiState.asStateFlow()
 
     init {
-        loadMockPlantedCrops()
+        loadPlantedCrops()
     }
 
-    private fun loadMockPlantedCrops() {
-        val mockCrops = listOf(
+    private fun loadPlantedCrops() {
+        val initialCrops = listOf(
             MonitoredPlant(
                 id = "p1",
                 cropName = "Carrot",
@@ -89,7 +90,8 @@ class MonitoringViewModel : ViewModel() {
                 companionStatus = "Good Companions, No Problems",
                 growingTip = "Keep soil loose and well-drained. Water deeply once per week to encourage straight taproot development.",
                 pestInfo = "Watch out for Carrot Rust Fly. Use row covers and intercrop with legumes or onions.",
-                assetPath = "crops/crop_carrot_1.png"
+                assetPath = "crops/crop_carrot_1.png",
+                isMonitoringStarted = true
             ),
             MonitoredPlant(
                 id = "p2",
@@ -98,55 +100,39 @@ class MonitoringViewModel : ViewModel() {
                 plotLabel = "PLOT 2",
                 seasonality = SeasonalityFilter.SEASONAL,
                 category = CropCategoryFilter.PODDED,
-                currentStageIndex = 2,
-                stageName = "Podding",
-                daysPlanted = 42,
+                currentStageIndex = 0,
+                stageName = "Seedling",
+                daysPlanted = 0,
                 daysToHarvest = 60,
-                healthStatus = "Optimal Growth",
+                healthStatus = "Pending Start",
                 companionCrop = "Carrot",
                 companionStatus = "Good Companions, No Problems",
                 growingTip = "Provide sturdy trellis support for climbing vines. Harvest pods when firm and crisp.",
                 pestInfo = "Inspect under leaves for aphids and pod borers. Apply neem spray during early podding.",
-                assetPath = "crops/crop_stringbeans_1.png"
-            ),
-            MonitoredPlant(
-                id = "p3",
-                cropName = "Tomato",
-                localName = "Kamatis",
-                plotLabel = "PLOT A",
-                seasonality = SeasonalityFilter.SEMI_PERMANENT,
-                category = CropCategoryFilter.FRUIT,
-                currentStageIndex = 2,
-                stageName = "Flowering",
-                daysPlanted = 50,
-                daysToHarvest = 80,
-                healthStatus = "Needs Water",
-                companionCrop = "Marigold",
-                companionStatus = "Good Companions, Repels Pests",
-                growingTip = "Prune lower suckers to improve airflow. Ensure regular calcium supplementation to prevent blossom end rot.",
-                pestInfo = "Monitor for Tomato Hornworms and Early Blight. Avoid overhead watering.",
-                assetPath = "crops/crop_carrot_1.png"
-            ),
-            MonitoredPlant(
-                id = "p4",
-                cropName = "Eggplant",
-                localName = "Talong",
-                plotLabel = "PLOT B",
-                seasonality = SeasonalityFilter.PERMANENT,
-                category = CropCategoryFilter.FRUIT,
-                currentStageIndex = 3,
-                stageName = "Harvest Ready",
-                daysPlanted = 70,
-                daysToHarvest = 70,
-                healthStatus = "Ready for Harvest",
-                companionCrop = "Beans",
-                companionStatus = "Good Companions, Nitrogen Fixer",
-                growingTip = "Harvest when skin is glossy and firm before seeds harden inside.",
-                pestInfo = "Watch for Fruit and Shoot Borer (FSB). Prune wilted shoots immediately.",
-                assetPath = "crops/crop_carrot_1.png"
+                assetPath = "crops/crop_stringbeans_1.png",
+                isMonitoringStarted = false
             )
         )
-        _uiState.update { it.copy(plantedCrops = mockCrops) }
+        _uiState.update { it.copy(plantedCrops = initialCrops) }
+    }
+
+    fun startMonitoring(plantId: String) {
+        _uiState.update { state ->
+            val updated = state.plantedCrops.map { plant ->
+                if (plant.id == plantId) {
+                    plant.copy(
+                        isMonitoringStarted = true,
+                        daysPlanted = 1,
+                        healthStatus = "Active Monitoring"
+                    )
+                } else plant
+            }
+            state.copy(plantedCrops = updated)
+        }
+    }
+
+    fun updatePlantedCrops(crops: List<MonitoredPlant>) {
+        _uiState.update { it.copy(plantedCrops = crops) }
     }
 
     fun selectNavSection(section: MonitoringNavSection) {

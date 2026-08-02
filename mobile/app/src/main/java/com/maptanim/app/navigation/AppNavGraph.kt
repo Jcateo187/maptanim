@@ -8,11 +8,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
 import com.maptanim.app.ui.screens.auth.LoginScreen
 import com.maptanim.app.ui.screens.auth.WelcomeGuideScreen
 import com.maptanim.app.ui.screens.auth.WelcomeScreen
+import com.maptanim.app.ui.screens.community.CommunityScreen
 import com.maptanim.app.ui.screens.edit.FarmEditorScreen
 import com.maptanim.app.ui.screens.home.HomeScreen
+import com.maptanim.app.ui.screens.knowledgebase.LibraryScreen
 import com.maptanim.app.ui.screens.loading.LoadingScreen
 import com.maptanim.app.ui.screens.profile.ProfileScreen
 import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
@@ -37,6 +40,10 @@ fun AppNavGraph() {
 
         composable(Routes.LOGIN) {
             LoginScreen(navController)
+        }
+
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(navController)
         }
 
         composable(Routes.LOADING) {
@@ -119,6 +126,42 @@ fun AppNavGraph() {
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             ProfileScreen(navController = navController, initialTab = tab)
+        }
+
+        composable(
+            route = Routes.LIBRARY,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            LibraryScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.COMMUNITY,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            CommunityScreen(navController = navController)
         }
     }
 }

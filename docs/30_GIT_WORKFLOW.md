@@ -24,7 +24,7 @@
 ```
 feature/edit-mode-soil-painter
 feature/dss-companion-planting-matrix
-bugfix/bed-selection-handle-z-index
+bugfix/plot-selection-handle-z-index
 hotfix/otp-lockout-not-triggering
 docs/update-view-mode-spec
 ```
@@ -55,13 +55,13 @@ docs/update-view-mode-spec
 
 ### Examples
 ```
-feat: Add soil painter tool to Edit Mode left panel
+feat: Add soil selector to Edit Mode left panel
 fix: Correct selection handle z-index layering on canvas
-docs: Update 19_EDIT_MODE.md with exact PNG 2 handle specs
+docs: Update 19_EDIT_MODE.md with exact handle specs
 test: Add DssEngine unit tests for companion planting matrix
 chore: Update supabase-kotlin SDK to 3.1.4
-refactor: Extract BedRepository from HomeViewModel
-perf: Optimize farm canvas re-composition by key-stabilizing beds
+refactor: Extract CropPlotRepository from HomeViewModel
+perf: Optimize farm canvas re-composition by key-stabilizing plots
 ```
 
 ---
