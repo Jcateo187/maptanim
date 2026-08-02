@@ -28,13 +28,13 @@ MapTanim follows **MVVM (Model-View-ViewModel)** combined with **Clean Architect
 │                                                     │
 │  GetTodayTasksUseCase                               │
 │  GetFarmSummaryUseCase                              │
-│  GetFarmBedsUseCase                                 │
-│  SelectBedUseCase                                   │
-│  MoveBedUseCase                                     │
-│  ResizeBedUseCase                                   │
+│  GetFarmPlotsUseCase                                │
+│  SelectPlotUseCase                                  │
+│  MovePlotUseCase                                    │
+│  ResizePlotUseCase                                  │
 │  SaveFarmLayoutUseCase                              │
-│  AddBedUseCase                                      │
-│  DeleteBedUseCase                                   │
+│  AddPlotUseCase                                     │
+│  DeletePlotUseCase                                  │
 │  ChangeSoilUseCase                                  │
 │  ChangeCropUseCase                                  │
 │  EvaluateDssUseCase                                 │
@@ -47,7 +47,7 @@ MapTanim follows **MVVM (Model-View-ViewModel)** combined with **Clean Architect
 │                                                     │
 │  FarmRepository       ──▶  FarmDao (Room)           │
 │                         ──▶  Supabase PostgREST      │
-│  BedRepository        ──▶  BedDao (Room)            │
+│  CropPlotRepository   ──▶  CropPlotDao (Room)       │
 │                         ──▶  Supabase PostgREST      │
 │  TaskRepository       ──▶  TaskDao (Room)           │
 │  CropRepository       ──▶  CropDao (Room)           │
@@ -71,7 +71,7 @@ com.maptanim.app/
 │
 ├── data/
 │   ├── local/
-│   │   ├── dao/            # FarmDao, BedDao, TaskDao, CropDao
+│   │   ├── dao/            # FarmDao, CropPlotDao, CropZoneDao, FarmObjectDao, TaskDao, CropDao
 │   │   ├── entity/         # Room @Entity classes
 │   │   └── database/       # MapTanimDatabase.kt
 │   ├── remote/
@@ -164,7 +164,7 @@ class HomeViewModel @Inject constructor(
 @HiltViewModel
 class EditViewModel @Inject constructor(
     private val saveFarmLayoutUseCase: SaveFarmLayoutUseCase,
-    private val bedRepository: BedRepository
+    private val cropPlotRepository: CropPlotRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditUiState())
@@ -242,7 +242,9 @@ object DatabaseModule {
         Room.databaseBuilder(ctx, MapTanimDatabase::class.java, "maptanim.db").build()
 
     @Provides fun provideFarmDao(db: MapTanimDatabase): FarmDao = db.farmDao()
-    @Provides fun provideBedDao(db: MapTanimDatabase): BedDao = db.bedDao()
+    @Provides fun provideCropPlotDao(db: MapTanimDatabase): CropPlotDao = db.cropPlotDao()
+    @Provides fun provideCropZoneDao(db: MapTanimDatabase): CropZoneDao = db.cropZoneDao()
+    @Provides fun provideFarmObjectDao(db: MapTanimDatabase): FarmObjectDao = db.farmObjectDao()
     @Provides fun provideTaskDao(db: MapTanimDatabase): TaskDao = db.taskDao()
 }
 

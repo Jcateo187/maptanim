@@ -70,7 +70,7 @@ ViewMode Canvas opens
 User taps [SAVE CHANGES]
   → EditViewModel.saveChanges()
     → SaveFarmLayoutUseCase
-      → BedRepository.saveAllBeds(editedBeds)
+      → CropPlotRepository.savePlots(plots)
         → Room DB immediately updated (offline-safe)
         → SyncQueueEntity inserted
           → WorkManager SyncWorker dispatched

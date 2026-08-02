@@ -162,7 +162,7 @@ Enable Realtime in Supabase Studio:
 
 ```
 Database → Replication → Enable for tables:
-  ✅ beds
+  ✅ crop_plots
   ✅ tasks
   ✅ notifications
 ```
@@ -171,8 +171,8 @@ Database → Replication → Enable for tables:
 // Subscribe in ViewModel or Repository
 val channel = supabaseClient.realtime.createChannel("farm-updates-$farmId")
 channel
-    .on<BedEntity>(PostgresAction.Update, schema = "public", table = "beds") { change ->
-        handleBedUpdate(change.record)
+    .on<CropPlotEntity>(PostgresAction.Update, schema = "public", table = "crop_plots") { change ->
+        handlePlotUpdate(change.record)
     }
     .on<TaskEntity>(PostgresAction.Insert, schema = "public", table = "tasks") { change ->
         handleNewTask(change.record)

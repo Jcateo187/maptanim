@@ -107,7 +107,9 @@ supabase db seed --db-url postgresql://postgres.ojilvcglpzbtpjxguhzj:[password]@
 
 ### 5. Enable Realtime for Required Tables
 In Supabase Studio → Database → Replication → Enable for:
-- `beds`
+- `crop_plots`
+- `crop_zones`
+- `farm_objects`
 - `tasks`
 - `notifications`
 
@@ -121,7 +123,7 @@ In Supabase Studio → Database → Replication → Enable for:
 4. Upload AAB: `app-release.aab`
 5. Required screenshots: **landscape orientation only**:
    - View Mode (Home Screen with farm canvas, task panel, farm summary)
-   - Edit Mode (with bed selected, EDIT TOOLS panel visible)
+   - Edit Mode (with plot selected, EDIT TOOLS panel visible)
 6. Short description: "Interactive farm plot mapping with DSS for vegetable farmers"
 7. Full description references 13 crops, 6 soil types, DA/PSA categories
 8. Submit for review

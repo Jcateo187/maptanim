@@ -34,18 +34,13 @@ class GetFarmSummaryUseCase(
         taskRepository.observeHarvestReady(farmId),
         taskRepository.observeActiveAlerts(farmId)
     ) { plots, harvestReady, alerts ->
+        val plantedCropsCount = plots.count { !it.cropName.isNullOrEmpty() }
         FarmSummary(
             totalPlots = plots.size,
-            totalPlants = plots.sumOf { estimatePlantCount(it) },
+            totalPlants = if (plantedCropsCount > 0) plantedCropsCount else plots.size,
             readyToHarvest = harvestReady.size,
             activeAlerts = alerts.size
         )
-    }
-
-    /** Estimates plant count from plot area and crop density. No hardcoded counts. */
-    private fun estimatePlantCount(plot: CropPlot): Int {
-        val areaSqm = plot.widthM * plot.heightM
-        return (areaSqm / 0.5f).toInt().coerceAtLeast(1)
     }
 }
 

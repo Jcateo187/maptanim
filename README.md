@@ -106,17 +106,19 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
   - **Crop Cards**:
     - **Carrot Card**: Light green active card with carrot graphic, titled **"Carrot"**, subtitle `Root • Drag/Tap`.
     - **String Beans Card**: Light gray card with beans graphic, titled **"String Beans"**, subtitle `Podded • Drag/Tap`.
-- **Live CoC-Style Glowing Green Tile Highlight**:
-  - Dragging a crop card from `CropTray` displays an elevated floating circle preview layer containing the single crop Stage 1 PNG sprite (`crop_carrot_1.png` / `crop_stringbeans_1.png`) right under your finger.
-  - A glowing isometric green rhombus (`#4CAF50`) glides across soil tiles in real-time to preview exact drop placement.
-- **Placed Crop Re-positioning**:
-  - Pressing and dragging any placed crop plot locks onto it with 1:1 finger tracking (`Math.round` nearest grid rounding).
-  - The glowing green tile highlight glides beneath the crop during drag re-positioning.
-- **Strict 30m x 30m Farm Area Boundary Clamping**:
-  - All drops, drag re-positioning, and hover tile highlights are strictly clamped to `[0.0, 30.0 - cropSize]` meters. Crops cannot cross perimeter fences into outer scenery.
-- **Clean Selection & Contextual Bottom Bar**:
-  - Tapping a placed crop highlights it with a clean dashed blue selection outline (`#1E88E5`).
-  - Displays dark floating bottom pill bar with 3 diagram tools: **Duplicate**, **Resize**, **Delete**.
+- **Live Placement Preview & Drag-and-Drop**:
+  - Dragging a crop card from `CropTray` displays an elevated floating circular preview carrying the Stage 1 crop sprite.
+  - A real-time placement preview renders across soil tiles: **Blue Border** (valid placement) or **Red Border** (invalid/collision).
+- **1×1 Drop Event & Selection Mode**:
+  - Releasing finger instantiates an initial 1×1 `CropZone` (`width = 1`, `height = 1`).
+  - Auto-selects the Crop Zone, replacing the blue preview with a permanent **White Border** outline and displaying the floating bottom toolbar.
+- **Contextual Bottom Toolbar & 8-Handle Resizing**:
+  - Displays dark floating bottom pill bar with 3 tools: **Duplicate**, **Resize**, **Delete**.
+  - Tapping **Resize** activates **8 interactive handles** (corners and edge midpoints) to expand `width` and `height`, automatically populating new grid tiles with duplicate plant instances via `PlantInstanceGenerator` without scaling plant sprites.
+- **Placed Crop Re-positioning & Boundary Clamping**:
+  - Pressing and dragging any placed Crop Zone locks onto it with 1:1 finger tracking (`Math.round` nearest grid rounding).
+  - All drops, drag re-positioning, and hover previews are strictly clamped to `[0.0, 30.0 - cropSize]` meters inside perimeter fences.
+
 
 ---
 
@@ -183,20 +185,24 @@ MapTanim/
 ├── backend/                 # Supabase Database Migrations, RLS Policies, Edge Functions
 ├── admin/                   # React + TypeScript Web Admin Dashboard
 ├── shared/                  # Shared DTOs and validation constants
-├── docs/                    # Complete 34-chapter Markdown Documentation suite
+├── docs/                    # Complete 37-chapter Markdown Documentation suite
 └── README.md                # Project Overview & Specification
 ```
 
 ---
 
 ## 📚 Documentation Index
-All 34 chapters are located in the `docs/` directory:
+All 37 chapters are located in the `docs/` directory:
 - [14. UI Component Library](docs/14_COMPONENT_LIBRARY.md)
 - [15. 2D Isometric Render Engine](docs/15_RENDER_ENGINE.md)
+- [16. Interactive Plot Mapping Specifications](docs/16_INTERACTIVE_PLOT_MAPPING.md)
 - [18. View Mode — Home Screen Dashboard](docs/18_VIEW_MODE.md)
 - [19. Edit Mode — Farm Editor](docs/19_EDIT_MODE.md)
 - [20. Decision Support System (DSS)](docs/20_DECISION_SUPPORT_SYSTEM.md)
 - [24. Offline Synchronization Architecture](docs/24_OFFLINE_SYNCHRONIZATION.md)
+- [34. Crop Planting & Resize System](docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
+- [35. Asset Pipeline & Isometric Specifications](docs/35_ASSETS_PLANNING.md)
+- [36. Crop Variety Timeline & Seasonality](docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
 
 ---
 

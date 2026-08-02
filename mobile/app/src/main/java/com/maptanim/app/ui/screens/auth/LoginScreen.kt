@@ -14,6 +14,11 @@ import androidx.navigation.NavController
 import com.maptanim.app.R
 import com.maptanim.app.ui.components.auth.LoginCard
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun LoginScreen(
 
@@ -47,7 +52,11 @@ fun LoginScreen(
 
         Box(
 
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
 
             contentAlignment = Alignment.Center
 

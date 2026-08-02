@@ -73,7 +73,7 @@ MapTanim/
 │   ├── ui/                              # UI wireframe diagrams
 │   └── workflow/                        # Data flow diagrams
 │
-├── docs/                                # All 34 documentation markdown files
+├── docs/                                # All 37 documentation markdown files
 │   ├── 00_GETTING_STARTED.md
 │   ├── 01_PROJECT_OVERVIEW.md
 │   ├── 02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md
@@ -107,7 +107,10 @@ MapTanim/
 │   ├── 30_GIT_WORKFLOW.md
 │   ├── 31_CONTRIBUTING.md
 │   ├── 32_CHANGELOG.md
-│   └── 33_ROADMAP.md
+│   ├── 33_ROADMAP.md
+│   ├── 34_CROP_PLANTING_AND_RESIZE_SYSTEM.md
+│   ├── 35_ASSETS_PLANNING.md
+│   └── 36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md
 │
 ├── mobile/                              # Android application module
 │   ├── app/
@@ -143,7 +146,7 @@ MapTanim/
 │   │   │   │   │   └── BottomNavItem.kt
 │   │   │   │   ├── renderer/
 │   │   │   │   │   ├── canvas/          # FarmCanvasRenderer.kt
-│   │   │   │   │   ├── model/           # BedRenderData, CameraState
+│   │   │   │   │   ├── model/           # PlotRenderData, RenderModels.kt, CameraState
 │   │   │   │   │   ├── gesture/         # CanvasGestureHandler.kt
 │   │   │   │   │   └── handle/          # SelectionHandlesRenderer.kt
 │   │   │   │   ├── service/

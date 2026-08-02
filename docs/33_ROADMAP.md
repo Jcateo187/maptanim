@@ -20,15 +20,19 @@ MapTanim follows a phased development plan. Phase 1 (v1.1) is the capstone deliv
 - [x] Save Farm Dialog (`Type farm name`) + `"Excellent Successful set up the farm"` confirmation flow
 - [x] Top bar: Farm selector, location, weather widget, notification bell with live badge count, user avatar
 - [x] Bottom navigation: 5 tabs (Home, Farms, Calendar, Library, Profile)
-- [x] DSS Engine: growth stage + water/fertilize/harvest/pest tasks
+- [x] DSS Engine: growth stage + water/fertilize/harvest/pest tasks + Monitoring Hub companion overlays
+- [x] Email OTP authentication (Supabase Auth / Gmail SMTP relay)
 - [x] Offline-first: Room + SyncWorker + SyncQueue
-- [x] 34 documentation files (`docs/00`–`docs/33`)
+- [x] AgriLibrary DIY Support Structure & Trellising Guides
+- [x] Comprehensive documentation (`docs/00`–`docs/37`)
 
-### Architecture Guarantees
-- ✅ Zero static/mock/hardcoded data in production code paths
-- ✅ All user-facing data from Supabase (via Room cache)
-- ✅ RLS enforced on all tables
-- ✅ MVVM + Clean Architecture
+### System Scope Guarantees
+- ✅ Email OTP Authentication (No paid SMS Gateway fees)
+- ✅ Companion overlays in Monitoring Hub (No map overlay clutter)
+- ✅ AgriLibrary DIY Trellis Guides (No complex interactive canvas trellis objects)
+- ✅ Deterministic offline rule engine (No paid live weather or external API dependency)
+- ✅ Yield metric tracking (No misleading live market price estimators)
+- For complete details, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
 
 ---
 
@@ -37,10 +41,9 @@ MapTanim follows a phased development plan. Phase 1 (v1.1) is the capstone deliv
 **Target**: 6 months after v1.1 submission
 
 ### Mobile App Enhancements
-- [ ] **Custom Trellis Asset System**: Custom trellis structures manually built for climbing crops.
 - [ ] **Localization**: Tagalog + Hiligaynon language support (`strings.xml` translations)
-- [ ] **Expanded crop library**: 30+ Philippine regional varieties
-- [ ] **Live weather integration**: OpenWeatherMap or PAGASA API
-- [ ] **Harvest record entry UI**: Farmers log yield_kg, quality_rating per harvest
-- [ ] **SQLCipher Room encryption**: Full local database encryption
-- [ ] **Certificate pinning**: Prevent MITM attacks
+- [ ] **Expanded Crop Profiles**: 30+ regional Philippine vegetable varieties across all 8 plant-part categories
+- [ ] **Harvest Record Export**: Export historical yield logs (kg) per plot section
+- [ ] **SQLCipher Room Encryption**: Full local database encryption for sensitive farm records
+- [ ] **Certificate Pinning**: Hardened network transport security
+

@@ -43,7 +43,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 | Zone | Content |
 |------|---------|
 | Left | Logo + Farm selector + Location (unchanged) |
-| Center | Green "✏ EDIT MODE" pill + "Tap a bed or item to edit" gray sub-label |
+| Center | Green "✏ EDIT MODE" pill + "Tap a plot or item to edit" gray sub-label |
 | Right | Bell badge + avatar (name hidden in Edit Mode) |
 
 ---
@@ -60,7 +60,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 ## 🔹 Touch Target Rules
 
 - Minimum touch target: **48dp × 48dp** (Material Design + outdoor-use requirement)
-- Farm canvas bed tap target: minimum **60dp × 60dp** (bed must be large enough to tap)
+- Farm canvas plot tap target: minimum **60dp × 60dp** (plot must be large enough to tap)
 - Selection handles: minimum **24dp diameter** circles
 - Bottom nav tabs: minimum **56dp height**
 
@@ -73,7 +73,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 | Default | Base color |
 | Hover/Pressed | Ripple effect (Material You) |
 | Active (nav tab) | Green fill + underline indicator |
-| Selected (bed) | Dashed blue border + handles |
+| Selected (plot) | Dashed blue/white border + handles |
 | Active tool (edit panel) | Light green `#E8F5E9` background row |
 | Toggle ON (Grid/Snap) | Green filled toggle switch |
 | Toggle OFF | Gray unfilled toggle switch |
@@ -86,7 +86,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 | Element | Animation |
 |---------|----------|
 | Mode switch (View → Edit) | Cross-fade of left panel content + top bar center |
-| Bed selection | Scale-in of selection handles (spring animation) |
+| Plot selection | Scale-in of selection handles (spring animation) |
 | Soil swatch selection | Scale up + ring border appear |
 | SAVE CHANGES tap | Button compress + green flash |
 | Task row tap | Ripple + navigate with slide |
@@ -102,7 +102,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 View Mode left panel:          Edit Mode left panel:
 ┌─────────────────┐            ┌─────────────────┐
 │ TODAY'S TASKS   │   ──────▶  │ EDIT TOOLS [∧]  │
-│ [task rows]     │            │ [6 tool rows]   │
+│ [task rows]     │            │ [4 tool rows]   │
 │                 │            ├─────────────────┤
 │ FARM SUMMARY    │            │ SOIL TYPE       │
 │ [4 stat items]  │            │ [6 swatches]    │
@@ -119,8 +119,8 @@ The left panel content **swaps** when transitioning between View and Edit Mode. 
 | Event | Feedback |
 |-------|---------|
 | Tap empty canvas | No visual change (deselect) |
-| Tap bed (View Mode) | Bed highlights + bottom sheet slides up |
-| Tap bed (Edit Mode) | Selection handles appear with spring bounce |
-| Drag bed | Bed follows finger, ghost trail at original position |
+| Tap plot (View Mode) | Plot highlights + Monitoring Hub opens |
+| Tap plot (Edit Mode) | Selection handles appear with spring bounce |
+| Drag plot | Plot follows finger, grid snap preview |
 | Snap to grid | Subtle haptic feedback (if device supports) |
 | Zoom at limit | Bounce-back animation |

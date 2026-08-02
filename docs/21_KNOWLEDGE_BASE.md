@@ -46,6 +46,14 @@ Each crop has a detailed profile card:
 - Per-crop planting windows
 - Color-coded calendar view
 
+### 5. DIY Support Structures & Trellising Guides
+- Detailed construction references and material requirements for climbing/vining vegetables (*Ampalaya, Sitaw, Pipino*):
+  - **Bamboo A-Frame Trellis**: Setup instructions, pole spacing, string netting.
+  - **T-Post Wire Support**: Wire tensioning, height limits, heavy-vining crops.
+  - **Single Stake / Teepee Structures**: Compact support for high-density plots.
+- **Scope Decision**: Embedded strictly as offline educational reference content within the AgriLibrary, eliminating the need for interactive draggable canvas game assets. For complete details, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
+
+
 ---
 
 ## 🔹 LibraryViewModel

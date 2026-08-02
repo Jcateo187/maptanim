@@ -19,13 +19,13 @@ class AuthViewModel : ViewModel() {
 
     fun signUp(
 
-        firstName: String,
-
-        lastName: String,
-
         email: String,
 
-        password: String
+        password: String,
+
+        firstName: String = "",
+
+        lastName: String = ""
 
     ) {
 

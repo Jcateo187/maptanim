@@ -63,7 +63,7 @@ class SyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val syncQueueDao: SyncQueueDao,
-    private val bedRepository: BedRepository,
+    private val cropPlotRepository: CropPlotRepository,
     private val taskRepository: TaskRepository,
     private val activityRepository: ActivityRepository,
     private val supabaseClient: SupabaseClient
@@ -155,26 +155,26 @@ object SyncScheduler {
 All repository methods follow this pattern to guarantee Room persistence before network:
 
 ```kotlin
-// BedRepository.kt
-class BedRepositoryImpl @Inject constructor(
-    private val bedDao: BedDao,
+// CropPlotRepository.kt
+class CropPlotRepositoryImpl @Inject constructor(
+    private val cropPlotDao: CropPlotDao,
     private val syncQueueDao: SyncQueueDao,
     private val supabaseClient: SupabaseClient
-) : BedRepository {
+) : CropPlotRepository {
 
     // Called when user saves Edit Mode changes
-    override suspend fun saveBeds(beds: List<BedEntity>) {
+    override suspend fun savePlots(plots: List<CropPlotEntity>) {
         // 1. Write to Room immediately (offline-safe, instant UI update)
-        bedDao.upsertBeds(beds)
+        cropPlotDao.upsertPlots(plots)
 
         // 2. Queue sync operations — no direct Supabase call here
-        beds.forEach { bed ->
+        plots.forEach { plot ->
             syncQueueDao.upsert(
                 SyncQueueEntity(
-                    tableName = "beds",
-                    recordId = bed.id,
+                    tableName = "crop_plots",
+                    recordId = plot.id,
                     operation = "UPDATE",
-                    payload = Json.encodeToString(bed)
+                    payload = Json.encodeToString(plot)
                 )
             )
         }
@@ -183,9 +183,9 @@ class BedRepositoryImpl @Inject constructor(
         // (SyncWorker handles retry on failure)
     }
 
-    // Observe beds — always reads from Room (never directly from Supabase in UI)
-    override fun observeBeds(farmId: String): Flow<List<BedEntity>> =
-        bedDao.observeBeds(farmId)   // Flow<List<BedEntity>> from Room
+    // Observe plots — always reads from Room (never directly from Supabase in UI)
+    override fun observePlots(farmId: String): Flow<List<CropPlotEntity>> =
+        cropPlotDao.observePlots(farmId)   // Flow<List<CropPlotEntity>> from Room
 }
 ```
 
@@ -203,8 +203,8 @@ class AppInitializationController {
         val farms = supabaseClient.postgrest["farms"].select().decodeList<FarmEntity>()
         farmDao.upsertFarms(farms)
 
-        val beds = supabaseClient.postgrest["beds"].select().decodeList<BedEntity>()
-        bedDao.upsertBeds(beds)
+        val plots = supabaseClient.postgrest["crop_plots"].select().decodeList<CropPlotEntity>()
+        cropPlotDao.upsertPlots(plots)
 
         val tasks = supabaseClient.postgrest["tasks"].select { filter { eq("is_completed", false) } }.decodeList<TaskEntity>()
         taskDao.upsertTasks(tasks)

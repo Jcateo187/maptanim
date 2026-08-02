@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -15,6 +16,7 @@ import com.maptanim.app.domain.model.FarmObjectType
 import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.renderer.AssetLoader
+import com.maptanim.app.renderer.PlantInstanceGenerator
 import com.maptanim.app.renderer.model.*
 import com.maptanim.app.ui.components.isometric.world.terrain.TerrainPainter
 import com.maptanim.app.ui.components.isometric.world.farm.SoilPainter
@@ -41,8 +43,10 @@ object FarmCanvasRenderer {
         selectedPlotId: String? = null,
         selectedZoneId: String? = null,
         hoverWorldPos: Offset? = null,
+        isValidPlacement: Boolean = true,
         isGridEnabled: Boolean = true,
         isSnapEnabled: Boolean = true,
+        isResizeMode: Boolean = false,
         resources: Resources? = null,
         context: android.content.Context? = null,
         onHandlesReady: ((String, HandlePositions) -> Unit)? = null
@@ -55,14 +59,18 @@ object FarmCanvasRenderer {
 
         // ── Layer 1.5: CoC-Style Hover Tile Highlight Preview ─────────────
         if (hoverWorldPos != null) {
-            renderTileHighlight(hoverWorldPos, camera)
+            val selectedPlot = selectedPlotId?.let { selId -> plots.firstOrNull { it.id == selId } }
+            val highlightW = selectedPlot?.widthM ?: 1.0f
+            val highlightH = selectedPlot?.heightM ?: 1.0f
+            renderTileHighlight(hoverWorldPos, camera, isValidPlacement, widthM = highlightW, heightM = highlightH)
         }
 
-        // ── Layer 2: Direct Planted Crops & Trellises ─────────────────────
+        // ── Layer 2: Direct Planted Crops & Soil Beds & Trellises ─────────
         val sortedPlots = plots.sortedBy { it.posX + it.posY }
 
         sortedPlots.forEach { plot ->
-            renderDirectCrop(plot, camera, context)
+            renderSoilPlot(plot, camera, resources, context)
+            renderDirectCrop(plot, cropZones, camera, context)
 
             val plotTrellises = farmObjects.filter { it.attachedPlotId == plot.id && it.objectType == FarmObjectType.TRELLIS }
             plotTrellises.forEach { trellis ->
@@ -78,12 +86,15 @@ object FarmCanvasRenderer {
             renderFarmObject(obj, camera, context)
         }
 
-        // ── Layer 4: Status Pins (VIEW MODE only) ─────────────────────────
-        if (canvasMode == com.maptanim.app.domain.model.CanvasMode.VIEW) {
-            sortedPlots.forEach { plot ->
-                if (plot.activeTasks.isNotEmpty()) {
-                    renderStatusPins(plot, camera)
-                }
+        // ── Layer 3.5: Floating Crop Zone Top Labels ─────────────────────
+        sortedPlots.forEach { plot ->
+            renderCropZoneLabel(plot, camera, isSelected = (plot.id == selectedPlotId))
+        }
+
+        // ── Layer 4: Status Pins & Calendar Monitoring Badges ─────────────
+        sortedPlots.forEach { plot ->
+            if (!plot.cropName.isNullOrEmpty() || plot.activeTasks.isNotEmpty()) {
+                renderStatusPins(plot, camera)
             }
         }
 
@@ -93,7 +104,7 @@ object FarmCanvasRenderer {
 
             selectedPlotId?.let { selId ->
                 sortedPlots.firstOrNull { it.id == selId }?.let { selPlot ->
-                    val handles = renderSelectionHandles(selPlot, camera)
+                    val handles = renderSelectionHandles(selPlot, camera, showHandles = isResizeMode)
                     onHandlesReady?.invoke(selId, handles)
                 }
             }
@@ -134,116 +145,88 @@ object FarmCanvasRenderer {
             "water_lily/water_lily_white.png"
         )
 
-        // 1. MASSIVE 3X BIGGER TREES IN THE BACK & SIDES (tileSpan 24.0f..30.0f)
-        // 4 Dense Back Rows (wy < 0) - hides background void completely
-        for (wyStep in listOf(-4.0f, -7.5f, -11.0f, -14.5f)) {
-            for (wx in -12..42 step 4) {
-                val jitterX = ((wx * 37 + wyStep.toInt() * 17) % 7 - 3) * 0.3f
-                val treeAsset = treeAssets[Math.abs((wx * 13 + wyStep.toInt() * 31).toInt()) % treeAssets.size]
-                val span = 24.0f + ((Math.abs(wx * 7 + wyStep.toInt() * 19) % 5) * 1.5f)
-                decors.add(Decor(wx.toFloat() + jitterX, wyStep, treeAsset, tileSpan = span, isTree = true))
-            }
+        // 1. CLEAN BACKDROP CANOPY TREES (Only ~15 well-spaced trees hiding back & left grass edges, zero collapsing)
+        // Back edge canopy row (wy = -5.5f)
+        for (wx in -6..36 step 5) {
+            val jitterX = ((wx * 37) % 5 - 2) * 0.2f
+            val treeAsset = treeAssets[Math.abs((wx * 13).toInt()) % treeAssets.size]
+            decors.add(Decor(wx.toFloat() + jitterX, -5.5f, treeAsset, tileSpan = 6.5f, isTree = true))
         }
-        // 3 Left Side Rows (wx < 0)
-        for (wxStep in listOf(-4.0f, -7.5f, -11.0f)) {
-            for (wy in -6..36 step 4) {
-                val jitterY = ((wy * 41 + wxStep.toInt() * 23) % 7 - 3) * 0.3f
-                val treeAsset = treeAssets[Math.abs((wy * 17 + wxStep.toInt() * 29).toInt()) % treeAssets.size]
-                val span = 24.0f + ((Math.abs(wy * 11 + wxStep.toInt() * 13) % 5) * 1.5f)
-                decors.add(Decor(wxStep, wy.toFloat() + jitterY, treeAsset, tileSpan = span, isTree = true))
-            }
+        // Left edge canopy row (wx = -5.5f)
+        for (wy in 0..32 step 5) {
+            val jitterY = ((wy * 41) % 5 - 2) * 0.2f
+            val treeAsset = treeAssets[Math.abs((wy * 17).toInt()) % treeAssets.size]
+            decors.add(Decor(-5.5f, wy.toFloat() + jitterY, treeAsset, tileSpan = 6.5f, isTree = true))
         }
 
-        // 2. ROCKS & FLOWERS AROUND BACK TREE BASES (wy < 0)
-        for (i in 0..20) {
-            val wx = -8.0f + (i * 2.5f)
-            val wy = -3.2f + ((i % 3) * -1.0f)
-            decors.add(Decor(wx, wy, if (i % 2 == 0) "trees_and_rocks/flower.png" else "trees_and_rocks/large_rock.png", tileSpan = 1.0f))
-        }
+        // 2. NATURAL ORGANIC OBSTACLES (ROCKS, BUSHES, FLOWERS, WATER LILIES)
+        // Positioned outside fence line (-1.8m to 31.8m boundary) with natural organic scatter
+        val obstacleLocations = listOf(
+            // Back/Left Forest Base Scatter (wy < -2f or wx < -2f)
+            Decor(-4.0f, -3.5f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
+            Decor(2.5f, -3.8f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+            Decor(8.0f, -4.2f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
+            Decor(15.2f, -3.6f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
+            Decor(22.0f, -4.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+            Decor(28.5f, -3.5f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
+            Decor(33.0f, -3.8f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
 
-        // 3. FRONT AREA: WIDE SPREAD WATER LILIES, FLOWERS, STONES, AND BUSHES (NO FLOATING GRASS TILE TEXTURES)
-        // Water Lilies (10 items widely spread)
-        for (i in 0..9) {
-            val hash1 = Math.abs(i * 1741 + 11)
-            val hash2 = Math.abs(i * 2803 + 23)
-            val isFrontEdge = (i % 2 == 0)
+            // Left Outer Grass Scatter (wx < -3f)
+            Decor(-3.8f, 4.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+            Decor(-4.2f, 10.5f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
+            Decor(-3.6f, 17.0f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
+            Decor(-4.0f, 24.2f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
 
-            val wx = if (isFrontEdge) 4.0f + (hash1 % 280) / 10f else 30.5f + (hash1 % 80) / 10f
-            val wy = if (isFrontEdge) 30.5f + (hash2 % 80) / 10f else 4.0f + (hash2 % 280) / 10f
-            val asset = waterLilyAssets[i % waterLilyAssets.size]
+            // Front/Right Open Landscape Scatter (wx > 33.5f or wy > 33.5f) - organically placed outside fence
+            Decor(4.5f, 34.2f, waterLilyAssets[0], tileSpan = 1.1f),
+            Decor(12.0f, 34.8f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
+            Decor(18.5f, 34.0f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
+            Decor(25.2f, 34.6f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+            Decor(34.2f, 6.0f, waterLilyAssets[1], tileSpan = 1.1f),
+            Decor(34.5f, 14.2f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
+            Decor(34.0f, 21.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+            Decor(34.6f, 28.5f, waterLilyAssets[2], tileSpan = 1.1f),
+            Decor(33.8f, 33.8f, "trees_and_rocks/flower.png", tileSpan = 0.85f)
+        )
+        decors.addAll(obstacleLocations)
 
-            decors.add(Decor(wx, wy, asset, tileSpan = 1.1f))
-        }
-
-        // Flowers (14 items widely spread)
-        for (i in 0..13) {
-            val hash1 = Math.abs(i * 1013 + 7)
-            val hash2 = Math.abs(i * 1619 + 13)
-            val isFrontEdge = (i % 2 == 0)
-
-            val wx = if (isFrontEdge) 2.0f + (hash1 % 300) / 10f else 31.0f + (hash1 % 70) / 10f
-            val wy = if (isFrontEdge) 31.0f + (hash2 % 70) / 10f else 2.0f + (hash2 % 300) / 10f
-
-            decors.add(Decor(wx, wy, "trees_and_rocks/flower.png", tileSpan = 0.85f))
-        }
-
-        // Stones / Rocks (10 items widely spread)
-        for (i in 0..9) {
-            val hash1 = Math.abs(i * 2237 + 19)
-            val hash2 = Math.abs(i * 3571 + 31)
-            val isFrontEdge = (i % 2 == 0)
-
-            val wx = if (isFrontEdge) 3.0f + (hash1 % 290) / 10f else 30.2f + (hash1 % 80) / 10f
-            val wy = if (isFrontEdge) 30.2f + (hash2 % 80) / 10f else 3.0f + (hash2 % 290) / 10f
-            val rockAsset = if (i % 2 == 0) "trees_and_rocks/small_rock.png" else "trees_and_rocks/large_rock.png"
-
-            decors.add(Decor(wx, wy, rockAsset, tileSpan = 0.9f))
-        }
-
-        // Bushes (14 items widely spread across open front terrain - no floating tile textures)
-        for (i in 0..13) {
-            val hash1 = Math.abs(i * 3187 + 43)
-            val hash2 = Math.abs(i * 4409 + 59)
-            val isFrontEdge = (i % 2 == 0)
-
-            val wx = if (isFrontEdge) 1.0f + (hash1 % 310) / 10f else 30.8f + (hash1 % 75) / 10f
-            val wy = if (isFrontEdge) 30.8f + (hash2 % 75) / 10f else 1.0f + (hash2 % 310) / 10f
-
-            decors.add(Decor(wx, wy, "trees_and_rocks/bush.png", tileSpan = 0.85f))
-        }
-
-        decors
+        decors.sortedBy { it.wx + it.wy }
     }
 
     private data class FenceSegment(val wx: Float, val wy: Float, val asset: String)
 
     private val FENCE_SEGMENTS: List<FenceSegment> by lazy {
         val segments = mutableListOf<FenceSegment>()
-        var x = FARM_MIN_X
-        while (x < FARM_MAX_X) {
-            segments.add(FenceSegment(x, FARM_MIN_Y - 1f, "fences/fences_left.png"))
+        val fenceMinX = FARM_MIN_X - 1.8f
+        val fenceMaxX = FARM_MAX_X + 1.8f
+        val fenceMinY = FARM_MIN_Y - 1.8f
+        val fenceMaxY = FARM_MAX_Y + 1.8f
+
+        var x = fenceMinX
+        while (x <= fenceMaxX) {
+            segments.add(FenceSegment(x, fenceMinY, "fences/fences_left.png"))
             x += 1f
         }
-        x = FARM_MIN_X
-        while (x < FARM_MAX_X) {
-            segments.add(FenceSegment(x, FARM_MAX_Y, "fences/fences_left.png"))
+        x = fenceMinX
+        while (x <= fenceMaxX) {
+            segments.add(FenceSegment(x, fenceMaxY, "fences/fences_left.png"))
             x += 1f
         }
-        var y = FARM_MIN_Y
-        while (y < FARM_MAX_Y) {
-            segments.add(FenceSegment(FARM_MIN_X - 1f, y, "fences/fences_right.png"))
+        var y = fenceMinY
+        while (y <= fenceMaxY) {
+            segments.add(FenceSegment(fenceMinX, y, "fences/fences_right.png"))
             y += 1f
         }
-        y = FARM_MIN_Y
-        while (y < FARM_MAX_Y) {
-            segments.add(FenceSegment(FARM_MAX_X, y, "fences/fences_right.png"))
+        y = fenceMinY
+        while (y <= fenceMaxY) {
+            segments.add(FenceSegment(fenceMaxX, y, "fences/fences_right.png"))
             y += 1f
         }
-        segments.add(FenceSegment(FARM_MIN_X - 1f, FARM_MIN_Y - 1f, "fences/fence_post.png"))
-        segments.add(FenceSegment(FARM_MAX_X, FARM_MIN_Y - 1f, "fences/fence_post.png"))
-        segments.add(FenceSegment(FARM_MIN_X - 1f, FARM_MAX_Y, "fences/fence_post.png"))
-        segments.add(FenceSegment(FARM_MAX_X, FARM_MAX_Y, "fences/fence_post.png"))
-        segments
+        segments.add(FenceSegment(fenceMinX, fenceMinY, "fences/fence_post.png"))
+        segments.add(FenceSegment(fenceMaxX, fenceMinY, "fences/fence_post.png"))
+        segments.add(FenceSegment(fenceMinX, fenceMaxY, "fences/fence_post.png"))
+        segments.add(FenceSegment(fenceMaxX, fenceMaxY, "fences/fence_post.png"))
+        segments.sortedBy { it.wx + it.wy }
     }
 
 
@@ -312,18 +295,28 @@ object FarmCanvasRenderer {
 
         val tileW = (IsometricProjection.TILE_W * camera.zoom).toInt().coerceAtLeast(1)
         val tileH = (IsometricProjection.TILE_H * camera.zoom).toInt().coerceAtLeast(1)
+        val canvasW = size.width
+        val canvasH = size.height
 
-        FENCE_SEGMENTS.sortedBy { it.wx + it.wy }.forEach { fence ->
+        // 1. Render Fences with Viewport Frustum Culling (Zero lag at high zoom)
+        FENCE_SEGMENTS.forEach { fence ->
+            val pos = IsometricProjection.toScreen(fence.wx, fence.wy, camera)
+            val targetW = tileW + 4
+            val left = pos.x - tileW / 2f - 2f
+
+            // Fast Cull Check (Skip off-screen fences outside viewport + 60px margin)
+            if (left > canvasW + 60f || left + targetW < -60f || pos.y < -100f || pos.y > canvasH + 100f) {
+                return@forEach
+            }
+
             val bitmap = AssetLoader.loadFromAssets(context, fence.asset)
             if (bitmap != null) {
-                val pos = IsometricProjection.toScreen(fence.wx, fence.wy, camera)
-                val targetW = tileW + 4
                 val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
                 val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
                 drawImage(
                     image = bitmap,
                     dstOffset = IntOffset(
-                        Math.round(pos.x - tileW / 2f - 2f),
+                        Math.round(left),
                         Math.round(pos.y - (targetH - tileH / 2f - 2f))
                     ),
                     dstSize = IntSize(targetW, targetH)
@@ -331,11 +324,19 @@ object FarmCanvasRenderer {
             }
         }
 
-        SCENERY_DECORATIONS.sortedBy { it.wx + it.wy }.forEach { decor ->
+        // 2. Render Scenery Objects (Trees, Rocks, Flowers, Bushes) with Viewport Frustum Culling
+        SCENERY_DECORATIONS.forEach { decor ->
+            val pos = IsometricProjection.toScreen(decor.wx, decor.wy, camera)
+            val targetW = ((tileW + 4) * decor.tileSpan).toInt().coerceAtLeast(1)
+            val left = pos.x - targetW / 2f
+
+            // Fast Cull Check (Skip off-screen items; 200px top margin for massive trees)
+            if (left > canvasW + 150f || left + targetW < -150f || pos.y < -250f || pos.y > canvasH + 150f) {
+                return@forEach
+            }
+
             val bitmap = AssetLoader.loadFromAssets(context, decor.asset)
             if (bitmap != null) {
-                val pos = IsometricProjection.toScreen(decor.wx, decor.wy, camera)
-                val targetW = ((tileW + 4) * decor.tileSpan).toInt().coerceAtLeast(1)
                 val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
                 val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
 
@@ -343,7 +344,7 @@ object FarmCanvasRenderer {
                     drawImage(
                         image = bitmap,
                         dstOffset = IntOffset(
-                            Math.round(pos.x - targetW / 2f),
+                            Math.round(left),
                             Math.round(pos.y + tileH / 2f - targetH)
                         ),
                         dstSize = IntSize(targetW, targetH)
@@ -352,7 +353,7 @@ object FarmCanvasRenderer {
                     drawImage(
                         image = bitmap,
                         dstOffset = IntOffset(
-                            Math.round(pos.x - targetW / 2f),
+                            Math.round(left),
                             Math.round(pos.y - (targetH - tileH / 2f))
                         ),
                         dstSize = IntSize(targetW, targetH)
@@ -362,11 +363,17 @@ object FarmCanvasRenderer {
         }
     }
 
-    // ── Layer 1.5: CoC Isometric Hover Tile Highlight ───────────────────
+    // ── Layer 1.5: CoC Isometric Hover Tile Highlight (MD 34 Blue/Red Preview) ─
 
-    private fun DrawScope.renderTileHighlight(hoverWorldPos: Offset, camera: CameraState) {
-        val w = 2.5f
-        val h = 2.0f
+    private fun DrawScope.renderTileHighlight(
+        hoverWorldPos: Offset,
+        camera: CameraState,
+        isValidPlacement: Boolean = true,
+        widthM: Float = 1.0f,
+        heightM: Float = 1.0f
+    ) {
+        val w = widthM
+        val h = heightM
 
         val topLeft     = IsometricProjection.toScreen(hoverWorldPos.x,     hoverWorldPos.y,     camera)
         val topRight    = IsometricProjection.toScreen(hoverWorldPos.x + w, hoverWorldPos.y,     camera)
@@ -381,48 +388,197 @@ object FarmCanvasRenderer {
             close()
         }
 
+        val strokeColor = if (isValidPlacement) Color(0xFF1E88E5) else Color(0xFFE53935)
+        val fillColor   = if (isValidPlacement) Color(0x331E88E5) else Color(0x44E53935)
+
         drawPath(
             path = path,
-            color = Color(0x554CAF50)
+            color = fillColor
         )
 
         drawPath(
             path = path,
-            color = Color(0xFF4CAF50),
+            color = strokeColor,
             style = Stroke(width = 3.dp.toPx())
         )
     }
 
-    // ── Layer 2: Direct Planted Crop PNG Sprite ─────────────────────────
+    // ── Layer 1.8: Floating Crop Zone Top Label Badge ────────────────────
+
+    private fun DrawScope.renderCropZoneLabel(
+        plot: PlotRenderData,
+        camera: CameraState,
+        isSelected: Boolean = false
+    ) {
+        val topPos = plot.topEdgeCenter(camera)
+        val cropName = plot.cropName ?: "Crop Zone"
+        val emoji = when (cropName.lowercase().replace(" ", "")) {
+            "stringbeans", "sitaw", "beans" -> "🫘"
+            "eggplant", "talong" -> "🍆"
+            "tomato", "kamatis" -> "🍅"
+            "onion", "sibuyas" -> "🧅"
+            "pumpkin", "kalabasa" -> "🎃"
+            "corn", "mais" -> "🌽"
+            else -> "🥕"
+        }
+        val labelText = "$emoji $cropName (${plot.widthM.toInt()}m × ${plot.heightM.toInt()}m)"
+
+        val nativeCanvas = drawContext.canvas.nativeCanvas
+        val textPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = (12f * camera.zoom).coerceIn(10f, 20f)
+            isAntiAlias = true
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        val textWidth = textPaint.measureText(labelText)
+        val fontMetrics = textPaint.fontMetrics
+        val textHeight = fontMetrics.bottom - fontMetrics.top
+
+        val padH = 12f * camera.zoom
+        val padV = 5f * camera.zoom
+        val rectW = textWidth + (padH * 2f)
+        val rectH = textHeight + (padV * 2f)
+
+        val centerY = topPos.y - (rectH / 2f) - (14f * camera.zoom)
+        val rectLeft = topPos.x - (rectW / 2f)
+        val rectTop = centerY - (rectH / 2f)
+        val rectRight = topPos.x + (rectW / 2f)
+        val rectBottom = centerY + (rectH / 2f)
+
+        val bgPaint = android.graphics.Paint().apply {
+            color = if (isSelected) android.graphics.Color.parseColor("#E61B5E20") else android.graphics.Color.parseColor("#CC000000")
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.FILL
+        }
+        val borderPaint = android.graphics.Paint().apply {
+            color = if (isSelected) android.graphics.Color.parseColor("#FF81C784") else android.graphics.Color.parseColor("#44FFFFFF")
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = (2f * camera.zoom).coerceIn(1f, 4f)
+        }
+
+        val cornerRadius = rectH / 2f
+        val rectF = android.graphics.RectF(rectLeft, rectTop, rectRight, rectBottom)
+
+        nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint)
+        nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint)
+
+        val textY = centerY - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
+        nativeCanvas.drawText(labelText, topPos.x, textY, textPaint)
+    }
+
+    // ── Layer 2: Direct Planted Crops & Soil Plot Beds ───────────────────
+
+    private fun DrawScope.renderSoilPlot(
+        plot: PlotRenderData,
+        camera: CameraState,
+        resources: Resources?,
+        context: android.content.Context?
+    ) {
+        if (context == null) return
+        val res = resources ?: context.resources
+        val tileW = (IsometricProjection.TILE_W * camera.zoom).toInt().coerceAtLeast(1)
+        val renderTileW = tileW + 4
+        val renderTileH = (IsometricProjection.TILE_H * camera.zoom).toInt().coerceAtLeast(1) + 4
+
+        var y = 0f
+        while (y < plot.heightM) {
+            var x = 0f
+            while (x < plot.widthM) {
+                val tileWorldX = plot.posX + x
+                val tileWorldY = plot.posY + y
+                val pos = IsometricProjection.toScreen(tileWorldX, tileWorldY, camera)
+
+                val soilVariant = if ((tileWorldX.toInt() + tileWorldY.toInt()) % 2 == 0) 1 else 2
+                val soilBitmap = SoilPainter.getTexture(res, soilVariant, context)
+
+                drawImage(
+                    image = soilBitmap,
+                    dstOffset = IntOffset(
+                        Math.round(pos.x - tileW / 2f - 2f),
+                        Math.round(pos.y - 2f)
+                    ),
+                    dstSize = IntSize(renderTileW, renderTileH)
+                )
+                x += 1.0f
+            }
+            y += 1.0f
+        }
+    }
 
     private fun DrawScope.renderDirectCrop(
         plot: PlotRenderData,
+        cropZones: List<CropZoneRenderData>,
         camera: CameraState,
         context: android.content.Context?
     ) {
         if (context == null) return
 
-        val cropClean = when (plot.cropName?.lowercase()?.replace(" ", "")) {
-            "stringbeans", "sitaw", "beans" -> "crop_stringbeans"
-            else -> "crop_carrot"
+        val zone = cropZones.firstOrNull { it.plotId == plot.id }
+        val plantsToRender = if (zone != null && zone.plantInstances.isNotEmpty()) {
+            zone.plantInstances
+        } else {
+            val tempZone = CropZoneRenderData(
+                id = "temp-${plot.id}",
+                plotId = plot.id,
+                cropName = plot.cropName ?: "Carrot",
+                offsetX = 0f,
+                offsetY = 0f,
+                widthM = plot.widthM,
+                heightM = plot.heightM,
+                spacingM = 1.0f
+            )
+            PlantInstanceGenerator.generate(tempZone, plot.posX, plot.posY)
         }
 
-        val bitmap = AssetLoader.loadFromAssets(context, "crops/${cropClean}_1.png")
-        if (bitmap != null) {
-            val centerPos = IsometricProjection.toScreen(plot.posX + plot.widthM / 2f, plot.posY + plot.heightM / 2f, camera)
-            val baseTileW = IsometricProjection.TILE_W * camera.zoom
-            val targetW = (baseTileW * 1.6f).toInt().coerceAtLeast(1)
-            val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
-            val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
+        plantsToRender.forEach { plant ->
+            val cropClean = when (plant.cropName.lowercase().replace(" ", "")) {
+                "stringbeans", "sitaw", "beans" -> "crop_stringbeans"
+                "eggplant", "talong" -> "crop_eggplant"
+                "tomato", "kamatis" -> "crop_tomato"
+                "onion", "sibuyas" -> "crop_onion"
+                "pumpkin", "squash", "kalabasa" -> "crop_pumpkin"
+                "corn", "mais" -> "crop_corn"
+                "cabbage", "repolyo" -> "crop_cabbage"
+                "pechay", "bokchoy" -> "crop_pechay"
+                "ampalaya", "bittergourd" -> "crop_ampalaya"
+                "okra" -> "crop_okra"
+                "sili", "chili", "chilipepper", "pepper" -> "crop_sili"
+                "cucumber", "pipino" -> "crop_pipino"
+                "kangkong", "waterspinach" -> "crop_kangkong"
+                "lettuce", "litsugas" -> "crop_lettuce"
+                else -> "crop_carrot"
+            }
 
-            drawImage(
-                image = bitmap,
-                dstOffset = IntOffset(
-                    Math.round(centerPos.x - targetW / 2f),
-                    Math.round(centerPos.y - targetH + (baseTileW * 0.2f))
-                ),
-                dstSize = IntSize(targetW, targetH)
-            )
+            val stage = plant.growthStage.coerceIn(1, 5)
+            val bitmap = AssetLoader.loadFromAssets(context, "crops/${cropClean}_${stage}.png")
+                ?: AssetLoader.loadFromAssets(context, "crops/${cropClean}_1.png")
+                ?: AssetLoader.loadFromAssets(context, "crops/crop_carrot_1.png")
+            val pos = IsometricProjection.toScreen(plant.worldX, plant.worldY, camera)
+            val baseTileW = IsometricProjection.TILE_W * camera.zoom
+
+            if (bitmap != null) {
+                val targetW = (baseTileW * 1.0f * plant.scaleFactor).toInt().coerceAtLeast(1)
+                val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
+                val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
+
+                drawImage(
+                    image = bitmap,
+                    dstOffset = IntOffset(
+                        Math.round(pos.x - targetW / 2f),
+                        Math.round(pos.y - targetH + (baseTileW * 0.25f))
+                    ),
+                    dstSize = IntSize(targetW, targetH)
+                )
+            } else {
+                drawCircle(
+                    color = Color(0xFF4CAF50),
+                    radius = (baseTileW * 0.35f),
+                    center = pos
+                )
+            }
         }
     }
 
@@ -478,35 +634,103 @@ object FarmCanvasRenderer {
         )
     }
 
-    // ── Layer 4: Status Pins (VIEW MODE) ────────────────────────────────
+    // ── Layer 4: Status Pins & Calendar Monitoring Badges (VIEW MODE) ────
 
     private fun DrawScope.renderStatusPins(plot: PlotRenderData, camera: CameraState) {
-        val anchor = plot.pinAnchor(camera)
-        val pinSizePx = 28f * camera.zoom
+        val topPos = plot.topEdgeCenter(camera)
 
-        plot.activeTasks.forEachIndexed { index, task ->
-            val offsetX = (index - (plot.activeTasks.size - 1) / 2f) * (pinSizePx + 4f)
-            val pinCenter = Offset(anchor.x + offsetX, anchor.y)
+        // ── 1. Unstarted Crop Calendar Badge (📅 START MONITORING) ───────
+        if (!plot.cropName.isNullOrEmpty() && !plot.isMonitoringStarted) {
+            val badgeCenterY = topPos.y - (42f * camera.zoom)
+            val badgeCenterX = topPos.x
 
-            val pinColor = when (task.taskType) {
-                TaskType.WATER -> Color(0xFF1E88E5)
-                TaskType.FERTILIZE -> Color(0xFF43A047)
-                TaskType.HARVEST -> Color(0xFFFB8C00)
-                TaskType.PEST_ALERT -> Color(0xFFE53935)
-                else -> Color(0xFF8E24AA)
+            val labelText = "📅 START MONITORING"
+            val nativeCanvas = drawContext.canvas.nativeCanvas
+            val textPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = (11f * camera.zoom).coerceIn(9f, 18f)
+                isAntiAlias = true
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                textAlign = android.graphics.Paint.Align.CENTER
             }
 
-            drawCircle(
-                color = pinColor,
-                radius = pinSizePx / 2f,
-                center = pinCenter
-            )
-            drawCircle(
-                color = Color.White,
-                radius = pinSizePx / 2f,
-                center = pinCenter,
-                style = Stroke(width = 2.dp.toPx())
-            )
+            val textWidth = textPaint.measureText(labelText)
+            val fontMetrics = textPaint.fontMetrics
+            val textHeight = fontMetrics.bottom - fontMetrics.top
+
+            val padH = 10f * camera.zoom
+            val padV = 4f * camera.zoom
+            val rectW = textWidth + (padH * 2f)
+            val rectH = textHeight + (padV * 2f)
+
+            val rectLeft = badgeCenterX - (rectW / 2f)
+            val rectTop = badgeCenterY - (rectH / 2f)
+            val rectRight = badgeCenterX + (rectW / 2f)
+            val rectBottom = badgeCenterY + (rectH / 2f)
+
+            val bgPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor("#FFE65100") // Glowing Amber Orange
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.FILL
+            }
+            val borderPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = (2f * camera.zoom).coerceIn(1.5f, 4f)
+            }
+
+            val cornerRadius = rectH / 2f
+            val rectF = android.graphics.RectF(rectLeft, rectTop, rectRight, rectBottom)
+
+            nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint)
+            nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint)
+
+            val textY = badgeCenterY - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
+            nativeCanvas.drawText(labelText, badgeCenterX, textY, textPaint)
+        }
+
+        // ── 2. Active Task Pin Badges (💧 🌿 🌾 🐛) ───────────────────────
+        if (plot.activeTasks.isNotEmpty()) {
+            val pinSizePx = 28f * camera.zoom
+            val anchorY = topPos.y - (70f * camera.zoom)
+
+            plot.activeTasks.forEachIndexed { index, task ->
+                val offsetX = (index - (plot.activeTasks.size - 1) / 2f) * (pinSizePx + 6f)
+                val pinCenter = Offset(topPos.x + offsetX, anchorY)
+
+                val (pinColorHex, iconSymbol) = when (task.taskType) {
+                    TaskType.WATER -> "#FF1E88E5" to "💧"
+                    TaskType.FERTILIZE -> "#FF43A047" to "🌿"
+                    TaskType.HARVEST -> "#FFFB8C00" to "🌾"
+                    TaskType.PEST_ALERT -> "#FFE53935" to "🐛"
+                    else -> "#FF8E24AA" to "📋"
+                }
+
+                drawCircle(
+                    color = Color(android.graphics.Color.parseColor(pinColorHex)),
+                    radius = pinSizePx / 2f,
+                    center = pinCenter
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = pinSizePx / 2f,
+                    center = pinCenter,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+
+                // Draw Icon/Emoji Symbol inside the pin circle
+                val nativeCanvas = drawContext.canvas.nativeCanvas
+                val iconPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    textSize = (14f * camera.zoom).coerceIn(10f, 22f)
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                val fontMetrics = iconPaint.fontMetrics
+                val textY = pinCenter.y - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
+                nativeCanvas.drawText(iconSymbol, pinCenter.x, textY, iconPaint)
+            }
         }
     }
 
@@ -527,11 +751,13 @@ object FarmCanvasRenderer {
 
     private fun DrawScope.renderSelectionHandles(
         plot: PlotRenderData,
-        camera: CameraState
+        camera: CameraState,
+        showHandles: Boolean = false
     ): HandlePositions {
         val sc = plot.screenCorners(camera)
         val strokeWidth = 3.dp.toPx()
-        val pathColor = Color(0xFF1E88E5)
+        val pathColor = Color.White
+        val handleStrokeColor = Color(0xFF1E88E5)
 
         val path = Path().apply {
             moveTo(sc.topLeft.x, sc.topLeft.y)
@@ -549,6 +775,31 @@ object FarmCanvasRenderer {
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(16f, 12f), 0f)
             )
         )
+
+        // Draw 8 Bounding Box Handle Control Points ONLY when Resize mode is active (MD 34 specification)
+        if (showHandles) {
+            val handleRadius = 6.dp.toPx()
+            val handleBorderWidth = 2.dp.toPx()
+            val handlePoints = listOf(
+                sc.topLeft, sc.topCenter, sc.topRight,
+                sc.leftMid, sc.rightMid,
+                sc.bottomLeft, sc.bottomCenter, sc.bottomRight
+            )
+
+            for (pt in handlePoints) {
+                drawCircle(
+                    color = Color.White,
+                    radius = handleRadius,
+                    center = pt
+                )
+                drawCircle(
+                    color = handleStrokeColor,
+                    radius = handleRadius,
+                    center = pt,
+                    style = Stroke(width = handleBorderWidth)
+                )
+            }
+        }
 
         return HandlePositions(
             dragHandle = plot.centerScreen(camera),

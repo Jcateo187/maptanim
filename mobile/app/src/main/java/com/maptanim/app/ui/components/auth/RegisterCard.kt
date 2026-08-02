@@ -34,10 +34,6 @@ fun RegisterCard(
 
     val uiState by authViewModel.uiState.collectAsState()
 
-    var firstName by remember { mutableStateOf("") }
-
-    var lastName by remember { mutableStateOf("") }
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -89,26 +85,6 @@ fun RegisterCard(
             Spacer(modifier = Modifier.height(24.dp))
 
             AppTextField(
-                value = firstName,
-                onValueChange = {
-                    firstName = it
-                },
-                label = "First Name"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AppTextField(
-                value = lastName,
-                onValueChange = {
-                    lastName = it
-                },
-                label = "Last Name"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AppTextField(
                 value = email,
                 onValueChange = {
                     email = it
@@ -155,8 +131,6 @@ fun RegisterCard(
 
                     if (
 
-                        firstName.isNotBlank() &&
-                        lastName.isNotBlank() &&
                         email.isNotBlank() &&
                         password.isNotBlank() &&
                         confirmPassword.isNotBlank() &&
@@ -166,10 +140,6 @@ fun RegisterCard(
                     ) {
 
                         authViewModel.signUp(
-
-                            firstName = firstName,
-
-                            lastName = lastName,
 
                             email = email,
 

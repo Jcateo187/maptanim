@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
+import com.maptanim.app.data.repository.RepositoryProvider
 
 /**
  * Action type for Undo/Redo operations in Farm Editor.
@@ -38,9 +39,9 @@ sealed interface EditAction {
  * EditViewModel — Manages state, undo/redo stacks, auto-save draft, and DSS integration for FarmEditorScreen.
  */
 class EditViewModel(
-    private val cropPlotRepository: CropPlotRepository? = null,
-    private val cropZoneRepository: CropZoneRepository? = null,
-    private val farmObjectRepository: FarmObjectRepository? = null
+    private val cropPlotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,
+    private val cropZoneRepository: CropZoneRepository = RepositoryProvider.cropZoneRepository,
+    private val farmObjectRepository: FarmObjectRepository = RepositoryProvider.farmObjectRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditUiState())
@@ -55,16 +56,30 @@ class EditViewModel(
 
     private fun loadFarmLayout(farmId: String) {
         viewModelScope.launch {
-            cropPlotRepository?.observePlots(farmId)?.collect { plots ->
+            cropPlotRepository.observePlots(farmId).collect { plots ->
+                val zones = plots.map { plot ->
+                    val zone = CropZoneRenderData(
+                        id = "zone-${plot.id}",
+                        plotId = plot.id,
+                        cropName = plot.cropName,
+                        offsetX = 0.0f,
+                        offsetY = 0.0f,
+                        widthM = plot.widthM,
+                        heightM = plot.heightM,
+                        spacingM = 1.0f
+                    )
+                    zone.copy(
+                        plantInstances = PlantInstanceGenerator.generate(zone, plot.posX, plot.posY)
+                    )
+                }
                 _uiState.update { state ->
                     state.copy(
                         editedPlots = plots,
                         plots = plots.map { it.toRenderData() },
+                        cropZones = zones,
                         isLoading = false
                     )
                 }
-            } ?: run {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -83,21 +98,42 @@ class EditViewModel(
         _uiState.update { it.copy(activeSoilType = soilType) }
     }
 
+    fun toggleResizeMode() {
+        _uiState.update { it.copy(isResizeMode = !it.isResizeMode) }
+    }
+
     fun selectPlot(plotId: String?) {
-        _uiState.update { it.copy(selectedPlotId = plotId) }
+        _uiState.update { state ->
+            val isSamePlot = plotId != null && plotId == state.selectedPlotId
+            state.copy(
+                selectedPlotId = plotId,
+                isResizeMode = if (isSamePlot) state.isResizeMode else false
+            )
+        }
     }
 
     fun deselect() {
-        _uiState.update { it.copy(selectedPlotId = null, selectedZoneId = null) }
+        _uiState.update { it.copy(selectedPlotId = null, selectedZoneId = null, isResizeMode = false) }
     }
 
     fun selectCropZone(zoneId: String?) {
         val zone = _uiState.value.cropZones.firstOrNull { it.id == zoneId }
+        val newPlotId = zone?.plotId ?: _uiState.value.selectedPlotId
         _uiState.update { state ->
+            val isSamePlot = newPlotId != null && newPlotId == state.selectedPlotId
             state.copy(
                 selectedZoneId = zoneId,
-                selectedPlotId = zone?.plotId ?: state.selectedPlotId
+                selectedPlotId = newPlotId,
+                isResizeMode = if (isSamePlot) state.isResizeMode else false
             )
+        }
+    }
+
+    private fun hasOverlap(x: Float, y: Float, w: Float, h: Float, ignorePlotId: String, plots: List<CropPlot>): Boolean {
+        return plots.any { other ->
+            if (other.id == ignorePlotId) false
+            else x < (other.posX + other.widthM) && (x + w) > other.posX &&
+                 y < (other.posY + other.heightM) && (y + h) > other.posY
         }
     }
 
@@ -116,6 +152,11 @@ class EditViewModel(
             val snapped = FarmCanvasRenderer.snapToGrid(Offset(newX, newY))
             newX = snapped.x.coerceIn(0f, maxX)
             newY = snapped.y.coerceIn(0f, maxY)
+        }
+
+        // Prevent moving into occupied crop zones
+        if (hasOverlap(newX, newY, plot.widthM, plot.heightM, plotId, currentPlots)) {
+            return
         }
 
         val updatedPlots = currentPlots.map {
@@ -143,11 +184,136 @@ class EditViewModel(
         updatePlotsState(updatedPlots)
     }
 
-    fun addDirectPlantingPlot(atWorldX: Float, atWorldY: Float, cropName: String = "Carrot", cropId: String = "carrot") {
-        val plotId = UUID.randomUUID().toString()
-        val safeX = atWorldX.coerceIn(0f, 27.5f)
-        val safeY = atWorldY.coerceIn(0f, 28.0f)
+    private var initialPlotForResize: CropPlot? = null
 
+    fun onHandleDragStart(plotId: String) {
+        initialPlotForResize = _uiState.value.editedPlots.firstOrNull { it.id == plotId }
+    }
+
+    fun onHandleDragEnd() {
+        initialPlotForResize = null
+    }
+
+    fun resizePlotByHandle(plotId: String, handle: com.maptanim.app.renderer.gesture.HandleType, totalWorldDelta: Offset) {
+        val currentPlots = _uiState.value.editedPlots
+        val basePlot = initialPlotForResize ?: currentPlots.firstOrNull { it.id == plotId } ?: return
+
+        var newX = basePlot.posX
+        var newY = basePlot.posY
+        var newW = basePlot.widthM
+        var newH = basePlot.heightM
+
+        when (handle) {
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_TL -> {
+                newX += totalWorldDelta.x
+                newY += totalWorldDelta.y
+                newW -= totalWorldDelta.x
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_TR -> {
+                newY += totalWorldDelta.y
+                newW += totalWorldDelta.x
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_BL -> {
+                newX += totalWorldDelta.x
+                newW -= totalWorldDelta.x
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_BR -> {
+                newW += totalWorldDelta.x
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_TOP -> {
+                newY += totalWorldDelta.y
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_BOTTOM -> {
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_LEFT -> {
+                newX += totalWorldDelta.x
+                newW -= totalWorldDelta.x
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_RIGHT -> {
+                newW += totalWorldDelta.x
+            }
+            else -> {}
+        }
+
+        // Discrete 1m step snapping per MD 34 Section 10
+        val safeW = newW.coerceIn(1.0f, 30.0f - basePlot.posX)
+        val safeH = newH.coerceIn(1.0f, 30.0f - basePlot.posY)
+
+        var roundedW = Math.round(safeW).toFloat().coerceAtLeast(1.0f)
+        var roundedH = Math.round(safeH).toFloat().coerceAtLeast(1.0f)
+
+        val safeX = newX.coerceIn(0f, 30.0f - roundedW)
+        val safeY = newY.coerceIn(0f, 30.0f - roundedH)
+
+        var roundedX = Math.round(safeX).toFloat().coerceIn(0f, 30.0f - roundedW)
+        var roundedY = Math.round(safeY).toFloat().coerceIn(0f, 30.0f - roundedH)
+
+        // Clamp expansion so crop zone cannot exceed/overlap into another crop zone
+        while (hasOverlap(roundedX, roundedY, roundedW, roundedH, plotId, currentPlots)) {
+            when (handle) {
+                com.maptanim.app.renderer.gesture.HandleType.MID_RIGHT -> {
+                    if (roundedW > 1.0f) roundedW -= 1.0f else break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.MID_BOTTOM -> {
+                    if (roundedH > 1.0f) roundedH -= 1.0f else break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.MID_LEFT -> {
+                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f } else break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.MID_TOP -> {
+                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f } else break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.CORNER_BR -> {
+                    if (roundedW > 1.0f) roundedW -= 1.0f
+                    if (roundedH > 1.0f) roundedH -= 1.0f
+                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.CORNER_TL -> {
+                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f }
+                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f }
+                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.CORNER_TR -> {
+                    if (roundedW > 1.0f) roundedW -= 1.0f
+                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f }
+                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                }
+                com.maptanim.app.renderer.gesture.HandleType.CORNER_BL -> {
+                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f }
+                    if (roundedH > 1.0f) roundedH -= 1.0f
+                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                }
+                else -> break
+            }
+        }
+
+        val updatedPlots = currentPlots.map {
+            if (it.id == plotId) it.copy(posX = roundedX, posY = roundedY, widthM = roundedW, heightM = roundedH) else it
+        }
+        updatePlotsState(updatedPlots)
+    }
+
+    fun addDirectPlantingPlot(
+        atWorldX: Float,
+        atWorldY: Float,
+        cropName: String = "Carrot",
+        cropId: String = "carrot",
+        initialW: Float = 1.0f,
+        initialH: Float = 1.0f
+    ) {
+        val plotId = UUID.randomUUID().toString()
+        val safeW = initialW.coerceIn(1.0f, 20.0f)
+        val safeH = initialH.coerceIn(1.0f, 20.0f)
+        val safeX = atWorldX.coerceIn(0f, (30.0f - safeW))
+        val safeY = atWorldY.coerceIn(0f, (30.0f - safeH))
+
+        // Initial Drop creates 1x1 CropZone (or initialW x initialH when duplicating) per MD 34 Section 6 & 8
         val newPlot = CropPlot(
             id          = plotId,
             farmId      = "farm-1",
@@ -157,10 +323,10 @@ class EditViewModel(
             soilType    = SoilType.LOAM,
             posX        = safeX,
             posY        = safeY,
-            widthM      = 2.5f,
-            heightM     = 2.0f,
+            widthM      = safeW,
+            heightM     = safeH,
             rotationDeg = 0f,
-            plantedDate = Instant.now().toString(),
+            plantedDate = null,
             isActive    = true,
             notes       = null,
             createdAt   = Instant.now().toString(),
@@ -170,11 +336,11 @@ class EditViewModel(
             id = "zone-$plotId",
             plotId = plotId,
             cropName = cropName,
-            offsetX = 0.2f,
-            offsetY = 0.2f,
-            widthM = 2.1f,
-            heightM = 1.6f,
-            spacingM = 0.4f
+            offsetX = 0.0f,
+            offsetY = 0.0f,
+            widthM = safeW,
+            heightM = safeH,
+            spacingM = 1.0f
         )
         val zoneWithPlants = zone.copy(
             plantInstances = PlantInstanceGenerator.generate(zone, safeX, safeY)
@@ -192,6 +358,7 @@ class EditViewModel(
                 plots = updatedPlots.map { it.toRenderData() },
                 cropZones = updatedZones,
                 selectedPlotId = plotId,
+                selectedZoneId = zone.id,
                 hasUnsavedChanges = true
             )
         }
@@ -217,6 +384,8 @@ class EditViewModel(
                 plots = updatedPlots.map { it.toRenderData() },
                 cropZones = updatedZones,
                 selectedPlotId = if (state.selectedPlotId == plotId) null else state.selectedPlotId,
+                selectedZoneId = if (state.selectedPlotId == plotId) null else state.selectedZoneId,
+                isResizeMode = if (state.selectedPlotId == plotId) false else state.isResizeMode,
                 hasUnsavedChanges = true
             )
         }
@@ -224,9 +393,16 @@ class EditViewModel(
 
     fun duplicatePlot(plotId: String) {
         val plot = _uiState.value.editedPlots.firstOrNull { it.id == plotId } ?: return
-        val newX = (plot.posX + 1.0f).coerceIn(0f, 27.5f)
-        val newY = (plot.posY + 1.0f).coerceIn(0f, 28.0f)
-        addDirectPlantingPlot(newX, newY, plot.cropName ?: "Carrot", plot.cropId ?: "carrot")
+        val newX = (plot.posX + plot.widthM).coerceIn(0f, 30.0f - plot.widthM)
+        val newY = plot.posY.coerceIn(0f, 30.0f - plot.heightM)
+        addDirectPlantingPlot(
+            atWorldX = newX,
+            atWorldY = newY,
+            cropName = plot.cropName ?: "Carrot",
+            cropId = plot.cropId ?: "carrot",
+            initialW = plot.widthM,
+            initialH = plot.heightM
+        )
     }
 
     fun paintSoil(plotId: String) {
@@ -328,9 +504,26 @@ class EditViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             val currentPlots = _uiState.value.editedPlots
-            currentPlots.forEach { plot ->
-                cropPlotRepository?.upsertPlot(plot)
+            cropPlotRepository.savePlots(currentPlots)
+
+            val currentZones = _uiState.value.cropZones
+            val domainZones = currentZones.map { zoneData ->
+                com.maptanim.app.domain.model.CropZone(
+                    id = zoneData.id,
+                    plotId = zoneData.plotId,
+                    cropName = zoneData.cropName,
+                    cropId = zoneData.cropName?.lowercase(),
+                    offsetX = zoneData.offsetX,
+                    offsetY = zoneData.offsetY,
+                    widthM = zoneData.widthM,
+                    heightM = zoneData.heightM,
+                    spacingM = zoneData.spacingM,
+                    createdAt = Instant.now().toString(),
+                    updatedAt = Instant.now().toString()
+                )
             }
+            cropZoneRepository.saveZones(domainZones)
+
             _uiState.update { state ->
                 state.copy(
                     isSaving = false,
@@ -350,9 +543,25 @@ class EditViewModel(
 
     private fun updatePlotsState(updatedPlots: List<CropPlot>) {
         _uiState.update { state ->
+            val updatedZones = state.cropZones.map { zone ->
+                val plot = updatedPlots.firstOrNull { it.id == zone.plotId }
+                if (plot != null) {
+                    val updatedZone = zone.copy(
+                        offsetX = 0.0f,
+                        offsetY = 0.0f,
+                        widthM = plot.widthM,
+                        heightM = plot.heightM,
+                        spacingM = 1.0f
+                    )
+                    updatedZone.copy(
+                        plantInstances = PlantInstanceGenerator.generate(updatedZone, plot.posX, plot.posY)
+                    )
+                } else zone
+            }
             state.copy(
                 editedPlots = updatedPlots,
                 plots = updatedPlots.map { it.toRenderData() },
+                cropZones = updatedZones,
                 hasUnsavedChanges = true,
                 canUndo = undoStack.isNotEmpty(),
                 canRedo = redoStack.isNotEmpty()
@@ -360,3 +569,4 @@ class EditViewModel(
         }
     }
 }
+

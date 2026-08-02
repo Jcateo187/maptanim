@@ -42,19 +42,19 @@ Body: { "farm_name": "Murcia Farm", "location": "Murcia, Negros Occidental", "to
 
 ---
 
-### Beds
+### Crop Plots
 
-**GET all beds for farm**
+**GET all crop plots for farm**
 ```http
-GET /rest/v1/beds?farm_id=eq.{farm_id}&select=*&order=created_at.asc
+GET /rest/v1/crop_plots?farm_id=eq.{farm_id}&select=*&order=created_at.asc
 ```
 
-**POST create bed**
+**POST create plot**
 ```http
-POST /rest/v1/beds
+POST /rest/v1/crop_plots
 Body: {
   "farm_id": "{farm_id}",
-  "bed_label": "BED 1",
+  "plot_label": "PLOT 1",
   "crop_name": "Eggplant",
   "soil_type": "LOAM",
   "pos_x": 1.0,
@@ -65,15 +65,15 @@ Body: {
 }
 ```
 
-**PATCH update bed (position/size/crop/soil)**
+**PATCH update plot (position/size/crop/soil)**
 ```http
-PATCH /rest/v1/beds?id=eq.{bed_id}
+PATCH /rest/v1/crop_plots?id=eq.{plot_id}
 Body: { "pos_x": 1.5, "pos_y": 3.0, "soil_type": "CLAY" }
 ```
 
-**DELETE remove bed**
+**DELETE remove plot**
 ```http
-DELETE /rest/v1/beds?id=eq.{bed_id}
+DELETE /rest/v1/crop_plots?id=eq.{plot_id}
 ```
 
 ---
@@ -82,7 +82,7 @@ DELETE /rest/v1/beds?id=eq.{bed_id}
 
 **GET today's tasks for farm**
 ```http
-GET /rest/v1/tasks?farm_id=eq.{farm_id}&due_date=eq.{today}&is_completed=eq.false&select=*,beds(bed_label)&order=due_date.asc
+GET /rest/v1/tasks?farm_id=eq.{farm_id}&due_date=eq.{today}&is_completed=eq.false&select=*,crop_plots(plot_label)&order=due_date.asc
 ```
 
 Response:
@@ -91,11 +91,11 @@ Response:
   {
     "id": "uuid",
     "task_type": "WATER",
-    "title": "Water Bed 3",
+    "title": "Water PLOT 3",
     "sub_label": "Tomato",
     "due_date": "2026-07-24",
     "is_completed": false,
-    "beds": { "bed_label": "BED 3" }
+    "crop_plots": { "plot_label": "PLOT 3" }
   }
 ]
 ```
@@ -198,21 +198,21 @@ Body: { "is_read": true }
 {
   "tasks": [
     {
-      "bed_id": "uuid",
-      "bed_label": "BED 3",
+      "plot_id": "uuid",
+      "plot_label": "PLOT 3",
       "crop_name": "Tomato",
       "task_type": "WATER",
-      "title": "Water Bed 3",
+      "title": "Water PLOT 3",
       "sub_label": "Tomato",
       "due_date": "2026-07-24"
     },
     {
-      "bed_id": "uuid",
-      "bed_label": "BED 1",
+      "plot_id": "uuid",
+      "plot_label": "PLOT 1",
       "crop_name": "Eggplant",
       "task_type": "FERTILIZE",
       "title": "Fertilize Eggplant",
-      "sub_label": "Bed 1",
+      "sub_label": "PLOT 1",
       "due_date": "2026-07-24"
     }
   ],
@@ -255,23 +255,23 @@ Body: { "is_read": true }
 ## 🔹 Kotlin SDK Usage Examples
 
 ```kotlin
-// Get all beds for a farm
-val beds = supabaseClient.postgrest["beds"]
+// Get all crop plots for a farm
+val plots = supabaseClient.postgrest["crop_plots"]
     .select {
         filter { eq("farm_id", farmId) }
         order("created_at", Order.ASCENDING)
     }
-    .decodeList<BedEntity>()
+    .decodeList<CropPlotEntity>()
 
-// Update bed position after drag-and-drop
-supabaseClient.postgrest["beds"]
+// Update plot position after drag-and-drop
+supabaseClient.postgrest["crop_plots"]
     .update(mapOf("pos_x" to newX, "pos_y" to newY)) {
-        filter { eq("id", bedId) }
+        filter { eq("id", plotId) }
     }
 
-// Delete a bed
-supabaseClient.postgrest["beds"]
+// Delete a plot
+supabaseClient.postgrest["crop_plots"]
     .delete {
-        filter { eq("id", bedId) }
+        filter { eq("id", plotId) }
     }
 ```

@@ -133,10 +133,10 @@ Serverless functions hosted on Supabase (Deno + TypeScript runtime):
 ## 🔹 Realtime Subscriptions
 
 ```kotlin
-// Subscribe to bed layout changes for real-time collaboration
+// Subscribe to plot layout changes for real-time collaboration
 supabaseClient.realtime.createChannel("farm-$farmId")
-    .on<BedEntity>(PostgresAction.Update, schema = "public", table = "beds") { change ->
-        bedRepository.applyServerChange(change.record)
+    .on<CropPlotEntity>(PostgresAction.Update, schema = "public", table = "crop_plots") { change ->
+        cropPlotRepository.applyServerChange(change.record)
     }
     .subscribe()
 ```

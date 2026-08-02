@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.map
 
 class CropPlotRepositoryImpl : CropPlotRepository {
 
-    private val plotsCache = MutableStateFlow<Map<String, List<CropPlot>>>(emptyMap())
+    private val plotsCache = MutableStateFlow<Map<String, List<CropPlot>>>(
+        mapOf("farm-1" to defaultInitialPlots)
+    )
 
     override fun observePlots(farmId: String): Flow<List<CropPlot>> {
         return plotsCache.map { map ->
@@ -30,7 +32,7 @@ class CropPlotRepositoryImpl : CropPlotRepository {
     }
 
     override suspend fun savePlots(plots: List<CropPlot>) {
-        val farmId = plots.firstOrNull()?.farmId ?: return
+        val farmId = plots.firstOrNull()?.farmId ?: "farm-1"
         val current = plotsCache.value.toMutableMap()
         current[farmId] = plots
         plotsCache.value = current
@@ -51,3 +53,42 @@ class CropPlotRepositoryImpl : CropPlotRepository {
         plotsCache.value = current
     }
 }
+
+internal val defaultInitialPlots = listOf(
+    CropPlot(
+        id = "plot-1",
+        farmId = "farm-1",
+        plotLabel = "PLOT 1",
+        cropName = "Carrot",
+        cropId = "carrot",
+        soilType = SoilType.LOAM,
+        posX = 5.0f,
+        posY = 6.0f,
+        widthM = 3.0f,
+        heightM = 2.0f,
+        rotationDeg = 0f,
+        plantedDate = "2026-07-01T00:00:00Z",
+        isActive = true,
+        notes = null,
+        createdAt = "2026-07-01T00:00:00Z",
+        updatedAt = "2026-07-01T00:00:00Z"
+    ),
+    CropPlot(
+        id = "plot-2",
+        farmId = "farm-1",
+        plotLabel = "PLOT 2",
+        cropName = "String Beans",
+        cropId = "stringbeans",
+        soilType = SoilType.LOAM,
+        posX = 12.0f,
+        posY = 8.0f,
+        widthM = 4.0f,
+        heightM = 2.0f,
+        rotationDeg = 0f,
+        plantedDate = null,
+        isActive = true,
+        notes = null,
+        createdAt = "2026-07-01T00:00:00Z",
+        updatedAt = "2026-07-01T00:00:00Z"
+    )
+)

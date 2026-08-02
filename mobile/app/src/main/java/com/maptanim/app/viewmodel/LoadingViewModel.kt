@@ -6,6 +6,7 @@ import com.maptanim.app.data.api.AppInitializationController
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.repository.ProfileRepository
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,42 +29,28 @@ class LoadingViewModel : ViewModel() {
     }
 
     private fun initialize() {
-
         viewModelScope.launch {
-
             val initializer = AppInitializationController()
             initializer.initialize()
 
             val session = SupabaseClient.client.auth.currentSessionOrNull()
-
-            if (session == null) {
-                _destination.value = LoadingDestination.Welcome
-                return@launch
-            }
-
             val user = SupabaseClient.client.auth.currentUserOrNull()
 
-            if (user == null) {
-                _destination.value = LoadingDestination.Welcome
-                return@launch
-            }
-
-            val profileRepository = ProfileRepository()
-            val profile = profileRepository.getProfile(user.id)
-
-            if (profile == null) {
-                _destination.value = LoadingDestination.Welcome
-                return@launch
-            }
-
-            if (profile.onboarding_completed) {
-                _destination.value = LoadingDestination.Home
+            val target = if (session == null || user == null) {
+                LoadingDestination.Welcome
             } else {
-                _destination.value = LoadingDestination.WelcomeGuide
+                val profileRepository = ProfileRepository()
+                val profile = profileRepository.getProfile(user.id)
+                if (profile?.onboarding_completed == true) {
+                    LoadingDestination.Home
+                } else {
+                    LoadingDestination.WelcomeGuide
+                }
             }
 
+            // Enforce exact 2-second (2000ms) loading screen display timer before navigating
+            delay(2000)
+            _destination.value = target
         }
-
     }
-
 }

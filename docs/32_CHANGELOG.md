@@ -4,6 +4,27 @@ All notable changes to the **MapTanim** project are documented in this file.
 
 ---
 
+## 📅 [1.2.0-RELEASE] — 2026-08-01
+
+### 🌟 Added
+- **End-to-End Edit-to-View Persistence**:
+  - Tapping **SAVE CHANGES** in Edit Mode (`FarmEditorScreen.kt`) persists all bed plots and crop zones to `CropPlotRepository` and `CropZoneRepository`.
+  - Returning to View Mode (`HomeScreen.kt`) immediately reflects saved beds, planted crops, and updates top HUD resource counters (`totalCrops`).
+- **Top Crop Label Calendar Monitoring Badge & Navigation**:
+  - Plots with unstarted crops render a floating **Glowing Calendar Badge (`📅`)** above the crop label on the 2D bed plot on the farm map (`FarmCanvasRenderer.kt`).
+  - Tapping the calendar icon badge or bed plot in View mode opens the **Monitoring Dashboard Overlay** (`HomeScreen.kt` & `FarmCanvas.kt`).
+  - Clicking **"📅 Start"** in Monitoring starts growth tracking and clears the unstarted badge.
+- **Full 15 Philippine Crop Catalog & Scroll Protection**:
+  - Expanded `CropTray.kt` to all 15 Philippine vegetable crops: Carrot 🥕, String Beans 🫘, Eggplant 🍆, Tomato 🍅, Onion 🧅, Squash 🎃, Corn 🌽, Cabbage 🥬, Pechay 🥬, Ampalaya 🥒, Okra 🌿, Chili Pepper 🌶️, Cucumber 🥒, Kangkong 🥬, and Lettuce 🥗.
+  - Required click-selection (`isSelected == true`) before drag gesture detection activates, enabling smooth vertical scrolling through the Crop Tray without accidental drag interference.
+- **Click-First Plot Repositioning Protection**:
+  - Enforced click-to-select before plot moving/repositioning on the 2D grid (`CanvasGestureHandler.kt`), preventing accidental plot displacement while panning the canvas.
+- **Room Local Database Integration & Clean Documentation**:
+  - Implemented Room Local Database (`AppDatabase`, `CropPlotEntity`, `FarmEntity`, `CropPlotDao`, `FarmDao`).
+  - Consolidated specifications in `docs/35_ASSETS_PLANNING.md` and indexed all 37 documentation chapters in `README.md` and `docs/28_PROJECT_STRUCTURE.md`.
+
+---
+
 ## 📅 [1.1.0-RELEASE] — 2026-07-28
 
 ### 🌟 Added

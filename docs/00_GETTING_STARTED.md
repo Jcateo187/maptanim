@@ -77,12 +77,12 @@ After the app launches, verify each step:
 | Step | Expected Result |
 |------|-----------------|
 | 1. App starts | Splash Screen with MAPTANIM logo appears |
-| 2. Loading | LoadingScreen with progress, transitions to Home |
+| 2. Loading | LoadingScreen with progress, checks auth session and populates Room DB |
 | 3. Auth | Welcome screen shows Login / Register / Guest Mode |
-| 4. Home (View Mode) | Farm canvas renders with beds. Left panel shows TODAY'S TASKS and FARM SUMMARY |
-| 5. Top bar | "Murcia Farm" farm name, weather widget, notification bell with badge, user avatar |
-| 6. Right toolbar | + Add, Search, Center, Layers buttons visible |
-| 7. Edit Mode | Tap the edit button → "EDIT MODE" green badge appears in top bar, left panel switches to EDIT TOOLS + SOIL TYPE |
-| 8. Bed selection | Tap a bed → selection handles appear (blue drag circle, red ✕, white corners) |
-| 9. SAVE CHANGES | Green "SAVE CHANGES" button in bottom bar saves to Room DB |
+| 4. Home (View Mode) | Farm canvas renders crop plots, crop zones, and farm objects. Left panel shows TODAY'S TASKS and FARM SUMMARY |
+| 5. Top bar | Active farm name (`farmName`), stat chips (`totalCrops`, `readyToHarvest`), notification bell with unread badge, user avatar |
+| 6. Right toolbar | AgriLibrary, Community, Re-Center buttons visible |
+| 7. Edit Mode | Tap edit FAB → "EDIT MODE" green badge appears in top bar, left panel switches to EDIT TOOLS (`SELECT_MOVE`, `ADD_PLOT`, `ADD_PLANT`, `DELETE`) + SOIL TYPE |
+| 8. Plot selection | Tap a plot → selection outline and 8 resize handles appear with contextual bottom toolbar |
+| 9. Save Changes | Green "Save" button in top bar saves layout to Room DB and queues background Supabase sync |
 | 10. Navigation | Bottom tabs: Home, Farms, Calendar, Library, Profile all respond |
