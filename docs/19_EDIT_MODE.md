@@ -1,5 +1,8 @@
 # 19. Edit Mode — Farm Editor
 
+> 📌 **Navigation**: [◀ 18. View Mode](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [20. Decision Support System ▶](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)
+
+---
 ## 📌 Overview
 **Edit Mode** is the interactive direct soil farm layout editor in MapTanim. It features Clash of Clans (CoC) inspired drag-and-drop plot placement, live glowing green/red isometric tile collision highlighting, 1:1 finger tracking, clean selection handles, and streamlined bottom editing tools (`SELECT_MOVE`, `ADD_PLOT`, `ADD_PLANT`, `DELETE`).
 
@@ -7,22 +10,19 @@
 
 ## 🖼️ User Interface Specifications
 
-### 1. Top Navigation Bar
-- **Save Button**: Green rounded pill button (`Color(0xFF2E7D32)`) with white save icon + `"Save"` label. Saves layout changes to Room SQLite and triggers background Supabase sync via `SyncWorker`.
-- **Exit Button**: Red rounded pill button (`Color(0xFFC62828)`) with white exit icon + `"Exit"` label. Discards unsaved changes and returns to View Mode (`HomeScreen`).
+### 1. Top Right Action Buttons
+- **Save Button**: Green rounded pill button (`Color(0xFF2E7D32)`) with save icon + `"Save"` label. Saves layout changes to Room SQLite DB and enqueues background Supabase sync.
+- **Exit Button**: Red rounded pill button (`Color(0xFFC62828)`) with exit icon + `"Exit"` label. Discards unsaved layout edits and returns to View Mode (`HomeScreen`).
 
-### 2. Left Edit Tools Toolbar (`LeftToolbar.kt`)
-- **Select & Move (`SELECT_MOVE`)**: Tap plot to select, drag to reposition on soil grid.
-- **Add Plot (`ADD_PLOT`)**: Tap empty soil grid space to instantiate a new `CropPlot`.
-- **Add Plant (`ADD_PLANT`)**: Tap plot to open `CropTray` drawer and assign vegetable crops.
-- **Delete (`DELETE`)**: Tap plot or object to delete with confirmation dialog.
+### 2. Right Action Button: Add Plant / Crops
+- **Add Plant / Crops Button**: Floating dark pill button (`Color.Black.copy(alpha = 0.75f)`) on the right side of the canvas with flower icon + `"Add Plant / Crops"`.
+- **Crop Selection Drawer (`CropTray.kt`)**: Opens when tapping **Add Plant / Crops**. Displays `SELECT CROPS (${crops.size})` header, category tabs (`All`, `Bulb`, `Stem`, `Shoot`, `Leafy`, `Flower`, `Fruit`, `Root`, `Tuber`), search filter, drag hint, and crop cards populated from the catalog.
 
-### 3. Right Crop Selection Drawer (`CropTray.kt`)
-- **Header**: Dynamic title `SELECT CROPS (${crops.size})` with a close `✕` button.
-- **Filter Tabs**: `All`, `Bulb`, `Stem`, `Shoot`, `Leafy`, `Flower`, `Fruit`, `Root`, `Tuber`.
-- **Search & Category Filter**: Interactive search input field with category filter dropdown.
-- **Drag Hint**: Light green hint card: `💡 Hold & drag crop card onto farm area to plant`.
-- **Crop Cards**: Populated dynamically from Room SQLite `crops` table (13 High-Value Philippine crops).
+### 3. Contextual Bottom Toolbar (`EditBottomLayout.kt`)
+Active only when a direct-planted crop plot on the soil canvas is tapped/selected:
+- **Duplicate**: Clones the selected crop plot and places an identical copy on adjacent soil grid coordinates (`+1.0m`).
+- **Resize**: Toggles 8-point bounding box corner and edge handles to adjust plot width ($width\_m$) and height ($height\_m$).
+- **Delete**: Red action button (`Color(0xFFEF5350)`) that removes the selected crop plot from the farm canvas and Room DB.
 
 ---
 
@@ -39,7 +39,7 @@
 - **Selection State**: Tapping an existing plot or zone sets `selectedPlotId`.
 - **Selection Outline**: A clean white border (`Color(0xFFFFFFFF)`) or dashed outline surrounds the active `CropPlot`.
 
-### 3. Contextual Bottom Toolbar & Resizing (`EditBottomBar.kt`)
+### 3. Contextual Bottom Toolbar & Resizing (`EditBottomLayout.kt`)
 Selecting a plot or zone displays the floating bottom toolbar with contextual tools:
 - **Duplicate Plot**: Clones the selected `CropPlot` and places an identical copy on adjacent soil grid coordinates (`+1.0m`).
 - **Resize Plot**: Activates 8 interactive resize handles (Top-Left, Top-Center, Top-Right, Mid-Left, Mid-Right, Bottom-Left, Bottom-Center, Bottom-Right). Dragging handles expands plot `widthM` and `heightM` (meters).
@@ -56,3 +56,21 @@ Selecting a plot or zone displays the floating bottom toolbar with contextual to
 1. Tap **Save** in top bar.
 2. **Save Farm Layout**: Persists layout state (`crop_plots`, `crop_zones`, `farm_objects`) to Room DB and inserts `SyncQueueEntity` records for Supabase sync.
 3. **Success Feedback**: Displays confirmation toast/dialog and returns to View Mode (`HomeScreen`) with live updated HUD counters.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [11. App Navigation](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md)
+- 📄 [12. UI/UX Guidelines](file:///d:/Development/MapTanim/docs/12_UI_UX_GUIDELINES.md)
+- 📄 [13. Design System](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md)
+- 📄 [14. Component Library](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md)
+- 📄 [15. Render Engine](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md)
+- 📄 [16. Interactive Plot Mapping](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md)
+- 📄 [18. View Mode](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md)
+- 📄 [34. Direct Soil Crop Planting & Resize System](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
+- 📄 [35. Asset Planning & Sprites](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md)
+- 📄 [38. Audio & Sound Assets Planning](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md)
+- 📄 [39. Crop View Interaction & Variety Simulation](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md)

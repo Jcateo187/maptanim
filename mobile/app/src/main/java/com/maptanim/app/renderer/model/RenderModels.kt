@@ -137,6 +137,7 @@ data class PlotRenderData(
     val plotLabel: String,
     val cropName: String?,
     val cropId: String?,
+    val cropVariety: String? = null,
     val soilType: SoilType,
     val posX: Float,
     val posY: Float,
@@ -144,6 +145,9 @@ data class PlotRenderData(
     val heightM: Float,
     val rotationDeg: Float = 0f,
     val isMonitoringStarted: Boolean = false,
+    val daysPlanted: Int = 0,
+    val daysToHarvest: Int = 60,
+    val stageProgressRatio: Float = 0f,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
     val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
@@ -189,21 +193,54 @@ data class PlotRenderData(
     }
 }
 
-fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData = PlotRenderData(
-    id = id,
-    farmId = farmId,
-    plotLabel = plotLabel,
-    cropName = cropName,
-    cropId = cropId,
-    soilType = soilType,
-    posX = posX,
-    posY = posY,
-    widthM = widthM,
-    heightM = heightM,
-    rotationDeg = rotationDeg,
-    isMonitoringStarted = !plantedDate.isNullOrBlank(),
-    activeTasks = activeTasks
-)
+fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData {
+    val isStarted = !plantedDate.isNullOrBlank()
+    var elapsedDays = 0
+    if (isStarted) {
+        try {
+            val date = java.time.LocalDate.parse(plantedDate!!.take(10))
+            elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(date, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
+        } catch (e: Exception) {
+            elapsedDays = 0
+        }
+    }
+    val defaultDays = when (cropName?.lowercase() ?: "") {
+        "pechay" -> 28
+        "okra" -> 45
+        "sitaw", "stringbeans" -> 50
+        "ampalaya" -> 55
+        "kamatis", "tomato" -> 60
+        "repolyo", "cabbage" -> 60
+        "mais", "corn" -> 65
+        "sili", "chili" -> 65
+        "talong", "eggplant" -> 75
+        "kalabasa", "pumpkin" -> 80
+        "karots", "carrot" -> 85
+        "sibuyas", "onion" -> 100
+        else -> 60
+    }
+    val progressRatio = if (isStarted && defaultDays > 0) (elapsedDays.toFloat() / defaultDays.toFloat()).coerceIn(0f, 1f) else 0f
+
+    return PlotRenderData(
+        id = id,
+        farmId = farmId,
+        plotLabel = plotLabel,
+        cropName = cropName,
+        cropId = cropId,
+        cropVariety = cropVariety,
+        soilType = soilType,
+        posX = posX,
+        posY = posY,
+        widthM = widthM,
+        heightM = heightM,
+        rotationDeg = rotationDeg,
+        isMonitoringStarted = isStarted,
+        daysPlanted = elapsedDays,
+        daysToHarvest = defaultDays,
+        stageProgressRatio = progressRatio,
+        activeTasks = activeTasks
+    )
+}
 
 data class HandlePositions(
     val dragHandle: Offset = Offset.Zero,

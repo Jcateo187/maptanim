@@ -39,7 +39,7 @@
 
 **MapTanim** is a landscape-oriented native Android application designed to empower smallholder vegetable farmers in the Philippines through an **Interactive 2D Isometric Farm Workspace**, **Digital Farm Management**, and a deterministic **Agroecological Decision Support System (DSS)**.
 
-Instead of relying on notebooks, memory, or complex form-based data entry, MapTanim transforms the farm into a dynamic 2D visual workspace. Farmers directly drag, drop, re-position, and manage planting beds on a digital soil grid, view companion planting compatibility overlays, monitor crop growth stages, and receive science-based recommendations aligned with Department of Agriculture (DA) and Bureau of Plant Industry (BPI) standards.
+Instead of relying on notebooks, memory, or complex form-based data entry, MapTanim transforms the farm into a dynamic 2D visual workspace. Built on **Direct-to-Soil Canvas Planting**, farmers directly drag and drop crops onto soil grid tiles (creating expandable 1×1 $m^2$ crop zones with no separate physical raised bed objects required), view companion planting compatibility overlays, monitor crop growth stages, and receive science-based recommendations aligned with Department of Agriculture (DA) and Bureau of Plant Industry (BPI) standards.
 
 ---
 
@@ -66,11 +66,11 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
 
 #### UI Elements:
 - **Top HUD Bar**:
-  - **Profile Avatar**: Circular green avatar (`#4CAF50`).
-  - **Farm Selector**: Dark pill dropdown displaying farm name (`"Murcia Farm"` ▾).
-  - **Crops Counter Chip**: Dark pill chip displaying total active plants (`🌱 186 Crops`).
-  - **Harvest Counter Chip**: Orange pill chip displaying harvest-ready crops (`🚜 4 Ready to Harvest`).
-  - **Quick Action Icons**: Notification Bell and Settings Gear buttons.
+  - **Profile Avatar & Nickname**: Custom profile avatar image and user's nickname (derived from email prefix upon registration or customized in profile settings) in a dark rounded pill.
+  - **Farm Name**: Displays the active farm name loaded directly from Supabase / local Room database.
+  - **Crops Counter Chip**: Dark pill chip displaying real-time total active crops count (`🌱 Crops`).
+  - **Harvest Counter Chip**: Orange pill chip displaying real-time harvest-ready crops count (`🚜 Ready to Harvest`).
+  - **Quick Action Icons**: Notification Bell (with unread notification badge count) and Settings Gear buttons.
 - **Left HUD Panel**:
   - **Monitoring Card**: Dark rounded card with green radio icon, titled **"Monitoring"**, subtitle `"Full Screen"`.
   - **Today's Tasks Card**: Dark rounded card with blue clipboard icon, titled **"Today's Tasks"**, subtitle `"4 Tasks"`.
@@ -139,8 +139,9 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
 
 - **Supabase Cloud Infrastructure**:
   - URL: `https://ojilvcglpzbtpjxguhzj.supabase.co`
-  - PostgreSQL Relational Database storing `farms`, `crop_plots`, `crops`, `dss_rules`, `tasks`, and `profiles`.
+  - PostgreSQL Relational Database storing `users` (email + password authentication), `profiles` (`nickname`, `avatar`, `onboarding_completed`), `farms`, `crop_plots`, `crops`, `dss_rules`, and `tasks`.
   - Row Level Security (RLS) policies enforcing multi-tenant farmer data isolation.
+  - Automatic `handle_new_user()` trigger for profile creation upon registration.
   - Edge Functions (`evaluate-dss`, `sync-offline-queue`) handling automated DSS calculations.
 - **Room SQLite Local Persistence**:
   - Offline-first architecture allowing full farm layout editing and task completion without active internet connection.
@@ -191,18 +192,56 @@ MapTanim/
 
 ---
 
-## 📚 Documentation Index
-All 37 chapters are located in the `docs/` directory:
-- [14. UI Component Library](docs/14_COMPONENT_LIBRARY.md)
-- [15. 2D Isometric Render Engine](docs/15_RENDER_ENGINE.md)
-- [16. Interactive Plot Mapping Specifications](docs/16_INTERACTIVE_PLOT_MAPPING.md)
-- [18. View Mode — Home Screen Dashboard](docs/18_VIEW_MODE.md)
-- [19. Edit Mode — Farm Editor](docs/19_EDIT_MODE.md)
-- [20. Decision Support System (DSS)](docs/20_DECISION_SUPPORT_SYSTEM.md)
-- [24. Offline Synchronization Architecture](docs/24_OFFLINE_SYNCHRONIZATION.md)
-- [34. Crop Planting & Resize System](docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
-- [35. Asset Pipeline & Isometric Specifications](docs/35_ASSETS_PLANNING.md)
-- [36. Crop Variety Timeline & Seasonality](docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+## 📚 Complete Documentation Suite (44 Technical Modules)
+All technical documentation modules are located in the [`docs/`](docs/) directory and indexed in the [Master Documentation Hub](docs/README.md):
+
+| Chapter | Module / Topic | Link |
+|---|---|---|
+| **Hub** | **Master Documentation Index & Hub** | [README.md](docs/README.md) |
+| **00** | Getting Started & Environment Setup | [00_GETTING_STARTED.md](docs/00_GETTING_STARTED.md) |
+| **01** | Project Overview & Goals | [01_PROJECT_OVERVIEW.md](docs/01_PROJECT_OVERVIEW.md) |
+| **02** | Software Requirements Specification | [02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md](docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md) |
+| **03** | System Architecture | [03_SYSTEM_ARCHITECTURE.md](docs/03_SYSTEM_ARCHITECTURE.md) |
+| **04** | Android App Architecture | [04_ANDROID_ARCHITECTURE.md](docs/04_ANDROID_ARCHITECTURE.md) |
+| **05** | Backend Services Architecture | [05_BACKEND_ARCHITECTURE.md](docs/05_BACKEND_ARCHITECTURE.md) |
+| **06** | Admin Dashboard Specifications | [06_ADMIN_DASHBOARD.md](docs/06_ADMIN_DASHBOARD.md) |
+| **07** | Database Schema & SQL Design | [07_DATABASE_DESIGN.md](docs/07_DATABASE_DESIGN.md) |
+| **08** | Supabase Project Configuration | [08_SUPABASE_CONFIGURATION.md](docs/08_SUPABASE_CONFIGURATION.md) |
+| **09** | Authentication & Security | [09_AUTHENTICATION.md](docs/09_AUTHENTICATION.md) |
+| **10** | API Reference & Endpoints | [10_API_DOCUMENTATION.md](docs/10_API_DOCUMENTATION.md) |
+| **11** | App Navigation Graph | [11_NAVIGATION.md](docs/11_NAVIGATION.md) |
+| **12** | UI / UX Design Guidelines | [12_UI_UX_GUIDELINES.md](docs/12_UI_UX_GUIDELINES.md) |
+| **13** | Theme & Design System | [13_DESIGN_SYSTEM.md](docs/13_DESIGN_SYSTEM.md) |
+| **14** | Jetpack Compose Component Library | [14_COMPONENT_LIBRARY.md](docs/14_COMPONENT_LIBRARY.md) |
+| **15** | 2D Isometric Render Engine | [15_RENDER_ENGINE.md](docs/15_RENDER_ENGINE.md) |
+| **16** | Interactive Plot Mapping Specs | [16_INTERACTIVE_PLOT_MAPPING.md](docs/16_INTERACTIVE_PLOT_MAPPING.md) |
+| **17** | Digital Farm Management Engine | [17_FARM_MANAGEMENT.md](docs/17_FARM_MANAGEMENT.md) |
+| **18** | View Mode & Dashboard Specifications | [18_VIEW_MODE.md](docs/18_VIEW_MODE.md) |
+| **19** | Edit Mode & Layout Tooling | [19_EDIT_MODE.md](docs/19_EDIT_MODE.md) |
+| **20** | Agroecological Decision Support System | [20_DECISION_SUPPORT_SYSTEM.md](docs/20_DECISION_SUPPORT_SYSTEM.md) |
+| **21** | Philippine Vegetable Knowledge Base | [21_KNOWLEDGE_BASE.md](docs/21_KNOWLEDGE_BASE.md) |
+| **22** | Planting Calendar Engine | [22_CALENDAR.md](docs/22_CALENDAR.md) |
+| **23** | Push & Local Notification System | [23_NOTIFICATION_SYSTEM.md](docs/23_NOTIFICATION_SYSTEM.md) |
+| **24** | Offline-First Sync Architecture | [24_OFFLINE_SYNCHRONIZATION.md](docs/24_OFFLINE_SYNCHRONIZATION.md) |
+| **25** | Data Protection & RLS Security | [25_SECURITY.md](docs/25_SECURITY.md) |
+| **26** | Testing Strategy & Automation | [26_TESTING.md](docs/26_TESTING.md) |
+| **27** | Deployment & Release Pipeline | [27_DEPLOYMENT.md](docs/27_DEPLOYMENT.md) |
+| **28** | Repository Project Directory Structure | [28_PROJECT_STRUCTURE.md](docs/28_PROJECT_STRUCTURE.md) |
+| **29** | Kotlin & Compose Coding Standards | [29_CODING_STANDARDS.md](docs/29_CODING_STANDARDS.md) |
+| **30** | Git Branching & Commit Workflow | [30_GIT_WORKFLOW.md](docs/30_GIT_WORKFLOW.md) |
+| **31** | Developer Contribution Guidelines | [31_CONTRIBUTING.md](docs/31_CONTRIBUTING.md) |
+| **32** | Version Release History & Changelog | [32_CHANGELOG.md](docs/32_CHANGELOG.md) |
+| **33** | Project Feature Roadmap | [33_ROADMAP.md](docs/33_ROADMAP.md) |
+| **34** | Direct Soil Crop Planting & 8-Handle Resize System | [34_CROP_PLANTING_AND_RESIZE_SYSTEM.md](docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md) |
+| **35** | Asset Pipeline & Isometric Graphics | [35_ASSETS_PLANNING.md](docs/35_ASSETS_PLANNING.md) |
+| **36** | Crop Variety Timeline & Seasonality | [36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md](docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md) |
+| **37** | Specifications & Scope Refinements | [37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md) |
+| **38** | Audio & Sound Design Specifications | [38_AUDIO_AND_SOUND_ASSETS_PLANNING.md](docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md) |
+| **39** | Crop View Interaction & Variety Simulation | [39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md](docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md) |
+| **40** | User & Profile Schema Refinement | [40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md](docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md) |
+| **41** | Users & Profiles Database Tables | [41_USERS_AND_PROFILES_DATABASE_TABLES.md](docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md) |
+| **42** | High-Scalability & Multi-Tenancy Architecture | [42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md](docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md) |
+| **Ops** | DevOps Architecture & Free Release Pipelines | [DEVOPS.md](docs/DEVOPS.md) |
 
 ---
 

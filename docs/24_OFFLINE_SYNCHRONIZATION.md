@@ -1,5 +1,8 @@
 # 24. Offline Synchronization
 
+> 📌 **Navigation**: [◀ 23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [25. Security & RLS ▶](file:///d:/Development/MapTanim/docs/25_SECURITY.md)
+
+---
 ## 📌 Overview
 MapTanim is **offline-first**. All reads and writes go to **Room SQLite** first. A `SyncWorker` powered by WorkManager pushes pending changes to Supabase when connectivity is available. No static or in-memory-only data is used — everything is persisted to Room and eventually synced to Supabase.
 
@@ -221,3 +224,16 @@ class AppInitializationController {
 ```
 
 > ✅ After initialization, the app operates fully from Room. Supabase is only contacted during sync cycles or on explicit refresh. **No screen shows data that came directly from a hardcoded source.**
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [07. Database Design](file:///d:/Development/MapTanim/docs/07_DATABASE_DESIGN.md)
+- 📄 [08. Supabase Configuration](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md)
+- 📄 [09. Authentication](file:///d:/Development/MapTanim/docs/09_AUTHENTICATION.md)
+- 📄 [25. Security & RLS](file:///d:/Development/MapTanim/docs/25_SECURITY.md)
+- 📄 [40. User & Profile Schema Refinement](file:///d:/Development/MapTanim/docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md)
+- 📄 [41. Users & Profiles Database Tables](file:///d:/Development/MapTanim/docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md)

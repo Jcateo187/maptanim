@@ -102,3 +102,20 @@ Supabase (live data)
 - GitHub: `https://github.com/Jcateo187/maptanim.git`
 
 All features must work against this live project. No alternative "test project" or local-only data flow is acceptable in submitted code.
+
+---
+
+## 🔄 Synchronized Cascade Updates Rule
+
+Whenever any element of the system changes (e.g., database schema, columns, API routes, data models, domain objects, ViewModels, or UI components):
+1. **Cascade Updates Across All Layers**: All connected files across every architectural layer (Database SQL files, Backend DTOs/Models, Data Repositories, Domain Use Cases, ViewModels, Compose UI screens, and `.md` documentation files) **MUST** be updated in lockstep during the same task.
+2. **Zero Out-of-Sync Files**: No file, repository implementation, or documentation chapter should be left out of date after a schema or architectural change.
+
+---
+
+## 🧹 Codebase Hygiene & Cleanup Rule
+
+1. **Delete Unused / Obsolete Files**: Any file, class, model, function, script, or resource that is no longer used or has been superseded by a new implementation **MUST** be deleted immediately.
+2. **Directory Preservation**: If a directory structure is required for future builds or repository structure but currently contains no active files, place a `.gitkeep` file inside it to maintain git tracking cleanly.
+3. **No Orphaned Code**: Never leave unused code snippets, commented-out dead code blocks, or unused mock/test helper files in production source directories.
+

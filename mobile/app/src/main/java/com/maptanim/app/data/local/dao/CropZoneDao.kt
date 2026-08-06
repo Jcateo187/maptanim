@@ -1,8 +1,9 @@
 package com.maptanim.app.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Upsert
 import com.maptanim.app.data.local.entity.CropZoneEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,15 +16,15 @@ interface CropZoneDao {
     @Query("SELECT * FROM crop_zones WHERE plot_id IN (:plotIds)")
     fun observeZonesByPlotIds(plotIds: List<String>): Flow<List<CropZoneEntity>>
 
-    @Upsert
-    suspend fun upsertZone(zone: CropZoneEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsertZone(zone: CropZoneEntity)
 
-    @Upsert
-    suspend fun upsertZones(zones: List<CropZoneEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsertZones(zones: List<CropZoneEntity>)
 
     @Query("DELETE FROM crop_zones WHERE id = :zoneId")
-    suspend fun deleteZone(zoneId: String)
+    fun deleteZone(zoneId: String): Int
 
     @Query("DELETE FROM crop_zones WHERE plot_id = :plotId")
-    suspend fun deleteZonesByPlotId(plotId: String)
+    fun deleteZonesByPlotId(plotId: String): Int
 }

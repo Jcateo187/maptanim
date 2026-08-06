@@ -1,5 +1,8 @@
 # 05. Backend Architecture — Supabase BaaS
 
+> 📌 **Navigation**: [◀ 04. Android Architecture](file:///d:/Development/MapTanim/docs/04_ANDROID_ARCHITECTURE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [06. Admin Dashboard ▶](file:///d:/Development/MapTanim/docs/06_ADMIN_DASHBOARD.md)
+
+---
 ## 📌 Overview
 MapTanim uses **Supabase** as its complete Backend-as-a-Service. No custom server (Spring Boot, Express, etc.) is required for v1.0. The Android app communicates directly with Supabase via the official Kotlin SDK.
 
@@ -161,3 +164,13 @@ supabase functions deploy verify-otp --project-ref ojilvcglpzbtpjxguhzj
 # Open Supabase studio locally
 supabase studio
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [04. Android Architecture](file:///d:/Development/MapTanim/docs/04_ANDROID_ARCHITECTURE.md)
+- 📄 [06. Admin Dashboard](file:///d:/Development/MapTanim/docs/06_ADMIN_DASHBOARD.md)
+- 📄 [42. Scalability & Multi-Tenancy Architecture](file:///d:/Development/MapTanim/docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md)

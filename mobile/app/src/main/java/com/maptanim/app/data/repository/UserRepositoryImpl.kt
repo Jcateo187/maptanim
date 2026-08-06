@@ -1,60 +1,68 @@
 package com.maptanim.app.data.repository
 
+import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.domain.model.AvatarItem
 import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.domain.model.UserProfile
 import com.maptanim.app.domain.repository.UserRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class UserRepositoryImpl : UserRepository {
+class UserRepositoryImpl(
+    private val profileRepository: ProfileRepository = ProfileRepository()
+) : UserRepository {
 
-    private val userProfileState = MutableStateFlow(
-        UserProfile(
-            id = "user_01",
-            nickname = "FarmerJames",
-            avatarAssetPath = "Avatar/Male_Avatar.png",
-            isAccountBound = false,
-            boundEmail = null
-        )
-    )
-
-    private val notificationsState = MutableStateFlow(
+    private val userProfileState = MutableStateFlow(UserProfile())
+    private val notificationsState = MutableStateFlow<List<NotificationItem>>(
         listOf(
             NotificationItem(
-                id = "notif_1",
-                title = "Welcome to MapTanim!",
-                message = "Your farm layout is initialized. Start planning your crop plots now.",
-                timestamp = "Today, 08:30 AM",
+                id = "notif_admin_01",
+                title = "📢 System Update v1.2.0",
+                message = "MapTanim Admin deployed direct-to-soil grid performance optimizations and sync upgrades.",
+                timestamp = "Today, 10:30 AM",
                 isRead = false,
-                type = "SYSTEM"
+                type = "SYSTEM_UPDATE"
             ),
             NotificationItem(
-                id = "notif_2",
-                title = "DSS Advisory Update",
-                message = "Optimal planting conditions for String Beans detected in Murcia region.",
-                timestamp = "Yesterday, 04:15 PM",
+                id = "notif_admin_02",
+                title = "🌾 New Crop Added: Sweet Corn",
+                message = "Admin added Sweet Corn (Zea mays) to the crop planting library. Tap to view growth stages.",
+                timestamp = "Yesterday, 4:15 PM",
                 isRead = false,
-                type = "ALERT"
+                type = "CROP_ADDITION"
             ),
             NotificationItem(
-                id = "notif_3",
-                title = "System Recommendation",
-                message = "Check irrigation schedule for Plot 1. Soil moisture target is 75%.",
+                id = "notif_admin_03",
+                title = "🛠 Bug Fix & Security Patch",
+                message = "Resolved offline database synchronization and plot status updating issues.",
                 timestamp = "2 days ago",
                 isRead = true,
-                type = "TASK"
+                type = "BUG_FIX"
             )
         )
     )
 
-    // Simulating taken nicknames in Supabase user registry
-    private val takenNicknames = setOf("admin", "system", "maptanim", "superuser", "taken")
-
     override fun observeUserProfile(): Flow<UserProfile> = userProfileState.asStateFlow()
 
     override fun observeNotifications(): Flow<List<NotificationItem>> = notificationsState.asStateFlow()
+
+    suspend fun loadUserProfile() {
+        val user = SupabaseClient.client.auth.currentUserOrNull()
+        if (user != null) {
+            val profile = profileRepository.getProfile(user.id)
+            if (profile != null) {
+                userProfileState.value = UserProfile(
+                    id = profile.id,
+                    nickname = profile.nickname ?: user.email?.substringBefore("@") ?: "Farmer",
+                    avatarAssetPath = profile.avatar ?: "Avatar/Male_Avatar.png",
+                    isAccountBound = true,
+                    boundEmail = user.email
+                )
+            }
+        }
+    }
 
     override suspend fun getAvailableAvatars(): List<AvatarItem> {
         return listOf(
@@ -68,19 +76,34 @@ class UserRepositoryImpl : UserRepository {
     }
 
     override suspend fun isNicknameAvailable(nickname: String): Boolean {
-        val cleanName = nickname.trim().lowercase()
+        val cleanName = nickname.trim()
         if (cleanName.isBlank()) return false
-        return cleanName !in takenNicknames && cleanName != userProfileState.value.nickname.lowercase()
+        val takenNames = setOf("admin", "system", "maptanim", "superuser")
+        return cleanName.lowercase() !in takenNames
     }
 
     override suspend fun updateNickname(newNickname: String): Boolean {
         if (!isNicknameAvailable(newNickname)) return false
-        userProfileState.value = userProfileState.value.copy(nickname = newNickname.trim())
+        val currentUser = userProfileState.value
+        userProfileState.value = currentUser.copy(nickname = newNickname.trim())
+        profileRepository.upsertProfile(
+            ProfileDto(
+                id = currentUser.id,
+                nickname = newNickname.trim()
+            )
+        )
         return true
     }
 
     override suspend fun updateAvatar(newAvatarPath: String): Boolean {
-        userProfileState.value = userProfileState.value.copy(avatarAssetPath = newAvatarPath)
+        val currentUser = userProfileState.value
+        userProfileState.value = currentUser.copy(avatarAssetPath = newAvatarPath)
+        profileRepository.upsertProfile(
+            ProfileDto(
+                id = currentUser.id,
+                avatar = newAvatarPath
+            )
+        )
         return true
     }
 
@@ -103,7 +126,11 @@ class UserRepositoryImpl : UserRepository {
     }
 
     override suspend fun logout(): Boolean {
-        // Reset user session state
+        try {
+            SupabaseClient.client.auth.signOut()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         return true
     }
 

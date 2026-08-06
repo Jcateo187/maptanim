@@ -1,5 +1,8 @@
 # 12. UI/UX Guidelines
 
+> 📌 **Navigation**: [◀ 11. App Navigation](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [13. Design System ▶](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md)
+
+---
 ## 📌 Overview
 MapTanim is a **landscape-first** Android application. All screens are designed for horizontal orientation, resembling a field tablet interface used outdoors.
 
@@ -53,7 +56,7 @@ MapTanim is a **landscape-first** Android application. All screens are designed 
 | Screen Mode | Bottom Bar Content |
 |-------------|------------------|
 | View Mode | Standard 5-tab BottomNavBar |
-| Edit Mode | `EditBottomBar` (EXIT / selection info / actions / SAVE) **above** BottomNavBar |
+| Edit Mode | `EditBottomLayout` (Duplicate / Resize / Delete actions when plot selected) |
 
 ---
 
@@ -124,3 +127,21 @@ The left panel content **swaps** when transitioning between View and Edit Mode. 
 | Drag plot | Plot follows finger, grid snap preview |
 | Snap to grid | Subtle haptic feedback (if device supports) |
 | Zoom at limit | Bounce-back animation |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [11. App Navigation](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md)
+- 📄 [13. Design System](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md)
+- 📄 [14. Component Library](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md)
+- 📄 [15. Render Engine](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md)
+- 📄 [16. Interactive Plot Mapping](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md)
+- 📄 [18. View Mode](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md)
+- 📄 [19. Edit Mode](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md)
+- 📄 [34. Direct Soil Crop Planting & Resize System](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
+- 📄 [35. Asset Planning & Sprites](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md)
+- 📄 [38. Audio & Sound Assets Planning](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md)
+- 📄 [39. Crop View Interaction & Variety Simulation](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md)

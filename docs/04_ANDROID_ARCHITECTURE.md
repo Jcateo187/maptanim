@@ -1,5 +1,8 @@
 # 04. Android Architecture — MVVM + Clean Architecture
 
+> 📌 **Navigation**: [◀ 03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [05. Backend Architecture ▶](file:///d:/Development/MapTanim/docs/05_BACKEND_ARCHITECTURE.md)
+
+---
 ## 📌 Overview
 MapTanim follows **MVVM (Model-View-ViewModel)** combined with **Clean Architecture** principles (Presentation → Domain → Data layers). **Hilt** is used for Dependency Injection throughout.
 
@@ -262,3 +265,13 @@ object SupabaseModule {
     }
 }
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [05. Backend Architecture](file:///d:/Development/MapTanim/docs/05_BACKEND_ARCHITECTURE.md)
+- 📄 [06. Admin Dashboard](file:///d:/Development/MapTanim/docs/06_ADMIN_DASHBOARD.md)
+- 📄 [42. Scalability & Multi-Tenancy Architecture](file:///d:/Development/MapTanim/docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md)

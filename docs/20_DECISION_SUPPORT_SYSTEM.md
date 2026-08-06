@@ -1,15 +1,18 @@
 # 20. Decision Support System (DSS) & Crop Monitoring
 
+> 📌 **Navigation**: [◀ 19. Edit Mode](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [21. Knowledge Base ▶](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)
+
+---
 ## 📌 Overview
 The **DSS Engine** is the intelligence core of MapTanim. It evaluates farm layout, soil conditions, weather, and crop growth timelines to power two primary user-facing systems:
 
 1. **TODAY'S TASKS (`TodaysTasksOverlay.kt`)**:
    - Real-time daily actionable tasks: 💧 **Water**, 🌿 **Fertilize**, 🌾 **Harvest**, and 🐛 **Pest Alert / Scouting**.
-   - Renders task cards on the left HUD panel and active status pins floating over 2D bed plots on the farm canvas.
+   - Renders task cards on the left HUD panel and active status pins floating over 2D crop plots on the farm canvas.
 
 2. **MONITORING DASHBOARD SYSTEM (`MonitoringDashboardOverlay.kt`)**:
    - Comprehensive crop monitoring hub featuring 6 dedicated panels: **My Plants**, **Timeline**, **Calendar**, **Companions**, **Growing Tips**, and **Pest & Disease Control**.
-   - Integrates unmonitored crop tracking with a **Glowing Calendar Badge (`📅`)** floating at the top of crop labels on 2D map beds.
+   - Integrates unmonitored crop tracking with a **Glowing Calendar Badge (`📅`)** floating at the top of crop labels on 2D map plots.
 
 ---
 
@@ -34,8 +37,8 @@ The **DSS Engine** is the intelligence core of MapTanim. It evaluates farm layou
 | **FERTILIZE Task** | `TodaysTasksOverlay.kt` (🌿 Green pill) + Canvas Pin | Tapping logs fertilizer application |
 | **HARVEST Task** | `TodaysTasksOverlay.kt` (🌾 Amber pill) + Canvas Pin | Tapping opens harvest yield modal |
 | **PEST_ALERT Task** | `TodaysTasksOverlay.kt` (🐛 Red pill) + Canvas Pin | Tapping opens organic treatment guide |
-| **Unstarted Crop Badge** | 2D Canvas (`FarmCanvasRenderer.kt` 📅 Badge) | Floating badge above crop label for unmonitored beds |
-| **Monitoring Hub** | `MonitoringDashboardOverlay.kt` | Opens via Top Bar button or tapping 2D canvas bed/badge |
+| **Unstarted Crop Badge** | 2D Canvas (`FarmCanvasRenderer.kt` 📅 Badge) | Floating badge above crop label for unmonitored plots |
+| **Monitoring Hub** | `MonitoringDashboardOverlay.kt` | Opens via Top Bar button or tapping 2D canvas plot/badge |
 
 ---
 
@@ -243,3 +246,16 @@ class DssEngine @Inject constructor(
     }
 }
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [17. Farm Management](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md)
+- 📄 [21. Knowledge Base](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)
+- 📄 [22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
+- 📄 [23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
+- 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+- 📄 [37. System Specifications & Scope Refinements](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)

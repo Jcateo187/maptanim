@@ -91,14 +91,15 @@ fun HomeScreen(
         val totalPlotsCount = currentPlots.size
         val totalCropsCount = currentPlots.count { !it.cropName.isNullOrEmpty() }.let { if (it > 0) it else totalPlotsCount }
 
-        // Top Bar HUD
+        // Top Bar HUD — all real data from Supabase (cloud) or Room (local)
         TopBar(
             modifier = Modifier.align(Alignment.TopCenter),
             totalCrops = totalCropsCount,
             readyToHarvest = uiState.farmSummary.readyToHarvest,
             notificationCount = uiState.notificationCount,
-            farmName = uiState.activeFarm?.farmName ?: "Murcia Farm",
-            location = uiState.activeFarm?.location ?: "Murcia, Negros Occidental",
+            nickname = uiState.nickname,
+            avatarAssetPath = uiState.avatarAssetPath,
+            farmName = uiState.activeFarm?.farmName ?: "",
             onProfileClick = {
                 soundManager.playSfx(SoundEffect.TAP_BUTTON)
                 navController.navigate(Routes.profileRoute(0))
@@ -109,7 +110,7 @@ fun HomeScreen(
             },
             onSettingsClick = {
                 soundManager.playSfx(SoundEffect.TAP_BUTTON)
-                showAudioSettingsDialog = true
+                navController.navigate(com.maptanim.app.navigation.Routes.profileRoute(2))
             }
         )
 
@@ -157,7 +158,12 @@ fun HomeScreen(
         // ── 3. Audio & Sound Settings Modal ──────────────────────────────
         if (showAudioSettingsDialog) {
             AudioSettingsDialog(
-                onDismissRequest = { showAudioSettingsDialog = false }
+                onDismissRequest = { showAudioSettingsDialog = false },
+                onLogoutClick = {
+                    navController.navigate(com.maptanim.app.navigation.Routes.WELCOME) {
+                        popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
+                    }
+                }
             )
         }
 

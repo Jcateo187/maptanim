@@ -2,7 +2,7 @@ package com.maptanim.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.maptanim.app.data.repository.AuthRepository
+import com.maptanim.backend.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,11 +21,7 @@ class AuthViewModel : ViewModel() {
 
         email: String,
 
-        password: String,
-
-        firstName: String = "",
-
-        lastName: String = ""
+        password: String
 
     ) {
 
@@ -36,10 +32,6 @@ class AuthViewModel : ViewModel() {
             )
 
             val result = repository.signUp(
-
-                firstName = firstName,
-
-                lastName = lastName,
 
                 email = email,
 

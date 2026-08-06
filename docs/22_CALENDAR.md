@@ -1,5 +1,8 @@
 # 22. Calendar Screen & Monitoring Engine
 
+> 📌 **Navigation**: [◀ 21. Knowledge Base](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [23. Notification System ▶](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
+
+---
 ## 📌 Overview
 The **Calendar Screen** corresponds to the `📅 Calendar` tab in the bottom navigation bar and operates as an integrated view within the **Monitoring Dashboard System** (`MonitoringDashboardOverlay.kt`). It maps all active farming activities, scheduled tasks, pest alert windows, and harvest milestones on a monthly timeline. 
 
@@ -181,3 +184,16 @@ When a farmer completes a task:
 2. An `ActivityEntity` is logged with `performed_at = Instant.now().toString()`.
 3. Changes queue in `SyncQueueEntity` for background Supabase synchronization.
 4. `StateFlow` automatically emits the updated state, refreshing the Calendar UI without manual reloads.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [17. Farm Management](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md)
+- 📄 [20. Decision Support System](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)
+- 📄 [21. Knowledge Base](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)
+- 📄 [23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
+- 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+- 📄 [37. System Specifications & Scope Refinements](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)

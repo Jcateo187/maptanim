@@ -1,5 +1,8 @@
 # 30. Git Workflow
 
+> 📌 **Navigation**: [◀ 29. Coding Standards](file:///d:/Development/MapTanim/docs/29_CODING_STANDARDS.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [31. Contributing Guidelines ▶](file:///d:/Development/MapTanim/docs/31_CONTRIBUTING.md)
+
+---
 ## 📌 Repository
 
 **GitHub**: [https://github.com/Jcateo187/maptanim.git](https://github.com/Jcateo187/maptanim.git)
@@ -121,3 +124,15 @@ supabase/.temp
 /docs/           @jcateo
 /admin/          @jcateo
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [26. Testing Strategy](file:///d:/Development/MapTanim/docs/26_TESTING.md)
+- 📄 [27. Deployment Guide](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md)
+- 📄 [32. Changelog](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md)
+- 📄 [33. Roadmap](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)
+- 📄 [DevOps Architecture & Free CI/CD Pipelines](file:///d:/Development/MapTanim/docs/DEVOPS.md)

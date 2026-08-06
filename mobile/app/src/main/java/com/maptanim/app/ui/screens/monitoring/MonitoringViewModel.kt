@@ -1,10 +1,16 @@
 package com.maptanim.app.ui.screens.monitoring
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import com.maptanim.app.data.remote.SupabaseClient
+import com.maptanim.app.data.repository.RepositoryProvider
+import com.maptanim.app.domain.repository.CropPlotRepository
+import com.maptanim.app.domain.repository.CropRepository
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 enum class MonitoringNavSection(val title: String) {
     MY_PLANTS("My Plants"),
@@ -38,10 +44,11 @@ data class MonitoredPlant(
     val id: String,
     val cropName: String,
     val localName: String,
+    val cropVariety: String? = null,
     val plotLabel: String,
     val seasonality: SeasonalityFilter,
     val category: CropCategoryFilter,
-    val currentStageIndex: Int, // 0..3
+    val currentStageIndex: Int,
     val stageName: String,
     val daysPlanted: Int,
     val daysToHarvest: Int,
@@ -51,6 +58,8 @@ data class MonitoredPlant(
     val growingTip: String,
     val pestInfo: String,
     val assetPath: String,
+    val imageUrl: String? = null,
+    val rawPlantedDate: String? = null,
     val isMonitoringStarted: Boolean = false
 )
 
@@ -63,76 +72,127 @@ data class MonitoringUiState(
     val plantedCrops: List<MonitoredPlant> = emptyList()
 )
 
-class MonitoringViewModel : ViewModel() {
+class MonitoringViewModel(
+    private val plotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,
+    private val cropRepository: CropRepository = RepositoryProvider.cropRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MonitoringUiState())
     val uiState: StateFlow<MonitoringUiState> = _uiState.asStateFlow()
 
     init {
-        loadPlantedCrops()
+        observeLivePlantedCrops()
     }
 
-    private fun loadPlantedCrops() {
-        val initialCrops = listOf(
-            MonitoredPlant(
-                id = "p1",
-                cropName = "Carrot",
-                localName = "Karot",
-                plotLabel = "PLOT 1",
-                seasonality = SeasonalityFilter.SEASONAL,
-                category = CropCategoryFilter.ROOT,
-                currentStageIndex = 1,
-                stageName = "Vegetative",
-                daysPlanted = 28,
-                daysToHarvest = 75,
-                healthStatus = "Healthy",
-                companionCrop = "String Beans",
-                companionStatus = "Good Companions, No Problems",
-                growingTip = "Keep soil loose and well-drained. Water deeply once per week to encourage straight taproot development.",
-                pestInfo = "Watch out for Carrot Rust Fly. Use row covers and intercrop with legumes or onions.",
-                assetPath = "crops/crop_carrot_1.png",
-                isMonitoringStarted = true
-            ),
-            MonitoredPlant(
-                id = "p2",
-                cropName = "String Beans",
-                localName = "Sitaw",
-                plotLabel = "PLOT 2",
-                seasonality = SeasonalityFilter.SEASONAL,
-                category = CropCategoryFilter.PODDED,
-                currentStageIndex = 0,
-                stageName = "Seedling",
-                daysPlanted = 0,
-                daysToHarvest = 60,
-                healthStatus = "Pending Start",
-                companionCrop = "Carrot",
-                companionStatus = "Good Companions, No Problems",
-                growingTip = "Provide sturdy trellis support for climbing vines. Harvest pods when firm and crisp.",
-                pestInfo = "Inspect under leaves for aphids and pod borers. Apply neem spray during early podding.",
-                assetPath = "crops/crop_stringbeans_1.png",
-                isMonitoringStarted = false
-            )
-        )
-        _uiState.update { it.copy(plantedCrops = initialCrops) }
-    }
+    private fun observeLivePlantedCrops() {
+        val farmerId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: "farmer-1"
+        viewModelScope.launch {
+            combine(
+                plotRepository.observeAllPlotsWithCrop(farmerId),
+                cropRepository.observeAllCrops()
+            ) { plots, crops ->
+                plots.map { plot ->
+                    val crop = crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                    val plantedDate = plot.plantedDate?.let {
+                        try { LocalDate.parse(it.take(10)) } catch (e: Exception) { null }
+                    }
 
-    fun startMonitoring(plantId: String) {
-        _uiState.update { state ->
-            val updated = state.plantedCrops.map { plant ->
-                if (plant.id == plantId) {
-                    plant.copy(
-                        isMonitoringStarted = true,
-                        daysPlanted = 1,
-                        healthStatus = "Active Monitoring"
+                    val daysPlanted = if (plantedDate != null) ChronoUnit.DAYS.between(plantedDate, LocalDate.now()).toInt().coerceAtLeast(0) else 0
+                    val varietyName = plot.cropVariety
+                    val daysToHarvest = getVarietyDurationDays(plot.cropName ?: "", varietyName) ?: crop?.daysToHarvest ?: 60
+
+                    val isStarted = plot.plantedDate != null && daysPlanted >= 0
+                    val stageProgress = if (daysToHarvest > 0 && isStarted) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
+                    val stageIndex = when {
+                        stageProgress < 0.25f -> 0
+                        stageProgress < 0.60f -> 1
+                        stageProgress < 0.90f -> 2
+                        else -> 3
+                    }
+                    val stageName = when (stageIndex) {
+                        0 -> "Germination / Seedling"
+                        1 -> "Vegetative Growth"
+                        2 -> "Flowering / Podding"
+                        else -> "Ready for Harvest"
+                    }
+
+                    MonitoredPlant(
+                        id = plot.id,
+                        cropName = crop?.name ?: plot.cropName ?: "Vegetable",
+                        localName = crop?.localName ?: plot.cropName ?: "Gulay",
+                        cropVariety = varietyName,
+                        plotLabel = plot.plotLabel,
+                        seasonality = SeasonalityFilter.SEASONAL,
+                        category = mapCategory(crop?.category),
+                        currentStageIndex = stageIndex,
+                        stageName = stageName,
+                        daysPlanted = daysPlanted,
+                        daysToHarvest = daysToHarvest,
+                        healthStatus = if (isStarted) "Active Monitoring" else "Pending Start",
+                        companionCrop = crop?.companionPlants?.joinToString(", ") ?: "None listed",
+                        companionStatus = "Good Companions, Healthy Growth",
+                        growingTip = crop?.description ?: "Maintain consistent irrigation and soil organic matter.",
+                        pestInfo = crop?.commonPests?.joinToString(", ") ?: "Inspect weekly for caterpillars and aphids.",
+                        assetPath = "crops/crop_${(crop?.name ?: "carrot").lowercase().replace(" ", "")}_1.png",
+                        imageUrl = crop?.imageUrl,
+                        rawPlantedDate = plot.plantedDate,
+                        isMonitoringStarted = isStarted
                     )
-                } else plant
+                }
+            }.collect { monitoredPlants ->
+                _uiState.update { it.copy(plantedCrops = monitoredPlants) }
             }
-            state.copy(plantedCrops = updated)
         }
     }
 
-    fun updatePlantedCrops(crops: List<MonitoredPlant>) {
-        _uiState.update { it.copy(plantedCrops = crops) }
+    private fun mapCategory(cat: String?): CropCategoryFilter = when (cat?.uppercase()) {
+        "LEAFY" -> CropCategoryFilter.LEAFY
+        "ROOT" -> CropCategoryFilter.ROOT
+        "BULB" -> CropCategoryFilter.BULB
+        "STEM" -> CropCategoryFilter.STEM
+        "FLOWER" -> CropCategoryFilter.FLOWER
+        "FRUIT", "PODDED" -> CropCategoryFilter.PODDED
+        "TUBER" -> CropCategoryFilter.TUBER
+        else -> CropCategoryFilter.ALL
+    }
+
+    private fun getVarietyDurationDays(cropName: String, variety: String?): Int? {
+        if (variety.isNullOrBlank()) return null
+        return when (variety.lowercase()) {
+            "sandigan f1" -> 48
+            "galante f1" -> 52
+            "morena f1" -> 75
+            "dumaguete long purple" -> 85
+            "diamante max f1", "diamante max" -> 60
+            "apollo" -> 72
+            "terracotta f1" -> 85
+            "kuroda improved", "kuroda" -> 95
+            "red pinoy f1", "red pinoy" -> 110
+            "yellow granex" -> 100
+            "suprema f1", "suprema" -> 80
+            "machismo f1" -> 65
+            "ipb var 6" -> 72
+            "k-s cross f1" -> 60
+            "pavon" -> 28
+            "jade star xl f1" -> 55
+            "smooth green" -> 45
+            "django f1" -> 65
+            else -> null
+        }
+    }
+
+    fun startMonitoring(plantId: String, targetDate: String = LocalDate.now().toString(), varietyName: String = "Standard Hybrid") {
+        viewModelScope.launch {
+            plotRepository.observePlot(plantId).take(1).collect { plot ->
+                plot?.let {
+                    val updatedPlot = it.copy(
+                        plantedDate = targetDate.ifBlank { LocalDate.now().toString() },
+                        cropVariety = varietyName.ifBlank { "Standard Hybrid" }
+                    )
+                    plotRepository.upsertPlot(updatedPlot)
+                }
+            }
+        }
     }
 
     fun selectNavSection(section: MonitoringNavSection) {

@@ -1,5 +1,8 @@
 # 32. Changelog
 
+> 📌 **Navigation**: [◀ 31. Contributing Guidelines](file:///d:/Development/MapTanim/docs/31_CONTRIBUTING.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [33. Roadmap ▶](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)
+
+---
 All notable changes to the **MapTanim** project are documented in this file.
 
 ---
@@ -68,3 +71,15 @@ All notable changes to the **MapTanim** project are documented in this file.
 - **Live Supabase Data Repositories**: Remote PostgREST API integration.
 - **Decision Support System (DSS Engine)**: Growth stage calculator & Dynamic task generator.
 - **Interactive 2D Isometric Canvas**: Viewport clipping & pre-warmed soil bitmap rendering.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [26. Testing Strategy](file:///d:/Development/MapTanim/docs/26_TESTING.md)
+- 📄 [27. Deployment Guide](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md)
+- 📄 [30. Git Workflow](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md)
+- 📄 [33. Roadmap](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)
+- 📄 [DevOps Architecture & Free CI/CD Pipelines](file:///d:/Development/MapTanim/docs/DEVOPS.md)

@@ -56,16 +56,7 @@ fun FarmCanvas(
     val gestureHandler = remember(editViewModel, activeCropName, activeCropId, onOpenCropPicker, onOpenMonitoring, canvasSize) {
         CanvasGestureHandler(
             onPlotTapped = { plotId ->
-                if (canvasMode == CanvasMode.VIEW) {
-                    onOpenMonitoring?.invoke()
-                } else {
-                    when (currentActiveTool) {
-                        com.maptanim.app.domain.model.EditTool.SELECT_MOVE -> editViewModel.selectPlot(plotId)
-                        com.maptanim.app.domain.model.EditTool.ADD_PLANT   -> editViewModel.selectPlot(plotId)
-                        com.maptanim.app.domain.model.EditTool.DELETE      -> editViewModel.deletePlot(plotId)
-                        else -> editViewModel.selectPlot(plotId)
-                    }
-                }
+                editViewModel.selectPlot(plotId)
             },
             onCanvasTapped = { worldPos ->
                 var targetX = worldPos.x

@@ -256,20 +256,33 @@ fun MonitoringDashboardOverlay(
                                     Text("No planted crops match the selected filters.", color = White.copy(alpha = 0.6f))
                                 }
                             } else {
+                                var selectedCropForVariety by remember { mutableStateOf<MonitoredPlant?>(null) }
+
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     items(filteredCrops) { crop ->
                                         when (uiState.selectedNavSection) {
-                                            MonitoringNavSection.MY_PLANTS -> MyPlantsCard(crop, onStartMonitoring = { viewModel.startMonitoring(it) })
+                                            MonitoringNavSection.MY_PLANTS -> MyPlantsCard(crop, onStartMonitoring = { selectedCropForVariety = crop })
                                             MonitoringNavSection.TIMELINE -> TimelineCard(crop)
                                             MonitoringNavSection.COMPANIONS -> CompanionsCard(crop)
                                             MonitoringNavSection.GROWING_TIPS -> GrowingTipsCard(crop)
-                                            MonitoringNavSection.CALENDAR -> CalendarCard(crop)
+                                            MonitoringNavSection.CALENDAR -> CalendarCard(crop, onRescheduleClick = { selectedCropForVariety = crop })
                                             MonitoringNavSection.PEST -> PestCard(crop)
                                         }
                                     }
+                                }
+
+                                selectedCropForVariety?.let { targetCrop ->
+                                    VarietySelectionModal(
+                                        crop = targetCrop,
+                                        onDismiss = { selectedCropForVariety = null },
+                                        onConfirmSchedule = { varietyName, targetDate ->
+                                            viewModel.startMonitoring(targetCrop.id, targetDate, varietyName)
+                                            selectedCropForVariety = null
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -497,9 +510,9 @@ private fun GrowingTipsCard(crop: MonitoredPlant) {
     }
 }
 
-// ── 5. CALENDAR CARD ─────────────────────────────────────────────────────────
+// ── 5. CALENDAR CARD & MONTHLY CALENDAR GRID ─────────────────────────────────
 @Composable
-private fun CalendarCard(crop: MonitoredPlant) {
+private fun CalendarCard(crop: MonitoredPlant, onRescheduleClick: () -> Unit = {}) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFF1B2317)
@@ -508,7 +521,7 @@ private fun CalendarCard(crop: MonitoredPlant) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -518,13 +531,20 @@ private fun CalendarCard(crop: MonitoredPlant) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("${crop.cropName} Calendar Schedule", fontWeight = FontWeight.Bold, color = White, fontSize = 14.sp)
+                    Text("${crop.cropName} Crop Calendar", fontWeight = FontWeight.Bold, color = White, fontSize = 14.sp)
                 }
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF2A3424)
+                    color = Color(0xFF2A3424),
+                    modifier = Modifier.clickable { onRescheduleClick() }
                 ) {
-                    Text(crop.plotLabel, fontSize = 10.sp, color = White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                    Text(
+                        text = "📅 Schedule Date",
+                        fontSize = 10.sp,
+                        color = ForestGreen,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
                 }
             }
 
@@ -540,12 +560,173 @@ private fun CalendarCard(crop: MonitoredPlant) {
                 }
                 Column {
                     Text("Expected Harvest", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
-                    Text("in ${crop.daysToHarvest - crop.daysPlanted} days", fontSize = 12.sp, color = ForestGreen, fontWeight = FontWeight.Bold)
+                    Text("in ${(crop.daysToHarvest - crop.daysPlanted).coerceAtLeast(0)} days", fontSize = 12.sp, color = ForestGreen, fontWeight = FontWeight.Bold)
                 }
                 Column {
-                    Text("Next Task", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
-                    Text("Water Tomorrow", fontSize = 12.sp, color = Color(0xFF1E88E5), fontWeight = FontWeight.SemiBold)
+                    Text("Variety", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                    Text(crop.cropVariety ?: "Standard", fontSize = 12.sp, color = Color(0xFF1E88E5), fontWeight = FontWeight.SemiBold)
                 }
+            }
+
+            HorizontalDivider(color = White.copy(alpha = 0.1f))
+
+            // Interactive Monthly Calendar View
+            MonthlyCalendarView(
+                plantedDateStr = crop.rawPlantedDate,
+                daysToHarvest = crop.daysToHarvest,
+                onSelectPlantingDate = { dateStr ->
+                    onRescheduleClick()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MonthlyCalendarView(
+    plantedDateStr: String?,
+    daysToHarvest: Int,
+    onSelectPlantingDate: (String) -> Unit
+) {
+    val initialDate = try {
+        if (!plantedDateStr.isNullOrBlank()) java.time.LocalDate.parse(plantedDateStr) else java.time.LocalDate.now()
+    } catch (e: Exception) {
+        java.time.LocalDate.now()
+    }
+
+    var currentYearMonth by remember { mutableStateOf(java.time.YearMonth.from(initialDate)) }
+
+    val plantingDate = initialDate
+    val harvestDate = initialDate.plusDays(daysToHarvest.toLong())
+    val today = java.time.LocalDate.now()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Month Navigation Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { currentYearMonth = currentYearMonth.minusMonths(1) },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = White)
+            }
+
+            Text(
+                text = "${currentYearMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${currentYearMonth.year}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = White
+            )
+
+            IconButton(
+                onClick = { currentYearMonth = currentYearMonth.plusMonths(1) },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = White)
+            }
+        }
+
+        // Days of Week Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            listOf("S", "M", "T", "W", "T", "F", "S").forEach { day ->
+                Text(day, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = White.copy(alpha = 0.5f))
+            }
+        }
+
+        // Calendar Days Grid
+        val firstDayOfMonth = currentYearMonth.atDay(1)
+        val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7 // 0=Sun, 1=Mon...
+        val daysInMonth = currentYearMonth.lengthOfMonth()
+
+        val totalCells = firstDayOfWeek + daysInMonth
+        val rows = (totalCells + 6) / 7
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (r in 0 until rows) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    for (c in 0..6) {
+                        val dayNum = r * 7 + c - firstDayOfWeek + 1
+                        if (dayNum in 1..daysInMonth) {
+                            val dateObj = currentYearMonth.atDay(dayNum)
+                            val isPlantingDay = dateObj == plantingDate
+                            val isHarvestDay = dateObj == harvestDate
+                            val isToday = dateObj == today
+
+                            val bgColor = when {
+                                isPlantingDay -> ForestGreen
+                                isHarvestDay -> Color(0xFFD48806)
+                                isToday -> Color(0xFF2A3424)
+                                else -> Color.Transparent
+                            }
+
+                            val textColor = when {
+                                isPlantingDay || isHarvestDay -> White
+                                isToday -> ForestGreen
+                                else -> White.copy(alpha = 0.85f)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(bgColor)
+                                    .border(
+                                        width = if (isToday && !isPlantingDay && !isHarvestDay) 1.dp else 0.dp,
+                                        color = if (isToday) ForestGreen else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                                    .clickable { onSelectPlantingDate(dateObj.toString()) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "$dayNum",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isPlantingDay || isHarvestDay || isToday) FontWeight.Bold else FontWeight.Normal,
+                                    color = textColor
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.size(28.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Legend Bar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(ForestGreen))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Planting", fontSize = 9.sp, color = White.copy(alpha = 0.7f))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFD48806)))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Harvest", fontSize = 9.sp, color = White.copy(alpha = 0.7f))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).border(1.dp, ForestGreen, CircleShape))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Today", fontSize = 9.sp, color = White.copy(alpha = 0.7f))
             }
         }
     }
@@ -570,6 +751,170 @@ private fun PestCard(crop: MonitoredPlant) {
                 Text("Pest Prevention: ${crop.cropName}", fontWeight = FontWeight.Bold, color = White, fontSize = 13.sp)
             }
             Text(crop.pestInfo, fontSize = 11.sp, color = White.copy(alpha = 0.85f))
+        }
+    }
+}
+
+// ── 7. VARIETY & TARGET PLANTING DATE SELECTION MODAL ─────────────────────────
+@Composable
+private fun VarietySelectionModal(
+    crop: MonitoredPlant,
+    onDismiss: () -> Unit,
+    onConfirmSchedule: (varietyName: String, targetDate: String) -> Unit
+) {
+    val todayStr = java.time.LocalDate.now().toString()
+    val tomorrowStr = java.time.LocalDate.now().plusDays(1).toString()
+    val in3DaysStr = java.time.LocalDate.now().plusDays(3).toString()
+    val nextWeekStr = java.time.LocalDate.now().plusDays(7).toString()
+
+    val presets = when (crop.cropName.lowercase().replace(" ", "")) {
+        "stringbeans", "sitaw", "beans" -> listOf("Sandigan F1", "Galante F1", "Bongga F1")
+        "eggplant", "talong" -> listOf("Morena F1", "Dumaguete Long Purple", "Casino 217")
+        "tomato", "kamatis" -> listOf("Diamante Max F1", "Apollo", "Cherry Tomato")
+        "carrot", "karots" -> listOf("Terracotta F1", "Kuroda Improved", "Chantenay")
+        "onion", "sibuyas" -> listOf("Red Pinoy F1", "Yellow Granex", "Super Rex")
+        "pumpkin", "kalabasa" -> listOf("Suprema F1", "Horizon F1")
+        "corn", "mais" -> listOf("Machismo F1 (Sweet)", "IPB Var 6 (White)", "Pioneer Hybrid")
+        "cabbage", "repolyo" -> listOf("K-S Cross F1", "Kyross F1")
+        "pechay" -> listOf("Pavon", "Black Beets")
+        "ampalaya" -> listOf("Jade Star XL F1")
+        "okra" -> listOf("Smooth Green")
+        "sili", "chili" -> listOf("Django F1 (Siling Haba)", "Taiwan Hot")
+        else -> listOf("Standard Hybrid", "Local Cultivar")
+    }
+
+    var selectedVariety by remember { mutableStateOf(presets.firstOrNull() ?: "Standard Variety") }
+    var customVariety by remember { mutableStateOf("") }
+    var selectedTargetDate by remember { mutableStateOf(todayStr) }
+    var customTargetDate by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1B2317),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Schedule ${crop.cropName} Planting",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = White
+                    )
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = White)
+                    }
+                }
+
+                Text(
+                    text = "Select cultivar variety and target planting date for ${crop.plotLabel}:",
+                    fontSize = 11.sp,
+                    color = White.copy(alpha = 0.7f)
+                )
+
+                // Variety Selector
+                Text("Seed Variety / Cultivar:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ForestGreen)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    presets.forEach { preset ->
+                        val isSelected = selectedVariety == preset && customVariety.isBlank()
+                        Surface(
+                            onClick = {
+                                selectedVariety = preset
+                                customVariety = ""
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) ForestGreen else Color(0xFF2A3424),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(preset, fontSize = 12.sp, color = White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                                if (isSelected) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = White, modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Target Planting Date Selector
+                Text("Target Planting Date:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ForestGreen)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "Today" to todayStr,
+                        "Tomorrow" to tomorrowStr,
+                        "3 Days" to in3DaysStr,
+                        "Next Week" to nextWeekStr
+                    ).forEach { (label, dateVal) ->
+                        val isSelected = selectedTargetDate == dateVal && customTargetDate.isBlank()
+                        Surface(
+                            onClick = {
+                                selectedTargetDate = dateVal
+                                customTargetDate = ""
+                            },
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isSelected) ForestGreen else Color(0xFF2A3424),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(modifier = Modifier.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                                Text(label, fontSize = 10.sp, color = White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = customTargetDate,
+                    onValueChange = { customTargetDate = it },
+                    label = { Text("Or custom date (YYYY-MM-DD)", fontSize = 10.sp, color = White.copy(alpha = 0.6f)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedBorderColor = ForestGreen,
+                        unfocusedBorderColor = White.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = White.copy(alpha = 0.7f))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val finalVariety = customVariety.ifBlank { selectedVariety }
+                            val finalDate = customTargetDate.ifBlank { selectedTargetDate }
+                            onConfirmSchedule(finalVariety, finalDate)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Save & Start Schedule", fontWeight = FontWeight.Bold, color = White, fontSize = 11.sp)
+                    }
+                }
+            }
         }
     }
 }

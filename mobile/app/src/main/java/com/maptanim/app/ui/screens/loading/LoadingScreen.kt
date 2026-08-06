@@ -92,7 +92,7 @@ fun LoadingScreen(
             }
             is LoadingDestination.Home -> {
                 navController.navigate(Routes.HOME) {
-                    popUpTo(0) { inclusive = true }
+                    popUpTo(Routes.LOADING) { inclusive = true }
                     launchSingleTop = true
                 }
             }

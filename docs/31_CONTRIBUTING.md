@@ -1,5 +1,8 @@
 # 31. Contributing Guide
 
+> 📌 **Navigation**: [◀ 30. Git Workflow](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [32. Changelog ▶](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md)
+
+---
 ## 📌 Overview
 Thank you for contributing to **MapTanim**! This guide ensures all contributions meet the project's data integrity, code quality, and documentation standards.
 
@@ -57,3 +60,12 @@ Reviewers will check for:
 3. **Offline safety**: New writes must go to Room first, then SyncQueue
 4. **Test coverage**: New features need at least 1 unit test + 1 UI test
 5. **Documentation**: New components/screens documented in `docs/14_COMPONENT_LIBRARY.md` or relevant doc
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [01. Project Overview](file:///d:/Development/MapTanim/docs/01_PROJECT_OVERVIEW.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [28. Project Structure](file:///d:/Development/MapTanim/docs/28_PROJECT_STRUCTURE.md)

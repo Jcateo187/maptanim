@@ -22,6 +22,7 @@ data class CropPlot(
     val plotLabel: String,      // "PLOT 1", "PLOT A", etc.
     val cropName: String?,      // null = no crop assigned
     val cropId: String?,
+    val cropVariety: String? = null,
     val soilType: SoilType,     // loaded from crop_plots.soil_type via Room
     val posX: Float,            // meters from farm origin
     val posY: Float,
@@ -90,7 +91,9 @@ data class SoilGuide(
     val drainageSpeed: String,           // "Moderate / Ideal"
     val phRange: String,                 // "6.0 – 7.0"
     val texture: String,                 // "Crumbly, rich in organic matter"
-    val bestCrops: List<String>          // ["Tomato", "Carrot", "Lettuce", "Onion"]
+    val bestCrops: List<String>,         // ["Tomato", "Carrot", "Lettuce", "Onion"]
+    val imageUrl: String? = null,
+    val colorHex: String? = null
 )
 
 // ─── Seasonal Planting Matrix Info ────────────────────────────────────────

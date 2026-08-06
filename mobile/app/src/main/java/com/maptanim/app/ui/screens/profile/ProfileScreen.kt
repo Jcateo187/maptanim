@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,6 +34,7 @@ import com.maptanim.app.ui.theme.TextPrimary
 import com.maptanim.app.ui.theme.White
 import com.maptanim.app.core.audio.LocalSoundManager
 import com.maptanim.app.core.audio.SoundEffect
+import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,15 +54,18 @@ fun ProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "User Hub",
-                        fontWeight = FontWeight.Bold,
-                        color = White
-                    )
-                },
-                navigationIcon = {
+            Surface(
+                color = Color(0xFF1B2317),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(56.dp)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
@@ -67,9 +73,76 @@ fun ProfileScreen(
                             tint = White
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1B2317))
-            )
+
+                    TabRow(
+                        selectedTabIndex = uiState.selectedTab,
+                        containerColor = Color.Transparent,
+                        contentColor = ForestGreen,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        indicator = { tabPositions ->
+                            TabRowDefaults.Indicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab]),
+                                color = ForestGreen,
+                                height = 3.dp
+                            )
+                        },
+                        divider = {}
+                    ) {
+                        Tab(
+                            selected = uiState.selectedTab == 0,
+                            onClick = { viewModel.selectTab(0) },
+                            text = {
+                                Text(
+                                    "Profile",
+                                    color = if (uiState.selectedTab == 0) White else White.copy(alpha = 0.6f),
+                                    fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            icon = { Icon(Icons.Default.Person, contentDescription = null, tint = if (uiState.selectedTab == 0) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
+                        )
+                        Tab(
+                            selected = uiState.selectedTab == 1,
+                            onClick = { viewModel.selectTab(1) },
+                            text = {
+                                Text(
+                                    "Notification",
+                                    color = if (uiState.selectedTab == 1) White else White.copy(alpha = 0.6f),
+                                    fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            icon = {
+                                BadgedBox(badge = {
+                                    val unread = uiState.notifications.count { !it.isRead }
+                                    if (unread > 0) {
+                                        Badge(containerColor = Color.Red, contentColor = White) {
+                                            Text(unread.toString(), fontSize = 10.sp)
+                                        }
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Notifications, contentDescription = null, tint = if (uiState.selectedTab == 1) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                        Tab(
+                            selected = uiState.selectedTab == 2,
+                            onClick = { viewModel.selectTab(2) },
+                            text = {
+                                Text(
+                                    "Settings",
+                                    color = if (uiState.selectedTab == 2) White else White.copy(alpha = 0.6f),
+                                    fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = if (uiState.selectedTab == 2) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
+                        )
+                    }
+                }
+            }
         },
         containerColor = Color(0xFF121810)
     ) { paddingValues ->
@@ -78,69 +151,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ── 3 Main Top Tabs (Profile, Notification, Settings) ────────────────
-            TabRow(
-                selectedTabIndex = uiState.selectedTab,
-                containerColor = Color(0xFF1B2317),
-                contentColor = ForestGreen,
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab]),
-                        color = ForestGreen,
-                        height = 3.dp
-                    )
-                }
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == 0,
-                    onClick = { viewModel.selectTab(0) },
-                    text = {
-                        Text(
-                            "Profile",
-                            color = if (uiState.selectedTab == 0) White else White.copy(alpha = 0.6f),
-                            fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    icon = { Icon(Icons.Default.Person, contentDescription = null, tint = if (uiState.selectedTab == 0) ForestGreen else White.copy(alpha = 0.6f)) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 1,
-                    onClick = { viewModel.selectTab(1) },
-                    text = {
-                        Text(
-                            "Notification",
-                            color = if (uiState.selectedTab == 1) White else White.copy(alpha = 0.6f),
-                            fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    icon = {
-                        BadgedBox(badge = {
-                            val unread = uiState.notifications.count { !it.isRead }
-                            if (unread > 0) {
-                                Badge(containerColor = Color.Red, contentColor = White) {
-                                    Text(unread.toString())
-                                }
-                            }
-                        }) {
-                            Icon(Icons.Default.Notifications, contentDescription = null, tint = if (uiState.selectedTab == 1) ForestGreen else White.copy(alpha = 0.6f))
-                        }
-                    }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.selectTab(2) },
-                    text = {
-                        Text(
-                            "Settings",
-                            color = if (uiState.selectedTab == 2) White else White.copy(alpha = 0.6f),
-                            fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = if (uiState.selectedTab == 2) ForestGreen else White.copy(alpha = 0.6f)) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Toast / Snack notification message
             uiState.successMessage?.let { msg ->
@@ -149,15 +160,15 @@ fun ProfileScreen(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(msg, color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        IconButton(onClick = { viewModel.dismissSuccessMessage() }, modifier = Modifier.size(20.dp)) {
+                        Text(msg, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        IconButton(onClick = { viewModel.dismissSuccessMessage() }, modifier = Modifier.size(18.dp)) {
                             Icon(Icons.Default.Close, contentDescription = null, tint = White)
                         }
                     }
@@ -218,131 +229,280 @@ fun ProfileScreen(
     }
 }
 
-// ─── TAB 1: PROFILE CONTENT ────────────────────────────────────────────────
+// ─── TAB 1: PROFILE CONTENT (2-Column Split: Left Avatar+Nickname, Right Farms+Forum) ───
 
 @Composable
 private fun ProfileTabContent(
     uiState: ProfileUiState,
     viewModel: ProfileViewModel
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Avatar Card
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF1E261A),
-            modifier = Modifier.fillMaxWidth()
+        // ── LEFT SIDE: Avatar & Nickname Only ─────────────────────────────────
+        Column(
+            modifier = Modifier
+                .weight(0.4f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Avatar & Nickname Card
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF1E261A),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                ProfileAvatar(
-                    avatarAssetPath = uiState.userProfile.avatarAssetPath,
-                    size = 96.dp,
-                    onClick = { viewModel.openViewAvatar() }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = uiState.userProfile.nickname,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White
-                )
-                Text(
-                    text = "Tap avatar to view or change profile photo",
-                    fontSize = 12.sp,
-                    color = White.copy(alpha = 0.6f)
-                )
-            }
-        }
-
-        // Nickname Card
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF1E261A),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Badge, contentDescription = null, tint = ForestGreen)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Nickname", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = White)
-                    }
-
-                    if (!uiState.isEditingNickname) {
-                        TextButton(onClick = { viewModel.startEditNickname() }) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Edit", color = ForestGreen)
-                        }
-                    }
-                }
-
-                if (uiState.isEditingNickname) {
-                    OutlinedTextField(
-                        value = uiState.nicknameInput,
-                        onValueChange = { viewModel.updateNicknameInput(it) },
-                        label = { Text("Enter Unique Nickname", color = White.copy(alpha = 0.7f)) },
-                        isError = uiState.nicknameError != null,
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ForestGreen,
-                            unfocusedBorderColor = White.copy(alpha = 0.3f),
-                            focusedTextColor = White,
-                            unfocusedTextColor = White
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                    ProfileAvatar(
+                        avatarAssetPath = uiState.userProfile.avatarAssetPath,
+                        size = 80.dp,
+                        onClick = { viewModel.openViewAvatar() }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = uiState.userProfile.nickname.ifBlank { "Farmer" },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = White
+                    )
+                    Text(
+                        text = "Tap avatar to view or change",
+                        fontSize = 11.sp,
+                        color = White.copy(alpha = 0.6f)
+                    )
+                }
+            }
 
-                    uiState.nicknameError?.let { err ->
-                        Text(text = err, color = Color.Red, fontSize = 12.sp)
-                    }
-
+            // Edit Nickname Card
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF1E261A),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = { viewModel.cancelEditNickname() }) {
-                            Text("Cancel", color = White.copy(alpha = 0.7f))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Badge, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Nickname", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = White)
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { viewModel.submitNicknameCheck() },
-                            colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                            enabled = !uiState.isCheckingNickname
-                        ) {
-                            if (uiState.isCheckingNickname) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = White, strokeWidth = 2.dp)
-                            } else {
-                                Text("Save & Check Availability")
+
+                        if (!uiState.isEditingNickname) {
+                            TextButton(onClick = { viewModel.startEditNickname() }) {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("Edit", color = ForestGreen, fontSize = 12.sp)
                             }
                         }
                     }
-                } else {
-                    Text(
-                        text = uiState.userProfile.nickname,
-                        fontSize = 16.sp,
-                        color = White.copy(alpha = 0.9f)
-                    )
+
+                    if (uiState.isEditingNickname) {
+                        OutlinedTextField(
+                            value = uiState.nicknameInput,
+                            onValueChange = { viewModel.updateNicknameInput(it) },
+                            label = { Text("Enter Nickname", color = White.copy(alpha = 0.7f), fontSize = 12.sp) },
+                            isError = uiState.nicknameError != null,
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ForestGreen,
+                                unfocusedBorderColor = White.copy(alpha = 0.3f),
+                                focusedTextColor = White,
+                                unfocusedTextColor = White
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        uiState.nicknameError?.let { err ->
+                            Text(text = err, color = Color.Red, fontSize = 11.sp)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = { viewModel.cancelEditNickname() }) {
+                                Text("Cancel", color = White.copy(alpha = 0.7f), fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Button(
+                                onClick = { viewModel.submitNicknameCheck() },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                enabled = !uiState.isCheckingNickname
+                            ) {
+                                if (uiState.isCheckingNickname) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = White, strokeWidth = 2.dp)
+                                } else {
+                                    Text("Save", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = uiState.userProfile.nickname.ifBlank { "Farmer" },
+                            fontSize = 14.sp,
+                            color = White.copy(alpha = 0.9f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── RIGHT SIDE: Available Farms List & Community Forum Activity ────────
+        LazyColumn(
+            modifier = Modifier
+                .weight(0.6f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // 1. Farms List Card (from Supabase cloud or local Room)
+            item {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF1E261A),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("My Farms List", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                        }
+
+                        if (uiState.farms.isEmpty()) {
+                            Text(
+                                text = "No farms registered yet.",
+                                fontSize = 12.sp,
+                                color = White.copy(alpha = 0.6f)
+                            )
+                        } else {
+                            uiState.farms.forEach { farm ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF141A12),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = farm.farmName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = White
+                                            )
+
+                                        }
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Community Forum Activity Card
+            item {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF1E261A),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Forum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Community Forum Activity", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                        }
+
+                        if (uiState.userPosts.isEmpty()) {
+                            Text(
+                                text = "No recent community activity.",
+                                fontSize = 12.sp,
+                                color = White.copy(alpha = 0.6f)
+                            )
+                        } else {
+                            uiState.userPosts.take(3).forEach { post ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF141A12),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = post.title,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = White
+                                            )
+                                            Text(
+                                                text = post.category,
+                                                fontSize = 10.sp,
+                                                color = ForestGreen,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                        Text(
+                                            text = post.content,
+                                            fontSize = 11.sp,
+                                            color = White.copy(alpha = 0.7f),
+                                            maxLines = 2
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                            Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -356,73 +516,94 @@ private fun NotificationTabContent(
     uiState: ProfileUiState,
     viewModel: ProfileViewModel
 ) {
-    if (uiState.notifications.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No notifications available.", color = White.copy(alpha = 0.6f))
+    var selectedFilter by remember { mutableStateOf("ALL") }
+
+    val filteredNotifications = remember(uiState.notifications, selectedFilter) {
+        when (selectedFilter) {
+            "UNREAD" -> uiState.notifications.filter { !it.isRead }
+            "SYSTEM" -> uiState.notifications.filter { it.type.uppercase().contains("SYSTEM") }
+            "CROP" -> uiState.notifications.filter { it.type.uppercase().contains("CROP") }
+            "BUG" -> uiState.notifications.filter { it.type.uppercase().contains("BUG") }
+            else -> uiState.notifications
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Filter Chips for Admin & System Bulletins
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(uiState.notifications) { item ->
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (item.isRead) Color(0xFF192016) else Color(0xFF243020),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.selectNotification(item) }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(if (item.isRead) Color.Gray else ForestGreen)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = item.title,
-                                fontWeight = if (item.isRead) FontWeight.Normal else FontWeight.Bold,
-                                color = White,
-                                fontSize = 15.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = item.message,
-                                color = White.copy(alpha = 0.75f),
-                                fontSize = 13.sp,
-                                maxLines = 2
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = item.timestamp,
-                                color = White.copy(alpha = 0.45f),
-                                fontSize = 11.sp
-                            )
-                        }
-                        IconButton(onClick = { viewModel.deleteNotification(item.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = White.copy(alpha = 0.5f))
-                        }
-                    }
+            listOf(
+                "ALL" to "All Updates",
+                "UNREAD" to "Unread",
+                "SYSTEM" to "System Announcements",
+                "CROP" to "Crops Added",
+                "BUG" to "Bug Fixes"
+            ).forEach { (filterKey, label) ->
+                val isSelected = selectedFilter == filterKey
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { selectedFilter = filterKey },
+                    label = { Text(label, fontSize = 11.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = ForestGreen,
+                        selectedLabelColor = White,
+                        containerColor = Color(0xFF1E261A),
+                        labelColor = White.copy(alpha = 0.7f)
+                    )
+                )
+            }
+        }
+
+        if (filteredNotifications.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = White.copy(alpha = 0.3f),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("No notifications found", color = White.copy(alpha = 0.5f), fontSize = 14.sp)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(filteredNotifications, key = { it.id }) { notif ->
+                    NotificationCardItem(
+                        notif = notif,
+                        onClick = { viewModel.selectNotification(notif) },
+                        onDelete = { viewModel.deleteNotification(notif.id) }
+                    )
                 }
             }
         }
     }
 
-    // Detail dialog when clicking system message
+    // Detail Dialog Modal
     uiState.selectedNotification?.let { notif ->
         AlertDialog(
             onDismissRequest = { viewModel.dismissNotificationDetail() },
-            title = { Text(notif.title, color = White, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(notif.title, fontWeight = FontWeight.Bold, color = White)
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(notif.message, color = White.copy(alpha = 0.9f))
-                    Text("Received: ${notif.timestamp}", color = White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text(notif.message, color = White.copy(alpha = 0.85f), fontSize = 14.sp)
+                    Text("Time: ${notif.timestamp}", color = White.copy(alpha = 0.5f), fontSize = 11.sp)
                 }
             },
             confirmButton = {
@@ -430,16 +611,84 @@ private fun NotificationTabContent(
                     onClick = { viewModel.dismissNotificationDetail() },
                     colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
                 ) {
-                    Text("OK")
+                    Text("OK", color = White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.deleteNotification(notif.id) }) {
-                    Text("Delete Message", color = Color.Red)
+                    Text("Delete", color = Color(0xFFEF5350))
                 }
             },
             containerColor = Color(0xFF1E261A)
         )
+    }
+}
+
+@Composable
+private fun NotificationCardItem(
+    notif: NotificationItem,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (notif.isRead) Color(0xFF1E261A) else Color(0xFF263321),
+        border = if (!notif.isRead) androidx.compose.foundation.BorderStroke(1.dp, ForestGreen) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                notif.type.uppercase().contains("CROP") -> Color(0xFF4CAF50)
+                                notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Color(0xFFFFA000)
+                                notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Color(0xFF1E88E5)
+                                else -> ForestGreen
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when {
+                            notif.type.uppercase().contains("CROP") -> Icons.Default.Eco
+                            notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Icons.Default.Build
+                            notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Icons.Default.Campaign
+                            else -> Icons.Default.Notifications
+                        },
+                        contentDescription = null,
+                        tint = White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(notif.title, fontWeight = FontWeight.Bold, color = White, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(notif.message, color = White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 2)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(notif.timestamp, color = White.copy(alpha = 0.4f), fontSize = 10.sp)
+                }
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            }
+        }
     }
 }
 
@@ -455,7 +704,9 @@ private fun SettingsTabContent(
     val soundManager = LocalSoundManager.current
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(6.dp))

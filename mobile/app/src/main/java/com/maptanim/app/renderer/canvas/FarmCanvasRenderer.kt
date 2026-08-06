@@ -419,9 +419,20 @@ object FarmCanvasRenderer {
             "onion", "sibuyas" -> "🧅"
             "pumpkin", "kalabasa" -> "🎃"
             "corn", "mais" -> "🌽"
+            "pechay" -> "🥬"
+            "repolyo", "cabbage" -> "🥬"
+            "sili", "chili" -> "🌶️"
+            "okra" -> "🌿"
             else -> "🥕"
         }
-        val labelText = "$emoji $cropName (${plot.widthM.toInt()}m × ${plot.heightM.toInt()}m)"
+        val varietyStr = if (!plot.cropVariety.isNullOrBlank()) " - ${plot.cropVariety}" else ""
+        val progressStr = if (plot.isMonitoringStarted) {
+            val pct = (plot.stageProgressRatio * 100).toInt()
+            " • Day ${plot.daysPlanted}/${plot.daysToHarvest} [$pct%]"
+        } else {
+            " • Pending Start"
+        }
+        val labelText = "$emoji $cropName$varietyStr$progressStr"
 
         val nativeCanvas = drawContext.canvas.nativeCanvas
         val textPaint = android.graphics.Paint().apply {
@@ -639,55 +650,33 @@ object FarmCanvasRenderer {
     private fun DrawScope.renderStatusPins(plot: PlotRenderData, camera: CameraState) {
         val topPos = plot.topEdgeCenter(camera)
 
-        // ── 1. Unstarted Crop Calendar Badge (📅 START MONITORING) ───────
+        // ── 1. Unstarted Crop Calendar Pin Badge (📅) ────────────────────
         if (!plot.cropName.isNullOrEmpty() && !plot.isMonitoringStarted) {
-            val badgeCenterY = topPos.y - (42f * camera.zoom)
-            val badgeCenterX = topPos.x
+            val pinSizePx = 28f * camera.zoom
+            val pinCenter = Offset(topPos.x, topPos.y - (44f * camera.zoom))
 
-            val labelText = "📅 START MONITORING"
+            drawCircle(
+                color = Color(android.graphics.Color.parseColor("#FFE65100")), // Amber Orange
+                radius = pinSizePx / 2f,
+                center = pinCenter
+            )
+            drawCircle(
+                color = Color.White,
+                radius = pinSizePx / 2f,
+                center = pinCenter,
+                style = Stroke(width = 2.dp.toPx())
+            )
+
             val nativeCanvas = drawContext.canvas.nativeCanvas
-            val textPaint = android.graphics.Paint().apply {
+            val iconPaint = android.graphics.Paint().apply {
                 color = android.graphics.Color.WHITE
-                textSize = (11f * camera.zoom).coerceIn(9f, 18f)
+                textSize = (14f * camera.zoom).coerceIn(10f, 22f)
                 isAntiAlias = true
-                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
                 textAlign = android.graphics.Paint.Align.CENTER
             }
-
-            val textWidth = textPaint.measureText(labelText)
-            val fontMetrics = textPaint.fontMetrics
-            val textHeight = fontMetrics.bottom - fontMetrics.top
-
-            val padH = 10f * camera.zoom
-            val padV = 4f * camera.zoom
-            val rectW = textWidth + (padH * 2f)
-            val rectH = textHeight + (padV * 2f)
-
-            val rectLeft = badgeCenterX - (rectW / 2f)
-            val rectTop = badgeCenterY - (rectH / 2f)
-            val rectRight = badgeCenterX + (rectW / 2f)
-            val rectBottom = badgeCenterY + (rectH / 2f)
-
-            val bgPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.parseColor("#FFE65100") // Glowing Amber Orange
-                isAntiAlias = true
-                style = android.graphics.Paint.Style.FILL
-            }
-            val borderPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.WHITE
-                isAntiAlias = true
-                style = android.graphics.Paint.Style.STROKE
-                strokeWidth = (2f * camera.zoom).coerceIn(1.5f, 4f)
-            }
-
-            val cornerRadius = rectH / 2f
-            val rectF = android.graphics.RectF(rectLeft, rectTop, rectRight, rectBottom)
-
-            nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint)
-            nativeCanvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint)
-
-            val textY = badgeCenterY - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
-            nativeCanvas.drawText(labelText, badgeCenterX, textY, textPaint)
+            val fontMetrics = iconPaint.fontMetrics
+            val textY = pinCenter.y - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
+            nativeCanvas.drawText("📅", pinCenter.x, textY, iconPaint)
         }
 
         // ── 2. Active Task Pin Badges (💧 🌿 🌾 🐛) ───────────────────────

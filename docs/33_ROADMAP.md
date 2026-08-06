@@ -1,5 +1,8 @@
 # 33. Development Roadmap
 
+> 📌 **Navigation**: [◀ 32. Changelog](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [34. Direct Soil Crop Planting & Resize System ▶](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
+
+---
 ## 📌 Overview
 MapTanim follows a phased development plan. Phase 1 (v1.1) is the capstone deliverable featuring the Direct Soil Planting Engine & Custom Trellis Framework.
 
@@ -47,3 +50,14 @@ MapTanim follows a phased development plan. Phase 1 (v1.1) is the capstone deliv
 - [ ] **SQLCipher Room Encryption**: Full local database encryption for sensitive farm records
 - [ ] **Certificate Pinning**: Hardened network transport security
 
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [26. Testing Strategy](file:///d:/Development/MapTanim/docs/26_TESTING.md)
+- 📄 [27. Deployment Guide](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md)
+- 📄 [30. Git Workflow](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md)
+- 📄 [32. Changelog](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md)
+- 📄 [DevOps Architecture & Free CI/CD Pipelines](file:///d:/Development/MapTanim/docs/DEVOPS.md)

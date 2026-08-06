@@ -1,5 +1,8 @@
 # 27. Deployment Guide
 
+> 📌 **Navigation**: [◀ 26. Testing Strategy](file:///d:/Development/MapTanim/docs/26_TESTING.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [28. Project Structure ▶](file:///d:/Development/MapTanim/docs/28_PROJECT_STRUCTURE.md)
+
+---
 ## 📌 Overview
 This guide covers the steps to build, sign, and release MapTanim to production. It also covers Supabase production deployment and admin panel hosting.
 
@@ -169,3 +172,15 @@ supabase db reset --linked
 # Redeploy previous Edge Function version
 supabase functions deploy verify-otp --version <previous-version>
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [26. Testing Strategy](file:///d:/Development/MapTanim/docs/26_TESTING.md)
+- 📄 [30. Git Workflow](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md)
+- 📄 [32. Changelog](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md)
+- 📄 [33. Roadmap](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)
+- 📄 [DevOps Architecture & Free CI/CD Pipelines](file:///d:/Development/MapTanim/docs/DEVOPS.md)

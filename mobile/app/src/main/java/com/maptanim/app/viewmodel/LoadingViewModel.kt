@@ -30,22 +30,31 @@ class LoadingViewModel : ViewModel() {
 
     private fun initialize() {
         viewModelScope.launch {
-            val initializer = AppInitializationController()
-            initializer.initialize()
+            try {
+                val initializer = AppInitializationController()
+                initializer.initialize()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
-            val session = SupabaseClient.client.auth.currentSessionOrNull()
-            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val target = try {
+                val session = SupabaseClient.client.auth.currentSessionOrNull()
+                val user = SupabaseClient.client.auth.currentUserOrNull()
 
-            val target = if (session == null || user == null) {
-                LoadingDestination.Welcome
-            } else {
-                val profileRepository = ProfileRepository()
-                val profile = profileRepository.getProfile(user.id)
-                if (profile?.onboarding_completed == true) {
-                    LoadingDestination.Home
+                if (session == null || user == null) {
+                    LoadingDestination.Welcome
                 } else {
-                    LoadingDestination.WelcomeGuide
+                    val profileRepository = ProfileRepository()
+                    val profile = profileRepository.getProfile(user.id)
+                    if (profile?.onboarding_completed == true) {
+                        LoadingDestination.Home
+                    } else {
+                        LoadingDestination.WelcomeGuide
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                LoadingDestination.Welcome
             }
 
             // Enforce exact 2-second (2000ms) loading screen display timer before navigating

@@ -326,7 +326,7 @@ class EditViewModel(
             widthM      = safeW,
             heightM     = safeH,
             rotationDeg = 0f,
-            plantedDate = null,
+            plantedDate = java.time.LocalDate.now().toString(),
             isActive    = true,
             notes       = null,
             createdAt   = Instant.now().toString(),
@@ -503,7 +503,10 @@ class EditViewModel(
     fun saveChanges(farmName: String, isGuest: Boolean, onSaveComplete: () -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
-            val currentPlots = _uiState.value.editedPlots
+            val currentPlots = _uiState.value.editedPlots.map { plot ->
+                if (plot.plantedDate.isNullOrBlank()) plot.copy(plantedDate = java.time.LocalDate.now().toString())
+                else plot
+            }
             cropPlotRepository.savePlots(currentPlots)
 
             val currentZones = _uiState.value.cropZones

@@ -2,11 +2,16 @@ package com.maptanim.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.maptanim.app.data.remote.SupabaseClient
+import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.data.repository.UserRepositoryImpl
 import com.maptanim.app.domain.model.AvatarItem
+import com.maptanim.app.domain.model.CommunityPost
+import com.maptanim.app.domain.model.Farm
 import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.domain.model.UserProfile
 import com.maptanim.app.domain.repository.UserRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +23,8 @@ data class ProfileUiState(
     val userProfile: UserProfile = UserProfile(),
     val availableAvatars: List<AvatarItem> = emptyList(),
     val notifications: List<NotificationItem> = emptyList(),
+    val farms: List<Farm> = emptyList(),
+    val userPosts: List<CommunityPost> = emptyList(),
     
     // Avatar picker modal states
     val showAvatarPickerModal: Boolean = false,
@@ -72,6 +79,22 @@ class ProfileViewModel(
         viewModelScope.launch {
             val avatars = userRepository.getAvailableAvatars()
             _uiState.update { it.copy(availableAvatars = avatars) }
+        }
+
+        // Observe real farms list from Room / Supabase database
+        viewModelScope.launch {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: "guest"
+            RepositoryProvider.farmRepository.observeFarms(userId).collect { farms ->
+                _uiState.update { it.copy(farms = farms) }
+            }
+        }
+
+        // Observe real community posts & forum activity
+        viewModelScope.launch {
+            RepositoryProvider.communityRepository.observePosts().collect { posts ->
+                _uiState.update { it.copy(userPosts = posts) }
+            }
         }
     }
 

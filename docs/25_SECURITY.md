@@ -1,5 +1,8 @@
 # 25. Security & Data Protection
 
+> 📌 **Navigation**: [◀ 24. Offline Synchronization](file:///d:/Development/MapTanim/docs/24_OFFLINE_SYNCHRONIZATION.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [26. Testing Strategy ▶](file:///d:/Development/MapTanim/docs/26_TESTING.md)
+
+---
 ## 📌 Overview
 MapTanim enforces multiple defense-in-depth security layers covering authentication, database Row Level Security (RLS), transport layer security, and local hardware-backed data protection. All security mechanisms apply directly to live database transactions — no authentication bypass or security fallback exists in production code paths.
 
@@ -157,3 +160,16 @@ val prefs = EncryptedSharedPreferences.create(
 | V5 – Network Communication | ✅ Pass | Strict TLS 1.3, no HTTP cleartext fallback |
 | V6 – Platform Interaction | ✅ Pass | Native Jetpack Compose UI, no insecure WebViews |
 | V7 – Code Quality | ✅ Pass | Kotlin null safety, strict type checking |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [07. Database Design](file:///d:/Development/MapTanim/docs/07_DATABASE_DESIGN.md)
+- 📄 [08. Supabase Configuration](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md)
+- 📄 [09. Authentication](file:///d:/Development/MapTanim/docs/09_AUTHENTICATION.md)
+- 📄 [24. Offline Synchronization](file:///d:/Development/MapTanim/docs/24_OFFLINE_SYNCHRONIZATION.md)
+- 📄 [40. User & Profile Schema Refinement](file:///d:/Development/MapTanim/docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md)
+- 📄 [41. Users & Profiles Database Tables](file:///d:/Development/MapTanim/docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md)

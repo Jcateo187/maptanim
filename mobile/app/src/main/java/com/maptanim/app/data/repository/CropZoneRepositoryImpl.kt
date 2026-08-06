@@ -26,14 +26,14 @@ class CropZoneRepositoryImpl(
         } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache.filterKeys { it in plotIds }.values.flatten())
     }
 
-    override suspend fun saveZones(zones: List<CropZone>) {
+    override suspend fun saveZones(zones: List<CropZone>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropZoneDao?.upsertZones(zones.map { it.toEntity() })
         zones.groupBy { it.plotId }.forEach { (plotId, plotZones) ->
             inMemoryCache[plotId] = plotZones
         }
     }
 
-    override suspend fun deleteZone(zoneId: String) {
+    override suspend fun deleteZone(zoneId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropZoneDao?.deleteZone(zoneId)
         inMemoryCache.keys.forEach { plotId ->
             inMemoryCache[plotId] = inMemoryCache[plotId]?.filter { it.id != zoneId } ?: emptyList()

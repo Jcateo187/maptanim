@@ -1,5 +1,8 @@
 # 21. Knowledge Base — Library Screen
 
+> 📌 **Navigation**: [◀ 20. Decision Support System](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [22. Calendar Engine ▶](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
+
+---
 ## 📌 Overview
 The **Library Screen** corresponds to the `📖 Library` tab in the bottom navigation bar. It provides farmers with a comprehensive, offline-accessible reference database covering crop profiles, pest guides, soil information, and seasonal planting calendars.
 
@@ -83,3 +86,16 @@ class LibraryViewModel @Inject constructor(
 
 ## 🔹 Offline Access
 All crop data, DSS rules, pest guides, and soil info are **synced to Room** on first app launch and periodically refreshed. The Library is fully accessible **without internet connection**.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [17. Farm Management](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md)
+- 📄 [20. Decision Support System](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)
+- 📄 [22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
+- 📄 [23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
+- 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+- 📄 [37. System Specifications & Scope Refinements](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)

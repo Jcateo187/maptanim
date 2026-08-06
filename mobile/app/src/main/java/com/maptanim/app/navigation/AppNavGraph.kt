@@ -12,12 +12,16 @@ import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
 import com.maptanim.app.ui.screens.auth.LoginScreen
 import com.maptanim.app.ui.screens.auth.WelcomeGuideScreen
 import com.maptanim.app.ui.screens.auth.WelcomeScreen
+import com.maptanim.app.ui.screens.about.AboutScreen
+import com.maptanim.app.ui.screens.calendar.CalendarScreen
 import com.maptanim.app.ui.screens.community.CommunityScreen
 import com.maptanim.app.ui.screens.edit.FarmEditorScreen
 import com.maptanim.app.ui.screens.home.HomeScreen
 import com.maptanim.app.ui.screens.knowledgebase.LibraryScreen
 import com.maptanim.app.ui.screens.loading.LoadingScreen
+import com.maptanim.app.ui.screens.monitoring.MonitoringScreen
 import com.maptanim.app.ui.screens.profile.ProfileScreen
+import com.maptanim.app.ui.screens.reports.ReportsScreen
 import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
 
 @Composable
@@ -162,6 +166,114 @@ fun AppNavGraph() {
             }
         ) {
             CommunityScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.SETTINGS,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Up,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Down,
+                    tween(300)
+                )
+            }
+        ) {
+            com.maptanim.app.ui.screens.settings.SettingsScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.NOTIFICATIONS,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Up,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Down,
+                    tween(300)
+                )
+            }
+        ) {
+            ProfileScreen(navController = navController, initialTab = 1)
+        }
+
+        composable(
+            route = Routes.CALENDAR,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            CalendarScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.FARMS,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            MonitoringScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.ABOUT,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Up,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Down,
+                    tween(300)
+                )
+            }
+        ) {
+            AboutScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.REPORTS,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            ReportsScreen(navController = navController)
         }
     }
 }

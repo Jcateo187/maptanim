@@ -17,8 +17,12 @@ object Routes {
     const val PROFILE = "profile"
     const val PROFILE_WITH_TAB = "profile?tab={tab}"
 
-    // Edit Mode
+    // Edit Mode, Settings & Notifications
     const val EDIT = "edit"
+    const val SETTINGS = "settings"
+    const val NOTIFICATIONS = "notifications"
+    const val ABOUT = "about"
+    const val REPORTS = "reports"
 
     fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
 }

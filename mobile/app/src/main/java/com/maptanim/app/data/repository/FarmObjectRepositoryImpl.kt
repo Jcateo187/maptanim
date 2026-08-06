@@ -20,14 +20,14 @@ class FarmObjectRepositoryImpl(
         } ?: kotlinx.coroutines.flow.flowOf(inMemoryCache[farmId] ?: emptyList())
     }
 
-    override suspend fun saveObjects(objects: List<FarmObject>) {
+    override suspend fun saveObjects(objects: List<FarmObject>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         farmObjectDao?.upsertObjects(objects.map { it.toEntity() })
         objects.groupBy { it.farmId }.forEach { (farmId, farmObjs) ->
             inMemoryCache[farmId] = farmObjs
         }
     }
 
-    override suspend fun deleteObject(objectId: String) {
+    override suspend fun deleteObject(objectId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         farmObjectDao?.deleteObject(objectId)
         inMemoryCache.keys.forEach { farmId ->
             inMemoryCache[farmId] = inMemoryCache[farmId]?.filter { it.id != objectId } ?: emptyList()

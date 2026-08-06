@@ -1,5 +1,8 @@
 # 29. Coding Standards
 
+> 📌 **Navigation**: [◀ 28. Project Structure](file:///d:/Development/MapTanim/docs/28_PROJECT_STRUCTURE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [30. Git Workflow ▶](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md)
+
+---
 ## 📌 Overview
 All code in MapTanim must follow these standards. The most critical rule: **no static, mock, fake, hardcoded, or demo data in any production code path.**
 
@@ -159,3 +162,10 @@ enum class GrowthStage { GERMINATION, EARLY_VEGETATIVE, MID_VEGETATIVE, FLOWERIN
 - All `UseCase` classes must have KDoc explaining: input, output, side effects
 - All `@Entity` fields must have inline comments explaining units (e.g., `// meters`)
 - All DSS rule functions must cite the agricultural source (BPI, DA-BAR, or research paper)
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)

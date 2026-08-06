@@ -1,5 +1,8 @@
 # 10. API Documentation
 
+> 📌 **Navigation**: [◀ 09. Authentication](file:///d:/Development/MapTanim/docs/09_AUTHENTICATION.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [11. App Navigation ▶](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md)
+
+---
 ## 📌 Overview
 MapTanim communicates with Supabase via two API surfaces:
 1. **PostgREST** — Auto-generated REST API for all database tables
@@ -275,3 +278,10 @@ supabaseClient.postgrest["crop_plots"]
         filter { eq("id", plotId) }
     }
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
