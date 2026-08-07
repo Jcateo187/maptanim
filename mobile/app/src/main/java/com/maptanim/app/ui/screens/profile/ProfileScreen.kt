@@ -1,9 +1,17 @@
 package com.maptanim.app.ui.screens.profile
 
+import android.app.Activity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +19,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -52,139 +63,180 @@ fun ProfileScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            Surface(
-                color = Color(0xFF1B2317),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .height(56.dp)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = White
-                        )
-                    }
-
-                    TabRow(
-                        selectedTabIndex = uiState.selectedTab,
-                        containerColor = Color.Transparent,
-                        contentColor = ForestGreen,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab]),
-                                color = ForestGreen,
-                                height = 3.dp
-                            )
-                        },
-                        divider = {}
-                    ) {
-                        Tab(
-                            selected = uiState.selectedTab == 0,
-                            onClick = { viewModel.selectTab(0) },
-                            text = {
-                                Text(
-                                    "Profile",
-                                    color = if (uiState.selectedTab == 0) White else White.copy(alpha = 0.6f),
-                                    fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            icon = { Icon(Icons.Default.Person, contentDescription = null, tint = if (uiState.selectedTab == 0) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
-                        )
-                        Tab(
-                            selected = uiState.selectedTab == 1,
-                            onClick = { viewModel.selectTab(1) },
-                            text = {
-                                Text(
-                                    "Notification",
-                                    color = if (uiState.selectedTab == 1) White else White.copy(alpha = 0.6f),
-                                    fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            icon = {
-                                BadgedBox(badge = {
-                                    val unread = uiState.notifications.count { !it.isRead }
-                                    if (unread > 0) {
-                                        Badge(containerColor = Color.Red, contentColor = White) {
-                                            Text(unread.toString(), fontSize = 10.sp)
-                                        }
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Notifications, contentDescription = null, tint = if (uiState.selectedTab == 1) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        )
-                        Tab(
-                            selected = uiState.selectedTab == 2,
-                            onClick = { viewModel.selectTab(2) },
-                            text = {
-                                Text(
-                                    "Settings",
-                                    color = if (uiState.selectedTab == 2) White else White.copy(alpha = 0.6f),
-                                    fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = if (uiState.selectedTab == 2) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
-                        )
-                    }
-                }
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val window = (view.parent as? DialogWindowProvider)?.window
+            ?: (view.context as? Activity)?.window
+        window?.let { win ->
+            WindowCompat.setDecorFitsSystemWindows(win, false)
+            WindowInsetsControllerCompat(win, win.decorView).apply {
+                hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
-        },
-        containerColor = Color(0xFF121810)
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Spacer(modifier = Modifier.height(10.dp))
+        }
+        onDispose {}
+    }
 
-            // Toast / Snack notification message
-            uiState.successMessage?.let { msg ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                navController.popBackStack()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.82f)
+                .fillMaxHeight(0.88f)
+                .padding(vertical = 12.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {},
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF131D15)),
+            border = BorderStroke(1.5.dp, Color(0xFF2E4D3E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header Bar (Back button + Profile / Notification / Settings Tabs)
                 Surface(
-                    color = ForestGreen,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                    color = Color(0xFF1C271E),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(msg, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        IconButton(onClick = { viewModel.dismissSuccessMessage() }, modifier = Modifier.size(18.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = null, tint = White)
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = White
+                            )
+                        }
+
+                        TabRow(
+                            selectedTabIndex = uiState.selectedTab,
+                            containerColor = Color.Transparent,
+                            contentColor = ForestGreen,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            indicator = { tabPositions ->
+                                TabRowDefaults.Indicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab]),
+                                    color = ForestGreen,
+                                    height = 3.dp
+                                )
+                            },
+                            divider = {}
+                        ) {
+                            Tab(
+                                selected = uiState.selectedTab == 0,
+                                onClick = { viewModel.selectTab(0) },
+                                text = {
+                                    Text(
+                                        "Profile",
+                                        color = if (uiState.selectedTab == 0) White else White.copy(alpha = 0.6f),
+                                        fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                icon = { Icon(Icons.Default.Person, contentDescription = null, tint = if (uiState.selectedTab == 0) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
+                            )
+                            Tab(
+                                selected = uiState.selectedTab == 1,
+                                onClick = { viewModel.selectTab(1) },
+                                text = {
+                                    Text(
+                                        "Notification",
+                                        color = if (uiState.selectedTab == 1) White else White.copy(alpha = 0.6f),
+                                        fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                icon = {
+                                    BadgedBox(badge = {
+                                        val unread = uiState.notifications.count { !it.isRead }
+                                        if (unread > 0) {
+                                            Badge(containerColor = Color.Red, contentColor = White) {
+                                                Text(unread.toString(), fontSize = 10.sp)
+                                            }
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.Notifications, contentDescription = null, tint = if (uiState.selectedTab == 1) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            )
+                            Tab(
+                                selected = uiState.selectedTab == 2,
+                                onClick = { viewModel.selectTab(2) },
+                                text = {
+                                    Text(
+                                        "Settings",
+                                        color = if (uiState.selectedTab == 2) White else White.copy(alpha = 0.6f),
+                                        fontWeight = if (uiState.selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = if (uiState.selectedTab == 2) ForestGreen else White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp)) }
+                            )
                         }
                     }
                 }
-            }
 
-            // Tab Content Switcher
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
-                when (uiState.selectedTab) {
-                    0 -> ProfileTabContent(uiState = uiState, viewModel = viewModel)
-                    1 -> NotificationTabContent(uiState = uiState, viewModel = viewModel)
-                    2 -> SettingsTabContent(uiState = uiState, viewModel = viewModel, navController = navController)
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 10.dp)
+                ) {
+                    // Toast / Snack notification message
+                    uiState.successMessage?.let { msg ->
+                        Surface(
+                            color = ForestGreen,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(msg, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                IconButton(onClick = { viewModel.dismissSuccessMessage() }, modifier = Modifier.size(18.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = null, tint = White)
+                                }
+                            }
+                        }
+                    }
+
+                    // Tab Content Switcher
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        when (uiState.selectedTab) {
+                            0 -> ProfileTabContent(uiState = uiState, viewModel = viewModel)
+                            1 -> NotificationTabContent(uiState = uiState, viewModel = viewModel)
+                            2 -> SettingsTabContent(uiState = uiState, viewModel = viewModel, navController = navController)
+                        }
+                    }
                 }
             }
         }
@@ -361,6 +413,20 @@ private fun ProfileTabContent(
                             fontSize = 14.sp,
                             color = White.copy(alpha = 0.9f)
                         )
+                        val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(uiState.userProfile.nicknameUpdatedAt)
+                        if (remainingDays > 0) {
+                            Text(
+                                text = "🔒 Next change available in $remainingDays day(s)",
+                                fontSize = 10.sp,
+                                color = Color(0xFFFFB74D)
+                            )
+                        } else {
+                            Text(
+                                text = "Can be changed once every 15 days",
+                                fontSize = 10.sp,
+                                color = White.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
             }
@@ -731,12 +797,12 @@ private fun SettingsTabContent(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(
-                        imageVector = if (soundManager.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                        imageVector = if (soundManager.isMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = null,
                         tint = ForestGreen
                     )
                     Column {
-                        Text("Audio & Sound Settings", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Text("Audio Adjustment", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = if (soundManager.isMuted) "Master Audio Muted" else "Music & SFX Enabled",
@@ -753,6 +819,48 @@ private fun SettingsTabContent(
             AudioSettingsDialog(
                 onDismissRequest = { showAudioSettingsModal = false }
             )
+        }
+
+        // Replay Tutorial Section
+        val tutorialViewModel: com.maptanim.app.viewmodel.TutorialViewModel = viewModel()
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xFF1E261A),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                    tutorialViewModel.restartTutorial()
+                    navController.navigate(com.maptanim.app.navigation.Routes.HOME) {
+                        popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
+                    }
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = null,
+                        tint = ForestGreen
+                    )
+                    Column {
+                        Text("Replay Farm Guide Tutorial", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Restart Tatay Juan step-by-step interactive guide",
+                            color = White.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+            }
         }
 
         // Bind Account Section
@@ -930,7 +1038,7 @@ private fun SettingsTabContent(
             },
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.cancelLogout() }) {
-                    Text("No, Stay in Settings", color = White)
+                    Text("No, Stay in Audio Adjustment", color = White)
                 }
             },
             containerColor = Color(0xFF1E261A)

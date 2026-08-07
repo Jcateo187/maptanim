@@ -137,27 +137,48 @@ class EditViewModel(
         }
     }
 
+    private val plotDragStartPos = mutableMapOf<String, Offset>()
+
+    fun onPlotDragStart(plotId: String) {
+        val plot = _uiState.value.editedPlots.firstOrNull { it.id == plotId } ?: return
+        plotDragStartPos[plotId] = Offset(plot.posX, plot.posY)
+        selectPlot(plotId)
+    }
+
+    fun onPlotDragEnd(plotId: String, isValidPlacement: Boolean = true) {
+        if (!isValidPlacement) {
+            val startPos = plotDragStartPos[plotId]
+            if (startPos != null) {
+                val currentPlots = _uiState.value.editedPlots
+                val updatedPlots = currentPlots.map {
+                    if (it.id == plotId) it.copy(posX = startPos.x, posY = startPos.y) else it
+                }
+                updatePlotsState(updatedPlots)
+            }
+        }
+        plotDragStartPos.remove(plotId)
+    }
+
     fun movePlot(plotId: String, worldDelta: Offset) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val startPos = plotDragStartPos[plotId] ?: Offset(plot.posX, plot.posY)
         val oldPos = Offset(plot.posX, plot.posY)
 
-        val maxX = (30.0f - plot.widthM).coerceAtLeast(0f)
-        val maxY = (30.0f - plot.heightM).coerceAtLeast(0f)
+        val maxX = (45.0f - plot.widthM).coerceAtLeast(0f)
+        val maxY = (45.0f - plot.heightM).coerceAtLeast(0f)
 
-        var newX = (plot.posX + worldDelta.x).coerceIn(0f, maxX)
-        var newY = (plot.posY + worldDelta.y).coerceIn(0f, maxY)
+        var targetX = startPos.x + worldDelta.x
+        var targetY = startPos.y + worldDelta.y
 
         if (_uiState.value.isSnapEnabled) {
-            val snapped = FarmCanvasRenderer.snapToGrid(Offset(newX, newY))
-            newX = snapped.x.coerceIn(0f, maxX)
-            newY = snapped.y.coerceIn(0f, maxY)
+            val snapped = FarmCanvasRenderer.snapToGrid(Offset(targetX, targetY))
+            targetX = snapped.x
+            targetY = snapped.y
         }
 
-        // Prevent moving into occupied crop zones
-        if (hasOverlap(newX, newY, plot.widthM, plot.heightM, plotId, currentPlots)) {
-            return
-        }
+        val newX = targetX.coerceIn(0f, maxX)
+        val newY = targetY.coerceIn(0f, maxY)
 
         val updatedPlots = currentPlots.map {
             if (it.id == plotId) it.copy(posX = newX, posY = newY) else it
@@ -172,8 +193,8 @@ class EditViewModel(
     fun resizePlot(plotId: String, newWidth: Float, newHeight: Float) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
-        val safeW = newWidth.coerceIn(1.0f, 20.0f)
-        val safeH = newHeight.coerceIn(1.0f, 20.0f)
+        val safeW = newWidth.coerceIn(1.0f, 45.0f)
+        val safeH = newHeight.coerceIn(1.0f, 45.0f)
 
         undoStack.addLast(EditAction.ResizePlot(plotId, plot.widthM, plot.heightM, safeW, safeH))
         redoStack.clear()
@@ -242,17 +263,17 @@ class EditViewModel(
         }
 
         // Discrete 1m step snapping per MD 34 Section 10
-        val safeW = newW.coerceIn(1.0f, 30.0f - basePlot.posX)
-        val safeH = newH.coerceIn(1.0f, 30.0f - basePlot.posY)
+        val safeW = newW.coerceIn(1.0f, 45.0f - basePlot.posX)
+        val safeH = newH.coerceIn(1.0f, 45.0f - basePlot.posY)
 
         var roundedW = Math.round(safeW).toFloat().coerceAtLeast(1.0f)
         var roundedH = Math.round(safeH).toFloat().coerceAtLeast(1.0f)
 
-        val safeX = newX.coerceIn(0f, 30.0f - roundedW)
-        val safeY = newY.coerceIn(0f, 30.0f - roundedH)
+        val safeX = newX.coerceIn(0f, 45.0f - roundedW)
+        val safeY = newY.coerceIn(0f, 45.0f - roundedH)
 
-        var roundedX = Math.round(safeX).toFloat().coerceIn(0f, 30.0f - roundedW)
-        var roundedY = Math.round(safeY).toFloat().coerceIn(0f, 30.0f - roundedH)
+        var roundedX = Math.round(safeX).toFloat().coerceIn(0f, 45.0f - roundedW)
+        var roundedY = Math.round(safeY).toFloat().coerceIn(0f, 45.0f - roundedH)
 
         // Clamp expansion so crop zone cannot exceed/overlap into another crop zone
         while (hasOverlap(roundedX, roundedY, roundedW, roundedH, plotId, currentPlots)) {
@@ -306,12 +327,17 @@ class EditViewModel(
         cropId: String = "carrot",
         initialW: Float = 1.0f,
         initialH: Float = 1.0f
-    ) {
+    ): Boolean {
         val plotId = UUID.randomUUID().toString()
         val safeW = initialW.coerceIn(1.0f, 20.0f)
         val safeH = initialH.coerceIn(1.0f, 20.0f)
-        val safeX = atWorldX.coerceIn(0f, (30.0f - safeW))
-        val safeY = atWorldY.coerceIn(0f, (30.0f - safeH))
+        val safeX = atWorldX.coerceIn(0f, (45.0f - safeW))
+        val safeY = atWorldY.coerceIn(0f, (45.0f - safeH))
+
+        // Reject placement if target location overlaps an existing crop zone
+        if (hasOverlap(safeX, safeY, safeW, safeH, "", _uiState.value.editedPlots)) {
+            return false
+        }
 
         // Initial Drop creates 1x1 CropZone (or initialW x initialH when duplicating) per MD 34 Section 6 & 8
         val newPlot = CropPlot(
@@ -362,6 +388,7 @@ class EditViewModel(
                 hasUnsavedChanges = true
             )
         }
+        return true
     }
 
     fun addPlot(atWorldX: Float, atWorldY: Float, farmId: String = "farm-1") {
@@ -393,8 +420,8 @@ class EditViewModel(
 
     fun duplicatePlot(plotId: String) {
         val plot = _uiState.value.editedPlots.firstOrNull { it.id == plotId } ?: return
-        val newX = (plot.posX + plot.widthM).coerceIn(0f, 30.0f - plot.widthM)
-        val newY = plot.posY.coerceIn(0f, 30.0f - plot.heightM)
+        val newX = (plot.posX + plot.widthM).coerceIn(0f, 45.0f - plot.widthM)
+        val newY = plot.posY.coerceIn(0f, 45.0f - plot.heightM)
         addDirectPlantingPlot(
             atWorldX = newX,
             atWorldY = newY,

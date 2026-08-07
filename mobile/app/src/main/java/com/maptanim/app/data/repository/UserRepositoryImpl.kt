@@ -15,52 +15,29 @@ class UserRepositoryImpl(
 ) : UserRepository {
 
     private val userProfileState = MutableStateFlow(UserProfile())
-    private val notificationsState = MutableStateFlow<List<NotificationItem>>(
-        listOf(
-            NotificationItem(
-                id = "notif_admin_01",
-                title = "📢 System Update v1.2.0",
-                message = "MapTanim Admin deployed direct-to-soil grid performance optimizations and sync upgrades.",
-                timestamp = "Today, 10:30 AM",
-                isRead = false,
-                type = "SYSTEM_UPDATE"
-            ),
-            NotificationItem(
-                id = "notif_admin_02",
-                title = "🌾 New Crop Added: Sweet Corn",
-                message = "Admin added Sweet Corn (Zea mays) to the crop planting library. Tap to view growth stages.",
-                timestamp = "Yesterday, 4:15 PM",
-                isRead = false,
-                type = "CROP_ADDITION"
-            ),
-            NotificationItem(
-                id = "notif_admin_03",
-                title = "🛠 Bug Fix & Security Patch",
-                message = "Resolved offline database synchronization and plot status updating issues.",
-                timestamp = "2 days ago",
-                isRead = true,
-                type = "BUG_FIX"
-            )
-        )
-    )
+    private val notificationsState = MutableStateFlow<List<NotificationItem>>(emptyList())
 
     override fun observeUserProfile(): Flow<UserProfile> = userProfileState.asStateFlow()
 
     override fun observeNotifications(): Flow<List<NotificationItem>> = notificationsState.asStateFlow()
 
     suspend fun loadUserProfile() {
-        val user = SupabaseClient.client.auth.currentUserOrNull()
-        if (user != null) {
-            val profile = profileRepository.getProfile(user.id)
-            if (profile != null) {
+        try {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            if (user != null) {
+                val profile = try { profileRepository.getProfile(user.id) } catch (_: Exception) { null }
                 userProfileState.value = UserProfile(
-                    id = profile.id,
-                    nickname = profile.nickname ?: user.email?.substringBefore("@") ?: "Farmer",
-                    avatarAssetPath = profile.avatar ?: "Avatar/Male_Avatar.png",
-                    isAccountBound = true,
-                    boundEmail = user.email
+                    id = profile?.id ?: user.id,
+                    nickname = profile?.nickname ?: user.email?.substringBefore("@") ?: "",
+                    avatarAssetPath = profile?.avatar ?: "Avatar/Male_Avatar.png",
+                    isAccountBound = !user.email.isNullOrEmpty(),
+                    boundEmail = user.email,
+                    nicknameUpdatedAt = profile?.nicknameUpdatedAt,
+                    tutorialCompletedAt = profile?.tutorialCompletedAt
                 )
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -83,15 +60,32 @@ class UserRepositoryImpl(
     }
 
     override suspend fun updateNickname(newNickname: String): Boolean {
-        if (!isNicknameAvailable(newNickname)) return false
+        val cleanName = newNickname.trim()
+        if (!isNicknameAvailable(cleanName)) return false
+
         val currentUser = userProfileState.value
-        userProfileState.value = currentUser.copy(nickname = newNickname.trim())
-        profileRepository.upsertProfile(
-            ProfileDto(
-                id = currentUser.id,
-                nickname = newNickname.trim()
-            )
+        val daysRemaining = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(currentUser.nicknameUpdatedAt)
+        if (daysRemaining > 0) {
+            return false
+        }
+
+        val nowIso = java.time.ZonedDateTime.now().toString()
+        userProfileState.value = currentUser.copy(
+            nickname = cleanName,
+            nicknameUpdatedAt = nowIso
         )
+
+        val user = SupabaseClient.client.auth.currentUserOrNull()
+        if (user != null) {
+            profileRepository.upsertProfile(
+                ProfileDto(
+                    id = user.id,
+                    nickname = cleanName,
+                    nicknameUpdatedAt = nowIso,
+                    updatedAt = nowIso
+                )
+            )
+        }
         return true
     }
 
@@ -125,9 +119,15 @@ class UserRepositoryImpl(
         return true
     }
 
+    fun resetState() {
+        userProfileState.value = UserProfile()
+    }
+
     override suspend fun logout(): Boolean {
         try {
             SupabaseClient.client.auth.signOut()
+            resetState()
+            RepositoryProvider.clearAllLocalCache()
         } catch (e: Exception) {
             e.printStackTrace()
         }

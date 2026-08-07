@@ -46,20 +46,17 @@ class AuthRepository {
                 e.printStackTrace()
             }
 
-            // Insert into public.profiles (stores nickname, avatar, and onboarding state)
             val profile = Profile(
                 id = user.id,
                 nickname = null,
-                avatar = null,
-                onboarding_completed = false
+                avatar = null
             )
 
             val profileResult = profileRepository.createProfile(profile)
 
             if (profileResult.isFailure) {
-
-                return profileResult
-
+                // Profile might already be created by DB trigger, log error but don't fail user registration
+                profileResult.exceptionOrNull()?.printStackTrace()
             }
 
             Result.success(Unit)
@@ -102,6 +99,41 @@ class AuthRepository {
 
         }
 
+    }
+
+    suspend fun signInAnonymously(): Result<Unit> {
+        return try {
+            client.auth.signInAnonymously()
+
+            val user = client.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("Guest user creation failed."))
+
+            try {
+                val userRecord = User(
+                    id = user.id,
+                    email = user.email
+                )
+                client.postgrest["users"].insert(userRecord)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            val profile = Profile(
+                id = user.id,
+                nickname = null,
+                avatar = null
+            )
+
+            val profileResult = profileRepository.createProfile(profile)
+            if (profileResult.isFailure) {
+                profileResult.exceptionOrNull()?.printStackTrace()
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
     }
 
 }

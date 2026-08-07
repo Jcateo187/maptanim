@@ -50,6 +50,14 @@ Selecting a plot or zone displays the floating bottom toolbar with contextual to
 - **Touch & Drag**: Dragging any selected plot tracks 1:1 with world position coordinates (`Math.round` grid snap).
 - **Boundary Containment**: Clamped to `[0.0, 30.0 - widthM]` meters to prevent plots from crossing farm perimeter fences.
 
+### 5. Onboarding & Tutorial Walkthrough System (`OldManFarmerGuideOverlay.kt`)
+- **Drag-and-Drop Overlay Hiding**: All guide speech cards and pointing hands automatically hide while actively dragging crops (`isDraggingCrop == true`), preventing visual obstruction during placement gestures.
+- **Post-Drop Bottom Toolbar Decision Overlay**: After dropping a crop onto the farm grid, an overlay explains the bottom contextual edit toolbar (`EditBottomLayout`) with two decision choices:
+  - **"Continue Editing"**: Returns to free editor mode (`EDIT_DRAGGING_CROP`) so farmers can continue dragging, duplicating, resizing, or deleting crops.
+  - **"Proceed"**: Advances to the next walkthrough step (`EDIT_CLOSE_TRAY`).
+- **Interactive Pointing Targets**: Pointing hands and spotlight rings for **"TAP TO ADD CROPS"**, **"CLOSE TRAY ('X')"**, and **"CLICK SAVE"** are directly clickable, allowing users to advance by tapping guide targets directly.
+- **Automatic Step Advancement**: `LaunchedEffect(isRightPanelVisible)` automatically advances `EDIT_ADD_PLANT` to `EDIT_SELECT_CROP` whenever the Crop Tray drawer is opened.
+
 ---
 
 ## 💾 Save & Confirmation Flow

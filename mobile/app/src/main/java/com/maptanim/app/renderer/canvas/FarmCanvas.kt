@@ -32,7 +32,9 @@ fun FarmCanvas(
     activeCropId: String = "carrot",
     hoverWorldPos: Offset? = null,
     isValidPlacement: Boolean = true,
+    isDraggingCrop: Boolean = false,
     onCameraStateChanged: (CameraState) -> Unit = {},
+    onCanvasTouchPosChanged: ((Offset?) -> Unit)? = null,
     onOpenCropPicker: (() -> Unit)? = null,
     onOpenMonitoring: (() -> Unit)? = null
 ) {
@@ -69,16 +71,18 @@ fun FarmCanvas(
                 if (activeCropName.isNotEmpty() && 
                     (currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT ||
                      currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT)) {
-                    editViewModel.addDirectPlantingPlot(targetX.coerceIn(0f, 29f), targetY.coerceIn(0f, 29f), activeCropName, activeCropId)
+                    if (isValidPlacement) {
+                        editViewModel.addDirectPlantingPlot(targetX.coerceIn(0f, 44f), targetY.coerceIn(0f, 44f), activeCropName, activeCropId)
+                    }
                 } else {
                     editViewModel.deselect()
                 }
             },
-            onPlotDragStart = { plotId -> editViewModel.selectPlot(plotId) },
+            onPlotDragStart = { plotId -> editViewModel.onPlotDragStart(plotId) },
             onPlotDragging = { plotId, worldDelta ->
                 editViewModel.movePlot(plotId, worldDelta)
             },
-            onPlotDragEnd = { },
+            onPlotDragEnd = { plotId, isValid -> editViewModel.onPlotDragEnd(plotId, isValid) },
             onHandleDragStart = { _, plotId -> editViewModel.onHandleDragStart(plotId) },
             onHandleDragging = { handle, worldDelta ->
                 currentSelectedPlotId?.let { plotId ->
@@ -116,6 +120,7 @@ fun FarmCanvas(
 
                         // ── 1. Multi-touch (2+ pointers -> Pinch Zoom & 2-finger Pan) ─
                         if (changes.size >= 2) {
+                            onCanvasTouchPosChanged?.invoke(null)
                             val p1 = changes[0]
                             val p2 = changes[1]
                             if (p1.pressed && p2.pressed) {
@@ -158,6 +163,7 @@ fun FarmCanvas(
                             if (change.changedToDown()) {
                                 downPos = change.position
                                 totalDragDistance = 0f
+                                onCanvasTouchPosChanged?.invoke(change.position)
                                 gestureHandler.onDragStart(
                                     startPos = change.position,
                                     plots = currentPlots,
@@ -170,6 +176,7 @@ fun FarmCanvas(
                             } else if (change.pressed && change.positionChange() != Offset.Zero) {
                                 val delta = change.positionChange()
                                 totalDragDistance += delta.getDistance()
+                                onCanvasTouchPosChanged?.invoke(change.position)
                                 gestureHandler.onDrag(
                                     currentPos = change.position,
                                     previousPos = change.previousPosition,
@@ -181,6 +188,7 @@ fun FarmCanvas(
                                 )
                                 change.consume()
                             } else if (change.changedToUp()) {
+                                onCanvasTouchPosChanged?.invoke(null)
                                 if (totalDragDistance < 8f) {
                                     // Tap event (minimal movement)
                                     gestureHandler.onTap(
@@ -193,7 +201,7 @@ fun FarmCanvas(
                                         selectedPlotId = currentSelectedPlotId
                                     )
                                 }
-                                gestureHandler.onDragEnd()
+                                gestureHandler.onDragEnd(isValidPlacement)
                             }
                         }
                     }
@@ -215,6 +223,7 @@ fun FarmCanvas(
                 selectedZoneId = uiState.selectedZoneId,
                 hoverWorldPos = hoverWorldPos,
                 isValidPlacement = isValidPlacement,
+                isDraggingCrop = isDraggingCrop,
                 isGridEnabled = uiState.isGridEnabled,
                 isSnapEnabled = uiState.isSnapEnabled,
                 isResizeMode = uiState.isResizeMode,

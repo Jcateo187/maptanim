@@ -18,7 +18,7 @@ class ProfileRepository {
 
             client.postgrest["profiles"]
 
-                .insert(profile)
+                .upsert(profile)
 
             Result.success(Unit)
 
@@ -101,7 +101,6 @@ class ProfileRepository {
                     {
                         set("nickname", nickname)
                         set("avatar", avatar)
-                        set("onboarding_completed", true)
                     }
 
                 ) {

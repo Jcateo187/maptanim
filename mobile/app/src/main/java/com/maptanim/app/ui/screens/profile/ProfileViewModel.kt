@@ -67,6 +67,9 @@ class ProfileViewModel(
 
     init {
         viewModelScope.launch {
+            (userRepository as? UserRepositoryImpl)?.loadUserProfile()
+        }
+        viewModelScope.launch {
             userRepository.observeUserProfile().collect { profile ->
                 _uiState.update { it.copy(userProfile = profile) }
             }
@@ -166,11 +169,16 @@ class ProfileViewModel(
     // ─── Nickname Flow Handlers ─────────────────────────────────────────────
 
     fun startEditNickname() {
+        val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+        val initialError = if (remainingDays > 0) {
+            "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s)."
+        } else null
+
         _uiState.update {
             it.copy(
                 isEditingNickname = true,
                 nicknameInput = it.userProfile.nickname,
-                nicknameError = null
+                nicknameError = initialError
             )
         }
     }
@@ -183,6 +191,14 @@ class ProfileViewModel(
         val input = _uiState.value.nicknameInput.trim()
         if (input.isBlank()) {
             _uiState.update { it.copy(nicknameError = "Nickname cannot be empty") }
+            return
+        }
+
+        val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+        if (remainingDays > 0) {
+            _uiState.update {
+                it.copy(nicknameError = "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s).")
+            }
             return
         }
 
@@ -217,7 +233,18 @@ class ProfileViewModel(
                         showNicknameConfirmDialog = false,
                         isEditingNickname = false,
                         nicknameInput = "",
-                        successMessage = "Nickname has been changed!"
+                        successMessage = "Nickname updated successfully in Supabase!"
+                    )
+                }
+            } else {
+                val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+                val errMsg = if (remainingDays > 0) {
+                    "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s)."
+                } else "Failed to update nickname. Please try again."
+                _uiState.update {
+                    it.copy(
+                        showNicknameConfirmDialog = false,
+                        nicknameError = errMsg
                     )
                 }
             }

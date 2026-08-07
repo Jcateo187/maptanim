@@ -177,7 +177,6 @@ data class Profile(
     val nickname: String,
     val avatarUrl: String?,     // Supabase Storage user-avatars/{userId}/avatar.jpg
     val role: UserRole,
-    val onboardingCompleted: Boolean,
     val createdAt: String
 )
 

@@ -101,4 +101,26 @@ class AuthViewModel : ViewModel() {
 
     }
 
+    fun signInAnonymously() {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState(
+                isLoading = true
+            )
+
+            val result = repository.signInAnonymously()
+
+            result.onSuccess {
+                _uiState.value = AuthUiState(
+                    isSuccess = true
+                )
+            }
+
+            result.onFailure {
+                _uiState.value = AuthUiState(
+                    errorMessage = it.message
+                )
+            }
+        }
+    }
+
 }

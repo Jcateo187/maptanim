@@ -6,11 +6,12 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.ui.window.DialogProperties
 import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
 import com.maptanim.app.ui.screens.auth.LoginScreen
-import com.maptanim.app.ui.screens.auth.WelcomeGuideScreen
 import com.maptanim.app.ui.screens.auth.WelcomeScreen
 import com.maptanim.app.ui.screens.about.AboutScreen
 import com.maptanim.app.ui.screens.calendar.CalendarScreen
@@ -54,10 +55,6 @@ fun AppNavGraph() {
             LoadingScreen(navController)
         }
 
-        composable(Routes.WELCOME_GUIDE) {
-            WelcomeGuideScreen(navController)
-        }
-
         composable(
             route = Routes.HOME,
             enterTransition = {
@@ -94,39 +91,17 @@ fun AppNavGraph() {
             FarmEditorScreen(navController)
         }
 
-        composable(
+        dialog(
             route = Routes.PROFILE,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    tween(300)
-                )
-            }
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
             ProfileScreen(navController = navController, initialTab = 0)
         }
 
-        composable(
+        dialog(
             route = Routes.PROFILE_WITH_TAB,
             arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    tween(300)
-                )
-            }
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             ProfileScreen(navController = navController, initialTab = tab)
@@ -168,38 +143,16 @@ fun AppNavGraph() {
             CommunityScreen(navController = navController)
         }
 
-        composable(
+        dialog(
             route = Routes.SETTINGS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    tween(300)
-                )
-            }
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
-            com.maptanim.app.ui.screens.settings.SettingsScreen(navController = navController)
+            ProfileScreen(navController = navController, initialTab = 2)
         }
 
-        composable(
+        dialog(
             route = Routes.NOTIFICATIONS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    tween(300)
-                )
-            }
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
             ProfileScreen(navController = navController, initialTab = 1)
         }

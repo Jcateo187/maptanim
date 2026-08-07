@@ -25,7 +25,7 @@ object AssetLoader {
      * Load an ImageBitmap from the `assets/` directory by relative path.
      * Example paths:
      *   - "grass/grass_01.png"
-     *   - "soil/soil_01.png"
+     *   - "soil/soil_03.png"
      *   - "fences/fence_left.png"
      *   - "tiles/path_straight_h.png"
      *   - "trees_and_rocks/tree_mango.png"
@@ -97,9 +97,32 @@ object AssetLoader {
         return loadFromDrawable(context.resources, resId)
     }
 
+    /**
+     * Helper to load high-resolution isometric farm background image.
+     * Looks in `assets/background_scenery/backgound_1.png` or fallback locations.
+     */
+    fun getBackgroundTexture(context: Context, fileName: String = "background_scenery/backgound_1.png"): ImageBitmap? {
+        val primary = loadFromAssets(context, fileName)
+        if (primary != null) return primary
+
+        val fallbacks = listOf(
+            "background_scenery/backgound_1.png",
+            "backgrounds/farm_bg_45x45.png",
+            "backgrounds/farm_bg_v2.png",
+            "background_scenery/farm_background_2to1.png"
+        )
+        for (path in fallbacks) {
+            val loaded = loadFromAssets(context, path)
+            if (loaded != null) return loaded
+        }
+        return null
+    }
+
+
     /** Clear in-memory caches if memory is low */
     fun clearCache() {
         assetCache.clear()
         drawableCache.clear()
     }
 }
+

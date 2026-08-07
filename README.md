@@ -139,7 +139,7 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
 
 - **Supabase Cloud Infrastructure**:
   - URL: `https://ojilvcglpzbtpjxguhzj.supabase.co`
-  - PostgreSQL Relational Database storing `users` (email + password authentication), `profiles` (`nickname`, `avatar`, `onboarding_completed`), `farms`, `crop_plots`, `crops`, `dss_rules`, and `tasks`.
+  - PostgreSQL Relational Database storing `users` (email + password authentication), `profiles` (`nickname`, `avatar`), `farms`, `crop_plots`, `crops`, `dss_rules`, and `tasks`.
   - Row Level Security (RLS) policies enforcing multi-tenant farmer data isolation.
   - Automatic `handle_new_user()` trigger for profile creation upon registration.
   - Edge Functions (`evaluate-dss`, `sync-offline-queue`) handling automated DSS calculations.

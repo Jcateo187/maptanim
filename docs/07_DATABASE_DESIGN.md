@@ -80,14 +80,13 @@ CREATE POLICY "users_own_data" ON public.users
 
 ## 🔹 Table: `profiles`
 
-Stores user display preferences, avatar selection, and onboarding progress.
+Stores user display preferences and avatar selection.
 
 ```sql
 CREATE TABLE public.profiles (
     id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     nickname                VARCHAR(100),
     avatar                  TEXT,
-    onboarding_completed    BOOLEAN NOT NULL DEFAULT FALSE,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -108,11 +107,10 @@ CREATE POLICY "profiles_update_own" ON public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, nickname, onboarding_completed)
+  INSERT INTO public.profiles (id, nickname)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1)),
-    FALSE
+    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1))
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

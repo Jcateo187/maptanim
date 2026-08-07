@@ -43,7 +43,7 @@ fun CompanyLogoScreen(
     val scale by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0.75f,
         animationSpec = tween(
-            durationMillis = 800,
+            durationMillis = 600,
             easing = FastOutSlowInEasing
         ),
         label = "scale"
@@ -52,7 +52,7 @@ fun CompanyLogoScreen(
     val alpha by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 800,
+            durationMillis = 600,
             easing = FastOutSlowInEasing
         ),
         label = "alpha"
@@ -60,7 +60,7 @@ fun CompanyLogoScreen(
 
     LaunchedEffect(Unit) {
         startAnimation = true
-        delay(2000L) // Exactly 2 seconds
+        delay(1200L)
 
         navController.navigate(Routes.LOADING) {
             popUpTo(Routes.COMPANY) {

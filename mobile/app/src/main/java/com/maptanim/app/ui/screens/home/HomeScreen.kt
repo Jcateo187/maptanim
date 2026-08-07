@@ -19,6 +19,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.launch
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.components.background.HomeBackground
@@ -47,7 +48,8 @@ import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
 fun HomeScreen(
     navController: NavHostController,
     homeViewModel: HomeViewModel = viewModel(),
-    editViewModel: EditViewModel = viewModel()
+    editViewModel: EditViewModel = viewModel(),
+    tutorialViewModel: com.maptanim.app.viewmodel.TutorialViewModel = viewModel()
 ) {
     TrackBgmEffect(BackgroundTrack.PEACEFUL_FARM)
     TrackAmbientEffect(AmbientSound.DAY_BIRDS)
@@ -55,6 +57,7 @@ fun HomeScreen(
     val soundManager = LocalSoundManager.current
     val uiState by homeViewModel.uiState.collectAsState()
     val editUiState by editViewModel.uiState.collectAsState()
+    val tutorialUiState by tutorialViewModel.uiState.collectAsState()
 
     var showMonitoringOverlay by remember { mutableStateOf(false) }
     var showTasksOverlay by remember { mutableStateOf(false) }
@@ -138,7 +141,12 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 16.dp),
-            onEditClick = { navController.navigate(Routes.EDIT) }
+            onEditClick = {
+                if (tutorialUiState.isTutorialActive) {
+                    tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT)
+                }
+                navController.navigate(Routes.EDIT)
+            }
         )
 
         // ── 1. Fullscreen Monitoring Overlay ──────────────────────────────
@@ -156,12 +164,16 @@ fun HomeScreen(
         }
 
         // ── 3. Audio & Sound Settings Modal ──────────────────────────────
+        val coroutineScope = rememberCoroutineScope()
         if (showAudioSettingsDialog) {
             AudioSettingsDialog(
                 onDismissRequest = { showAudioSettingsDialog = false },
                 onLogoutClick = {
-                    navController.navigate(com.maptanim.app.navigation.Routes.WELCOME) {
-                        popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
+                    coroutineScope.launch {
+                        com.maptanim.app.data.repository.RepositoryProvider.userRepository.logout()
+                        navController.navigate(com.maptanim.app.navigation.Routes.WELCOME) {
+                            popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -210,6 +222,46 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // ── 4. Old Man Farmer Guided Tutorial Overlay (CoC Style) ─────────
+        if (tutorialUiState.isTutorialActive) {
+            when (tutorialUiState.currentStep) {
+                com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON -> {
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Napakaganda, ${tutorialUiState.userNickname.ifEmpty { "Magsasaka" }}! Click the EDIT button below to start!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        nextButtonText = "Let's Go!",
+                        dialogAlignment = Alignment.TopCenter,
+                        compactMode = true,
+                        scrimAlpha = 0.40f,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        onNext = {
+                            tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT)
+                            navController.navigate(Routes.EDIT)
+                        },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 24.dp, bottom = 24.dp),
+                                contentAlignment = Alignment.BottomEnd
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.DOWN,
+                                        label = "CLICK EDIT TO SET UP FARM",
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                    com.maptanim.app.ui.components.guide.SpotlightPulseRing(size = 80.dp)
+                                }
+                            }
+                        }
+                    )
+                }
+                else -> {}
             }
         }
     }

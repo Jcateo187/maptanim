@@ -55,38 +55,18 @@ fun LoadingScreen(
     TrackBgmEffect(BackgroundTrack.APP_LAUNCH)
 
     val loadingViewModel: LoadingViewModel = viewModel()
-    val destination by loadingViewModel.destination.collectAsState()
-
-    var progress by remember { mutableFloatStateOf(0.15f) }
-    var statusText by remember { mutableStateOf("Initializing Agroecological Engine...") }
+    val uiState by loadingViewModel.uiState.collectAsState()
 
     val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = tween(durationMillis = 600),
+        targetValue = uiState.progress,
+        animationSpec = tween(durationMillis = 350),
         label = "progress"
     )
 
-    LaunchedEffect(Unit) {
-        delay(500)
-        progress = 0.40f
-        statusText = "Loading Farm Workspace..."
-        delay(800)
-        progress = 0.80f
-        statusText = "Syncing Philippine Crop Database..."
-        delay(700)
-        progress = 1.0f
-        statusText = "Ready!"
-    }
-
-    LaunchedEffect(destination) {
-        when (destination) {
+    LaunchedEffect(uiState.destination) {
+        when (uiState.destination) {
             is LoadingDestination.Welcome -> {
                 navController.navigate(Routes.WELCOME) {
-                    popUpTo(Routes.LOADING) { inclusive = true }
-                }
-            }
-            is LoadingDestination.WelcomeGuide -> {
-                navController.navigate(Routes.WELCOME_GUIDE) {
                     popUpTo(Routes.LOADING) { inclusive = true }
                 }
             }
@@ -174,7 +154,7 @@ fun LoadingScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = statusText,
+                text = uiState.statusText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFFA5D6A7),

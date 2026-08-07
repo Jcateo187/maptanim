@@ -38,21 +38,35 @@ fun RegisterCard(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var acceptedTerms by remember { mutableStateOf(false) }
+    var showTermsModal by remember { mutableStateOf(false) }
+    var showPrivacyModal by remember { mutableStateOf(false) }
+
+    if (showTermsModal) {
+        com.maptanim.app.ui.components.legal.LegalDialog(
+            title = "Terms & Conditions",
+            content = com.maptanim.app.data.local.LegalContent.TERMS_AND_CONDITIONS,
+            onDismiss = { showTermsModal = false },
+            onAccept = { acceptedTerms = true }
+        )
+    }
+
+    if (showPrivacyModal) {
+        com.maptanim.app.ui.components.legal.LegalDialog(
+            title = "Privacy Policy",
+            content = com.maptanim.app.data.local.LegalContent.PRIVACY_POLICY,
+            onDismiss = { showPrivacyModal = false },
+            onAccept = { acceptedTerms = true }
+        )
+    }
 
     LaunchedEffect(uiState.isSuccess) {
-
         if (uiState.isSuccess) {
-
             navController.navigate(Routes.LOADING) {
-
                 popUpTo(Routes.WELCOME) {
                     inclusive = true
                 }
-
             }
-
         }
-
     }
 
     Card(
@@ -118,7 +132,9 @@ fun RegisterCard(
                 checked = acceptedTerms,
                 onCheckedChange = {
                     acceptedTerms = it
-                }
+                },
+                onOpenTerms = { showTermsModal = true },
+                onOpenPrivacy = { showPrivacyModal = true }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -183,9 +199,7 @@ fun RegisterCard(
 
             GuestButton(
                 onClick = {
-
-                    navController.navigate(Routes.WELCOME_GUIDE)
-
+                    authViewModel.signInAnonymously()
                 }
             )
 

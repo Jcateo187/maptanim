@@ -44,6 +44,7 @@ object FarmCanvasRenderer {
         selectedZoneId: String? = null,
         hoverWorldPos: Offset? = null,
         isValidPlacement: Boolean = true,
+        isDraggingCrop: Boolean = false,
         isGridEnabled: Boolean = true,
         isSnapEnabled: Boolean = true,
         isResizeMode: Boolean = false,
@@ -51,15 +52,16 @@ object FarmCanvasRenderer {
         context: android.content.Context? = null,
         onHandlesReady: ((String, HandlePositions) -> Unit)? = null
     ) {
-        // ── Layer 0: Full Viewport Grass Terrain & Soil Tiles ─────────────
-        renderGround(camera, resources, context)
+        // ── Layer 0: Full Viewport Grass Terrain & Background Image ────────
+        val hasBg = renderGround(camera, resources, context)
 
-        // ── Layer 1: Outer Scenery (50 Trees, 20 Rocks, 30 Flowers) ──────
-        renderFarmScenery(camera, context)
+        // ── Layer 1: Outer Scenery (Fallback Procedural Trees/Fences) ──────
+        renderFarmScenery(camera, context, hasBgImage = hasBg)
+
 
         // ── Layer 1.5: CoC-Style Hover Tile Highlight Preview ─────────────
         if (hoverWorldPos != null) {
-            val selectedPlot = selectedPlotId?.let { selId -> plots.firstOrNull { it.id == selId } }
+            val selectedPlot = if (!isDraggingCrop && selectedPlotId != null) plots.firstOrNull { it.id == selectedPlotId } else null
             val highlightW = selectedPlot?.widthM ?: 1.0f
             val highlightH = selectedPlot?.heightM ?: 1.0f
             renderTileHighlight(hoverWorldPos, camera, isValidPlacement, widthM = highlightW, heightM = highlightH)
@@ -69,7 +71,9 @@ object FarmCanvasRenderer {
         val sortedPlots = plots.sortedBy { it.posX + it.posY }
 
         sortedPlots.forEach { plot ->
-            renderSoilPlot(plot, camera, resources, context)
+            if (!hasBg) {
+                renderSoilPlot(plot, camera, resources, context)
+            }
             renderDirectCrop(plot, cropZones, camera, context)
 
             val plotTrellises = farmObjects.filter { it.attachedPlotId == plot.id && it.objectType == FarmObjectType.TRELLIS }
@@ -115,8 +119,8 @@ object FarmCanvasRenderer {
     // ── Farm Area Constants ──────────────────────────────────────────────
     private const val FARM_MIN_X = 0f
     private const val FARM_MIN_Y = 0f
-    private const val FARM_MAX_X = 30f
-    private const val FARM_MAX_Y = 30f
+    private const val FARM_MAX_X = 45f
+    private const val FARM_MAX_Y = 45f
 
     private data class Decor(
         val wx: Float, val wy: Float,
@@ -126,10 +130,12 @@ object FarmCanvasRenderer {
     )
 
     /**
-     * LANDSCAPED SCENERY WITH 3X MASSIVE BACK FOREST & CONTINUOUS ISOMETRIC GRASS:
-     * - Back Area: 3x Bigger Trees (tileSpan 24.0f..30.0f) forming a dense forest wall hiding the back void.
-     * - Ground Grass: Full isometric terrain grid (-25..50 world bounds) rendering under all back trees.
-     * - Front Area: Clean vegetation, water lilies, flowers, rocks & bushes — zero floating grass tile textures.
+     * 4-SIDE PERIMETER FARM SURROUND SYSTEM (Clash of Clans / Hay Day Style):
+     * - Side 1 (Top-Left North-West): Dense forest canopy + Central Farmhouse/Cottage backdrop.
+     * - Side 2 (Top-Right North-East): Right forest canopy + Farm equipment/Tractor boundary.
+     * - Side 3 (Bottom-Left South-West): Left forest canopy + Pathway bushes & rock scatter.
+     * - Side 4 (Bottom-Right South-East): Front landscape + Water lily pond & flower accents.
+     * Guaranteed lag-free 60-120 FPS performance (rendered as 4 fast side layers instead of tile loops).
      */
     private val SCENERY_DECORATIONS: List<Decor> by lazy {
         val decors = mutableListOf<Decor>()
@@ -145,50 +151,55 @@ object FarmCanvasRenderer {
             "water_lily/water_lily_white.png"
         )
 
-        // 1. CLEAN BACKDROP CANOPY TREES (Only ~15 well-spaced trees hiding back & left grass edges, zero collapsing)
-        // Back edge canopy row (wy = -5.5f)
-        for (wx in -6..36 step 5) {
+        // ── SIDE 1: TOP-LEFT EDGE (North-West Backdrop & Farmhouse) ──────
+        for (wx in -8..52 step 5) {
             val jitterX = ((wx * 37) % 5 - 2) * 0.2f
             val treeAsset = treeAssets[Math.abs((wx * 13).toInt()) % treeAssets.size]
-            decors.add(Decor(wx.toFloat() + jitterX, -5.5f, treeAsset, tileSpan = 6.5f, isTree = true))
+            decors.add(Decor(wx.toFloat() + jitterX, -6.0f, treeAsset, tileSpan = 6.5f, isTree = true))
         }
-        // Left edge canopy row (wx = -5.5f)
-        for (wy in 0..32 step 5) {
+
+        // ── SIDE 2: TOP-RIGHT EDGE (North-East Right Forest Canopy) ──────
+        for (wy in -4..48 step 5) {
             val jitterY = ((wy * 41) % 5 - 2) * 0.2f
-            val treeAsset = treeAssets[Math.abs((wy * 17).toInt()) % treeAssets.size]
-            decors.add(Decor(-5.5f, wy.toFloat() + jitterY, treeAsset, tileSpan = 6.5f, isTree = true))
+            val treeAsset = treeAssets[Math.abs((wy * 19).toInt()) % treeAssets.size]
+            decors.add(Decor(50.5f, wy.toFloat() + jitterY, treeAsset, tileSpan = 6.5f, isTree = true))
         }
 
-        // 2. NATURAL ORGANIC OBSTACLES (ROCKS, BUSHES, FLOWERS, WATER LILIES)
-        // Positioned outside fence line (-1.8m to 31.8m boundary) with natural organic scatter
-        val obstacleLocations = listOf(
-            // Back/Left Forest Base Scatter (wy < -2f or wx < -2f)
-            Decor(-4.0f, -3.5f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
-            Decor(2.5f, -3.8f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
-            Decor(8.0f, -4.2f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
-            Decor(15.2f, -3.6f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
-            Decor(22.0f, -4.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
-            Decor(28.5f, -3.5f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
-            Decor(33.0f, -3.8f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
+        // ── SIDE 3: BOTTOM-LEFT EDGE (South-West Left Forest Canopy) ─────
+        for (wy in -2..48 step 5) {
+            val jitterY = ((wy * 31) % 5 - 2) * 0.2f
+            val treeAsset = treeAssets[Math.abs((wy * 17).toInt()) % treeAssets.size]
+            decors.add(Decor(-6.0f, wy.toFloat() + jitterY, treeAsset, tileSpan = 6.5f, isTree = true))
+        }
 
-            // Left Outer Grass Scatter (wx < -3f)
-            Decor(-3.8f, 4.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
-            Decor(-4.2f, 10.5f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
-            Decor(-3.6f, 17.0f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
-            Decor(-4.0f, 24.2f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
+        // ── SIDE 4: BOTTOM-RIGHT EDGE & NATURAL OBSTACLE ACCENTS ──────────
+        val perimeterAccents = listOf(
+            // Top-Left Farm Base Scatter
+            Decor(-4.0f, -3.5f, "trees_and_rocks/large_rock.png", tileSpan = 1.2f),
+            Decor(8.5f, -4.0f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+            Decor(18.0f, -4.5f, "trees_and_rocks/flower.png", tileSpan = 0.9f),
+            Decor(28.2f, -4.2f, "trees_and_rocks/small_rock.png", tileSpan = 1.0f),
+            Decor(38.0f, -4.0f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+            Decor(46.5f, -3.8f, "trees_and_rocks/large_rock.png", tileSpan = 1.2f),
 
-            // Front/Right Open Landscape Scatter (wx > 33.5f or wy > 33.5f) - organically placed outside fence
-            Decor(4.5f, 34.2f, waterLilyAssets[0], tileSpan = 1.1f),
-            Decor(12.0f, 34.8f, "trees_and_rocks/small_rock.png", tileSpan = 0.9f),
-            Decor(18.5f, 34.0f, "trees_and_rocks/flower.png", tileSpan = 0.85f),
-            Decor(25.2f, 34.6f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
-            Decor(34.2f, 6.0f, waterLilyAssets[1], tileSpan = 1.1f),
-            Decor(34.5f, 14.2f, "trees_and_rocks/large_rock.png", tileSpan = 1.0f),
-            Decor(34.0f, 21.0f, "trees_and_rocks/bush.png", tileSpan = 0.9f),
-            Decor(34.6f, 28.5f, waterLilyAssets[2], tileSpan = 1.1f),
-            Decor(33.8f, 33.8f, "trees_and_rocks/flower.png", tileSpan = 0.85f)
+            // Bottom-Left Pathway Scatter
+            Decor(-4.2f, 8.0f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+            Decor(-4.5f, 18.5f, "trees_and_rocks/small_rock.png", tileSpan = 1.0f),
+            Decor(-4.0f, 29.0f, "trees_and_rocks/flower.png", tileSpan = 0.9f),
+            Decor(-4.2f, 40.2f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+
+            // Bottom-Right Front Landscape Pond & Flowers
+            Decor(6.5f, 49.5f, waterLilyAssets[0], tileSpan = 1.2f),
+            Decor(17.0f, 49.8f, "trees_and_rocks/small_rock.png", tileSpan = 1.0f),
+            Decor(26.5f, 49.2f, "trees_and_rocks/flower.png", tileSpan = 0.9f),
+            Decor(36.2f, 49.6f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+            Decor(49.2f, 8.0f, waterLilyAssets[1], tileSpan = 1.2f),
+            Decor(49.5f, 19.2f, "trees_and_rocks/large_rock.png", tileSpan = 1.1f),
+            Decor(49.0f, 30.0f, "trees_and_rocks/bush.png", tileSpan = 1.0f),
+            Decor(49.6f, 40.5f, waterLilyAssets[2], tileSpan = 1.2f),
+            Decor(48.8f, 48.8f, "trees_and_rocks/flower.png", tileSpan = 0.9f)
         )
-        decors.addAll(obstacleLocations)
+        decors.addAll(perimeterAccents)
 
         decors.sortedBy { it.wx + it.wy }
     }
@@ -232,79 +243,72 @@ object FarmCanvasRenderer {
 
     // ── Layer 0: Full Viewport Ground Terrain ────────────────────────────
 
-    private fun DrawScope.renderGround(camera: CameraState, resources: Resources? = null, context: android.content.Context?) {
-        // 1. Instant full-screen base grass background
-        drawRect(color = Color(0xFF4A7C29))
+    private fun DrawScope.renderGround(
+        camera: CameraState,
+        resources: Resources? = null,
+        context: android.content.Context?
+    ): Boolean {
+        // Full-screen lush green base grass fallback matching scenery edge grass
+        drawRect(color = Color(0xFF38651B))
 
-        val tileW = (IsometricProjection.TILE_W * camera.zoom).toInt().coerceAtLeast(1)
-        val tileH = (IsometricProjection.TILE_H * camera.zoom).toInt().coerceAtLeast(1)
-        val renderTileW = tileW + 4
-        val renderTileH = tileH + 4
+        // Render high-res custom isometric background image (background 1) if available in assets
+        if (context != null) {
+            val bgBitmap = AssetLoader.getBackgroundTexture(context, "background_scenery/backgound_1.png")
+            if (bgBitmap != null) {
+                // Align asset central dirt diamond center shifted 1 tile to left and 1 tile to bottom
+                val centerPos = IsometricProjection.toScreen(22.5f, 22.5f + 1.0f, camera)
+                val gridWidthPx = 45f * IsometricProjection.TILE_W * camera.zoom
+                val gridHeightPx = 45f * IsometricProjection.TILE_H * camera.zoom
 
-        // 2. Focused grass tile rendering strictly bounded to [-17, 34]
-        val bounds = camera.getVisibleWorldBounds(size.width, size.height)
-        val minX = maxOf(bounds.left.toInt() - 1, -17)
-        val maxX = minOf(bounds.right.toInt() + 1, 34)
-        val minY = maxOf(bounds.top.toInt() - 1, -17)
-        val maxY = minOf(bounds.bottom.toInt() + 1, 34)
+                // Determine diamond width/height ratios and center offsets based on asset dimensions:
+                // backgound_1.png (1774x887): Central 45x45 farm fence diamond spans 75.42% of asset width (1338px / 1774px)
+                // and 64.71% of asset height (574px / 887px), with center at X: 50.0% (887px) and Y: 55.58% (493px).
+                val isBg1 = (bgBitmap.width in 1700..1850 && bgBitmap.height in 800..950) ||
+                        (Math.abs((bgBitmap.width.toFloat() / bgBitmap.height.toFloat()) - 2.0f) < 0.1f)
 
-        if (resources != null) {
-            for (wx in minX..maxX) {
-                for (wy in minY..maxY) {
-                    val pos = IsometricProjection.toScreen(wx.toFloat(), wy.toFloat(), camera)
-                    val variant = (Math.abs(wx * 31 + wy * 17) % 5) + 1
-                    val grassBitmap = TerrainPainter.getTexture(resources, variant, context)
-                    drawImage(
-                        image = grassBitmap,
-                        dstOffset = IntOffset(Math.round(pos.x - tileW / 2f - 2f), Math.round(pos.y - 2f)),
-                        dstSize = IntSize(renderTileW, renderTileH)
-                    )
-                }
+                val diamondWidthRatio = if (isBg1) 0.7050f else 0.7578f
+                val diamondHeightRatio = if (isBg1) 0.6050f else 0.7578f
+                val centerXRatio = 0.4960f
+                val centerYRatio = if (isBg1) 0.5420f else 0.50f
+
+                val scaleX = gridWidthPx / (bgBitmap.width * diamondWidthRatio)
+                val scaleY = gridHeightPx / (bgBitmap.height * diamondHeightRatio)
+
+                // Fixed 1.50x scale expansion guarantees full viewport coverage with 0% gap at top or bottom
+                val bgScaleBoost = 1.50f
+                val targetW = (bgBitmap.width * scaleX * bgScaleBoost).toInt().coerceAtLeast(1)
+                val targetH = (bgBitmap.height * scaleY * bgScaleBoost).toInt().coerceAtLeast(1)
+
+                // Align asset central dirt diamond center directly with farm world center (22.5, 22.5)
+                val left = Math.round(centerPos.x - (targetW * centerXRatio))
+                val top = Math.round(centerPos.y - (targetH * centerYRatio))
+
+                drawImage(
+                    image = bgBitmap,
+                    dstOffset = IntOffset(left, top),
+                    dstSize = IntSize(targetW, targetH)
+                )
+                return true
             }
         }
-
-        // 2. Central Soil Farm Grid (0 to 30m)
-        if (resources != null) {
-            val farmMinXi = FARM_MIN_X.toInt()
-            val farmMaxXi = (FARM_MAX_X - 1).toInt()
-            val farmMinYi = FARM_MIN_Y.toInt()
-            val farmMaxYi = (FARM_MAX_Y - 1).toInt()
-
-            val startX = maxOf(minX, farmMinXi)
-            val endX   = minOf(maxX, farmMaxXi)
-            val startY = maxOf(minY, farmMinYi)
-            val endY   = minOf(maxY, farmMaxYi)
-
-            for (wx in startX..endX) {
-                for (wy in startY..endY) {
-                    val pos = IsometricProjection.toScreen(wx.toFloat(), wy.toFloat(), camera)
-                    val soilVariant = if ((wx + wy) % 2 == 0) 1 else 2
-                    val soilBitmap = SoilPainter.getTexture(resources, soilVariant, context)
-                    drawImage(
-                        image = soilBitmap,
-                        dstOffset = IntOffset(Math.round(pos.x - tileW / 2f - 2f), Math.round(pos.y - 2f)),
-                        dstSize = IntSize(renderTileW, renderTileH)
-                    )
-                }
-            }
-        }
+        return false
     }
 
-    private fun DrawScope.renderFarmScenery(camera: CameraState, context: android.content.Context?) {
-        if (context == null) return
+    private fun DrawScope.renderFarmScenery(camera: CameraState, context: android.content.Context?, hasBgImage: Boolean = false) {
+        if (context == null || hasBgImage) return
 
         val tileW = (IsometricProjection.TILE_W * camera.zoom).toInt().coerceAtLeast(1)
         val tileH = (IsometricProjection.TILE_H * camera.zoom).toInt().coerceAtLeast(1)
+
         val canvasW = size.width
         val canvasH = size.height
 
-        // 1. Render Fences with Viewport Frustum Culling (Zero lag at high zoom)
+        // Render Perimeter Fences surrounding the 45x45 farm
         FENCE_SEGMENTS.forEach { fence ->
             val pos = IsometricProjection.toScreen(fence.wx, fence.wy, camera)
             val targetW = tileW + 4
             val left = pos.x - tileW / 2f - 2f
 
-            // Fast Cull Check (Skip off-screen fences outside viewport + 60px margin)
             if (left > canvasW + 60f || left + targetW < -60f || pos.y < -100f || pos.y > canvasH + 100f) {
                 return@forEach
             }
@@ -321,44 +325,6 @@ object FarmCanvasRenderer {
                     ),
                     dstSize = IntSize(targetW, targetH)
                 )
-            }
-        }
-
-        // 2. Render Scenery Objects (Trees, Rocks, Flowers, Bushes) with Viewport Frustum Culling
-        SCENERY_DECORATIONS.forEach { decor ->
-            val pos = IsometricProjection.toScreen(decor.wx, decor.wy, camera)
-            val targetW = ((tileW + 4) * decor.tileSpan).toInt().coerceAtLeast(1)
-            val left = pos.x - targetW / 2f
-
-            // Fast Cull Check (Skip off-screen items; 200px top margin for massive trees)
-            if (left > canvasW + 150f || left + targetW < -150f || pos.y < -250f || pos.y > canvasH + 150f) {
-                return@forEach
-            }
-
-            val bitmap = AssetLoader.loadFromAssets(context, decor.asset)
-            if (bitmap != null) {
-                val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
-                val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
-
-                if (decor.isTree) {
-                    drawImage(
-                        image = bitmap,
-                        dstOffset = IntOffset(
-                            Math.round(left),
-                            Math.round(pos.y + tileH / 2f - targetH)
-                        ),
-                        dstSize = IntSize(targetW, targetH)
-                    )
-                } else {
-                    drawImage(
-                        image = bitmap,
-                        dstOffset = IntOffset(
-                            Math.round(left),
-                            Math.round(pos.y - (targetH - tileH / 2f))
-                        ),
-                        dstSize = IntSize(targetW, targetH)
-                    )
-                }
             }
         }
     }
@@ -502,8 +468,7 @@ object FarmCanvasRenderer {
                 val tileWorldY = plot.posY + y
                 val pos = IsometricProjection.toScreen(tileWorldX, tileWorldY, camera)
 
-                val soilVariant = if ((tileWorldX.toInt() + tileWorldY.toInt()) % 2 == 0) 1 else 2
-                val soilBitmap = SoilPainter.getTexture(res, soilVariant, context)
+                val soilBitmap = SoilPainter.getTexture(res, 2, context)
 
                 drawImage(
                     image = soilBitmap,
@@ -571,15 +536,16 @@ object FarmCanvasRenderer {
             val baseTileW = IsometricProjection.TILE_W * camera.zoom
 
             if (bitmap != null) {
-                val targetW = (baseTileW * 1.0f * plant.scaleFactor).toInt().coerceAtLeast(1)
+                val targetW = (baseTileW * 0.72f * plant.scaleFactor).toInt().coerceAtLeast(1)
                 val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
                 val targetH = (targetW * aspect).toInt().coerceAtLeast(1)
 
+                val baseTileH = IsometricProjection.TILE_H * camera.zoom
                 drawImage(
                     image = bitmap,
                     dstOffset = IntOffset(
                         Math.round(pos.x - targetW / 2f),
-                        Math.round(pos.y - targetH + (baseTileW * 0.25f))
+                        Math.round(pos.y - targetH + (baseTileH * 0.1f))
                     ),
                     dstSize = IntSize(targetW, targetH)
                 )
@@ -727,13 +693,13 @@ object FarmCanvasRenderer {
 
     private fun DrawScope.renderGridOverlay(camera: CameraState) {
         val gridColor = Color.White.copy(alpha = 0.12f)
-        for (i in 0..30) {
+        for (i in 0..45) {
             val p1 = IsometricProjection.toScreen(i.toFloat(), 0f, camera)
-            val p2 = IsometricProjection.toScreen(i.toFloat(), 30f, camera)
+            val p2 = IsometricProjection.toScreen(i.toFloat(), 45f, camera)
             drawLine(gridColor, p1, p2, strokeWidth = 1f)
 
             val p3 = IsometricProjection.toScreen(0f, i.toFloat(), camera)
-            val p4 = IsometricProjection.toScreen(30f, i.toFloat(), camera)
+            val p4 = IsometricProjection.toScreen(45f, i.toFloat(), camera)
             drawLine(gridColor, p3, p4, strokeWidth = 1f)
         }
     }

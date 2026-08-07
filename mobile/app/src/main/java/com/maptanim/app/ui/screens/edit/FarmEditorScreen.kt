@@ -47,38 +47,55 @@ import com.maptanim.app.core.audio.TrackBgmEffect
 @Composable
 fun FarmEditorScreen(
     navController: NavController,
-    editViewModel: EditViewModel = viewModel()
+    editViewModel: EditViewModel = viewModel(),
+    tutorialViewModel: com.maptanim.app.viewmodel.TutorialViewModel = viewModel()
 ) {
     TrackBgmEffect(BackgroundTrack.EDITOR_FOCUS)
 
     val soundManager = LocalSoundManager.current
     val context = LocalContext.current
     val uiState by editViewModel.uiState.collectAsState()
+    val tutorialUiState by tutorialViewModel.uiState.collectAsState()
     var activeCropName by remember { mutableStateOf("") }
     var activeCropId by remember { mutableStateOf("") }
     var isRightPanelVisible by remember { mutableStateOf(false) }
 
+    LaunchedEffect(tutorialUiState.currentStep, isRightPanelVisible) {
+        if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON) {
+            tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT)
+        }
+        if (isRightPanelVisible && (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT ||
+                                    tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON)) {
+            tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP)
+        }
+    }
+
     // Live Camera State tracked from FarmCanvas for accurate drop conversion
     var liveCameraState by remember { mutableStateOf(CameraState()) }
 
-    // CoC Floating Drag & Drop State (Right Panel drags)
+    // CoC Floating Drag & Drop State (Right Panel drags & Canvas touch hover)
     var isDraggingCrop by remember { mutableStateOf(false) }
     var dragCropName by remember { mutableStateOf("Carrot") }
     var dragCropId by remember { mutableStateOf("carrot") }
     var dragTouchPos by remember { mutableStateOf(Offset.Zero) }
+    var canvasTouchPos by remember { mutableStateOf<Offset?>(null) }
 
-    // Compute snapped hover tile position bounded strictly inside farm area (0 to 30m)
-    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, liveCameraState, uiState.selectedPlotId, uiState.plots) {
+    // Compute snapped hover tile position bounded strictly inside farm area (0 to 45m)
+    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, canvasTouchPos, liveCameraState, uiState.selectedPlotId, uiState.plots, activeCropName, uiState.activeTool) {
         if (isDraggingCrop) {
             val rawWorld = IsometricProjection.toWorld(dragTouchPos.x, dragTouchPos.y, liveCameraState)
             val snapped = FarmCanvasRenderer.snapToGrid(rawWorld)
-            Offset(snapped.x.coerceIn(0f, 29.0f), snapped.y.coerceIn(0f, 29.0f))
+            Offset(snapped.x.coerceIn(0f, 44.0f), snapped.y.coerceIn(0f, 44.0f))
+        } else if (canvasTouchPos != null && (activeCropName.isNotEmpty() || uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT || uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT)) {
+            val rawWorld = IsometricProjection.toWorld(canvasTouchPos!!.x, canvasTouchPos!!.y, liveCameraState)
+            val snapped = FarmCanvasRenderer.snapToGrid(rawWorld)
+            Offset(snapped.x.coerceIn(0f, 44.0f), snapped.y.coerceIn(0f, 44.0f))
         } else if (uiState.selectedPlotId != null) {
             val selectedPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
             if (selectedPlot != null) {
                 val snapped = FarmCanvasRenderer.snapToGrid(Offset(selectedPlot.posX, selectedPlot.posY))
-                val maxX = (30.0f - selectedPlot.widthM).coerceAtLeast(0f)
-                val maxY = (30.0f - selectedPlot.heightM).coerceAtLeast(0f)
+                val maxX = (45.0f - selectedPlot.widthM).coerceAtLeast(0f)
+                val maxY = (45.0f - selectedPlot.heightM).coerceAtLeast(0f)
                 Offset(snapped.x.coerceIn(0f, maxX), snapped.y.coerceIn(0f, maxY))
             } else null
         } else null
@@ -86,16 +103,15 @@ fun FarmEditorScreen(
 
     val isValidPlacement = remember(isDraggingCrop, hoverWorldPos, uiState.plots, uiState.selectedPlotId) {
         if (hoverWorldPos != null) {
-            val (w, h) = if (isDraggingCrop) {
-                1.0f to 1.0f
-            } else {
-                val selPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
-                (selPlot?.widthM ?: 1.0f) to (selPlot?.heightM ?: 1.0f)
-            }
+            val selectedPlot = if (!isDraggingCrop && uiState.selectedPlotId != null) {
+                uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
+            } else null
+
+            val (w, h) = selectedPlot?.let { it.widthM to it.heightM } ?: (1.0f to 1.0f)
 
             val hx = hoverWorldPos.x
             val hy = hoverWorldPos.y
-            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 30.0f && (hy + h) <= 30.0f
+            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 45.0f && (hy + h) <= 45.0f
 
             val overlaps = uiState.plots.any { plot ->
                 if (plot.id == uiState.selectedPlotId) false
@@ -110,6 +126,7 @@ fun FarmEditorScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var farmNameInput by remember { mutableStateOf("Murcia Farm") }
 
     Box(
@@ -127,7 +144,9 @@ fun FarmEditorScreen(
             activeCropId = activeCropId,
             hoverWorldPos = hoverWorldPos,
             isValidPlacement = isValidPlacement,
-            onCameraStateChanged = { liveCameraState = it }
+            isDraggingCrop = isDraggingCrop,
+            onCameraStateChanged = { liveCameraState = it },
+            onCanvasTouchPosChanged = { canvasTouchPos = it }
         )
 
         // ── Top Right Action Buttons: Save & Exit ─────────
@@ -208,6 +227,9 @@ fun FarmEditorScreen(
                     .clickable {
                         isRightPanelVisible = true
                         editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.ADD_PLANT)
+                        if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT) {
+                            tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP)
+                        }
                     }
             ) {
                 Row(
@@ -242,12 +264,18 @@ fun FarmEditorScreen(
                         activeCropId = newCropId
                     }
                     editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.ADD_PLANT)
+                    if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP) {
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP)
+                    }
                 },
                 onCropDragStart = { cropName, cropId, startOffset ->
                     isDraggingCrop = true
                     dragCropName = cropName
                     dragCropId = cropId
                     dragTouchPos = startOffset
+                    if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP) {
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP)
+                    }
                 },
                 onCropDragging = { currentOffset ->
                     dragTouchPos = currentOffset
@@ -258,10 +286,15 @@ fun FarmEditorScreen(
                         isDraggingCrop = false
                         val dropWorld = com.maptanim.app.renderer.model.IsometricProjection.toWorld(dropOffset.x, dropOffset.y, liveCameraState)
                         val snapped = com.maptanim.app.renderer.canvas.FarmCanvasRenderer.snapToGrid(dropWorld)
-                        val safeX = snapped.x.coerceIn(0f, 29.0f)
-                        val safeY = snapped.y.coerceIn(0f, 29.0f)
+                        val safeX = snapped.x.coerceIn(0f, 44.0f)
+                        val safeY = snapped.y.coerceIn(0f, 44.0f)
                         if (wasValid) {
                             editViewModel.addDirectPlantingPlot(safeX, safeY, dragCropName, dragCropId)
+                            if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP ||
+                                tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP ||
+                                tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT) {
+                                tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_BOTTOM_TOOLBAR_EXPLAIN)
+                            }
                         }
                     }
                 },
@@ -270,6 +303,9 @@ fun FarmEditorScreen(
                     activeCropName = ""
                     activeCropId = ""
                     editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.SELECT_MOVE)
+                    if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_CLOSE_TRAY) {
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_SAVE_FARM)
+                    }
                 }
             )
         }
@@ -343,9 +379,40 @@ fun FarmEditorScreen(
                 uiState.selectedPlotId?.let { editViewModel.paintSoil(it) }
             },
             onDeleteClick = {
-                uiState.selectedPlotId?.let { editViewModel.deletePlot(it) }
+                showDeleteConfirmDialog = true
             }
         )
+
+        // ── Delete Confirmation Dialog ───────────────────────────
+        if (showDeleteConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmDialog = false },
+                title = { Text("Delete Crop Plot", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text("Sigurado ka bang gusto mong burahin ang pananim na ito sa map?", fontSize = 14.sp)
+                },
+                confirmButton = {
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)),
+                        onClick = {
+                            uiState.selectedPlotId?.let { editViewModel.deletePlot(it) }
+                            showDeleteConfirmDialog = false
+                        }
+                    ) {
+                        Text("Oo (Burahin)", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmDialog = false
+                        }
+                    ) {
+                        Text("Hindi (I-cancel)", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
 
         // ── Save Farm Dialog ───────────────────────────
         if (showSaveDialog) {
@@ -401,10 +468,10 @@ fun FarmEditorScreen(
                         modifier = Modifier.size(48.dp)
                     )
                 },
-                title = { Text("Setup Complete", fontWeight = FontWeight.Bold) },
+                title = { Text("Congratulations!", fontWeight = FontWeight.Bold) },
                 text = {
                     Text(
-                        "Excellent Successful set up the farm",
+                        "Congratulations! You created your first farm!",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
                         color = Color(0xFF1B5E20)
@@ -415,6 +482,9 @@ fun FarmEditorScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                         onClick = {
                             showSuccessDialog = false
+                            if (tutorialUiState.isTutorialActive) {
+                                tutorialViewModel.completeTutorial()
+                            }
                             navController.navigate(com.maptanim.app.navigation.Routes.HOME) {
                                 popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
                             }
@@ -424,6 +494,181 @@ fun FarmEditorScreen(
                     }
                 }
             )
+        }
+
+        // ── Interactive Guided Walkthrough Steps ──────────────────────
+        if (tutorialUiState.isTutorialActive && !isDraggingCrop) {
+            when (tutorialUiState.currentStep) {
+                com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON,
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT -> {
+                    val openTrayAction = {
+                        isRightPanelVisible = true
+                        editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.ADD_PLANT)
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP)
+                    }
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Pindutin ang 'Add Plant / Crops' button sa kanan para buksan ang listahan ng mga pananim!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        compactMode = true,
+                        scrimAlpha = 0.0f,
+                        dialogAlignment = Alignment.TopStart,
+                        nextButtonText = "Open Tray",
+                        onNext = openTrayAction,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 16.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                Row(
+                                    modifier = Modifier.clickable { openTrayAction() },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.RIGHT,
+                                        label = "TAP TO ADD CROPS"
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    com.maptanim.app.ui.components.guide.SpotlightPulseRing(size = 72.dp)
+                                }
+                            }
+                        }
+                    )
+                }
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP -> {
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Pumili ng pananim at i-drag o i-tap papunta sa isometric soil map!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        compactMode = true,
+                        scrimAlpha = 0.0f,
+                        dialogAlignment = Alignment.TopStart,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 80.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                    direction = com.maptanim.app.ui.components.guide.PointingDirection.RIGHT,
+                                    label = "CLICK & DRAG CROP"
+                                )
+                            }
+                        }
+                    )
+                }
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP -> {
+                    // Overlay and pointing hand hidden completely while user is selecting / dragging crops freely
+                }
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_BOTTOM_TOOLBAR_EXPLAIN -> {
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Magaling! Pwede mong i-duplicate, i-resize, o i-delete ang iyong pananim gamit ang toolbar sa ibaba.",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        compactMode = true,
+                        scrimAlpha = 0.0f,
+                        dialogAlignment = Alignment.TopCenter,
+                        secondaryButtonText = "Continue Editing",
+                        nextButtonText = "Proceed",
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        onSecondaryClick = { tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP) },
+                        onNext = { tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_CLOSE_TRAY) },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = 75.dp),
+                                contentAlignment = Alignment.BottomCenter
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.DOWN,
+                                        label = "BOTTOM TOOLBAR"
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_CLOSE_TRAY -> {
+                    val closeTrayAction = {
+                        isRightPanelVisible = false
+                        activeCropName = ""
+                        activeCropId = ""
+                        editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.SELECT_MOVE)
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_SAVE_FARM)
+                    }
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Pindutin ang 'X' button sa crop tray para isara ito!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        compactMode = true,
+                        scrimAlpha = 0.0f,
+                        dialogAlignment = Alignment.BottomStart,
+                        nextButtonText = "Close Tray",
+                        onNext = closeTrayAction,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 16.dp, end = 16.dp),
+                                contentAlignment = Alignment.TopEnd
+                            ) {
+                                Row(
+                                    modifier = Modifier.clickable { closeTrayAction() },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.UP,
+                                        label = "CLOSE TRAY ('X')"
+                                    )
+                                    com.maptanim.app.ui.components.guide.SpotlightPulseRing(size = 56.dp)
+                                }
+                            }
+                        }
+                    )
+                }
+                com.maptanim.app.viewmodel.TutorialStep.EDIT_SAVE_FARM -> {
+                    val saveFarmAction = {
+                        showSaveDialog = true
+                    }
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Napakagaling! Pindutin ang 'Save' button sa taas para mai-save at pangalanan ang iyong sakahan!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        compactMode = true,
+                        scrimAlpha = 0.0f,
+                        dialogAlignment = Alignment.BottomStart,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 12.dp, end = 70.dp),
+                                contentAlignment = Alignment.TopEnd
+                            ) {
+                                Row(
+                                    modifier = Modifier.clickable { saveFarmAction() },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.UP,
+                                        label = "CLICK SAVE"
+                                    )
+                                    com.maptanim.app.ui.components.guide.SpotlightPulseRing(size = 64.dp)
+                                }
+                            }
+                        }
+                    )
+                }
+                else -> {}
+            }
         }
     }
 }

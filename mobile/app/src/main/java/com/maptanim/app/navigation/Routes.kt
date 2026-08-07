@@ -6,7 +6,6 @@ object Routes {
     const val LOGIN = "login"
     const val FORGOT_PASSWORD = "forgot_password"
     const val LOADING = "loading"
-    const val WELCOME_GUIDE = "welcome_guide"
 
     // 5-Tab Navigation Routes
     const val HOME = "home"

@@ -7,6 +7,39 @@ All notable changes to the **MapTanim** project are documented in this file.
 
 ---
 
+## 📅 [1.4.0-RELEASE] — 2026-08-07
+
+### 🌟 Added & Fixed
+- **45×45 Farm Grid Tile Map Alignment**:
+  - Expanded all grid boundary calculations, tile hover snapping, duplicate plot logic, and bounds checks to $45\text{m} \times 45\text{m}$ (`45.0f`).
+- **MD 34 Real-Time Isometric Rhombus Preview**:
+  - Implemented real-time $1\text{m} \times 1\text{m}$ isometric rhombus outline preview tracking active touch/drag gestures over the farm map:
+    - **🟦 Blue Rhombus (`#1E88E5`)**: Highlights valid, empty target soil tiles.
+    - **🟥 Red Rhombus (`#E53935`)**: Highlights invalid, occupied, or out-of-bounds tiles.
+- **Direct Crop Tray Drag & Drop**:
+  - Enabled direct drag gestures on all crop cards in `CropTray.kt` without requiring prior card selection.
+- **Strict Crop Placement Collision Prevention**:
+  - Enforced strict overlap collision checks in `EditViewModel.kt` (`addDirectPlantingPlot`), `FarmCanvas.kt`, and `FarmEditorScreen.kt` to reject dropping crops onto occupied crop plots.
+
+---
+
+## 📅 [1.3.0-RELEASE] — 2026-08-07
+
+### 🌟 Added & Refined
+- **Drag-and-Drop Gesture Overlay Hiding**:
+  - All guide speech cards and pointing hands automatically hide while actively dragging crops (`isDraggingCrop`), preventing visual obstruction during placement gestures.
+- **Post-Drop Bottom Toolbar Decision Overlay**:
+  - After dropping a crop onto the farm grid, an overlay explains the bottom contextual edit toolbar (`EditBottomLayout`) with two decision choices:
+    - **"Continue Editing"**: Returns to free editor mode (`EDIT_DRAGGING_CROP`) so farmers can continue dragging, duplicating, resizing, or deleting crops.
+    - **"Proceed"**: Advances to the next walkthrough step (`EDIT_CLOSE_TRAY`).
+- **Interactive Pointing Targets & Fallback Actions**:
+  - Pointing hands and spotlight rings for **"TAP TO ADD CROPS"**, **"CLOSE TRAY ('X')"**, and **"CLICK SAVE"** are directly clickable, preventing tutorial stalls and allowing users to advance by tapping guide targets directly.
+  - Added explicit **"Open Tray"** and **"Close Tray"** fallback buttons inside Tatay Juan's guide speech cards.
+- **Automatic Step Advancement on Tray Open**:
+  - Added `LaunchedEffect` auto-advancing `EDIT_ADD_PLANT` to `EDIT_SELECT_CROP` whenever the Crop Tray drawer is opened (`isRightPanelVisible == true`).
+
+---
+
 ## 📅 [1.2.0-RELEASE] — 2026-08-01
 
 ### 🌟 Added
