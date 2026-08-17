@@ -119,6 +119,14 @@ class HomeViewModel(
         val today = LocalDate.now().toString()
         val farmerId = currentFarmerId ?: "guest"
 
+        // One-time cleanup: delete old hardcoded demo plots that were previously seeded
+        viewModelScope.launch {
+            val oldPlotIds = listOf("plot-1", "plot-2", "plot-3", "plot-4")
+            oldPlotIds.forEach { plotId ->
+                try { RepositoryProvider.cropPlotRepository.deletePlot(plotId) } catch (_: Exception) {}
+            }
+        }
+
         viewModelScope.launch {
             getFarmSummaryUseCase(farmId).collect { summary ->
                 _uiState.update { it.copy(farmSummary = summary) }

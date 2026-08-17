@@ -32,39 +32,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+
 data class CropOption(
     val id: String,
     val name: String,
     val emoji: String,
     val category: String,
     val lifeType: String = "Seasonal",
+    val imageFileName: String = "${id}.png",
     val hasAsset: Boolean = true
 )
 
 val AVAILABLE_CROP_CATALOG = listOf(
-    CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", hasAsset = true),
-    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", hasAsset = true),
-    CropOption("eggplant", "Eggplant", "🍆", "Fruit", lifeType = "Permanent", hasAsset = true),
-    CropOption("tomato", "Tomato", "🍅", "Fruit", lifeType = "Semi Permanent", hasAsset = true),
-    CropOption("onion", "Onion", "🧅", "Bulb", lifeType = "Seasonal", hasAsset = true),
-    CropOption("pumpkin", "Squash", "🎃", "Fruit", lifeType = "Seasonal", hasAsset = true),
-    CropOption("corn", "Corn", "🌽", "Stem", lifeType = "Seasonal", hasAsset = true),
-    CropOption("cabbage", "Cabbage", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
-    CropOption("pechay", "Pechay", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
-    CropOption("ampalaya", "Ampalaya", "🥒", "Fruit", lifeType = "Seasonal", hasAsset = true),
-    CropOption("okra", "Okra", "🌿", "Fruit", lifeType = "Seasonal", hasAsset = true),
-    CropOption("sili", "Chili Pepper", "🌶️", "Fruit", lifeType = "Permanent", hasAsset = true),
-    CropOption("cucumber", "Cucumber", "🥒", "Fruit", lifeType = "Seasonal", hasAsset = true),
-    CropOption("kangkong", "Kangkong", "🥬", "Leafy", lifeType = "Seasonal", hasAsset = true),
-    CropOption("lettuce", "Lettuce", "🥗", "Leafy", lifeType = "Seasonal", hasAsset = true)
+    CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", imageFileName = "carrot.png"),
+    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", imageFileName = "sitaw.png"),
+    CropOption("eggplant", "Eggplant", "🍆", "Fruit", lifeType = "Permanent", imageFileName = "eggplant.png"),
+    CropOption("tomato", "Tomato", "🍅", "Fruit", lifeType = "Semi Permanent", imageFileName = "tomato.png"),
+    CropOption("onion", "Onion", "🧅", "Bulb", lifeType = "Seasonal", imageFileName = "onion.png"),
+    CropOption("pumpkin", "Squash", "🎃", "Fruit", lifeType = "Seasonal", imageFileName = "pumpkin.png"),
+    CropOption("corn", "Corn", "🌽", "Stem", lifeType = "Seasonal", imageFileName = "corn.png"),
+    CropOption("cabbage", "Cabbage", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "cabbage.png"),
+    CropOption("pechay", "Pechay", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "pechay.png"),
+    CropOption("ampalaya", "Ampalaya", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "ampalaya.png"),
+    CropOption("okra", "Okra", "🌿", "Fruit", lifeType = "Seasonal", imageFileName = "okra.png"),
+    CropOption("sili", "Chili Pepper", "🌶️", "Fruit", lifeType = "Permanent", imageFileName = "sili.png"),
+    CropOption("cucumber", "Cucumber", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "pipino.png"),
+    CropOption("kangkong", "Kangkong", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "kangkong.png"),
+    CropOption("lettuce", "Lettuce", "🥗", "Leafy", lifeType = "Seasonal", imageFileName = "lettuce.png")
 )
 
 val CATEGORY_OPTIONS = listOf(
     "All", "Leafy", "Root", "Bulb", "Stem", "Flower", "Podded", "Tuber", "Fruit"
-)
-
-val TAB_OPTIONS = listOf(
-    "All", "Seasonal", "Permanent", "Semi Permanent"
 )
 
 /**
@@ -81,7 +81,6 @@ fun CropTray(
     onCropDragEnd: (screenOffset: Offset) -> Unit = { _ -> },
     onClose: () -> Unit = {}
 ) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedCategory by remember { mutableStateOf("All") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -99,19 +98,17 @@ fun CropTray(
         label = "searchElevation"
     )
 
-    val filteredCrops = remember(selectedTabIndex, selectedCategory, activeSearchQuery, availableCrops) {
-        val selectedTabName = TAB_OPTIONS[selectedTabIndex]
+    val filteredCrops = remember(selectedCategory, activeSearchQuery, availableCrops) {
         availableCrops.filter { crop ->
-            val tabMatch = selectedTabName == "All" || crop.lifeType.equals(selectedTabName, ignoreCase = true)
             val categoryMatch = selectedCategory == "All" || crop.category.equals(selectedCategory, ignoreCase = true)
             val searchMatch = activeSearchQuery.isBlank() || crop.name.contains(activeSearchQuery, ignoreCase = true)
 
-            tabMatch && categoryMatch && searchMatch
+            categoryMatch && searchMatch
         }
     }
 
     Surface(
-        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+        shape = RoundedCornerShape(topStart = 30.dp, bottomStart = 30.dp),
         color = Color.White.copy(alpha = 0.98f),
         shadowElevation = 12.dp,
         modifier = modifier
@@ -157,32 +154,6 @@ fun CropTray(
                         contentDescription = "Close Panel",
                         tint = Color.DarkGray,
                         modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // 4 Tabs
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                edgePadding = 0.dp,
-                containerColor = Color(0xFFF1F8E9),
-                contentColor = Color(0xFF1B5E20),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-            ) {
-                TAB_OPTIONS.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
-                            Text(
-                                text = title,
-                                fontSize = 11.sp,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTabIndex == index) Color(0xFF1B5E20) else Color.DarkGray
-                            )
-                        }
                     )
                 }
             }
@@ -425,49 +396,66 @@ private fun CropChipCard(
             .onGloballyPositioned { coordinates ->
                 cardRootOffset = coordinates.positionInRoot()
             }
-            .clickable { onClick() }
-            .then(
-                if (isSelected) {
-                    Modifier.pointerInput(crop.id) {
-                        detectDragGestures(
-                            onDragStart = { localOffset ->
-                                currentTouchOffset = cardRootOffset + localOffset
-                                onDragStart(currentTouchOffset)
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                currentTouchOffset = cardRootOffset + change.position
-                                onDragging(currentTouchOffset)
-                            },
-                            onDragEnd = {
-                                onDragEnd(currentTouchOffset)
-                            },
-                            onDragCancel = {
-                                onDragEnd(currentTouchOffset)
-                            }
-                        )
+            .pointerInput(crop.id) {
+                detectDragGestures(
+                    onDragStart = { localOffset ->
+                        onClick()
+                        currentTouchOffset = cardRootOffset + localOffset
+                        onDragStart(currentTouchOffset)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        currentTouchOffset = cardRootOffset + change.position
+                        onDragging(currentTouchOffset)
+                    },
+                    onDragEnd = {
+                        onDragEnd(currentTouchOffset)
+                    },
+                    onDragCancel = {
+                        onDragEnd(currentTouchOffset)
                     }
-                } else Modifier
-            )
+                )
+            }
+            .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(crop.emoji, fontSize = 22.sp)
-            Column {
+            // Crop image from assets/metadata/crops_images
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) Color(0xFFC8E6C9) else Color(0xFFE8F5E9).copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                val assetUri = "file:///android_asset/metadata/crops_images/${crop.imageFileName}"
+                AsyncImage(
+                    model = assetUri,
+                    contentDescription = crop.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = crop.name,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 11.sp,
-                    color = if (isSelected) Color(0xFF1B5E20) else Color.Black
+                    color = if (isSelected) Color(0xFF1B5E20) else Color.Black,
+                    maxLines = 1
                 )
                 Text(
                     text = if (isSelected) "${crop.category} • Drag or Tap Map" else "${crop.category} • Tap to Select",
                     fontSize = 8.sp,
                     color = if (isSelected) Color(0xFF1B5E20) else Color.Gray,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1
                 )
             }
         }

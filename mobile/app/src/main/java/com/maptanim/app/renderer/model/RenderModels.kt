@@ -162,11 +162,52 @@ data class PlotRenderData(
     val heightM: Float,
     val rotationDeg: Float = 0f,
     val isMonitoringStarted: Boolean = false,
+    val plantedDate: String? = null,
     val daysPlanted: Int = 0,
     val daysToHarvest: Int = 60,
     val stageProgressRatio: Float = 0f,
+    val plantedTimestampMs: Long = 0L,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
+    val currentStageProgressRatio: Float get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            val nowMs = System.currentTimeMillis()
+            val startMs = if (plantedTimestampMs > 0L) plantedTimestampMs else 0L
+            val elapsedMs = (nowMs - startMs).coerceAtLeast(0L)
+            // 10-second simulation timeline: 10,000 ms = 100% progress. Continues beyond 1.0f for overdue state.
+            return (elapsedMs / 10000f)
+        }
+        return stageProgressRatio
+    }
+
+    val growthStage: Int get() {
+        val ratio = currentStageProgressRatio
+        return when {
+            ratio < 0.20f -> 1
+            ratio < 0.40f -> 2
+            ratio < 0.60f -> 3
+            ratio < 0.80f -> 4
+            else -> 5
+        }
+    }
+
+    val isHarvestReady: Boolean get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            return currentStageProgressRatio >= 0.80f
+        }
+        return isMonitoringStarted && (growthStage == 5 || currentStageProgressRatio >= 0.90f || (daysToHarvest > 0 && daysPlanted >= daysToHarvest))
+    }
+
+    val isHarvestOverdue: Boolean get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            return currentStageProgressRatio > 1.0f
+        }
+        return isMonitoringStarted && daysToHarvest > 0 && daysPlanted > daysToHarvest
+    }
+
     val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
 
     fun worldCorners(): PlotWorldCorners = PlotWorldCorners(
@@ -213,14 +254,30 @@ data class PlotRenderData(
 fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData {
     val isStarted = !plantedDate.isNullOrBlank()
     var elapsedDays = 0
+    var plantedMs = 0L
+
     if (isStarted) {
+        try {
+            val dateTime = java.time.ZonedDateTime.parse(plantedDate)
+            plantedMs = dateTime.toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            try {
+                val date = java.time.LocalDate.parse(plantedDate!!.take(10))
+                plantedMs = date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            } catch (e2: Exception) {
+                plantedMs = System.currentTimeMillis()
+            }
+        }
         try {
             val date = java.time.LocalDate.parse(plantedDate!!.take(10))
             elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(date, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
         } catch (e: Exception) {
             elapsedDays = 0
         }
+    } else {
+        plantedMs = System.currentTimeMillis()
     }
+
     val defaultDays = when (cropName?.lowercase() ?: "") {
         "pechay" -> 28
         "okra" -> 45
@@ -252,9 +309,11 @@ fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRen
         heightM = heightM,
         rotationDeg = rotationDeg,
         isMonitoringStarted = isStarted,
+        plantedDate = plantedDate,
         daysPlanted = elapsedDays,
         daysToHarvest = defaultDays,
         stageProgressRatio = progressRatio,
+        plantedTimestampMs = plantedMs,
         activeTasks = activeTasks
     )
 }

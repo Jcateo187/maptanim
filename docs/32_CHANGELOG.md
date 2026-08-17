@@ -7,6 +7,30 @@ All notable changes to the **MapTanim** project are documented in this file.
 
 ---
 
+## 📅 [1.5.0-RELEASE] — 2026-08-13
+
+### 🌟 Added & Refined
+- **Complete Background Scenery Integration**:
+  - Configured `IsometricScene`, `FarmRenderer`, and `FarmCanvasRenderer` to render the complete high-resolution isometric background scenery asset (`background_scenery/backgound_1.png`).
+- **Elimination of Obsolete Procedural Scenery & Tile Loops**:
+  - Removed all procedural grass tile loops, soil tile loops, procedural trees, rocks, flowers, perimeter fences, and separate trellis rendering routines from the render pipeline.
+  - Placed crops now render direct crop growth stage sprites on top of the background scenery with 0 rendering overhead.
+- **Selection-First Drag Protection**:
+  - Requires crop selection before dragging/moving activates (`CanvasGestureHandler.kt`). Sliding unselected crops pans the camera smoothly without displacing crops.
+- **Deferred Overlap Reversion**:
+  - Finger release over an overlapping tile leaves the crop sitting in its **RED** rhombus state, permitting camera drag/pan and 2-finger pinch zoom. Tapping empty map ground or tapping another crop automatically reverts the RED floating crop back to its original position (`startPos`).
+- **Unified Blue/Red Rhombus & Grid Overlay**:
+  - Renders **Blue Rhombus (`#1E88E5`)** for valid tiles and **Red Rhombus (`#E53935`)** for occupied tiles in both **HomeScreen** (`CanvasMode.VIEW`) and **EditScreen** (`CanvasMode.EDIT`).
+  - 45×45 white grid lines overlay is always visible in Edit screen, and appears when selecting a crop in Home screen.
+- **5 Growth Stages & Crop-Specific Zone Naming**:
+  - Dynamically renders 5 crop growth stage lifecycle phases (`_1.png` to `_5.png`: Sprout, Seedling, Vegetative, Flowering, Harvest Ready).
+  - All placed crop areas are named specifically by their crop name (e.g. `🥕 Carrot`, `🍆 Eggplant`, `🫘 String Beans`) rather than generic `Plot 1` / `Plot 2`.
+- **Obsolete Code Cleanup**:
+  - Removed `SoilPainter.kt`, `SoilGenerator.kt`, and `FarmTile.kt`.
+  - Resolved all associated Kotlin build and compilation errors.
+
+---
+
 ## 📅 [1.4.0-RELEASE] — 2026-08-07
 
 ### 🌟 Added & Fixed

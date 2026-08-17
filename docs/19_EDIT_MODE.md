@@ -48,7 +48,7 @@ Selecting a plot or zone displays the floating bottom toolbar with contextual to
 
 ### 4. Placed Plot Drag & Re-positioning
 - **Touch & Drag**: Dragging any selected plot tracks 1:1 with world position coordinates (`Math.round` grid snap).
-- **Boundary Containment**: Clamped to `[0.0, 30.0 - widthM]` meters to prevent plots from crossing farm perimeter fences.
+- **Boundary Containment**: Clamped to `[0.0, 45.0 - widthM]` meters to prevent plots from crossing farm bounds.
 
 ### 5. Onboarding & Tutorial Walkthrough System (`OldManFarmerGuideOverlay.kt`)
 - **Drag-and-Drop Overlay Hiding**: All guide speech cards and pointing hands automatically hide while actively dragging crops (`isDraggingCrop == true`), preventing visual obstruction during placement gestures.

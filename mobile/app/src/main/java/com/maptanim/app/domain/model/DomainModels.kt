@@ -28,12 +28,12 @@ data class CropPlot(
     val posY: Float,
     val widthM: Float,
     val heightM: Float,
-    val rotationDeg: Float,
-    val plantedDate: String?,   // ISO-8601 date string, null if not planted
-    val isActive: Boolean,
-    val notes: String?,
-    val createdAt: String,
-    val updatedAt: String
+    val rotationDeg: Float = 0f,
+    val plantedDate: String? = null,   // ISO-8601 date string, null if not planted
+    val isActive: Boolean = true,
+    val notes: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = ""
 )
 
 // ─── Crop (reference data from crops table) ────────────────────────────────
@@ -139,11 +139,16 @@ data class HarvestRecord(
     val id: String,
     val plotId: String,
     val farmId: String,
+    val farmName: String = "MapTanim Main Farm",
+    val plotLabel: String = "Plot 1",
     val cropName: String,
-    val yieldKg: Float,
-    val qualityRating: Int,   // 1–5
+    val cropVariety: String? = null,
+    val plantedDate: String? = null,
     val harvestedAt: String,
-    val notes: String?
+    val growingDurationDays: Int = 0,
+    val yieldKg: Float = 0f,
+    val qualityRating: Int = 5,   // 1–5
+    val notes: String? = null
 )
 
 // ─── Activity (farmer manual log) ─────────────────────────────────────────

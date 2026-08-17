@@ -27,14 +27,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.maptanim.app.renderer.AssetLoader
 import com.maptanim.app.renderer.canvas.FarmCanvas
 import com.maptanim.app.renderer.canvas.FarmCanvasRenderer
 import com.maptanim.app.renderer.model.CameraState
 import com.maptanim.app.renderer.model.IsometricProjection
-import com.maptanim.app.ui.components.background.HomeBackground
+
 import com.maptanim.app.ui.components.editcomponents.croptray.CropTray
 import com.maptanim.app.ui.components.editcomponents.layout.EditBottomLayout
+import com.maptanim.app.ui.components.editcomponents.summary.CropsSummaryOverlay
 
 import com.maptanim.app.core.audio.BackgroundTrack
 import com.maptanim.app.core.audio.LocalSoundManager
@@ -81,65 +84,47 @@ fun FarmEditorScreen(
     var canvasTouchPos by remember { mutableStateOf<Offset?>(null) }
 
     // Compute snapped hover tile position bounded strictly inside farm area (0 to 45m)
-    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, canvasTouchPos, liveCameraState, uiState.selectedPlotId, uiState.plots, activeCropName, uiState.activeTool) {
+    // Hover highlight is active ONLY when dragging a crop from the CropTray onto the farm
+    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, liveCameraState) {
         if (isDraggingCrop) {
             val rawWorld = IsometricProjection.toWorld(dragTouchPos.x, dragTouchPos.y, liveCameraState)
             val snapped = FarmCanvasRenderer.snapToGrid(rawWorld)
             Offset(snapped.x.coerceIn(0f, 44.0f), snapped.y.coerceIn(0f, 44.0f))
-        } else if (canvasTouchPos != null && (activeCropName.isNotEmpty() || uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT || uiState.activeTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT)) {
-            val rawWorld = IsometricProjection.toWorld(canvasTouchPos!!.x, canvasTouchPos!!.y, liveCameraState)
-            val snapped = FarmCanvasRenderer.snapToGrid(rawWorld)
-            Offset(snapped.x.coerceIn(0f, 44.0f), snapped.y.coerceIn(0f, 44.0f))
-        } else if (uiState.selectedPlotId != null) {
-            val selectedPlot = uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
-            if (selectedPlot != null) {
-                val snapped = FarmCanvasRenderer.snapToGrid(Offset(selectedPlot.posX, selectedPlot.posY))
-                val maxX = (45.0f - selectedPlot.widthM).coerceAtLeast(0f)
-                val maxY = (45.0f - selectedPlot.heightM).coerceAtLeast(0f)
-                Offset(snapped.x.coerceIn(0f, maxX), snapped.y.coerceIn(0f, maxY))
-            } else null
-        } else null
+        } else {
+            null
+        }
     }
 
-    val isValidPlacement = remember(isDraggingCrop, hoverWorldPos, uiState.plots, uiState.selectedPlotId) {
-        if (hoverWorldPos != null) {
-            val selectedPlot = if (!isDraggingCrop && uiState.selectedPlotId != null) {
-                uiState.plots.firstOrNull { it.id == uiState.selectedPlotId }
-            } else null
-
-            val (w, h) = selectedPlot?.let { it.widthM to it.heightM } ?: (1.0f to 1.0f)
-
+    val isValidPlacement = remember(isDraggingCrop, hoverWorldPos, uiState.plots) {
+        if (isDraggingCrop && hoverWorldPos != null) {
             val hx = hoverWorldPos.x
             val hy = hoverWorldPos.y
-            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 45.0f && (hy + h) <= 45.0f
+            val inBounds = hx >= 0f && hy >= 0f && (hx + 1.0f) <= 45.0f && (hy + 1.0f) <= 45.0f
 
             val overlaps = uiState.plots.any { plot ->
-                if (plot.id == uiState.selectedPlotId) false
-                else {
-                    hx < (plot.posX + plot.widthM) && (hx + w) > plot.posX &&
-                    hy < (plot.posY + plot.heightM) && (hy + h) > plot.posY
-                }
+                hx < (plot.posX + plot.widthM) && (hx + 1.0f) > plot.posX &&
+                hy < (plot.posY + plot.heightM) && (hy + 1.0f) > plot.posY
             }
             inBounds && !overlaps
         } else true
     }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showSuccessDialog by remember { mutableStateOf(false) }
+    var showCropsSummaryOverlay by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var farmNameInput by remember { mutableStateOf("Murcia Farm") }
 
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Background
-        HomeBackground()
+
 
         // Interactive 2D Isometric Farm Canvas
         FarmCanvas(
             modifier = Modifier.fillMaxSize(),
             uiState = uiState,
             editViewModel = editViewModel,
+            canvasMode = com.maptanim.app.domain.model.CanvasMode.EDIT,
+            animateEntranceZoom = true,
             activeCropName = activeCropName,
             activeCropId = activeCropId,
             hoverWorldPos = hoverWorldPos,
@@ -157,12 +142,12 @@ fun FarmEditorScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Save Button
+            // Save Button (Opens Crops Planting Summary directly)
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color(0xFF2E7D32),
                 shadowElevation = 6.dp,
-                modifier = Modifier.clickable { showSaveDialog = true }
+                modifier = Modifier.clickable { showCropsSummaryOverlay = true }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -282,13 +267,21 @@ fun FarmEditorScreen(
                 },
                 onCropDragEnd = { dropOffset ->
                     if (isDraggingCrop) {
-                        val wasValid = isValidPlacement
-                        isDraggingCrop = false
                         val dropWorld = com.maptanim.app.renderer.model.IsometricProjection.toWorld(dropOffset.x, dropOffset.y, liveCameraState)
                         val snapped = com.maptanim.app.renderer.canvas.FarmCanvasRenderer.snapToGrid(dropWorld)
                         val safeX = snapped.x.coerceIn(0f, 44.0f)
                         val safeY = snapped.y.coerceIn(0f, 44.0f)
-                        if (wasValid) {
+
+                        // Strict collision check at target drop location
+                        val canDrop = safeX >= 0f && safeY >= 0f && (safeX + 1.0f) <= 45.0f && (safeY + 1.0f) <= 45.0f &&
+                                !uiState.plots.any { plot ->
+                                    safeX < (plot.posX + plot.widthM) && (safeX + 1.0f) > plot.posX &&
+                                    safeY < (plot.posY + plot.heightM) && (safeY + 1.0f) > plot.posY
+                                }
+
+                        isDraggingCrop = false
+
+                        if (canDrop) {
                             editViewModel.addDirectPlantingPlot(safeX, safeY, dragCropName, dragCropId)
                             if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP ||
                                 tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP ||
@@ -312,55 +305,48 @@ fun FarmEditorScreen(
 
         // ── CoC Floating Single Crop Sprite Preview Layer (Right Panel Drags) ─────
         if (isDraggingCrop) {
-            val cropClean = when (dragCropName.lowercase().replace(" ", "")) {
-                "stringbeans", "sitaw", "beans" -> "crop_stringbeans"
-                "eggplant", "talong" -> "crop_eggplant"
-                "tomato", "kamatis" -> "crop_tomato"
-                "onion", "sibuyas" -> "crop_onion"
-                "pumpkin", "kalabasa" -> "crop_pumpkin"
-                "corn", "mais" -> "crop_corn"
-                else -> "crop_carrot"
+            val cropImageFile = when (dragCropName.lowercase().replace(" ", "")) {
+                "stringbeans", "sitaw", "beans" -> "sitaw.png"
+                "eggplant", "talong" -> "eggplant.png"
+                "tomato", "kamatis" -> "tomato.png"
+                "onion", "sibuyas" -> "onion.png"
+                "pumpkin", "kalabasa", "squash" -> "pumpkin.png"
+                "corn", "mais" -> "corn.png"
+                "cabbage", "repolyo" -> "cabbage.png"
+                "pechay" -> "pechay.png"
+                "ampalaya", "bittergourd" -> "ampalaya.png"
+                "okra" -> "okra.png"
+                "sili", "chili", "chilipepper", "pepper" -> "sili.png"
+                "cucumber", "pipino" -> "pipino.png"
+                "kangkong", "waterspinach" -> "kangkong.png"
+                "lettuce", "litsugas" -> "lettuce.png"
+                else -> "carrot.png"
             }
-            val assetBitmap = remember(cropClean) {
-                AssetLoader.loadFromAssets(context, "crops/${cropClean}_1.png")
-                    ?: AssetLoader.loadFromAssets(context, "crops/crop_carrot_1.png")
-            }
+
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val halfSizePx = with(density) { 40.dp.roundToPx() }
 
             Box(
                 modifier = Modifier
                     .offset {
                         IntOffset(
-                            x = dragTouchPos.x.toInt() - 40,
-                            y = dragTouchPos.y.toInt() - 40
+                            x = dragTouchPos.x.toInt() - halfSizePx,
+                            y = dragTouchPos.y.toInt() - halfSizePx
                         )
                     }
                     .size(80.dp)
                     .shadow(12.dp, CircleShape)
-                    .background(Color(0xFFE8F5E9).copy(alpha = 0.9f), CircleShape)
-                    .border(2.dp, Color(0xFF1B5E20), CircleShape),
+                    .background(Color(0xFFE8F5E9).copy(alpha = 0.95f), CircleShape)
+                    .border(2.5.dp, Color(0xFF1B5E20), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (assetBitmap != null) {
-                    Image(
-                        bitmap = assetBitmap,
-                        contentDescription = "Floating Crop",
-                        modifier = Modifier.size(56.dp)
-                    )
-                } else {
-                    val emoji = when (cropClean) {
-                        "crop_stringbeans" -> "🫘"
-                        "crop_eggplant" -> "🍆"
-                        "crop_tomato" -> "🍅"
-                        "crop_onion" -> "🧅"
-                        "crop_pumpkin" -> "🎃"
-                        "crop_corn" -> "🌽"
-                        else -> "🥕"
-                    }
-                    Text(
-                        text = emoji,
-                        fontSize = 32.sp
-                    )
-                }
+                val assetUri = "file:///android_asset/metadata/crops_images/$cropImageFile"
+                AsyncImage(
+                    model = assetUri,
+                    contentDescription = "Floating Crop",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(56.dp)
+                )
             }
         }
 
@@ -414,74 +400,22 @@ fun FarmEditorScreen(
             )
         }
 
-        // ── Save Farm Dialog ───────────────────────────
-        if (showSaveDialog) {
-            AlertDialog(
-                onDismissRequest = { showSaveDialog = false },
-                title = { Text("Save Farm Layout", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Type farm name to save your layout to Supabase / Local Storage:", fontSize = 14.sp)
-                        OutlinedTextField(
-                            value = farmNameInput,
-                            onValueChange = { farmNameInput = it },
-                            label = { Text("Farm Name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+        // ── Crops Planting Summary Overlay (Opens Directly on Save) ───────────
+        if (showCropsSummaryOverlay) {
+            CropsSummaryOverlay(
+                farmName = farmNameInput,
+                plots = uiState.plots,
+                onCancel = {
+                    showCropsSummaryOverlay = false
                 },
-                confirmButton = {
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                        onClick = {
-                            editViewModel.saveChanges(
-                                farmName = farmNameInput,
-                                isGuest = false,
-                                onSaveComplete = {
-                                    showSaveDialog = false
-                                    showSuccessDialog = true
-                                }
-                            )
-                        }
-                    ) {
-                        Text("Okay", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showSaveDialog = false }) {
-                        Text("Cancel", color = Color.Gray)
-                    }
-                }
-            )
-        }
-
-        // ── Success Confirmation Message Dialog ────────────────────────
-        if (showSuccessDialog) {
-            AlertDialog(
-                onDismissRequest = { },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Success",
-                        tint = Color(0xFF2E7D32),
-                        modifier = Modifier.size(48.dp)
-                    )
-                },
-                title = { Text("Congratulations!", fontWeight = FontWeight.Bold) },
-                text = {
-                    Text(
-                        "Congratulations! You created your first farm!",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = Color(0xFF1B5E20)
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                        onClick = {
-                            showSuccessDialog = false
+                onSave = { updatedDates, updatedVarieties ->
+                    editViewModel.saveChanges(
+                        farmName = farmNameInput,
+                        isGuest = false,
+                        plantedDatesMap = updatedDates,
+                        varietiesMap = updatedVarieties,
+                        onSaveComplete = {
+                            showCropsSummaryOverlay = false
                             if (tutorialUiState.isTutorialActive) {
                                 tutorialViewModel.completeTutorial()
                             }
@@ -489,9 +423,7 @@ fun FarmEditorScreen(
                                 popUpTo(com.maptanim.app.navigation.Routes.HOME) { inclusive = true }
                             }
                         }
-                    ) {
-                        Text("Okay", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                    )
                 }
             )
         }
@@ -636,10 +568,10 @@ fun FarmEditorScreen(
                 }
                 com.maptanim.app.viewmodel.TutorialStep.EDIT_SAVE_FARM -> {
                     val saveFarmAction = {
-                        showSaveDialog = true
+                        showCropsSummaryOverlay = true
                     }
                     com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
-                        dialogText = "Napakagaling! Pindutin ang 'Save' button sa taas para mai-save at pangalanan ang iyong sakahan!",
+                        dialogText = "Napakagaling! Pindutin ang 'Save' button sa taas para mai-save ang iskedyul at layout ng iyong sakahan!",
                         titleText = "Tatay Juan (Farm Guide)",
                         showSkip = true,
                         compactMode = true,

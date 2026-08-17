@@ -35,7 +35,6 @@ fun TopBar(
     notificationCount: Int = 0,
     nickname: String = "",
     avatarAssetPath: String? = null,
-    onEditClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
@@ -55,8 +54,9 @@ fun TopBar(
         ) {
             // Profile Avatar — loaded from Supabase profile or local default
             com.maptanim.app.ui.components.avatar.ProfileAvatar(
-                avatarAssetPath = avatarAssetPath,
-                size = 40.dp,
+                avatarAssetPath = avatarAssetPath ?: "Avatar/Male_Avatar.png",
+                size = 38.dp,
+                borderWidth = 2.dp,
                 onClick = onProfileClick
             )
 

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface UserRepository {
     fun observeUserProfile(): Flow<UserProfile>
     fun observeNotifications(): Flow<List<NotificationItem>>
+    suspend fun refreshNotifications()
     suspend fun getAvailableAvatars(): List<AvatarItem>
     suspend fun isNicknameAvailable(nickname: String): Boolean
     suspend fun updateNickname(newNickname: String): Boolean
@@ -15,5 +16,6 @@ interface UserRepository {
     suspend fun markNotificationAsRead(notificationId: String)
     suspend fun deleteNotification(notificationId: String)
     suspend fun bindAccount(email: String): Boolean
+    suspend fun sendSupportTicket(subject: String, message: String, category: String = "GENERAL"): Boolean
     suspend fun logout(): Boolean
 }

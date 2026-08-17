@@ -33,7 +33,7 @@ This document specifies the exact technical interaction model for the **Direct S
    └──> Tap "Delete"    ──> Removes selected Crop Zone from layout
    │
    ▼
-6. Hold & Drag Crop Zone -> Reposition crop zone anywhere on 30m × 30m farm soil grid
+6. Hold & Drag Crop Zone -> Reposition crop zone anywhere on 45m × 45m farm soil grid
    │
    ▼
 7. Click "Save" -> Save Farm Dialog ("Type farm name")

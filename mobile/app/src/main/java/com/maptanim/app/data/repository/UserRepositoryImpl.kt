@@ -6,6 +6,7 @@ import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.domain.model.UserProfile
 import com.maptanim.app.domain.repository.UserRepository
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,55 @@ class UserRepositoryImpl(
     override fun observeUserProfile(): Flow<UserProfile> = userProfileState.asStateFlow()
 
     override fun observeNotifications(): Flow<List<NotificationItem>> = notificationsState.asStateFlow()
+
+    override suspend fun refreshNotifications() {
+        try {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: userProfileState.value.id.ifBlank { null }
+
+            // 1. Direct notifications from notifications table
+            val notifDtos = profileRepository.getNotifications(userId)
+            val notifItems = notifDtos.map { dto ->
+                NotificationItem(
+                    id = dto.id ?: java.util.UUID.randomUUID().toString(),
+                    title = dto.title.ifBlank { "Notification" },
+                    message = dto.body ?: "",
+                    timestamp = formatTimestamp(dto.createdAt),
+                    isRead = dto.isRead,
+                    type = dto.notificationType
+                )
+            }
+
+            // 2. Admin replies from feedback table
+            val feedbackDtos = profileRepository.getFeedbackRepliesForUser(userId)
+            val feedbackItems = feedbackDtos.map { dto ->
+                NotificationItem(
+                    id = dto.id ?: java.util.UUID.randomUUID().toString(),
+                    title = "Support Advisory: ${dto.subject}",
+                    message = dto.adminReply ?: "",
+                    timestamp = formatTimestamp(dto.resolvedAt ?: dto.createdAt),
+                    isRead = false,
+                    type = "SUPPORT_REPLY"
+                )
+            }
+
+            val allItems = (feedbackItems + notifItems).distinctBy { it.id }
+            if (allItems.isNotEmpty()) {
+                notificationsState.value = allItems
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun formatTimestamp(rawTimestamp: String?): String {
+        if (rawTimestamp.isNullOrBlank()) return "Just now"
+        return try {
+            rawTimestamp.take(16).replace("T", " ")
+        } catch (_: Exception) {
+            rawTimestamp
+        }
+    }
 
     suspend fun loadUserProfile() {
         try {
@@ -36,6 +86,7 @@ class UserRepositoryImpl(
                     tutorialCompletedAt = profile?.tutorialCompletedAt
                 )
             }
+            refreshNotifications()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -105,10 +156,20 @@ class UserRepositoryImpl(
         notificationsState.value = notificationsState.value.map {
             if (it.id == notificationId) it.copy(isRead = true) else it
         }
+        try {
+            profileRepository.markNotificationRead(notificationId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override suspend fun deleteNotification(notificationId: String) {
         notificationsState.value = notificationsState.value.filter { it.id != notificationId }
+        try {
+            profileRepository.deleteNotification(notificationId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override suspend fun bindAccount(email: String): Boolean {
@@ -117,6 +178,26 @@ class UserRepositoryImpl(
             boundEmail = email
         )
         return true
+    }
+
+    override suspend fun sendSupportTicket(subject: String, message: String, category: String): Boolean {
+        return try {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val profile = userProfileState.value
+            val dto = FeedbackDto(
+                userId = user?.id ?: profile.id.ifBlank { null },
+                farmerName = profile.nickname.ifBlank { "Mobile Farmer" },
+                category = category,
+                subject = subject,
+                message = message,
+                status = "PENDING"
+            )
+            SupabaseClient.client.from("feedback").insert(dto)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
     fun resetState() {

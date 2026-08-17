@@ -288,6 +288,10 @@ private fun ProfileTabContent(
     uiState: ProfileUiState,
     viewModel: ProfileViewModel
 ) {
+    var isFarmsExpanded by remember { mutableStateOf(false) }
+    var isHarvestExpanded by remember { mutableStateOf(false) }
+    var isForumExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -439,7 +443,7 @@ private fun ProfileTabContent(
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Farms List Card (from Supabase cloud or local Room)
+            // 1. Farms List Card (with See More toggle)
             item {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -452,10 +456,26 @@ private fun ProfileTabContent(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("My Farms List", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Agriculture, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("My Farms List", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                            }
+                            if (uiState.farms.size > 2) {
+                                TextButton(onClick = { isFarmsExpanded = true }) {
+                                    Text(
+                                        text = "See More (${uiState.farms.size}) ▼",
+                                        color = ForestGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
                         }
 
                         if (uiState.farms.isEmpty()) {
@@ -465,7 +485,8 @@ private fun ProfileTabContent(
                                 color = White.copy(alpha = 0.6f)
                             )
                         } else {
-                            uiState.farms.forEach { farm ->
+                            val visibleFarms = uiState.farms.take(2)
+                            visibleFarms.forEach { farm ->
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = Color(0xFF141A12),
@@ -485,9 +506,25 @@ private fun ProfileTabContent(
                                                 fontSize = 13.sp,
                                                 color = White
                                             )
-
+                                            Text(
+                                                text = "📍 ${farm.location.ifBlank { "Murcia, Negros Occidental" }}",
+                                                fontSize = 11.sp,
+                                                color = White.copy(alpha = 0.6f)
+                                            )
                                         }
-
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = ForestGreen.copy(alpha = 0.25f),
+                                            border = BorderStroke(1.dp, ForestGreen)
+                                        ) {
+                                            Text(
+                                                text = "ACTIVE",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = White,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -496,7 +533,7 @@ private fun ProfileTabContent(
                 }
             }
 
-            // 2. Community Forum Activity Card
+            // 2. Farm Harvest History Card (with Activity Timestamp & See More modal)
             item {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -509,10 +546,188 @@ private fun ProfileTabContent(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Forum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Community Forum Activity", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Agriculture, contentDescription = null, tint = Color(0xFFD48806), modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Farm Harvest History", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                            }
+                            if (uiState.harvestHistory.size > 3) {
+                                TextButton(onClick = { isHarvestExpanded = true }) {
+                                    Text(
+                                        text = "See More (${uiState.harvestHistory.size}) ▼",
+                                        color = Color(0xFFD48806),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = "Preserved crop yield records for rotation planning & management decisions.",
+                            fontSize = 11.sp,
+                            color = White.copy(alpha = 0.6f)
+                        )
+
+                        if (uiState.harvestHistory.isEmpty()) {
+                            Text(
+                                text = "No harvest records stored yet. Harvest ready crops from active monitoring to record history.",
+                                fontSize = 12.sp,
+                                color = White.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            val visibleHarvests = uiState.harvestHistory.take(3)
+                            visibleHarvests.forEach { record ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFF141A12),
+                                    border = BorderStroke(1.dp, Color(0xFF2A3828)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(getCropEmoji(record.cropName), fontSize = 16.sp)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = record.cropName.uppercase(),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp,
+                                                    color = White
+                                                )
+                                                if (!record.cropVariety.isNullOrBlank()) {
+                                                    Text(
+                                                        text = " (${record.cropVariety})",
+                                                        fontSize = 12.sp,
+                                                        color = ForestGreen
+                                                    )
+                                                }
+                                            }
+
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFFD48806).copy(alpha = 0.25f),
+                                                border = BorderStroke(1.dp, Color(0xFFD48806))
+                                            ) {
+                                                Text(
+                                                    text = record.farmName,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = White,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "📍 Plot/Zone: ${record.plotLabel}",
+                                                fontSize = 11.sp,
+                                                color = White.copy(alpha = 0.8f)
+                                            )
+                                            Text(
+                                                text = "⚖️ Yield: ${if (record.yieldKg > 0f) "${record.yieldKg} kg" else "N/A"}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFD48806)
+                                            )
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "🌱 Planted: ${record.plantedDate?.take(10) ?: "N/A"}",
+                                                fontSize = 10.sp,
+                                                color = White.copy(alpha = 0.6f)
+                                            )
+                                            Text(
+                                                text = "🌾 Harvested: ${record.harvestedAt.take(10)}",
+                                                fontSize = 10.sp,
+                                                color = White.copy(alpha = 0.6f)
+                                            )
+                                            Text(
+                                                text = "⏱️ ${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}",
+                                                fontSize = 10.sp,
+                                                color = ForestGreen
+                                            )
+                                        }
+
+                                        // Exact Time Activity Timestamp
+                                        Text(
+                                            text = "🕒 Activity Time: ${formatActivityTime(record.harvestedAt)}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFD48806)
+                                        )
+
+                                        if (!record.notes.isNullOrBlank()) {
+                                            Text(
+                                                text = "📝 Notes: ${record.notes}",
+                                                fontSize = 11.sp,
+                                                color = White.copy(alpha = 0.75f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Community Forum Activity Card (with Activity Timestamp & See More modal)
+            item {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF1E261A),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Forum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Community Forum Activity", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                            }
+                            if (uiState.userPosts.size > 3) {
+                                TextButton(onClick = { isForumExpanded = true }) {
+                                    Text(
+                                        text = "See More (${uiState.userPosts.size}) ▼",
+                                        color = ForestGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
                         }
 
                         if (uiState.userPosts.isEmpty()) {
@@ -522,7 +737,8 @@ private fun ProfileTabContent(
                                 color = White.copy(alpha = 0.6f)
                             )
                         } else {
-                            uiState.userPosts.take(3).forEach { post ->
+                            val visiblePosts = uiState.userPosts.take(3)
+                            visiblePosts.forEach { post ->
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = Color(0xFF141A12),
@@ -558,11 +774,25 @@ private fun ProfileTabContent(
                                             maxLines = 2
                                         )
                                         Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
-                                            Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                                Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                            }
+
+                                            // Exact Time Activity Timestamp
+                                            Text(
+                                                text = "🕒 ${formatActivityTime(post.timestamp)}",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = ForestGreen
+                                            )
                                         }
                                     }
                                 }
@@ -572,6 +802,28 @@ private fun ProfileTabContent(
                 }
             }
         }
+    }
+
+    // Render Full List Modals when See More is clicked
+    if (isFarmsExpanded) {
+        FullFarmsListModal(
+            farms = uiState.farms,
+            onDismiss = { isFarmsExpanded = false }
+        )
+    }
+
+    if (isHarvestExpanded) {
+        FullHarvestHistoryModal(
+            harvestHistory = uiState.harvestHistory,
+            onDismiss = { isHarvestExpanded = false }
+        )
+    }
+
+    if (isForumExpanded) {
+        FullCommunityActivityModal(
+            posts = uiState.userPosts,
+            onDismiss = { isForumExpanded = false }
+        )
     }
 }
 
@@ -587,6 +839,7 @@ private fun NotificationTabContent(
     val filteredNotifications = remember(uiState.notifications, selectedFilter) {
         when (selectedFilter) {
             "UNREAD" -> uiState.notifications.filter { !it.isRead }
+            "SUPPORT" -> uiState.notifications.filter { it.type.uppercase().contains("SUPPORT") || it.type.uppercase().contains("REPLY") }
             "SYSTEM" -> uiState.notifications.filter { it.type.uppercase().contains("SYSTEM") }
             "CROP" -> uiState.notifications.filter { it.type.uppercase().contains("CROP") }
             "BUG" -> uiState.notifications.filter { it.type.uppercase().contains("BUG") }
@@ -606,6 +859,7 @@ private fun NotificationTabContent(
             listOf(
                 "ALL" to "All Updates",
                 "UNREAD" to "Unread",
+                "SUPPORT" to "Support Advisories",
                 "SYSTEM" to "System Announcements",
                 "CROP" to "Crops Added",
                 "BUG" to "Bug Fixes"
@@ -719,6 +973,7 @@ private fun NotificationCardItem(
                         .clip(CircleShape)
                         .background(
                             when {
+                                notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Color(0xFF8E24AA)
                                 notif.type.uppercase().contains("CROP") -> Color(0xFF4CAF50)
                                 notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Color(0xFFFFA000)
                                 notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Color(0xFF1E88E5)
@@ -729,6 +984,7 @@ private fun NotificationCardItem(
                 ) {
                     Icon(
                         imageVector = when {
+                            notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Icons.Default.SupportAgent
                             notif.type.uppercase().contains("CROP") -> Icons.Default.Eco
                             notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Icons.Default.Build
                             notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Icons.Default.Campaign
@@ -1043,5 +1299,846 @@ private fun SettingsTabContent(
             },
             containerColor = Color(0xFF1E261A)
         )
+    }
+}
+
+// ── Crop Emoji Helper ────────────────────────────────────────────────────────
+private fun getCropEmoji(name: String): String = when (name.lowercase().replace(" ", "")) {
+    "carrot", "karot" -> "🥕"
+    "stringbeans", "sitaw", "beans" -> "🫘"
+    "eggplant", "talong" -> "🍆"
+    "tomato", "kamatis" -> "🍅"
+    "onion", "sibuyas" -> "🧅"
+    "pumpkin", "squash", "kalabasa" -> "🎃"
+    "corn", "mais" -> "🌽"
+    "cabbage", "repolyo" -> "🥬"
+    "pechay" -> "🥬"
+    "ampalaya" -> "🥒"
+    "okra" -> "🌿"
+    "sili", "chilipepper", "chili" -> "🌶️"
+    "cucumber", "pipino" -> "🥒"
+    else -> "🌱"
+}
+
+// ── Time Activity Formatter ──────────────────────────────────────────────────
+private fun formatActivityTime(rawTimestamp: String?): String {
+    if (rawTimestamp.isNullOrBlank()) return "Recently"
+    return try {
+        val zdt = java.time.ZonedDateTime.parse(rawTimestamp)
+        val localZdt = zdt.withZoneSameInstant(java.time.ZoneId.systemDefault())
+        val now = java.time.ZonedDateTime.now()
+        val diffHours = java.time.Duration.between(localZdt, now).toHours()
+        val diffMins = java.time.Duration.between(localZdt, now).toMinutes()
+        when {
+            diffMins < 1 -> "Just now"
+            diffMins < 60 -> "$diffMins mins ago"
+            diffHours < 24 && localZdt.dayOfMonth == now.dayOfMonth -> "Today at ${localZdt.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))}"
+            diffHours < 48 -> "Yesterday at ${localZdt.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))}"
+            else -> localZdt.format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy • hh:mm a"))
+        }
+    } catch (e: Exception) {
+        try {
+            val date = java.time.LocalDate.parse(rawTimestamp.take(10))
+            date.format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy"))
+        } catch (e2: Exception) {
+            rawTimestamp.take(16).replace("T", " ")
+        }
+    }
+}
+
+// ── Modals with Search Filter & Pagination ───────────────────────────────────
+
+@Composable
+private fun FullFarmsListModal(
+    farms: List<com.maptanim.app.domain.model.Farm>,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var currentPage by remember { mutableStateOf(1) }
+    val itemsPerPage = 5
+
+    val filteredFarms = remember(farms, searchQuery) {
+        if (searchQuery.isBlank()) farms
+        else farms.filter {
+            it.farmName.contains(searchQuery, ignoreCase = true) ||
+            it.location.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    val totalPages = (filteredFarms.size + itemsPerPage - 1) / itemsPerPage
+    val pageItems = remember(filteredFarms, currentPage) {
+        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val startIndex = (safePage - 1) * itemsPerPage
+        filteredFarms.drop(startIndex).take(itemsPerPage)
+    }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.88f)
+                .clip(RoundedCornerShape(20.dp))
+                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+            color = Color(0xFA121811)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Agriculture, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "🚜 My Registered Farms (${filteredFarms.size})",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = White
+                        )
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2A3424),
+                    border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it; currentPage = 1 },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(color = White, fontSize = 12.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(ForestGreen),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.isEmpty()) {
+                                    Text("Search farms by name or location...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
+                                }
+                                innerTextField()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (pageItems.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("No matching farms found.", color = White.copy(alpha = 0.6f), fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+                        items(pageItems) { farm ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1B2317),
+                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.3f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(farm.farmName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = White)
+                                        Text("📍 Location: ${farm.location.ifBlank { "Murcia, Negros Occidental" }}", fontSize = 11.sp, color = White.copy(alpha = 0.7f))
+                                        Text("📐 Total Area: ${(farm.totalAreaSqm ?: 0f).toInt()} sqm", fontSize = 10.sp, color = ForestGreen)
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = ForestGreen.copy(alpha = 0.25f),
+                                        border = BorderStroke(1.dp, ForestGreen)
+                                    ) {
+                                        Text("ACTIVE FARM", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (totalPages > 1) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (currentPage > 1) currentPage-- },
+                            enabled = currentPage > 1,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                        }
+                        Text("Page $currentPage of $totalPages", fontSize = 12.sp, color = White, fontWeight = FontWeight.Bold)
+                        OutlinedButton(
+                            onClick = { if (currentPage < totalPages) currentPage++ },
+                            enabled = currentPage < totalPages,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Next ►", fontSize = 11.sp, color = White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullHarvestHistoryModal(
+    harvestHistory: List<com.maptanim.app.domain.model.HarvestRecord>,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedDateFilter by remember { mutableStateOf<String?>(null) }
+    var showDatePickerModal by remember { mutableStateOf(false) }
+    var currentPage by remember { mutableStateOf(1) }
+    val itemsPerPage = 5
+
+    val filteredRecords = remember(harvestHistory, searchQuery, selectedDateFilter) {
+        harvestHistory.filter { record ->
+            val matchesSearch = searchQuery.isBlank() || (
+                record.cropName.contains(searchQuery, ignoreCase = true) ||
+                (record.cropVariety?.contains(searchQuery, ignoreCase = true) == true) ||
+                record.farmName.contains(searchQuery, ignoreCase = true) ||
+                record.plotLabel.contains(searchQuery, ignoreCase = true) ||
+                (record.notes?.contains(searchQuery, ignoreCase = true) == true)
+            )
+            val matchesDate = selectedDateFilter.isNullOrBlank() || (
+                record.harvestedAt.take(10) == selectedDateFilter ||
+                (record.plantedDate?.take(10) == selectedDateFilter)
+            )
+            matchesSearch && matchesDate
+        }
+    }
+
+    val totalPages = (filteredRecords.size + itemsPerPage - 1) / itemsPerPage
+    val pageItems = remember(filteredRecords, currentPage) {
+        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val startIndex = (safePage - 1) * itemsPerPage
+        filteredRecords.drop(startIndex).take(itemsPerPage)
+    }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.88f)
+                .clip(RoundedCornerShape(20.dp))
+                .border(1.5.dp, Color(0xFFD48806).copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
+            color = Color(0xFA121811)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Agriculture, contentDescription = null, tint = Color(0xFFD48806), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (selectedDateFilter != null) "🌾 Harvests on $selectedDateFilter (${filteredRecords.size})" else "🌾 Complete Harvest History (${filteredRecords.size})",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = White
+                        )
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                    }
+                }
+
+                // Search Bar with 📅 Date Selection Icon Button
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2A3424),
+                    border = BorderStroke(1.dp, Color(0xFFD48806).copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it; currentPage = 1 },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(color = White, fontSize = 12.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFFD48806)),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.isEmpty()) {
+                                    Text("Search harvest history by crop, variety, plot...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
+                                }
+                                innerTextField()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        // 📅 Date Selection Icon Button
+                        IconButton(
+                            onClick = { showDatePickerModal = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = "Select Activity Date",
+                                tint = if (selectedDateFilter != null) Color(0xFFD48806) else White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                // Date Filter Badge if Active
+                if (selectedDateFilter != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFD48806).copy(alpha = 0.25f),
+                            border = BorderStroke(1.dp, Color(0xFFD48806))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable { selectedDateFilter = null }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "📅 Activity Date: $selectedDateFilter ✖",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = White
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Showing all harvest activity on $selectedDateFilter",
+                            fontSize = 10.sp,
+                            color = White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (pageItems.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (selectedDateFilter != null) "No harvest activities found on $selectedDateFilter." else "No harvest records match your search filter.",
+                                    color = White.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    } else {
+                        items(pageItems) { record ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1B2317),
+                                border = BorderStroke(1.dp, Color(0xFF2A3828)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(getCropEmoji(record.cropName), fontSize = 18.sp)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = record.cropName.uppercase(),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = White
+                                            )
+                                            if (!record.cropVariety.isNullOrBlank()) {
+                                                Text(
+                                                    text = " (${record.cropVariety})",
+                                                    fontSize = 12.sp,
+                                                    color = ForestGreen
+                                                )
+                                            }
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFD48806).copy(alpha = 0.25f),
+                                            border = BorderStroke(1.dp, Color(0xFFD48806))
+                                        ) {
+                                            Text(
+                                                text = record.farmName,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = White,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("📍 Plot/Zone: ${record.plotLabel}", fontSize = 11.sp, color = White.copy(alpha = 0.8f))
+                                        Text("⚖️ Yield: ${if (record.yieldKg > 0f) "${record.yieldKg} kg" else "N/A"}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD48806))
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("🌱 Planted: ${record.plantedDate?.take(10) ?: "N/A"}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                        Text("🌾 Harvested: ${record.harvestedAt.take(10)}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                        Text("⏱️ ${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}", fontSize = 10.sp, color = ForestGreen)
+                                    }
+
+                                    Text(
+                                        text = "🕒 Activity Time: ${formatActivityTime(record.harvestedAt)}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFD48806)
+                                    )
+
+                                    if (!record.notes.isNullOrBlank()) {
+                                        Text("📝 Notes: ${record.notes}", fontSize = 11.sp, color = White.copy(alpha = 0.8f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (totalPages > 1) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (currentPage > 1) currentPage-- },
+                            enabled = currentPage > 1,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                        }
+                        Text("Page $currentPage of $totalPages", fontSize = 12.sp, color = White, fontWeight = FontWeight.Bold)
+                        OutlinedButton(
+                            onClick = { if (currentPage < totalPages) currentPage++ },
+                            enabled = currentPage < totalPages,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Next ►", fontSize = 11.sp, color = White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDatePickerModal) {
+        DatePickerSelectionDialog(
+            selectedDate = selectedDateFilter,
+            onDateSelected = { selectedDateFilter = it; currentPage = 1 },
+            onDismiss = { showDatePickerModal = false }
+        )
+    }
+}
+
+@Composable
+private fun FullCommunityActivityModal(
+    posts: List<com.maptanim.app.domain.model.CommunityPost>,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedDateFilter by remember { mutableStateOf<String?>(null) }
+    var showDatePickerModal by remember { mutableStateOf(false) }
+    var currentPage by remember { mutableStateOf(1) }
+    val itemsPerPage = 5
+
+    val filteredPosts = remember(posts, searchQuery, selectedDateFilter) {
+        posts.filter { post ->
+            val matchesSearch = searchQuery.isBlank() || (
+                post.title.contains(searchQuery, ignoreCase = true) ||
+                post.content.contains(searchQuery, ignoreCase = true) ||
+                post.category.contains(searchQuery, ignoreCase = true)
+            )
+            val matchesDate = selectedDateFilter.isNullOrBlank() || (
+                post.timestamp.contains(selectedDateFilter!!)
+            )
+            matchesSearch && matchesDate
+        }
+    }
+
+    val totalPages = (filteredPosts.size + itemsPerPage - 1) / itemsPerPage
+    val pageItems = remember(filteredPosts, currentPage) {
+        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val startIndex = (safePage - 1) * itemsPerPage
+        filteredPosts.drop(startIndex).take(itemsPerPage)
+    }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.88f)
+                .clip(RoundedCornerShape(20.dp))
+                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+            color = Color(0xFA121811)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Forum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (selectedDateFilter != null) "💬 Forum Activity on $selectedDateFilter (${filteredPosts.size})" else "💬 Community Forum Activity (${filteredPosts.size})",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = White
+                        )
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                    }
+                }
+
+                // Search Bar with 📅 Date Selection Icon Button
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2A3424),
+                    border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it; currentPage = 1 },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(color = White, fontSize = 12.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(ForestGreen),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.isEmpty()) {
+                                    Text("Search forum activity by title, content, category...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
+                                }
+                                innerTextField()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        // 📅 Date Selection Icon Button
+                        IconButton(
+                            onClick = { showDatePickerModal = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = "Select Activity Date",
+                                tint = if (selectedDateFilter != null) ForestGreen else White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                // Date Filter Badge if Active
+                if (selectedDateFilter != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = ForestGreen.copy(alpha = 0.25f),
+                            border = BorderStroke(1.dp, ForestGreen)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable { selectedDateFilter = null }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "📅 Activity Date: $selectedDateFilter ✖",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = White
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Showing all forum activity on $selectedDateFilter",
+                            fontSize = 10.sp,
+                            color = White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (pageItems.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (selectedDateFilter != null) "No forum activity found on $selectedDateFilter." else "No community posts match your search filter.",
+                                    color = White.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    } else {
+                        items(pageItems) { post ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1B2317),
+                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.3f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(post.title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = White)
+                                        Text(post.category, fontSize = 10.sp, color = ForestGreen, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    Text(post.content, fontSize = 11.sp, color = White.copy(alpha = 0.8f))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                            Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                        }
+                                        Text("🕒 ${formatActivityTime(post.timestamp)}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = ForestGreen)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (totalPages > 1) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (currentPage > 1) currentPage-- },
+                            enabled = currentPage > 1,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                        }
+                        Text("Page $currentPage of $totalPages", fontSize = 12.sp, color = White, fontWeight = FontWeight.Bold)
+                        OutlinedButton(
+                            onClick = { if (currentPage < totalPages) currentPage++ },
+                            enabled = currentPage < totalPages,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Next ►", fontSize = 11.sp, color = White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDatePickerModal) {
+        DatePickerSelectionDialog(
+            selectedDate = selectedDateFilter,
+            onDateSelected = { selectedDateFilter = it; currentPage = 1 },
+            onDismiss = { showDatePickerModal = false }
+        )
+    }
+}
+
+// ── Interactive Date Selection Dialog ────────────────────────────────────────
+
+@Composable
+private fun DatePickerSelectionDialog(
+    selectedDate: String?,
+    onDateSelected: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var dateInput by remember { mutableStateOf(selectedDate ?: java.time.LocalDate.now().toString()) }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1E261A),
+            border = BorderStroke(1.dp, ForestGreen),
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Select Activity Date", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = White)
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = null, tint = White)
+                    }
+                }
+
+                Text(
+                    text = "Filter and view all recorded farm harvest and community activities on a specific day.",
+                    fontSize = 11.sp,
+                    color = White.copy(alpha = 0.7f)
+                )
+
+                // Quick Preset Chips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val todayStr = java.time.LocalDate.now().toString()
+                    val yesterdayStr = java.time.LocalDate.now().minusDays(1).toString()
+
+                    FilterChip(
+                        selected = dateInput == todayStr,
+                        onClick = { dateInput = todayStr },
+                        label = { Text("Today", fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ForestGreen,
+                            selectedLabelColor = White
+                        )
+                    )
+                    FilterChip(
+                        selected = dateInput == yesterdayStr,
+                        onClick = { dateInput = yesterdayStr },
+                        label = { Text("Yesterday", fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ForestGreen,
+                            selectedLabelColor = White
+                        )
+                    )
+                    FilterChip(
+                        selected = selectedDate == null,
+                        onClick = { onDateSelected(null); onDismiss() },
+                        label = { Text("Show All", fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFD48806),
+                            selectedLabelColor = White
+                        )
+                    )
+                }
+
+                // Custom Date Entry Field
+                OutlinedTextField(
+                    value = dateInput,
+                    onValueChange = { dateInput = it },
+                    label = { Text("Enter Date (YYYY-MM-DD)", color = White.copy(alpha = 0.7f), fontSize = 11.sp) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ForestGreen,
+                        unfocusedBorderColor = White.copy(alpha = 0.3f),
+                        focusedTextColor = White,
+                        unfocusedTextColor = White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { onDateSelected(null); onDismiss() }) {
+                        Text("Reset / All", color = White.copy(alpha = 0.7f), fontSize = 12.sp)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Button(
+                        onClick = { onDateSelected(dateInput.trim()); onDismiss() },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    ) {
+                        Text("Apply Date Filter", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
     }
 }

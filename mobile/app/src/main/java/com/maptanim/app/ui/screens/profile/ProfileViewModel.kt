@@ -10,6 +10,7 @@ import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.domain.model.Farm
 import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.domain.model.UserProfile
+import com.maptanim.app.domain.model.getDaysRemainingForNicknameChange
 import com.maptanim.app.domain.repository.UserRepository
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,8 @@ data class ProfileUiState(
     val notifications: List<NotificationItem> = emptyList(),
     val farms: List<Farm> = emptyList(),
     val userPosts: List<CommunityPost> = emptyList(),
-    
+    val harvestHistory: List<com.maptanim.app.domain.model.HarvestRecord> = emptyList(),
+
     // Avatar picker modal states
     val showAvatarPickerModal: Boolean = false,
     val showViewAvatarModal: Boolean = false,
@@ -68,6 +70,7 @@ class ProfileViewModel(
     init {
         viewModelScope.launch {
             (userRepository as? UserRepositoryImpl)?.loadUserProfile()
+            userRepository.refreshNotifications()
         }
         viewModelScope.launch {
             userRepository.observeUserProfile().collect { profile ->
@@ -93,6 +96,13 @@ class ProfileViewModel(
             }
         }
 
+        // Observe real harvest history records
+        viewModelScope.launch {
+            RepositoryProvider.harvestRepository.observeHarvestRecords("farm-1").collect { records ->
+                _uiState.update { it.copy(harvestHistory = records) }
+            }
+        }
+
         // Observe real community posts & forum activity
         viewModelScope.launch {
             RepositoryProvider.communityRepository.observePosts().collect { posts ->
@@ -103,6 +113,11 @@ class ProfileViewModel(
 
     fun selectTab(index: Int) {
         _uiState.update { it.copy(selectedTab = index) }
+        if (index == 1) {
+            viewModelScope.launch {
+                userRepository.refreshNotifications()
+            }
+        }
     }
 
     // ─── Avatar Flow Handlers ──────────────────────────────────────────────
@@ -333,13 +348,21 @@ class ProfileViewModel(
     }
 
     fun submitReportIssue() {
-        if (_uiState.value.issueTextInput.isNotBlank()) {
-            _uiState.update {
-                it.copy(
-                    showReportIssueModal = false,
-                    issueTextInput = "",
-                    successMessage = "Issue report sent to Admin!"
+        val message = _uiState.value.issueTextInput.trim()
+        if (message.isNotBlank()) {
+            viewModelScope.launch {
+                userRepository.sendSupportTicket(
+                    subject = "Farmer App Issue Report",
+                    message = message,
+                    category = "GENERAL"
                 )
+                _uiState.update {
+                    it.copy(
+                        showReportIssueModal = false,
+                        issueTextInput = "",
+                        successMessage = "Issue report sent to Admin!"
+                    )
+                }
             }
         }
     }

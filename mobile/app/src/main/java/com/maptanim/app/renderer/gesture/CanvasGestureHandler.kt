@@ -121,14 +121,16 @@ class CanvasGestureHandler(
             return
         }
 
-        // 2. Drag placed crop on farm area (Clash of Clans style instant repositioning)
+        // 2. Drag placed crop on farm area ONLY if already selected
         val tappedPlot = hitTestPlots(startPos, plots, camera)
         if (tappedPlot != null) {
             onPlotTapped(tappedPlot.id)
-            activePlotDrag = tappedPlot.id
-            initialPlotWorldPos = Offset(tappedPlot.posX, tappedPlot.posY)
-            initialTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
-            onPlotDragStart(tappedPlot.id)
+            if (tappedPlot.id == selectedPlotId) {
+                activePlotDrag = tappedPlot.id
+                initialPlotWorldPos = Offset(tappedPlot.posX, tappedPlot.posY)
+                initialTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
+                onPlotDragStart(tappedPlot.id)
+            }
             return
         }
     }

@@ -15,17 +15,18 @@ import java.time.temporal.ChronoUnit
 class GrowthStageCalculator {
 
     fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): GrowthStage {
-        val daysSincePlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt()
-            .coerceAtLeast(0)
+        val daysSincePlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
+        if (daysToHarvest > 0 && daysSincePlanting > daysToHarvest) {
+            return GrowthStage.OVERDUE
+        }
+        val progress = if (daysToHarvest > 0) (daysSincePlanting.toFloat() / daysToHarvest.toFloat()).coerceIn(0f, 1f) else 0f
 
         return when {
-            daysSincePlanting < 7              -> GrowthStage.GERMINATION
-            daysSincePlanting < 21             -> GrowthStage.EARLY_VEGETATIVE
-            daysSincePlanting < 35             -> GrowthStage.MID_VEGETATIVE
-            daysSincePlanting < 50             -> GrowthStage.FLOWERING
-            daysSincePlanting < daysToHarvest  -> GrowthStage.FRUITING
-            daysSincePlanting < daysToHarvest + 7 -> GrowthStage.HARVEST_READY
-            else                               -> GrowthStage.OVERDUE
+            progress < 0.15f -> GrowthStage.SPROUT
+            progress < 0.35f -> GrowthStage.SEEDLING
+            progress < 0.65f -> GrowthStage.VEGETATIVE
+            progress < 0.90f -> GrowthStage.FLOWERING
+            else             -> GrowthStage.HARVEST_READY
         }
     }
 }
@@ -214,7 +215,7 @@ class DssEngine(
         }
 
         // ── FERTILIZE task ────────────────────────────────────────────────
-        if (stage in listOf(GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE, GrowthStage.FLOWERING)) {
+        if (stage in listOf(GrowthStage.SEEDLING, GrowthStage.VEGETATIVE, GrowthStage.FLOWERING, GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE)) {
             val lastFertilized = activities
                 .filter { it.plotId == plot.id && it.type == TaskType.FERTILIZE }
                 .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }

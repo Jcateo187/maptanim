@@ -85,6 +85,10 @@ DROP POLICY IF EXISTS "users_own_data" ON public.users;
 CREATE POLICY "users_own_data" ON public.users
     FOR ALL USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "users_read_all" ON public.users;
+CREATE POLICY "users_read_all" ON public.users
+    FOR SELECT USING (true);
+
 -- Table: public.profiles (Queried by ProfileRepository & LoadingViewModel)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -180,6 +184,10 @@ ALTER TABLE public.farms ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "farmers_own_farms" ON public.farms;
 CREATE POLICY "farmers_own_farms" ON public.farms
     FOR ALL USING (auth.uid() = farmer_id);
+
+DROP POLICY IF EXISTS "farms_read_all" ON public.farms;
+CREATE POLICY "farms_read_all" ON public.farms
+    FOR SELECT USING (true);
 
 -- Table: public.crop_plots (Direct-Planted Crop Plots)
 CREATE TABLE IF NOT EXISTS public.crop_plots (

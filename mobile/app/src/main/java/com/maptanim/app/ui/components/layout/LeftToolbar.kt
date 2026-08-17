@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,8 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.maptanim.app.domain.model.FarmTask
-import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.ui.screens.home.HomeUiState
 
 /**
@@ -34,8 +33,7 @@ fun LeftToolbar(
     modifier: Modifier = Modifier,
     uiState: HomeUiState = HomeUiState(),
     onMonitoringClick: () -> Unit = {},
-    onTasksClick: () -> Unit = {},
-    onSummaryClick: () -> Unit = {}
+    onTasksClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier.padding(vertical = 12.dp),
@@ -52,7 +50,7 @@ fun LeftToolbar(
 
         // ── 2. Today's Tasks HUD Button ───────────────────────────────────
         HudLeftButton(
-            icon = Icons.Default.Assignment,
+            icon = Icons.AutoMirrored.Filled.Assignment,
             iconBgColor = Color(0xFF1E88E5),
             title = "Today's Tasks",
             subtitle = "${uiState.todayTasks.size.coerceAtLeast(4)} Tasks",

@@ -10,7 +10,12 @@ The **Library Screen** corresponds to the `📖 Library` tab in the bottom navig
 
 ## 🔹 Library Sections
 
-### 1. Crop Profiles (13 Crops)
+### 1. Crop Profiles (15 Philippine Crops)
+MapTanim includes 15 high-value Philippine vegetable crops:
+- **Carrot** (*Karot*), **String Beans** (*Sitaw*), **Eggplant** (*Talong*), **Tomato** (*Kamatis*), **Onion** (*Sibuyas*)
+- **Squash** (*Kalabasa*), **Corn** (*Mais*), **Cabbage** (*Repolyo*), **Pechay** (*Pechay*), **Ampalaya** (*Bitter Gourd*)
+- **Okra** (*Okra*), **Chili Pepper** (*Sili*), **Cucumber** (*Pipino*), **Kangkong** (*Water Spinach*), **Lettuce** (*Laitus*)
+
 Each crop has a detailed profile card:
 
 | Field | Example (Tomato) |

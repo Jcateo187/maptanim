@@ -13,7 +13,7 @@ The **MapTanim 2D Isometric Render Engine** (`FarmCanvasRenderer` & `IsometricPr
 ### Tile Metrics & Projection
 - **Standard Tile Width (`TILE_W`)**: `64.0f` pixels
 - **Standard Tile Height (`TILE_H`)**: `32.0f` pixels
-- **Farm Grid Bounds**: `30.0f` meters x `30.0f` meters (0f to 30f world space)
+- **Farm Grid Bounds**: `45.0f` meters x `45.0f` meters (0f to 45f world space)
 
 ### Projection Formulas (`IsometricProjection`)
 - **World to Screen**:
@@ -29,36 +29,42 @@ The **MapTanim 2D Isometric Render Engine** (`FarmCanvasRenderer` & `IsometricPr
 
 ## 🎨 Layered Rendering Architecture (`FarmCanvasRenderer.render`)
 
-The renderer executes a strict depth-sorted rendering pipeline:
+The renderer executes a streamlined high-performance depth-sorted rendering pipeline focused on custom background scenery and direct crop sprites:
 
 | Layer | Component | Description |
 |---|---|---|
-| **Layer 0** | **Ground Terrain & Soil** | Renders 30x30 loam soil tile grid surrounded by grass terrain. |
-| **Layer 1** | **Scenery & Perimeter** | Perimeter wooden fences, coconut trees, mango trees, banana trees, flowers, bushes, and rocks sorted by depth ($X + Y$). |
-| **Layer 1.5** | **CoC Tile Highlight** | Glowing semi-transparent green rhombus (`Color(0x554CAF50)` fill, `Color(0xFF4CAF50)` 3dp stroke) preview on ground soil. |
-| **Layer 2** | **Direct Planted Crops** | Crop Zone plant instances generated dynamically via `PlantInstanceGenerator` without database row duplication. Renders 1 plant per grid tile at `scaleFactor = 1.0f`. |
-| **Layer 3** | **Exterior Scenery** | Secondary trees and decorations sorted by depth. |
-| **Layer 4** | **Status Pins (View Mode)** | Interactive task pins (Water, Fertilize, Harvest, Pest Alert) floating above crops. |
-| **Layer 5** | **Selection & Grid (Edit Mode)**| Selected Crop Zone white border / blue dashed outline, 8 resize handles (Top-Left to Bottom-Right), and grid overlay. |
+| **Layer 0** | **Background Scenery** | Renders high-resolution custom isometric background scenery image (`background_scenery/backgound_1.png`) centered on the farm map. |
+| **Layer 1.5** | **CoC Tile Highlight** | Glowing semi-transparent blue (`#1E88E5`) or red (`#E53935`) rhombus preview overlay for active touch placement. Rendered in both **HomeScreen** (`CanvasMode.VIEW`) and **EditScreen** (`CanvasMode.EDIT`). |
+| **Layer 2** | **Direct Planted Crops** | Crop Zone plant instances generated dynamically via `PlantInstanceGenerator` rendering 5 crop stage sprites (`1` to `5`) directly over the background scenery. |
+| **Layer 3.5** | **Crop Zone Top Labels** | Floating crop name, variety, and growth day status pill badges rendered at top edge center of placed crop plots (e.g. `🥕 Carrot`, `🍆 Eggplant`). |
+| **Layer 4** | **Status Pins (View Mode)** | Interactive task pins (Water, Fertilize, Harvest, Pest Alert, Unstarted Calendar Badge `📅`) floating above crops. |
+| **Layer 5** | **Selection & Grid** | Selected Crop Zone white border outline, 8 interactive resize handles (Edit Mode), and 45×45 isometric white grid overlay (always visible in Edit screen; visible when crop selected in Home screen). |
 
----
+> 💡 **Note**: All procedural grass/soil tile loops, procedural trees, rocks, flowers, perimeter fences, and separate trellis objects have been removed in favor of the high-res background scenery asset with direct crop sprite rendering.
 
 ## 🌾 Crop Zone & Plant Instance Rendering (MD 34 Architecture)
 
 1. **Crop Zone Loop**: `FarmCanvasRenderer` iterates through all `CropZoneRenderData` instances in the layout.
 2. **Dynamic Generation**: `PlantInstanceGenerator.generate()` calculates individual plant coordinates for every tile within `[0 until width]` and `[0 until height]`.
-3. **No Sprite Scaling**: Plant sprites render at constant scale `1.0f`. Resizing expands grid coverage rather than scaling images.
-4. **8-Handle Bounding Box Overlay**: Selecting **Resize** from the bottom toolbar renders 8 interactive resize handles (4 corners + 4 edge midpoints) over the Crop Zone bounds.
+3. **5 Growth Stage Lifecycles**: Plant sprites dynamically select growth stage images from `crops/${cropClean}_${stage}.png` matching the 5 lifecycle phases:
+   - **Stage 1**: Sprout / Germination
+   - **Stage 2**: Seedling
+   - **Stage 3**: Vegetative Growth
+   - **Stage 4**: Flowering / Podding
+   - **Stage 5**: Harvest Ready
+4. **No Sprite Scaling**: Plant sprites render at constant scale `1.0f`. Resizing expands grid coverage rather than scaling images.
+5. **8-Handle Bounding Box Overlay**: Selecting **Resize** from the bottom toolbar renders 8 interactive resize handles (4 corners + 4 edge midpoints) over the Crop Zone bounds.
 
 ---
 
 ## ⚡ Low-Level 60 FPS Gesture Engine (`awaitPointerEventScope`)
 
 Replaces high-level Compose gesture wrappers with low-level pointer event handling:
-1. **1-Touch Direct Drag**: Pressing down on any placed crop zone locks onto it instantly (`onDragStart`), tracking finger movement 1:1 using `Math.round` nearest grid rounding.
-2. **2-Finger Pinch Zoom**: Computes pointer distance and centroid to scale zoom smoothly between **70% minimum zoom (`0.70f`)** and **400% maximum zoom (`4.00f`)**.
-3. **1-Finger Camera Pan**: Dragging empty ground pans the camera across the farm map with 0 lag or touch-slop delay.
-4. **Boundary Containment**: All crop movements and tile highlights are strictly clamped to `[0f, 30f - cropSize]` meters.
+1. **Selection-First Crop Drag**: Pressing down on an already-selected crop locks onto it instantly (`onDragStart`), tracking finger movement 1:1 using grid snapping. Sliding across unselected crops pans the camera smoothly without accidental crop movement.
+2. **Deferred Overlap Reversion**: Releasing a finger over an overlapping location leaves the crop sitting in its **RED** floating state. Farmers can freely drag/pan the map and pinch zoom in/out while in RED state. Tapping empty map ground or tapping another crop automatically reverts the RED floating crop back to its pre-drag location (`startPos`).
+3. **2-Finger Pinch Zoom**: Computes pointer distance and centroid to scale zoom smoothly between **70% minimum zoom (`0.70f`)** and **400% maximum zoom (`4.00f`)**.
+4. **1-Finger Camera Pan**: Dragging empty ground pans the camera across the 45×45 farm map with 0 lag or touch-slop delay.
+5. **Boundary Containment**: All crop movements and tile highlights are strictly clamped to `[0f, 45f - cropSize]` meters.
 
 ---
 
