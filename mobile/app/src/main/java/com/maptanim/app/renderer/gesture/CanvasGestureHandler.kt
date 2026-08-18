@@ -16,7 +16,7 @@ class CanvasGestureHandler(
     private val onCanvasTapped: (worldPos: Offset) -> Unit,
     private val onPlotDragStart: (plotId: String) -> Unit,
     private val onPlotDragging: (plotId: String, worldDelta: Offset) -> Unit,
-    private val onPlotDragEnd: (plotId: String) -> Unit,
+    private val onPlotDragEnd: (plotId: String, isValidPlacement: Boolean) -> Unit,
     private val onHandleDragStart: (handle: HandleType, plotId: String) -> Unit,
     private val onHandleDragging: (handle: HandleType, worldDelta: Offset) -> Unit,
     private val onHandleDragEnd: (handle: HandleType) -> Unit,
@@ -94,7 +94,6 @@ class CanvasGestureHandler(
             val worldDelta = currentTouchWorldPos - startTouchWorld
 
             onPlotDragging(plotId, worldDelta)
-            initialTouchWorldPos = currentTouchWorldPos
             return
         }
 
@@ -122,31 +121,28 @@ class CanvasGestureHandler(
             return
         }
 
-        // 2. Drag placed crop on farm area ONLY IF already selected (Click/tap first before repositioning)
+        // 2. Drag placed crop on farm area ONLY if already selected
         val tappedPlot = hitTestPlots(startPos, plots, camera)
         if (tappedPlot != null) {
+            onPlotTapped(tappedPlot.id)
             if (tappedPlot.id == selectedPlotId) {
-                // Already selected -> allow repositioning/dragging
                 activePlotDrag = tappedPlot.id
                 initialPlotWorldPos = Offset(tappedPlot.posX, tappedPlot.posY)
                 initialTouchWorldPos = IsometricProjection.toWorld(startPos.x, startPos.y, camera)
                 onPlotDragStart(tappedPlot.id)
-            } else {
-                // Not selected yet -> tap to select first, do not initiate drag
-                onPlotTapped(tappedPlot.id)
             }
             return
         }
     }
 
-    fun onDragEnd() {
+    fun onDragEnd(isValidPlacement: Boolean = true) {
         activeHandleDrag?.let { handle ->
             onHandleDragEnd(handle)
             activeHandleDrag = null
             initialHandleTouchWorldPos = null
         }
         activePlotDrag?.let { plotId ->
-            onPlotDragEnd(plotId)
+            onPlotDragEnd(plotId, isValidPlacement)
             activePlotDrag = null
             initialPlotWorldPos = null
             initialTouchWorldPos = null

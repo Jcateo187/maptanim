@@ -34,13 +34,16 @@ enum class SoilType {
  * by GrowthStageCalculator. Never hardcoded.
  */
 enum class GrowthStage {
-    GERMINATION,        // Days 0–7 from planting
-    EARLY_VEGETATIVE,   // Days 8–21
-    MID_VEGETATIVE,     // Days 22–35
-    FLOWERING,          // Days 36–50
-    FRUITING,           // Days 51 to (days_to_harvest - 1)
-    HARVEST_READY,      // days_to_harvest reached
-    OVERDUE             // 7+ days past harvest window
+    SPROUT,             // Stage 1: Germination / Emergence (0–15% progress)
+    SEEDLING,           // Stage 2: Early Leaf Development (15–35% progress)
+    VEGETATIVE,         // Stage 3: Rapid Stem & Leaf Expansion (35–65% progress)
+    FLOWERING,          // Stage 4: Budding / Podding / Fruiting (65–90% progress)
+    HARVEST_READY,      // Stage 5: Full Maturation (90%+ progress)
+    GERMINATION,        // Legacy alias for SPROUT
+    EARLY_VEGETATIVE,   // Legacy alias for SEEDLING
+    MID_VEGETATIVE,     // Legacy alias for VEGETATIVE
+    FRUITING,           // Legacy alias for FLOWERING
+    OVERDUE             // Legacy alias for HARVEST_READY
 }
 
 /**

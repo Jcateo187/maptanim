@@ -1,5 +1,8 @@
 # 01. Project Overview
 
+> 📌 **Navigation**: [◀ 00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [02. Software Requirements Specification ▶](file:///d:/Development/MapTanim/docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md)
+
+---
 ## 📌 Capstone Project Information
 
 | Field | Detail |
@@ -52,3 +55,12 @@ This results in:
 4. Integrate **Supabase** as a cloud BaaS for data persistence, authentication, and real-time sync with local Room storage fallback.
 5. Support **offline-first** operation with Room SQLite and WorkManager background sync.
 6. Deliver a **landscape-optimized UI** suitable for tablet and large-screen Android devices used in field conditions.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [28. Project Structure](file:///d:/Development/MapTanim/docs/28_PROJECT_STRUCTURE.md)
+- 📄 [31. Contributing Guidelines](file:///d:/Development/MapTanim/docs/31_CONTRIBUTING.md)

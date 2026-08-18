@@ -1,5 +1,8 @@
 # 03. System Architecture
 
+> 📌 **Navigation**: [◀ 02. Software Requirements Specification](file:///d:/Development/MapTanim/docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [04. Android Architecture ▶](file:///d:/Development/MapTanim/docs/04_ANDROID_ARCHITECTURE.md)
+
+---
 ## 📌 Overview
 MapTanim uses a **Client-BaaS (Backend-as-a-Service)** architecture. The Android app connects directly to **Supabase** — no custom middleware server is required for v1.0.
 
@@ -135,3 +138,13 @@ User taps [SAVE CHANGES]
 | Build System | Gradle with KTS | 9.4.1 |
 | Min SDK | Android 8.0 | API 26 |
 | Target SDK | Android 14 | API 34 |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [04. Android Architecture](file:///d:/Development/MapTanim/docs/04_ANDROID_ARCHITECTURE.md)
+- 📄 [05. Backend Architecture](file:///d:/Development/MapTanim/docs/05_BACKEND_ARCHITECTURE.md)
+- 📄 [06. Admin Dashboard](file:///d:/Development/MapTanim/docs/06_ADMIN_DASHBOARD.md)
+- 📄 [42. Scalability & Multi-Tenancy Architecture](file:///d:/Development/MapTanim/docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md)

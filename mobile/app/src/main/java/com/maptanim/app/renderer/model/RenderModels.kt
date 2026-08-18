@@ -17,26 +17,35 @@ import com.maptanim.app.domain.model.SoilType
 data class CameraState(
     val panX: Float = 0f,       // Horizontal pan offset in screen pixels
     val panY: Float = 0f,       // Vertical pan offset in screen pixels
-    val zoom: Float = 0.72f,     // Scale factor — default 0.72f (fits full farm diamond cleanly on screen)
-    val minZoom: Float = 0.72f,  // Max zoom out (72% - 100% full farm visibility)
+    val zoom: Float = 0.52f,     // Scale factor — default 0.52f provides a clear, zoomed-in view
+    val minZoom: Float = 0.30f,  // Dynamic minZoom floor allows smooth zoom out
     val maxZoom: Float = 4.0f    // Max zoom in (400%)
 ) {
     /**
      * Clamps zoom and ensures camera pan offset stays within valid map boundaries.
-     * When zoomed out to minZoom, resets pan offsets back to dead center.
+     * Calculates dynamic minZoom based on screen width/height so the entire 45x45 farm
+     * diamond (2880px x 1440px at 1.0 zoom) fits without edge clipping on any screen orientation.
      */
     fun clampZoom(newZoom: Float, screenWidth: Float = 1920f, screenHeight: Float = 1080f): CameraState {
-        val clampedZ = newZoom.coerceIn(minZoom, maxZoom)
-        val centerPanX = if (screenWidth > 0f) screenWidth / 2f else 960f
-        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * clampedZ) else 150f
-
-        if (clampedZ <= minZoom * 1.001f) {
-            return copy(zoom = clampedZ, panX = centerPanX, panY = centerPanY)
+        val effectiveMinZoom = if (screenWidth > 0f && screenHeight > 0f) {
+            val fitW = screenWidth / (45f * IsometricProjection.TILE_W)
+            val fitH = screenHeight / (45f * IsometricProjection.TILE_H)
+            minOf(fitW, fitH).coerceIn(0.25f, 0.52f)
+        } else {
+            minZoom
         }
 
-        val zoomRatio = ((clampedZ / minZoom) - 1.0f).coerceAtLeast(0f)
-        val halfMapW = 44f * (IsometricProjection.TILE_W / 2f) * minZoom
-        val halfMapH = 44f * (IsometricProjection.TILE_H / 2f) * minZoom
+        val clampedZ = newZoom.coerceIn(effectiveMinZoom, maxZoom)
+        val centerPanX = if (screenWidth > 0f) screenWidth / 2f else 960f
+        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (45f * (IsometricProjection.TILE_H / 2f) * clampedZ) else 150f
+
+        if (clampedZ <= effectiveMinZoom * 1.001f) {
+            return copy(zoom = clampedZ, panX = centerPanX, panY = centerPanY, minZoom = effectiveMinZoom)
+        }
+
+        val zoomRatio = ((clampedZ / effectiveMinZoom) - 1.0f).coerceAtLeast(0f)
+        val halfMapW = 65f * (IsometricProjection.TILE_W / 2f) * effectiveMinZoom
+        val halfMapH = 65f * (IsometricProjection.TILE_H / 2f) * effectiveMinZoom
 
         val maxPanH = halfMapW * zoomRatio
         val maxPanV = halfMapH * zoomRatio
@@ -44,7 +53,7 @@ data class CameraState(
         val clampedPanX = panX.coerceIn(centerPanX - maxPanH, centerPanX + maxPanH)
         val clampedPanY = panY.coerceIn(centerPanY - maxPanV, centerPanY + maxPanV)
 
-        return copy(zoom = clampedZ, panX = clampedPanX, panY = clampedPanY)
+        return copy(zoom = clampedZ, panX = clampedPanX, panY = clampedPanY, minZoom = effectiveMinZoom)
     }
 
     /**
@@ -55,7 +64,7 @@ data class CameraState(
      */
     fun pan(dx: Float, dy: Float, screenWidth: Float = 1920f, screenHeight: Float = 1080f): CameraState {
         val centerPanX = if (screenWidth > 0f) screenWidth / 2f else 960f
-        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * zoom) else 150f
+        val centerPanY = if (screenHeight > 0f) (screenHeight / 2f) - (45f * (IsometricProjection.TILE_H / 2f) * zoom) else 150f
 
         // At max zoom out, lock camera completely to center
         if (zoom <= minZoom * 1.001f) {
@@ -64,8 +73,8 @@ data class CameraState(
 
         // When zoomed in, allow panning strictly within the max-zoom-out bounding frame
         val zoomRatio = ((zoom / minZoom) - 1.0f).coerceAtLeast(0f)
-        val halfMapW = 44f * (IsometricProjection.TILE_W / 2f) * minZoom
-        val halfMapH = 44f * (IsometricProjection.TILE_H / 2f) * minZoom
+        val halfMapW = 65f * (IsometricProjection.TILE_W / 2f) * minZoom
+        val halfMapH = 65f * (IsometricProjection.TILE_H / 2f) * minZoom
 
         val maxPanH = halfMapW * zoomRatio
         val maxPanV = halfMapH * zoomRatio
@@ -81,11 +90,19 @@ data class CameraState(
         )
     }
 
-    /** Centers world coordinate (15, 15) dead-center on screen. */
+    /** Centers world coordinate (22.5, 22.5) dead-center on screen. */
     fun centered(screenWidth: Float, screenHeight: Float): CameraState {
+        val effectiveMinZoom = if (screenWidth > 0f && screenHeight > 0f) {
+            val fitW = screenWidth / (45f * IsometricProjection.TILE_W)
+            val fitH = screenHeight / (45f * IsometricProjection.TILE_H)
+            minOf(fitW, fitH).coerceIn(0.25f, 0.52f)
+        } else {
+            minZoom
+        }
+        val targetZoom = zoom.coerceIn(effectiveMinZoom, maxZoom)
         val centerPanX = screenWidth / 2f
-        val centerPanY = (screenHeight / 2f) - (30f * (IsometricProjection.TILE_H / 2f) * zoom)
-        return copy(panX = centerPanX, panY = centerPanY)
+        val centerPanY = (screenHeight / 2f) - (45f * (IsometricProjection.TILE_H / 2f) * targetZoom)
+        return copy(zoom = targetZoom, panX = centerPanX, panY = centerPanY, minZoom = effectiveMinZoom)
     }
 
     /** Returns the farm world bounds visible at current pan/zoom with buffer padding. */
@@ -137,6 +154,7 @@ data class PlotRenderData(
     val plotLabel: String,
     val cropName: String?,
     val cropId: String?,
+    val cropVariety: String? = null,
     val soilType: SoilType,
     val posX: Float,
     val posY: Float,
@@ -144,8 +162,52 @@ data class PlotRenderData(
     val heightM: Float,
     val rotationDeg: Float = 0f,
     val isMonitoringStarted: Boolean = false,
+    val plantedDate: String? = null,
+    val daysPlanted: Int = 0,
+    val daysToHarvest: Int = 60,
+    val stageProgressRatio: Float = 0f,
+    val plantedTimestampMs: Long = 0L,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
+    val currentStageProgressRatio: Float get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            val nowMs = System.currentTimeMillis()
+            val startMs = if (plantedTimestampMs > 0L) plantedTimestampMs else 0L
+            val elapsedMs = (nowMs - startMs).coerceAtLeast(0L)
+            // 10-second simulation timeline: 10,000 ms = 100% progress. Continues beyond 1.0f for overdue state.
+            return (elapsedMs / 10000f)
+        }
+        return stageProgressRatio
+    }
+
+    val growthStage: Int get() {
+        val ratio = currentStageProgressRatio
+        return when {
+            ratio < 0.20f -> 1
+            ratio < 0.40f -> 2
+            ratio < 0.60f -> 3
+            ratio < 0.80f -> 4
+            else -> 5
+        }
+    }
+
+    val isHarvestReady: Boolean get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            return currentStageProgressRatio >= 0.80f
+        }
+        return isMonitoringStarted && (growthStage == 5 || currentStageProgressRatio >= 0.90f || (daysToHarvest > 0 && daysPlanted >= daysToHarvest))
+    }
+
+    val isHarvestOverdue: Boolean get() {
+        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
+        if (isAmpalayaOrSim) {
+            return currentStageProgressRatio > 1.0f
+        }
+        return isMonitoringStarted && daysToHarvest > 0 && daysPlanted > daysToHarvest
+    }
+
     val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
 
     fun worldCorners(): PlotWorldCorners = PlotWorldCorners(
@@ -189,21 +251,72 @@ data class PlotRenderData(
     }
 }
 
-fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData = PlotRenderData(
-    id = id,
-    farmId = farmId,
-    plotLabel = plotLabel,
-    cropName = cropName,
-    cropId = cropId,
-    soilType = soilType,
-    posX = posX,
-    posY = posY,
-    widthM = widthM,
-    heightM = heightM,
-    rotationDeg = rotationDeg,
-    isMonitoringStarted = !plantedDate.isNullOrBlank(),
-    activeTasks = activeTasks
-)
+fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRenderData {
+    val isStarted = !plantedDate.isNullOrBlank()
+    var elapsedDays = 0
+    var plantedMs = 0L
+
+    if (isStarted) {
+        try {
+            val dateTime = java.time.ZonedDateTime.parse(plantedDate)
+            plantedMs = dateTime.toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            try {
+                val date = java.time.LocalDate.parse(plantedDate!!.take(10))
+                plantedMs = date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            } catch (e2: Exception) {
+                plantedMs = System.currentTimeMillis()
+            }
+        }
+        try {
+            val date = java.time.LocalDate.parse(plantedDate!!.take(10))
+            elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(date, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
+        } catch (e: Exception) {
+            elapsedDays = 0
+        }
+    } else {
+        plantedMs = System.currentTimeMillis()
+    }
+
+    val defaultDays = when (cropName?.lowercase() ?: "") {
+        "pechay" -> 28
+        "okra" -> 45
+        "sitaw", "stringbeans" -> 50
+        "ampalaya" -> 55
+        "kamatis", "tomato" -> 60
+        "repolyo", "cabbage" -> 60
+        "mais", "corn" -> 65
+        "sili", "chili" -> 65
+        "talong", "eggplant" -> 75
+        "kalabasa", "pumpkin" -> 80
+        "karots", "carrot" -> 85
+        "sibuyas", "onion" -> 100
+        else -> 60
+    }
+    val progressRatio = if (isStarted && defaultDays > 0) (elapsedDays.toFloat() / defaultDays.toFloat()).coerceIn(0f, 1f) else 0f
+
+    return PlotRenderData(
+        id = id,
+        farmId = farmId,
+        plotLabel = plotLabel,
+        cropName = cropName,
+        cropId = cropId,
+        cropVariety = cropVariety,
+        soilType = soilType,
+        posX = posX,
+        posY = posY,
+        widthM = widthM,
+        heightM = heightM,
+        rotationDeg = rotationDeg,
+        isMonitoringStarted = isStarted,
+        plantedDate = plantedDate,
+        daysPlanted = elapsedDays,
+        daysToHarvest = defaultDays,
+        stageProgressRatio = progressRatio,
+        plantedTimestampMs = plantedMs,
+        activeTasks = activeTasks
+    )
+}
 
 data class HandlePositions(
     val dragHandle: Offset = Offset.Zero,

@@ -1,5 +1,8 @@
 # 09. Authentication System
 
+> 📌 **Navigation**: [◀ 08. Supabase Configuration](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [10. API Documentation ▶](file:///d:/Development/MapTanim/docs/10_API_DOCUMENTATION.md)
+
+---
 ## 📌 Overview
 MapTanim supports three user access levels: **Authenticated Farmer**, **Guest**, and **Administrator**. Authentication is powered by **Supabase Auth** using Email OTP (One-Time Password).
 
@@ -189,3 +192,16 @@ data class AuthUiState(
 | OTP lockout | 3 attempts → 15-minute block |
 | Session expiry | JWT auto-refresh via Supabase SDK |
 | Data isolation | RLS policies on all tables |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [07. Database Design](file:///d:/Development/MapTanim/docs/07_DATABASE_DESIGN.md)
+- 📄 [08. Supabase Configuration](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md)
+- 📄 [24. Offline Synchronization](file:///d:/Development/MapTanim/docs/24_OFFLINE_SYNCHRONIZATION.md)
+- 📄 [25. Security & RLS](file:///d:/Development/MapTanim/docs/25_SECURITY.md)
+- 📄 [40. User & Profile Schema Refinement](file:///d:/Development/MapTanim/docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md)
+- 📄 [41. Users & Profiles Database Tables](file:///d:/Development/MapTanim/docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md)

@@ -1,4 +1,4 @@
-package com.maptanim.app.data.remote
+package com.maptanim.backend.data.remote
 
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth

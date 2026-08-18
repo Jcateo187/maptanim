@@ -1,5 +1,8 @@
 # 26. Testing Strategy
 
+> 📌 **Navigation**: [◀ 25. Security & RLS](file:///d:/Development/MapTanim/docs/25_SECURITY.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [27. Deployment Guide ▶](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md)
+
+---
 ## 📌 Overview
 MapTanim's test strategy covers three layers: **Unit Tests** (domain logic + DSS), **Compose UI Tests** (View Mode + Edit Mode interactions), and **Integration Tests** (Room ↔ Supabase sync). All tests use **real database schemas and Supabase test environment** — no fake repositories or mock data providers that diverge from production behavior.
 
@@ -251,3 +254,15 @@ class CropPlotSyncIntegrationTest {
 | Repository Layer | ≥80% |
 | ViewModels | ≥75% |
 | UI Composables | ≥60% (key interactions only) |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [27. Deployment Guide](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md)
+- 📄 [30. Git Workflow](file:///d:/Development/MapTanim/docs/30_GIT_WORKFLOW.md)
+- 📄 [32. Changelog](file:///d:/Development/MapTanim/docs/32_CHANGELOG.md)
+- 📄 [33. Roadmap](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)
+- 📄 [DevOps Architecture & Free CI/CD Pipelines](file:///d:/Development/MapTanim/docs/DEVOPS.md)

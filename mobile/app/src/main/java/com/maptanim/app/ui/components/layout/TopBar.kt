@@ -29,13 +29,12 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun TopBar(
     modifier: Modifier = Modifier,
-    farmName: String = "Murcia Farm",
-    location: String = "Murcia, Negros Occidental",
-    totalCrops: Int = 186,
-    readyToHarvest: Int = 4,
-    notificationCount: Int = 3,
-    userName: String = "James",
-    onEditClick: () -> Unit = {},
+    farmName: String = "",
+    totalCrops: Int = 0,
+    readyToHarvest: Int = 0,
+    notificationCount: Int = 0,
+    nickname: String = "",
+    avatarAssetPath: String? = null,
     onProfileClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
@@ -47,43 +46,46 @@ fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // ── 1. Top Left: Profile Avatar & Farm Name ───────────────────────
+        // ── 1. Top Left: Avatar + Nickname + Farm Name (all real data) ────
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.clickable { onProfileClick() }
         ) {
-            // Profile Avatar
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF43A047))
-                    .clickable { onProfileClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = userName,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            // Profile Avatar — loaded from Supabase profile or local default
+            com.maptanim.app.ui.components.avatar.ProfileAvatar(
+                avatarAssetPath = avatarAssetPath ?: "Avatar/Male_Avatar.png",
+                size = 38.dp,
+                borderWidth = 2.dp,
+                onClick = onProfileClick
+            )
 
-            // Farm Name Pill
+            // Nickname + Farm Name Pill
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.Black.copy(alpha = 0.55f)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = farmName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = Color.White
-                    )
+                    Column {
+                        Text(
+                            text = nickname.ifBlank { "Farmer" },
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF81C784)
+                        )
+                        if (farmName.isNotBlank()) {
+                            Text(
+                                text = farmName,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 10.sp,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = null,

@@ -1,5 +1,8 @@
 # 07. Database Design & Schema
 
+> 📌 **Navigation**: [◀ 06. Admin Dashboard](file:///d:/Development/MapTanim/docs/06_ADMIN_DASHBOARD.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [08. Supabase Configuration ▶](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md)
+
+---
 ## 📌 Overview
 MapTanim uses **PostgreSQL** via Supabase as its cloud database, with **Room SQLite** as the local offline cache. Row Level Security (RLS) enforces data isolation per farmer.
 
@@ -60,8 +63,6 @@ CREATE TYPE farm_object_type_enum AS ENUM ('TRELLIS', 'FENCE_SEGMENT', 'TREE', '
 CREATE TABLE public.users (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     email           VARCHAR(255)    UNIQUE NOT NULL,
-    phone_number    VARCHAR(20),
-    full_name       VARCHAR(100)    NOT NULL,
     role            role_enum       NOT NULL DEFAULT 'FARMER',
     avatar_url      TEXT,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
@@ -73,6 +74,52 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "users_own_data" ON public.users
     FOR ALL USING (auth.uid() = id);
+```
+
+---
+
+## 🔹 Table: `profiles`
+
+Stores user display preferences and avatar selection.
+
+```sql
+CREATE TABLE public.profiles (
+    id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    nickname                VARCHAR(100),
+    avatar                  TEXT,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "profiles_select_own" ON public.profiles
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "profiles_insert_own" ON public.profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "profiles_update_own" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id);
+
+-- Automatic Profile Creation Trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nickname)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1))
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
 ---
@@ -99,17 +146,18 @@ CREATE POLICY "farmers_own_farms" ON public.farms
 
 ---
 
-## 🔹 Table: `crop_plots`
+## 🔹 Table: `beds` (Direct-Planted Crop Zones)
 
-`crop_plots` represent individual planting beds on the 2D farm canvas. All position and size values are in **meters** relative to farm origin (0, 0).
+> 💡 **Direct Soil Canvas Architecture**: MapTanim features **Direct-to-Soil Canvas Planting**. Farmers drag crops directly onto the soil grid without building raised beds. In the database, the table `public.beds` stores the direct-planted crop area's position ($pos\_x, pos\_y$), grid dimensions ($width\_m, height\_m$), crop variety, soil classification, and growth status.
 
 ```sql
-CREATE TABLE public.crop_plots (
+CREATE TABLE public.beds (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    plot_label      VARCHAR(20)     NOT NULL,       -- e.g., "PLOT 1", "PLOT A"
+    bed_label       VARCHAR(20)     NOT NULL,       -- e.g., "PLOT 1", "ZONE A"
     crop_name       VARCHAR(100),                   -- e.g., "Eggplant", "Tomato"
     crop_id         UUID            REFERENCES public.crops(id),
+    crop_variety    VARCHAR(100),                   -- e.g., "Diamante Max"
     soil_type       soil_type_enum  NOT NULL DEFAULT 'LOAM',
     pos_x           FLOAT           NOT NULL DEFAULT 0.0,    -- meters from farm origin X
     pos_y           FLOAT           NOT NULL DEFAULT 0.0,    -- meters from farm origin Y
@@ -117,20 +165,20 @@ CREATE TABLE public.crop_plots (
     height_m        FLOAT           NOT NULL DEFAULT 3.0,    -- height in meters
     rotation_deg    FLOAT           NOT NULL DEFAULT 0.0,    -- rotation in degrees
     notes           TEXT,
-    planted_date    TIMESTAMPTZ,
+    planted_date    DATE,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 -- RLS
-ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.beds ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "farmers_own_plots" ON public.crop_plots
+CREATE POLICY "farmers_own_beds" ON public.beds
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM public.farms f
-            WHERE f.id = crop_plots.farm_id AND f.farmer_id = auth.uid()
+            WHERE f.id = beds.farm_id AND f.farmer_id = auth.uid()
         )
     );
 ```
@@ -215,18 +263,18 @@ CREATE POLICY "farmers_own_farm_objects" ON public.farm_objects
     );
 ```
 
-### Demo Farm Beds (from PNG screenshots)
+### Demo Farm Plots (Direct Soil Planting)
 
-| bed_label | crop_name | soil_type | Notes |
+| plot_label | crop_name | soil_type | Notes |
 |-----------|-----------|-----------|-------|
-| BED 1 | Eggplant | LOAM | Fertilize task active |
-| BED 2 | Cucumber | LOAM | Pest alert active |
-| BED 3 | Tomato | LOAM | Water + Fertilize tasks active; selected in Edit Mode |
-| BED A | Lettuce | CLAY | Warning pin |
-| BED E | Cabbage | LOAM | |
-| BED F | Carrot | SANDY | |
-| BED G | String Beans | LOAM | |
-| BED R | Mixed Veg | LOAM | Harvest ready |
+| PLOT 1 | Eggplant | LOAM | Fertilize task active |
+| PLOT 2 | Cucumber | LOAM | Pest alert active |
+| PLOT 3 | Tomato | LOAM | Water + Fertilize tasks active; selected in Edit Mode |
+| PLOT A | Lettuce | CLAY | Warning pin |
+| PLOT E | Cabbage | LOAM | |
+| PLOT F | Carrot | SANDY | |
+| PLOT G | String Beans | LOAM | |
+| PLOT R | Mixed Veg | LOAM | Harvest ready |
 
 ---
 
@@ -283,10 +331,10 @@ Generated by the DSS rule engine. Displayed as TODAY'S TASKS in View Mode.
 CREATE TABLE public.tasks (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    plot_id         UUID            REFERENCES public.crop_plots(id) ON DELETE CASCADE,
+    bed_id          UUID            REFERENCES public.beds(id) ON DELETE CASCADE,
     task_type       task_type_enum  NOT NULL,
-    title           VARCHAR(200)    NOT NULL,   -- e.g., "Water PLOT 3"
-    sub_label       VARCHAR(200),               -- e.g., "Tomato" or "PLOT 1"
+    title           VARCHAR(200)    NOT NULL,   -- e.g., "Water BED 3"
+    sub_label       VARCHAR(200),               -- e.g., "Tomato" or "BED 1"
     due_date        DATE            NOT NULL,
     is_completed    BOOLEAN         NOT NULL DEFAULT FALSE,
     completed_at    TIMESTAMPTZ,
@@ -316,7 +364,7 @@ Manual farming activity log.
 CREATE TABLE public.activities (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    plot_id         UUID            REFERENCES public.crop_plots(id) ON DELETE SET NULL,
+    bed_id          UUID            REFERENCES public.beds(id) ON DELETE SET NULL,
     activity_type   task_type_enum  NOT NULL,
     performed_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     amount          FLOAT,          -- e.g., liters of water applied
@@ -333,7 +381,7 @@ CREATE TABLE public.activities (
 ```sql
 CREATE TABLE public.harvest_records (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    plot_id         UUID            NOT NULL REFERENCES public.crop_plots(id) ON DELETE CASCADE,
+    bed_id          UUID            NOT NULL REFERENCES public.beds(id) ON DELETE CASCADE,
     crop_name       VARCHAR(100)    NOT NULL,
     yield_kg        FLOAT,
     yield_units     INT,
@@ -376,24 +424,25 @@ CREATE TABLE public.dss_rules (
 
 ---
 
-## 🔹 Table: `notifications`
+## 🔹 Table: `notifications` (System Updates & Admin Announcements)
 
 ```sql
 CREATE TABLE public.notifications (
-    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID            NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    title           VARCHAR(200)    NOT NULL,
-    body            TEXT,
-    task_type       task_type_enum,
-    is_read         BOOLEAN         NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID            REFERENCES public.users(id) ON DELETE CASCADE, -- NULL for system-wide broadcasts
+    title               VARCHAR(200)    NOT NULL,
+    body                TEXT,
+    task_type           task_type_enum,
+    notification_type   VARCHAR(50)     NOT NULL DEFAULT 'SYSTEM_UPDATE', -- SYSTEM_UPDATE, CROP_ADDITION, BUG_FIX
+    is_read             BOOLEAN         NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
--- RLS
+-- RLS (System announcements read by all authenticated users, user-specific notifications read by owner)
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users_own_notifications" ON public.notifications
-    FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "notifications_read_all" ON public.notifications
+    FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
 ```
 
 ---
@@ -432,3 +481,16 @@ abstract class MapTanimDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
 }
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [08. Supabase Configuration](file:///d:/Development/MapTanim/docs/08_SUPABASE_CONFIGURATION.md)
+- 📄 [09. Authentication](file:///d:/Development/MapTanim/docs/09_AUTHENTICATION.md)
+- 📄 [24. Offline Synchronization](file:///d:/Development/MapTanim/docs/24_OFFLINE_SYNCHRONIZATION.md)
+- 📄 [25. Security & RLS](file:///d:/Development/MapTanim/docs/25_SECURITY.md)
+- 📄 [40. User & Profile Schema Refinement](file:///d:/Development/MapTanim/docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md)
+- 📄 [41. Users & Profiles Database Tables](file:///d:/Development/MapTanim/docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md)

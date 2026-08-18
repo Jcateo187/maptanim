@@ -2,11 +2,17 @@ package com.maptanim.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.maptanim.app.data.remote.SupabaseClient
+import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.data.repository.UserRepositoryImpl
 import com.maptanim.app.domain.model.AvatarItem
+import com.maptanim.app.domain.model.CommunityPost
+import com.maptanim.app.domain.model.Farm
 import com.maptanim.app.domain.model.NotificationItem
 import com.maptanim.app.domain.model.UserProfile
+import com.maptanim.app.domain.model.getDaysRemainingForNicknameChange
 import com.maptanim.app.domain.repository.UserRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +24,10 @@ data class ProfileUiState(
     val userProfile: UserProfile = UserProfile(),
     val availableAvatars: List<AvatarItem> = emptyList(),
     val notifications: List<NotificationItem> = emptyList(),
-    
+    val farms: List<Farm> = emptyList(),
+    val userPosts: List<CommunityPost> = emptyList(),
+    val harvestHistory: List<com.maptanim.app.domain.model.HarvestRecord> = emptyList(),
+
     // Avatar picker modal states
     val showAvatarPickerModal: Boolean = false,
     val showViewAvatarModal: Boolean = false,
@@ -60,6 +69,10 @@ class ProfileViewModel(
 
     init {
         viewModelScope.launch {
+            (userRepository as? UserRepositoryImpl)?.loadUserProfile()
+            userRepository.refreshNotifications()
+        }
+        viewModelScope.launch {
             userRepository.observeUserProfile().collect { profile ->
                 _uiState.update { it.copy(userProfile = profile) }
             }
@@ -73,10 +86,38 @@ class ProfileViewModel(
             val avatars = userRepository.getAvailableAvatars()
             _uiState.update { it.copy(availableAvatars = avatars) }
         }
+
+        // Observe real farms list from Room / Supabase database
+        viewModelScope.launch {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: "guest"
+            RepositoryProvider.farmRepository.observeFarms(userId).collect { farms ->
+                _uiState.update { it.copy(farms = farms) }
+            }
+        }
+
+        // Observe real harvest history records
+        viewModelScope.launch {
+            RepositoryProvider.harvestRepository.observeHarvestRecords("farm-1").collect { records ->
+                _uiState.update { it.copy(harvestHistory = records) }
+            }
+        }
+
+        // Observe real community posts & forum activity
+        viewModelScope.launch {
+            RepositoryProvider.communityRepository.observePosts().collect { posts ->
+                _uiState.update { it.copy(userPosts = posts) }
+            }
+        }
     }
 
     fun selectTab(index: Int) {
         _uiState.update { it.copy(selectedTab = index) }
+        if (index == 1) {
+            viewModelScope.launch {
+                userRepository.refreshNotifications()
+            }
+        }
     }
 
     // ─── Avatar Flow Handlers ──────────────────────────────────────────────
@@ -143,11 +184,16 @@ class ProfileViewModel(
     // ─── Nickname Flow Handlers ─────────────────────────────────────────────
 
     fun startEditNickname() {
+        val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+        val initialError = if (remainingDays > 0) {
+            "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s)."
+        } else null
+
         _uiState.update {
             it.copy(
                 isEditingNickname = true,
                 nicknameInput = it.userProfile.nickname,
-                nicknameError = null
+                nicknameError = initialError
             )
         }
     }
@@ -160,6 +206,14 @@ class ProfileViewModel(
         val input = _uiState.value.nicknameInput.trim()
         if (input.isBlank()) {
             _uiState.update { it.copy(nicknameError = "Nickname cannot be empty") }
+            return
+        }
+
+        val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+        if (remainingDays > 0) {
+            _uiState.update {
+                it.copy(nicknameError = "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s).")
+            }
             return
         }
 
@@ -194,7 +248,18 @@ class ProfileViewModel(
                         showNicknameConfirmDialog = false,
                         isEditingNickname = false,
                         nicknameInput = "",
-                        successMessage = "Nickname has been changed!"
+                        successMessage = "Nickname updated successfully in Supabase!"
+                    )
+                }
+            } else {
+                val remainingDays = com.maptanim.app.domain.model.getDaysRemainingForNicknameChange(_uiState.value.userProfile.nicknameUpdatedAt)
+                val errMsg = if (remainingDays > 0) {
+                    "Nickname can only be changed once every 15 days. Please try again in $remainingDays day(s)."
+                } else "Failed to update nickname. Please try again."
+                _uiState.update {
+                    it.copy(
+                        showNicknameConfirmDialog = false,
+                        nicknameError = errMsg
                     )
                 }
             }
@@ -283,13 +348,21 @@ class ProfileViewModel(
     }
 
     fun submitReportIssue() {
-        if (_uiState.value.issueTextInput.isNotBlank()) {
-            _uiState.update {
-                it.copy(
-                    showReportIssueModal = false,
-                    issueTextInput = "",
-                    successMessage = "Issue report sent to Admin!"
+        val message = _uiState.value.issueTextInput.trim()
+        if (message.isNotBlank()) {
+            viewModelScope.launch {
+                userRepository.sendSupportTicket(
+                    subject = "Farmer App Issue Report",
+                    message = message,
+                    category = "GENERAL"
                 )
+                _uiState.update {
+                    it.copy(
+                        showReportIssueModal = false,
+                        issueTextInput = "",
+                        successMessage = "Issue report sent to Admin!"
+                    )
+                }
             }
         }
     }

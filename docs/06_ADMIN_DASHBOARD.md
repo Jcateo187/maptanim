@@ -1,5 +1,8 @@
 # 06. Admin Dashboard
 
+> 📌 **Navigation**: [◀ 05. Backend Architecture](file:///d:/Development/MapTanim/docs/05_BACKEND_ARCHITECTURE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [07. Database Design ▶](file:///d:/Development/MapTanim/docs/07_DATABASE_DESIGN.md)
+
+---
 ## 📌 Overview
 The **MapTanim Admin Dashboard** is a web-based management panel accessible to users with the `ADMINISTRATOR` role. It is separate from the Android mobile app and connects to the same Supabase project (`ojilvcglpzbtpjxguhzj.supabase.co`) using elevated server-side access.
 
@@ -78,3 +81,13 @@ http://localhost:5173
 ```
 
 Production deployment target: Vercel (connected to the same Supabase project).
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [04. Android Architecture](file:///d:/Development/MapTanim/docs/04_ANDROID_ARCHITECTURE.md)
+- 📄 [05. Backend Architecture](file:///d:/Development/MapTanim/docs/05_BACKEND_ARCHITECTURE.md)
+- 📄 [42. Scalability & Multi-Tenancy Architecture](file:///d:/Development/MapTanim/docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md)

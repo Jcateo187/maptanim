@@ -1,5 +1,8 @@
 # 28. Project Structure
 
+> 📌 **Navigation**: [◀ 27. Deployment Guide](file:///d:/Development/MapTanim/docs/27_DEPLOYMENT.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [29. Coding Standards ▶](file:///d:/Development/MapTanim/docs/29_CODING_STANDARDS.md)
+
+---
 ## 📌 Overview
 Full annotated directory tree for the MapTanim monorepo.
 
@@ -200,9 +203,17 @@ MapTanim/
 │   └── validation/
 │
 ├── tests/
-│   ├── integration/                     # Room ↔ Supabase sync tests
-│   ├── ui/                              # Compose UI tests (also in mobile/androidTest)
-│   └── unit/                           # DSS + domain unit tests
+│   ├── integration/                     # API & Supabase database integration tests
+│   ├── performance/                     # Telemetry & DSS benchmark load tests
+│   ├── ui/                              # Admin web E2E & Compose UI tests
+│   └── unit/                            # DSS & domain unit tests
+│
+├── deployment/                          # DevOps containerization & deployment configs
+│   ├── Dockerfile.admin                 # Multi-stage production build for Admin Web
+│   ├── nginx.conf                       # Production Nginx web server configuration
+│   ├── docker-compose.yml               # Container service orchestration manifest
+│   ├── .env.example                     # Environment variable template
+│   └── scripts/                         # Local bootstrap & test execution scripts
 │
 ├── AGENTS.md                            # AI agent guidelines
 ├── CODE_OF_CONDUCT.md
@@ -230,3 +241,12 @@ MapTanim/
 | `AppNavGraph.kt` | Full Compose navigation graph |
 | `DssEngine.kt` | DSS evaluation engine |
 | `FarmCanvasRenderer.kt` | 2D farm canvas rendering |
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [01. Project Overview](file:///d:/Development/MapTanim/docs/01_PROJECT_OVERVIEW.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [31. Contributing Guidelines](file:///d:/Development/MapTanim/docs/31_CONTRIBUTING.md)

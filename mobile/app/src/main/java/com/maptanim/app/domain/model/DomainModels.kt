@@ -22,17 +22,18 @@ data class CropPlot(
     val plotLabel: String,      // "PLOT 1", "PLOT A", etc.
     val cropName: String?,      // null = no crop assigned
     val cropId: String?,
+    val cropVariety: String? = null,
     val soilType: SoilType,     // loaded from crop_plots.soil_type via Room
     val posX: Float,            // meters from farm origin
     val posY: Float,
     val widthM: Float,
     val heightM: Float,
-    val rotationDeg: Float,
-    val plantedDate: String?,   // ISO-8601 date string, null if not planted
-    val isActive: Boolean,
-    val notes: String?,
-    val createdAt: String,
-    val updatedAt: String
+    val rotationDeg: Float = 0f,
+    val plantedDate: String? = null,   // ISO-8601 date string, null if not planted
+    val isActive: Boolean = true,
+    val notes: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = ""
 )
 
 // ─── Crop (reference data from crops table) ────────────────────────────────
@@ -90,7 +91,9 @@ data class SoilGuide(
     val drainageSpeed: String,           // "Moderate / Ideal"
     val phRange: String,                 // "6.0 – 7.0"
     val texture: String,                 // "Crumbly, rich in organic matter"
-    val bestCrops: List<String>          // ["Tomato", "Carrot", "Lettuce", "Onion"]
+    val bestCrops: List<String>,         // ["Tomato", "Carrot", "Lettuce", "Onion"]
+    val imageUrl: String? = null,
+    val colorHex: String? = null
 )
 
 // ─── Seasonal Planting Matrix Info ────────────────────────────────────────
@@ -136,11 +139,16 @@ data class HarvestRecord(
     val id: String,
     val plotId: String,
     val farmId: String,
+    val farmName: String = "MapTanim Main Farm",
+    val plotLabel: String = "Plot 1",
     val cropName: String,
-    val yieldKg: Float,
-    val qualityRating: Int,   // 1–5
+    val cropVariety: String? = null,
+    val plantedDate: String? = null,
     val harvestedAt: String,
-    val notes: String?
+    val growingDurationDays: Int = 0,
+    val yieldKg: Float = 0f,
+    val qualityRating: Int = 5,   // 1–5
+    val notes: String? = null
 )
 
 // ─── Activity (farmer manual log) ─────────────────────────────────────────
@@ -174,7 +182,6 @@ data class Profile(
     val nickname: String,
     val avatarUrl: String?,     // Supabase Storage user-avatars/{userId}/avatar.jpg
     val role: UserRole,
-    val onboardingCompleted: Boolean,
     val createdAt: String
 )
 

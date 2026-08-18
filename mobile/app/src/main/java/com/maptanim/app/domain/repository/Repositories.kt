@@ -46,6 +46,9 @@ interface CropPlotRepository {
 
     /** Upsert a single plot (used after Add Plot in Edit Mode). */
     suspend fun upsertPlot(plot: CropPlot)
+
+    /** Record harvest event, log harvest activity, and reset plot crop state for next cycle. */
+    suspend fun recordHarvest(plotId: String, yieldKg: Float? = null, notes: String? = null)
 }
 
 // ─── TaskRepository ────────────────────────────────────────────────────────

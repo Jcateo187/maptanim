@@ -1,5 +1,8 @@
 # 23. Notification System
 
+> 📌 **Navigation**: [◀ 22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [24. Offline Synchronization ▶](file:///d:/Development/MapTanim/docs/24_OFFLINE_SYNCHRONIZATION.md)
+
+---
 ## 📌 Overview
 The **Notification System** powers the top bar `🔔` bell badge and the in-app Notification Center. It serves strictly as an **informational alert, reminder, and system broadcast channel**. All notification records are stored in Room SQLite (`notifications` table) and synchronized with Supabase PostgREST — no static alerts or hardcoded badge values are used.
 
@@ -139,3 +142,16 @@ Notification Center
 - `○` = Unread alert indicator (increments top bar badge counter).
 - `●` = Read alert.
 - **Tapping an Item**: Marks the notification as read and navigates directly to the associated plot, AgriLibrary guide, or monitoring screen.
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [17. Farm Management](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md)
+- 📄 [20. Decision Support System](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)
+- 📄 [21. Knowledge Base](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)
+- 📄 [22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
+- 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+- 📄 [37. System Specifications & Scope Refinements](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)

@@ -1,5 +1,8 @@
 # 16. Interactive Plot Mapping Specifications
 
+> 📌 **Navigation**: [◀ 15. Render Engine](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [17. Farm Management ▶](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md)
+
+---
 ## 📌 Overview
 This document specifies the exact technical interaction model for the **Direct Soil Planting, Crop Zone Expansion & Drag-and-Drop Mapping Engine** in MapTanim, aligned with the **Crop Zone Specifications (MD 34)**. It details initial 1×1 placement, hold-and-drag crop positioning, blue/red drag placement previews, white selection borders, 8-handle bounding box overlays for expanding crop zones, contextual bottom toolbar actions (**Duplicate**, **Resize**, **Delete**), and the complete **Save Farm Layout Flow**.
 
@@ -30,7 +33,7 @@ This document specifies the exact technical interaction model for the **Direct S
    └──> Tap "Delete"    ──> Removes selected Crop Zone from layout
    │
    ▼
-6. Hold & Drag Crop Zone -> Reposition crop zone anywhere on 30m × 30m farm soil grid
+6. Hold & Drag Crop Zone -> Reposition crop zone anywhere on 45m × 45m farm soil grid
    │
    ▼
 7. Click "Save" -> Save Farm Dialog ("Type farm name")
@@ -73,4 +76,20 @@ This document specifies the exact technical interaction model for the **Direct S
 - **Monitoring Hub Overlay**: Evaluation of intercropping compatibility (beneficial vs. antagonistic crop pairings) is executed dynamically inside the **Monitoring Hub / Decision Support Overlay** when reviewing active farm plots.
 - For complete technical specifications, see **[37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)**.
 
+---
 
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [11. App Navigation](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md)
+- 📄 [12. UI/UX Guidelines](file:///d:/Development/MapTanim/docs/12_UI_UX_GUIDELINES.md)
+- 📄 [13. Design System](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md)
+- 📄 [14. Component Library](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md)
+- 📄 [15. Render Engine](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md)
+- 📄 [18. View Mode](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md)
+- 📄 [19. Edit Mode](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md)
+- 📄 [34. Direct Soil Crop Planting & Resize System](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
+- 📄 [35. Asset Planning & Sprites](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md)
+- 📄 [38. Audio & Sound Assets Planning](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md)
+- 📄 [39. Crop View Interaction & Variety Simulation](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md)

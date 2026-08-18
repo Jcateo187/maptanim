@@ -1,6 +1,6 @@
-package com.maptanim.app.data.repository
+package com.maptanim.backend.data.repository
 
-import com.maptanim.app.data.remote.SupabaseClient
+import com.maptanim.backend.data.remote.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.Serializable
 

@@ -195,9 +195,7 @@ fun LoginCard(
 
             GuestButton(
                 onClick = {
-
-                    navController.navigate(Routes.WELCOME_GUIDE)
-
+                    authViewModel.signInAnonymously()
                 }
             )
 

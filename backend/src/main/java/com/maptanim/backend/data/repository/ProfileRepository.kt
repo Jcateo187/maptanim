@@ -1,7 +1,7 @@
-package com.maptanim.app.data.repository
+package com.maptanim.backend.data.repository
 
-import com.maptanim.app.data.model.Profile
-import com.maptanim.app.data.remote.SupabaseClient
+import com.maptanim.backend.data.model.Profile
+import com.maptanim.backend.data.remote.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 
 class ProfileRepository {
@@ -18,7 +18,7 @@ class ProfileRepository {
 
             client.postgrest["profiles"]
 
-                .insert(profile)
+                .upsert(profile)
 
             Result.success(Unit)
 
@@ -101,7 +101,6 @@ class ProfileRepository {
                     {
                         set("nickname", nickname)
                         set("avatar", avatar)
-                        set("onboarding_completed", true)
                     }
 
                 ) {

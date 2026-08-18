@@ -49,13 +49,35 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.users (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     email           VARCHAR(255)    UNIQUE NOT NULL,
-    phone_number    VARCHAR(20),
-    full_name       VARCHAR(100)    NOT NULL,
     role            role_enum       NOT NULL DEFAULT 'FARMER',
     avatar_url      TEXT,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
+
+-- Migrations for existing deployments:
+ALTER TABLE public.users DROP COLUMN IF EXISTS full_name;
+ALTER TABLE public.users DROP COLUMN IF EXISTS phone_number;
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS first_name;
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS last_name;
+
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'beds') THEN
+        ALTER TABLE public.beds RENAME TO crop_plots;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'crop_plots' AND column_name = 'bed_label') THEN
+        ALTER TABLE public.crop_plots RENAME COLUMN bed_label TO plot_label;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'bed_id') THEN
+        ALTER TABLE public.tasks RENAME COLUMN bed_id TO plot_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'activities' AND column_name = 'bed_id') THEN
+        ALTER TABLE public.activities RENAME COLUMN bed_id TO plot_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'harvest_records' AND column_name = 'bed_id') THEN
+        ALTER TABLE public.harvest_records RENAME COLUMN bed_id TO plot_id;
+    END IF;
+END $$;
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
@@ -63,11 +85,13 @@ DROP POLICY IF EXISTS "users_own_data" ON public.users;
 CREATE POLICY "users_own_data" ON public.users
     FOR ALL USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "users_read_all" ON public.users;
+CREATE POLICY "users_read_all" ON public.users
+    FOR SELECT USING (true);
+
 -- Table: public.profiles (Queried by ProfileRepository & LoadingViewModel)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    first_name              VARCHAR(100) DEFAULT '',
-    last_name               VARCHAR(100) DEFAULT '',
     nickname                VARCHAR(100),
     avatar                  TEXT,
     onboarding_completed    BOOLEAN NOT NULL DEFAULT FALSE,
@@ -93,11 +117,9 @@ CREATE POLICY "profiles_update_own" ON public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, first_name, last_name, nickname, onboarding_completed)
+  INSERT INTO public.profiles (id, nickname, onboarding_completed)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1)),
     FALSE
   )
@@ -112,11 +134,9 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Backfill profile records for any existing users in auth.users
-INSERT INTO public.profiles (id, first_name, last_name, nickname, onboarding_completed)
+INSERT INTO public.profiles (id, nickname, onboarding_completed)
 SELECT 
     id,
-    COALESCE(raw_user_meta_data->>'first_name', ''),
-    COALESCE(raw_user_meta_data->>'last_name', ''),
     COALESCE(raw_user_meta_data->>'nickname', split_part(email, '@', 1)),
     FALSE
 FROM auth.users
@@ -165,13 +185,18 @@ DROP POLICY IF EXISTS "farmers_own_farms" ON public.farms;
 CREATE POLICY "farmers_own_farms" ON public.farms
     FOR ALL USING (auth.uid() = farmer_id);
 
--- Table: public.beds
-CREATE TABLE IF NOT EXISTS public.beds (
+DROP POLICY IF EXISTS "farms_read_all" ON public.farms;
+CREATE POLICY "farms_read_all" ON public.farms
+    FOR SELECT USING (true);
+
+-- Table: public.crop_plots (Direct-Planted Crop Plots)
+CREATE TABLE IF NOT EXISTS public.crop_plots (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_label       VARCHAR(20)     NOT NULL,
+    plot_label      VARCHAR(20)     NOT NULL,
     crop_name       VARCHAR(100),
     crop_id         UUID            REFERENCES public.crops(id),
+    crop_variety    VARCHAR(100),
     soil_type       soil_type_enum  NOT NULL DEFAULT 'LOAM',
     pos_x           FLOAT           NOT NULL DEFAULT 0.0,
     pos_y           FLOAT           NOT NULL DEFAULT 0.0,
@@ -185,14 +210,14 @@ CREATE TABLE IF NOT EXISTS public.beds (
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE public.beds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "farmers_own_beds" ON public.beds;
-CREATE POLICY "farmers_own_beds" ON public.beds
+DROP POLICY IF EXISTS "farmers_own_crop_plots" ON public.crop_plots;
+CREATE POLICY "farmers_own_crop_plots" ON public.crop_plots
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM public.farms f
-            WHERE f.id = beds.farm_id AND f.farmer_id = auth.uid()
+            WHERE f.id = crop_plots.farm_id AND f.farmer_id = auth.uid()
         )
     );
 
@@ -200,7 +225,7 @@ CREATE POLICY "farmers_own_beds" ON public.beds
 CREATE TABLE IF NOT EXISTS public.tasks (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_id          UUID            REFERENCES public.beds(id) ON DELETE CASCADE,
+    plot_id         UUID            REFERENCES public.crop_plots(id) ON DELETE CASCADE,
     task_type       task_type_enum  NOT NULL,
     title           VARCHAR(200)    NOT NULL,
     sub_label       VARCHAR(200),
@@ -226,7 +251,7 @@ CREATE POLICY "farmers_own_tasks" ON public.tasks
 CREATE TABLE IF NOT EXISTS public.activities (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id         UUID            NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    bed_id          UUID            REFERENCES public.beds(id),
+    plot_id         UUID            REFERENCES public.crop_plots(id),
     activity_type   task_type_enum  NOT NULL,
     performed_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     amount          FLOAT,
@@ -249,7 +274,7 @@ CREATE POLICY "farmers_own_activities" ON public.activities
 -- Table: public.harvest_records
 CREATE TABLE IF NOT EXISTS public.harvest_records (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    bed_id          UUID            NOT NULL REFERENCES public.beds(id) ON DELETE CASCADE,
+    plot_id         UUID            NOT NULL REFERENCES public.crop_plots(id) ON DELETE CASCADE,
     crop_name       VARCHAR(100)    NOT NULL,
     yield_kg        FLOAT,
     yield_units     INT,
@@ -265,9 +290,9 @@ DROP POLICY IF EXISTS "farmers_own_harvest" ON public.harvest_records;
 CREATE POLICY "farmers_own_harvest" ON public.harvest_records
     FOR ALL USING (
         EXISTS (
-            SELECT 1 FROM public.beds b
-            JOIN public.farms f ON f.id = b.farm_id
-            WHERE b.id = harvest_records.bed_id AND f.farmer_id = auth.uid()
+            SELECT 1 FROM public.crop_plots p
+            JOIN public.farms f ON f.id = p.farm_id
+            WHERE p.id = harvest_records.plot_id AND f.farmer_id = auth.uid()
         )
     );
 
@@ -288,22 +313,40 @@ DROP POLICY IF EXISTS "dss_rules_read_all" ON public.dss_rules;
 CREATE POLICY "dss_rules_read_all" ON public.dss_rules
     FOR SELECT USING (true);
 
--- Table: public.notifications
+-- Table: public.notifications (System Updates & Admin Announcements)
 CREATE TABLE IF NOT EXISTS public.notifications (
-    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID            NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    title           VARCHAR(200)    NOT NULL,
-    body            TEXT,
-    task_type       task_type_enum,
-    is_read         BOOLEAN         NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID            REFERENCES public.users(id) ON DELETE CASCADE,
+    title               VARCHAR(200)    NOT NULL,
+    body                TEXT,
+    task_type           task_type_enum,
+    notification_type   VARCHAR(50)     NOT NULL DEFAULT 'SYSTEM_UPDATE',
+    is_read             BOOLEAN         NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
+
+-- Migration block for existing installations
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'notifications' 
+          AND column_name = 'notification_type'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN notification_type VARCHAR(50) NOT NULL DEFAULT 'SYSTEM_UPDATE';
+    END IF;
+    
+    -- Ensure user_id is nullable for system-wide broadcasts
+    ALTER TABLE public.notifications ALTER COLUMN user_id DROP NOT NULL;
+END $$;
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "users_own_notifications" ON public.notifications;
-CREATE POLICY "users_own_notifications" ON public.notifications
-    FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "notifications_read_all" ON public.notifications;
+CREATE POLICY "notifications_read_all" ON public.notifications
+    FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
 
 -- ============================================================================
 -- 3. SEED DATA (High-Value Vegetables & Companion Matrix)
@@ -337,4 +380,11 @@ VALUES
     ('Cabbage', 'Onion', 'BENEFICIAL', 'Onion repels cabbage loopers', 'BPI Guidelines'),
     ('Lettuce', 'Carrot', 'BENEFICIAL', 'Companion harvest timing aligned', 'BPI Guidelines'),
     ('Onion', 'String Beans', 'ANTAGONIST', 'Onion inhibits bean growth', 'DA-BAR Companion Guide')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.notifications (title, body, notification_type, is_read)
+VALUES
+    ('📢 System Update v1.2.0', 'MapTanim Admin deployed direct-to-soil grid performance optimizations and sync upgrades.', 'SYSTEM_UPDATE', FALSE),
+    ('🌾 New Crop Added: Sweet Corn', 'Admin added Sweet Corn (Zea mays) to the crop planting library. Tap to view growth stages.', 'CROP_ADDITION', FALSE),
+    ('🛠 Bug Fix & Security Patch', 'Resolved offline database synchronization and plot status updating issues.', 'BUG_FIX', TRUE)
 ON CONFLICT DO NOTHING;

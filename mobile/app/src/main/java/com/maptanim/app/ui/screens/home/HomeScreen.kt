@@ -1,44 +1,53 @@
 package com.maptanim.app.ui.screens.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.maptanim.app.domain.model.TaskType
-import com.maptanim.app.navigation.Routes
-import com.maptanim.app.ui.components.background.HomeBackground
-import com.maptanim.app.ui.components.isometric.layout.IsometricLayout
-import com.maptanim.app.ui.components.layout.BottomToolbar
-import com.maptanim.app.ui.components.layout.LeftToolbar
-import com.maptanim.app.ui.components.layout.RightToolbar
-import com.maptanim.app.ui.components.layout.TopBar
-
-import com.maptanim.app.domain.model.CanvasMode
-import com.maptanim.app.renderer.canvas.FarmCanvas
-import com.maptanim.app.ui.screens.edit.EditViewModel
-
 import com.maptanim.app.core.audio.AmbientSound
 import com.maptanim.app.core.audio.BackgroundTrack
 import com.maptanim.app.core.audio.LocalSoundManager
 import com.maptanim.app.core.audio.SoundEffect
 import com.maptanim.app.core.audio.TrackAmbientEffect
 import com.maptanim.app.core.audio.TrackBgmEffect
+import com.maptanim.app.domain.model.CanvasMode
+import com.maptanim.app.navigation.Routes
+import com.maptanim.app.renderer.canvas.FarmCanvas
+import com.maptanim.app.ui.components.layout.BottomToolbar
+import com.maptanim.app.ui.components.layout.LeftToolbar
+import com.maptanim.app.ui.components.layout.RightToolbar
+import com.maptanim.app.ui.components.layout.TopBar
+import com.maptanim.app.ui.screens.edit.EditViewModel
 import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
+import kotlinx.coroutines.launch
 
 /**
  * HomeScreen — Clash of Clans inspired HUD design with shared 2D Isometric Scenery.
@@ -47,7 +56,8 @@ import com.maptanim.app.ui.screens.settings.AudioSettingsDialog
 fun HomeScreen(
     navController: NavHostController,
     homeViewModel: HomeViewModel = viewModel(),
-    editViewModel: EditViewModel = viewModel()
+    editViewModel: EditViewModel = viewModel(),
+    tutorialViewModel: com.maptanim.app.viewmodel.TutorialViewModel = viewModel()
 ) {
     TrackBgmEffect(BackgroundTrack.PEACEFUL_FARM)
     TrackAmbientEffect(AmbientSound.DAY_BIRDS)
@@ -55,18 +65,31 @@ fun HomeScreen(
     val soundManager = LocalSoundManager.current
     val uiState by homeViewModel.uiState.collectAsState()
     val editUiState by editViewModel.uiState.collectAsState()
+    val tutorialUiState by tutorialViewModel.uiState.collectAsState()
 
     var showMonitoringOverlay by remember { mutableStateOf(false) }
     var showTasksOverlay by remember { mutableStateOf(false) }
     var showSummaryOverlay by remember { mutableStateOf(false) }
     var showAudioSettingsDialog by remember { mutableStateOf(false) }
+    var isNavigatingToEdit by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    val mergedPlots = remember(editUiState.plots, uiState.plots) {
-        editUiState.plots.map { editPlot ->
-            val homeMatch = uiState.plots.firstOrNull { it.id == editPlot.id }
-            editPlot.copy(
-                activeTasks = homeMatch?.activeTasks ?: editPlot.activeTasks,
-                isMonitoringStarted = homeMatch?.isMonitoringStarted ?: editPlot.isMonitoringStarted
+    val homePlots = uiState.plots
+    val zonesForHome = remember(homePlots) {
+        homePlots.map { plot ->
+            val zone = com.maptanim.app.renderer.model.CropZoneRenderData(
+                id = "zone-${plot.id}",
+                plotId = plot.id,
+                cropName = plot.cropName,
+                offsetX = 0.0f,
+                offsetY = 0.0f,
+                widthM = plot.widthM,
+                heightM = plot.heightM,
+                spacingM = 1.0f,
+                growthStage = plot.growthStage
+            )
+            zone.copy(
+                plantInstances = com.maptanim.app.renderer.PlantInstanceGenerator.generate(zone, plot.posX, plot.posY)
             )
         }
     }
@@ -75,10 +98,10 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         // 2D Isometric Map Canvas Background (Same scenery engine as EditScreen)
-        HomeBackground()
+
         FarmCanvas(
             modifier = Modifier.fillMaxSize(),
-            uiState = editUiState.copy(plots = mergedPlots),
+            uiState = editUiState.copy(plots = homePlots, cropZones = zonesForHome),
             editViewModel = editViewModel,
             canvasMode = CanvasMode.VIEW,
             onOpenMonitoring = {
@@ -87,18 +110,18 @@ fun HomeScreen(
             }
         )
 
-        val currentPlots = editUiState.plots.ifEmpty { uiState.plots }
-        val totalPlotsCount = currentPlots.size
-        val totalCropsCount = currentPlots.count { !it.cropName.isNullOrEmpty() }.let { if (it > 0) it else totalPlotsCount }
+        val totalPlotsCount = homePlots.size
+        val totalCropsCount = homePlots.count { !it.cropName.isNullOrEmpty() }
 
-        // Top Bar HUD
+        // Top Bar HUD — all real data from Supabase (cloud) or Room (local)
         TopBar(
             modifier = Modifier.align(Alignment.TopCenter),
             totalCrops = totalCropsCount,
             readyToHarvest = uiState.farmSummary.readyToHarvest,
             notificationCount = uiState.notificationCount,
-            farmName = uiState.activeFarm?.farmName ?: "Murcia Farm",
-            location = uiState.activeFarm?.location ?: "Murcia, Negros Occidental",
+            nickname = uiState.nickname,
+            avatarAssetPath = uiState.avatarAssetPath,
+            farmName = uiState.activeFarm?.farmName ?: "",
             onProfileClick = {
                 soundManager.playSfx(SoundEffect.TAP_BUTTON)
                 navController.navigate(Routes.profileRoute(0))
@@ -109,7 +132,7 @@ fun HomeScreen(
             },
             onSettingsClick = {
                 soundManager.playSfx(SoundEffect.TAP_BUTTON)
-                showAudioSettingsDialog = true
+                navController.navigate(Routes.profileRoute(2))
             }
         )
 
@@ -137,7 +160,22 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 16.dp),
-            onEditClick = { navController.navigate(Routes.EDIT) }
+            isLoading = isNavigatingToEdit,
+            onEditClick = {
+                if (!isNavigatingToEdit) {
+                    isNavigatingToEdit = true
+                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                    if (tutorialUiState.isTutorialActive) {
+                        tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT)
+                    }
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(450)
+                        navController.navigate(Routes.EDIT)
+                        kotlinx.coroutines.delay(300)
+                        isNavigatingToEdit = false
+                    }
+                }
+            }
         )
 
         // ── 1. Fullscreen Monitoring Overlay ──────────────────────────────
@@ -155,9 +193,18 @@ fun HomeScreen(
         }
 
         // ── 3. Audio & Sound Settings Modal ──────────────────────────────
+        val coroutineScope = rememberCoroutineScope()
         if (showAudioSettingsDialog) {
             AudioSettingsDialog(
-                onDismissRequest = { showAudioSettingsDialog = false }
+                onDismissRequest = { showAudioSettingsDialog = false },
+                onLogoutClick = {
+                    coroutineScope.launch {
+                        com.maptanim.app.data.repository.RepositoryProvider.userRepository.logout()
+                        navController.navigate(Routes.WELCOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
 
@@ -206,34 +253,44 @@ fun HomeScreen(
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun MonitoringCard(title: String, value: String, status: String, color: Color, modifier: Modifier = Modifier) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.15f), modifier = modifier) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
-            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(status, fontSize = 10.sp, color = Color.White)
-        }
-    }
-}
-
-@Composable
-private fun TaskItemRow(title: String, subtext: String, type: TaskType) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Default.CheckCircleOutline, null, tint = Color.Gray)
-            Column {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
-                Text(subtext, fontSize = 11.sp, color = Color.Gray)
+        // ── 4. Old Man Farmer Guided Tutorial Overlay (CoC Style) ─────────
+        if (tutorialUiState.isTutorialActive) {
+            when (tutorialUiState.currentStep) {
+                com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON -> {
+                    com.maptanim.app.ui.components.guide.OldManFarmerGuideOverlay(
+                        dialogText = "Napakaganda, ${tutorialUiState.userNickname.ifEmpty { "Magsasaka" }}! Click the EDIT button below to start!",
+                        titleText = "Tatay Juan (Farm Guide)",
+                        showSkip = true,
+                        nextButtonText = "Let's Go!",
+                        dialogAlignment = Alignment.TopCenter,
+                        compactMode = true,
+                        scrimAlpha = 0.40f,
+                        onSkip = { tutorialViewModel.skipTutorial() },
+                        onNext = {
+                            tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_ADD_PLANT)
+                            navController.navigate(Routes.EDIT)
+                        },
+                        pointingHandTarget = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 24.dp, bottom = 24.dp),
+                                contentAlignment = Alignment.BottomEnd
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    com.maptanim.app.ui.components.guide.PointingHandSprite(
+                                        direction = com.maptanim.app.ui.components.guide.PointingDirection.DOWN,
+                                        label = "CLICK EDIT TO SET UP FARM",
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                    com.maptanim.app.ui.components.guide.SpotlightPulseRing(size = 80.dp)
+                                }
+                            }
+                        }
+                    )
+                }
+                else -> {}
             }
         }
     }

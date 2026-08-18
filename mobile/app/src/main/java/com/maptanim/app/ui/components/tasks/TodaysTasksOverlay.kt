@@ -39,10 +39,10 @@ fun TodaysTasksOverlay(
     var tasks by remember {
         mutableStateOf(
             listOf(
-                TaskItem("t1", "Water Plot 3", "String Beans (PLOT 2)", TaskType.WATER),
-                TaskItem("t2", "Fertilize Eggplant", "Plot 1", TaskType.FERTILIZE),
-                TaskItem("t3", "Harvest Carrot", "PLOT 1 - Ready for harvest", TaskType.HARVEST),
-                TaskItem("t4", "Check Pest Alert", "Tomato - Inspect for Hornworms", TaskType.PEST_ALERT)
+                TaskItem("t1", "Water String Beans", "String Beans Zone", TaskType.WATER),
+                TaskItem("t2", "Fertilize Eggplant", "Eggplant Zone", TaskType.FERTILIZE),
+                TaskItem("t3", "Harvest Carrot", "Carrot Zone - Ready for harvest", TaskType.HARVEST),
+                TaskItem("t4", "Check Pest Alert", "Tomato Zone - Inspect for Hornworms", TaskType.PEST_ALERT)
             )
         )
     }

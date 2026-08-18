@@ -1,5 +1,8 @@
 # 17. Farm Management
 
+> 📌 **Navigation**: [◀ 16. Interactive Plot Mapping](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [18. View Mode ▶](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md)
+
+---
 ## 📌 Overview
 Farm Management covers how farms and direct soil planted crop plots (`crop_plots`), sub-regions (`crop_zones`), and support structures (`farm_objects`) are created, managed, saved, and rendered in MapTanim.
 
@@ -41,3 +44,16 @@ data class CropPlotEntity(
     @ColumnInfo(name = "updated_at") val updatedAt: String
 )
 ```
+
+---
+
+## 📚 Related Documentation & Cross References
+- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
+- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
+- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
+- 📄 [20. Decision Support System](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)
+- 📄 [21. Knowledge Base](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)
+- 📄 [22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
+- 📄 [23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
+- 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+- 📄 [37. System Specifications & Scope Refinements](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md)

@@ -10,19 +10,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed class LoadingDestination {
     object None : LoadingDestination()
     object Welcome : LoadingDestination()
-    object WelcomeGuide : LoadingDestination()
     object Home : LoadingDestination()
 }
 
+data class LoadingUiState(
+    val progress: Float = 0.10f,
+    val statusText: String = "Initializing Agroecological Engine...",
+    val destination: LoadingDestination = LoadingDestination.None
+)
+
 class LoadingViewModel : ViewModel() {
 
-    private val _destination = MutableStateFlow<LoadingDestination>(LoadingDestination.None)
-    val destination: StateFlow<LoadingDestination> = _destination.asStateFlow()
+    private val _uiState = MutableStateFlow(LoadingUiState())
+    val uiState: StateFlow<LoadingUiState> = _uiState.asStateFlow()
 
     init {
         initialize()
@@ -30,27 +36,69 @@ class LoadingViewModel : ViewModel() {
 
     private fun initialize() {
         viewModelScope.launch {
-            val initializer = AppInitializationController()
-            initializer.initialize()
+            // Step 1: Initialize Engine & Remote Data
+            _uiState.update {
+                it.copy(
+                    progress = 0.25f,
+                    statusText = "Initializing Agroecological Engine..."
+                )
+            }
+            delay(300)
 
-            val session = SupabaseClient.client.auth.currentSessionOrNull()
-            val user = SupabaseClient.client.auth.currentUserOrNull()
-
-            val target = if (session == null || user == null) {
-                LoadingDestination.Welcome
-            } else {
-                val profileRepository = ProfileRepository()
-                val profile = profileRepository.getProfile(user.id)
-                if (profile?.onboarding_completed == true) {
-                    LoadingDestination.Home
-                } else {
-                    LoadingDestination.WelcomeGuide
-                }
+            try {
+                val initializer = AppInitializationController()
+                initializer.initialize()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
 
-            // Enforce exact 2-second (2000ms) loading screen display timer before navigating
-            delay(2000)
-            _destination.value = target
+            // Step 2: Sync Philippine Crop Database
+            _uiState.update {
+                it.copy(
+                    progress = 0.60f,
+                    statusText = "Syncing Philippine Crop Database..."
+                )
+            }
+            delay(350)
+
+            // Step 3: Verify Auth Session & User Profile
+            _uiState.update {
+                it.copy(
+                    progress = 0.85f,
+                    statusText = "Verifying User Session & Workspace..."
+                )
+            }
+            delay(300)
+
+            val target = try {
+                val session = SupabaseClient.client.auth.currentSessionOrNull()
+                val user = SupabaseClient.client.auth.currentUserOrNull()
+
+                if (session != null || user != null) {
+                    // Authenticated user exists locally - proceed offline to Home screen
+                    LoadingDestination.Home
+                } else {
+                    LoadingDestination.Welcome
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Network unavailable or offline session parse error - fallback to Welcome or Home based on local user
+                val cachedUser = try { SupabaseClient.client.auth.currentUserOrNull() } catch (_: Exception) { null }
+                if (cachedUser != null) LoadingDestination.Home else LoadingDestination.Welcome
+            }
+
+            // Step 4: Final Ready State & Navigation Trigger
+            _uiState.update {
+                it.copy(
+                    progress = 1.0f,
+                    statusText = if (target is LoadingDestination.Home) "Loading Farm Workspace..." else "Ready!"
+                )
+            }
+            delay(300)
+
+            _uiState.update {
+                it.copy(destination = target)
+            }
         }
     }
 }
