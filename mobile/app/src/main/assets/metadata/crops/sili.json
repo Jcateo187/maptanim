@@ -1,0 +1,46 @@
+{
+  "id": "crop_sili",
+  "category": "crop",
+  "common_name": "Chili / Pepper",
+  "local_name_ph": "Sili",
+  "scientific_name": "Capsicum annuum",
+  "taxonomic_family": "Solanaceae",
+  "crop_type": "Solanaceous",
+  "growing_specifications": {
+    "days_to_harvest": "65 days",
+    "optimal_soil_ph": "5.8 - 6.8",
+    "optimal_temperature_c": "22 - 32 C",
+    "description": "Cultivated for labuyo (bird's eye chili) and green panigang peppers across Luzon and Visayas."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_sili_django_f1",
+      "variety_name": "Django F1 (Siling Haba)",
+      "local_name_ph": "Sili Django F1 (Panigang)",
+      "growth_duration_days": 65,
+      "stage_days": {
+        "stage1_sprout": 6,
+        "stage2_seedling": 14,
+        "stage3_vegetative": 22,
+        "stage4_flowering": 16,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 12,
+      "description": "Pungent green finger chili hybrid resistant to anthracnose and bacterial spot, ideal for Sinigang.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-10"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "6b5fc1191759af2ed8841884783af5fc0ef578fce9f784f0c242e406df5687de"
+  }
+}

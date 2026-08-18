@@ -9,11 +9,11 @@ data class FarmDto(
     val id: String,
     val farmer_id: String,
     val farm_name: String,
-    val location: String = "Murcia, Negros Occidental",
-    val total_area_sqm: Float? = null,
     val created_at: String? = null,
     val updated_at: String? = null
 )
+
+
 
 class FarmRemoteRepository {
     private val client = SupabaseClient.client

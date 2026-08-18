@@ -1,0 +1,46 @@
+{
+  "id": "crop_ampalaya",
+  "category": "crop",
+  "common_name": "Bitter Gourd",
+  "local_name_ph": "Ampalaya",
+  "scientific_name": "Momordica charantia",
+  "taxonomic_family": "Cucurbitaceae",
+  "crop_type": "Cucurbit / Vine",
+  "growing_specifications": {
+    "days_to_harvest": "55 days",
+    "optimal_soil_ph": "6.0 - 6.7",
+    "optimal_temperature_c": "24 - 35 C",
+    "description": "High-value medicinal and culinary vining crop grown on bamboo trellises nationwide."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_ampalaya_jade_star_xl_f1",
+      "variety_name": "Jade Star XL F1",
+      "local_name_ph": "Ampalaya Jade Star XL F1",
+      "growth_duration_days": 55,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 11,
+        "stage3_vegetative": 18,
+        "stage4_flowering": 14,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Deep green extra-long hybrid bitter gourd with thick ridges and high tolerance to leaf spot viruses.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-30"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "0eeb9dd94c58225cfcbc1b5e9975860f9acd91e695d82bdb388327cf18266d13"
+  }
+}

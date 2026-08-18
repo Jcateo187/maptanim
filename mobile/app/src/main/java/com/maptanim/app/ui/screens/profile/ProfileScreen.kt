@@ -506,12 +506,9 @@ private fun ProfileTabContent(
                                                 fontSize = 13.sp,
                                                 color = White
                                             )
-                                            Text(
-                                                text = "📍 ${farm.location.ifBlank { "Murcia, Negros Occidental" }}",
-                                                fontSize = 11.sp,
-                                                color = White.copy(alpha = 0.6f)
-                                            )
                                         }
+
+
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
                                             color = ForestGreen.copy(alpha = 0.25f),
@@ -1360,8 +1357,7 @@ private fun FullFarmsListModal(
     val filteredFarms = remember(farms, searchQuery) {
         if (searchQuery.isBlank()) farms
         else farms.filter {
-            it.farmName.contains(searchQuery, ignoreCase = true) ||
-            it.location.contains(searchQuery, ignoreCase = true)
+            it.farmName.contains(searchQuery, ignoreCase = true)
         }
     }
 
@@ -1430,7 +1426,7 @@ private fun FullFarmsListModal(
                             cursorBrush = androidx.compose.ui.graphics.SolidColor(ForestGreen),
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
-                                    Text("Search farms by name or location...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
+                                    Text("Search farms by name...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
                                 }
                                 innerTextField()
                             },
@@ -1466,9 +1462,8 @@ private fun FullFarmsListModal(
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(farm.farmName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = White)
-                                        Text("📍 Location: ${farm.location.ifBlank { "Murcia, Negros Occidental" }}", fontSize = 11.sp, color = White.copy(alpha = 0.7f))
-                                        Text("📐 Total Area: ${(farm.totalAreaSqm ?: 0f).toInt()} sqm", fontSize = 10.sp, color = ForestGreen)
                                     }
+
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = ForestGreen.copy(alpha = 0.25f),
@@ -1481,6 +1476,7 @@ private fun FullFarmsListModal(
                         }
                     }
                 }
+
 
                 if (totalPages > 1) {
                     Row(

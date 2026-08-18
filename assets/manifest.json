@@ -1,0 +1,503 @@
+{
+  "generator": "MapTanim Asset Pipeline v1.0",
+  "generated_at": "2026-08-06T02:42:26.628043+00:00",
+  "total_assets": 98,
+  "categories": {
+    "sprites": [
+      {
+        "path": "sprites/crops/ampalaya/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "c2deea0d3bb650a8bd55f5f599a1c0f20f4e638ad987c41e47f477ad91e6deb2"
+      },
+      {
+        "path": "sprites/crops/ampalaya/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "79f093e3c9dc2e60564558cf7f78c555034b131a182b522c87ac4f36629b0401"
+      },
+      {
+        "path": "sprites/crops/ampalaya/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "44f819cebf8259453642a26ef9adde756a6bd07b4a10464abb27c63633d94444"
+      },
+      {
+        "path": "sprites/crops/ampalaya/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "802fa281f0cd882f63669154ac49ee1f56a4ffb5c7bb30f9dbfde47b55e5a44d"
+      },
+      {
+        "path": "sprites/crops/ampalaya/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "5e4e357d8708f3485cd462076f0268bf8aaa783050190f8eb7ac6aa5c546680c"
+      },
+      {
+        "path": "sprites/crops/cabbage/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "3a9d210018be81ead827c399bb746b9b979b4dea918038f531345b70789e6e01"
+      },
+      {
+        "path": "sprites/crops/cabbage/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "daafbd66fdce203b427535ff1806d7ca1cc1edf9e8b64502f5edebfcf8762dc9"
+      },
+      {
+        "path": "sprites/crops/cabbage/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "f5f3cb09e9eb56ddcb3195c3ec40366634d2eb2fb07776def7bd86bd5a869e44"
+      },
+      {
+        "path": "sprites/crops/cabbage/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "9448272e4c3a1cddbb585538e4f6080c2467eca7a604d6ddc273b6205c6c2295"
+      },
+      {
+        "path": "sprites/crops/cabbage/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "d37ea48d34a6975728eb7d019f8a0bd14ecc449887df409321da8c6b02eff752"
+      },
+      {
+        "path": "sprites/crops/carrot/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "8090dbce18512cbf2654dcfcf002abd238650a6b8e714b7fabf3df93d54ef89d"
+      },
+      {
+        "path": "sprites/crops/carrot/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "1c3db5abe1cc6513c9ff56caf3e75fe087c92ee3c1d2818d1ddbdbdd8d6efb00"
+      },
+      {
+        "path": "sprites/crops/carrot/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "2bb2ae238e4d2d0fb09dd97c05d7d9fa4df47cb2698c5494c02c34b485bac5ce"
+      },
+      {
+        "path": "sprites/crops/carrot/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "1e043929d4b90ae205d5708e3e212888fdd870ab315fdf95ba0f142179565b09"
+      },
+      {
+        "path": "sprites/crops/carrot/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "b312b0c7fa436cd36b2a46470712b412a48d6bb4213c955bf1b65812723e116f"
+      },
+      {
+        "path": "sprites/crops/corn/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "1e21be1683ed2bded5fd8247c176b54edec330db90d089d7511152434b37335b"
+      },
+      {
+        "path": "sprites/crops/corn/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "0a82c5077165eb5e25d950dd0f98cda934824f7c484018f7385efbcd6d0d99e8"
+      },
+      {
+        "path": "sprites/crops/corn/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "8600649af58204e414b2d221d966ff1aad713a717cf60019e25427530dd6559b"
+      },
+      {
+        "path": "sprites/crops/corn/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "c7e8a312bb214cea53e94f25d2abdd4d31fe8eb845dd1aa7e1306d304d0865ff"
+      },
+      {
+        "path": "sprites/crops/corn/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "92e6670b2306874c86e75bc6c0288c6db037da3a804cfb74d9c8a742d4a003da"
+      },
+      {
+        "path": "sprites/crops/eggplant/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "cfc2cc127e8c0e3a07b4300164af83f017ba93e78e56bcc99096941e0508e8f1"
+      },
+      {
+        "path": "sprites/crops/eggplant/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "3df9630fc1006f23e5194052aad5ddc3f43d13887459613d823fd8eb23976b50"
+      },
+      {
+        "path": "sprites/crops/eggplant/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "3a24477d3eb056b0509e09193da088f740ea8c65270aa321f9b829d9a80f032b"
+      },
+      {
+        "path": "sprites/crops/eggplant/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "fb6e127bbf6cb0fc45350b689ebe56167e04b76bba0fc8ad5f0cb3f8200e7a2c"
+      },
+      {
+        "path": "sprites/crops/eggplant/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "ff6ebfbeb14972aa6530aa1c54dab8e7f598c81d958d9b2461bf2fdda352028c"
+      },
+      {
+        "path": "sprites/crops/kangkong/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "dad5c2ad9240f3df9abd99cd4bd145c00f98f7c92d6cc926986fbe27c29cf13b"
+      },
+      {
+        "path": "sprites/crops/kangkong/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "76a06bc73408f17eedc3eb3038c41154ef32b347fef741731917beb9f9cec67f"
+      },
+      {
+        "path": "sprites/crops/kangkong/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "6e3563ee711237ade3967a69afa91935fec815090adedd7bce166d6f0c2fcaa8"
+      },
+      {
+        "path": "sprites/crops/kangkong/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "2a15fbcbcea8b35a23823322ad59d3b93a27efea2be531cead94e8566790fc8f"
+      },
+      {
+        "path": "sprites/crops/kangkong/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "49f11c55b8033cafb0ecc03368e8caba83154f63841326763cbd9628e506a6e5"
+      },
+      {
+        "path": "sprites/crops/lettuce/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "0b42f61bb4a2f11cc65257f0fbdfe8ac74a2bd835f49bc7e76c5535d06a62a07"
+      },
+      {
+        "path": "sprites/crops/lettuce/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "5bd7846d435d662cbb16e16f2273b56af8f1fd0d5b787a7015de2b4672a6f7a8"
+      },
+      {
+        "path": "sprites/crops/lettuce/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "b2f3602631a487a06472b776f14e800183c16234d6c15f21ff6ffe32b1947d21"
+      },
+      {
+        "path": "sprites/crops/lettuce/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "f0ace0ba4ea64ca7e141c28ff8005e6a6d0db9a0ecb57b4dcd87ba3565bbd93a"
+      },
+      {
+        "path": "sprites/crops/lettuce/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "5088f4757d9f70f0cd716e1cdb621276eebda0330c6b85075a866116509c729e"
+      },
+      {
+        "path": "sprites/crops/okra/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "4f0545c97764330c31e32285e9ed8df3a4e8564361cc15a0d37a34ad28a61a69"
+      },
+      {
+        "path": "sprites/crops/okra/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "6f5d19893678f1920907b435961a2f08ac4741055ef41ef461c7933275e3d8e5"
+      },
+      {
+        "path": "sprites/crops/okra/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "20c6af0cb725de6425092bd490250e004697e5af40f9a4c7276b3ec046344a53"
+      },
+      {
+        "path": "sprites/crops/okra/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "a3ff6ca21c17774ff885003f91b5363e824466aa5c3689280fc1c74c64fb9b27"
+      },
+      {
+        "path": "sprites/crops/okra/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "d37fe6da5e4df9bd288cfd7adf199d2926c2f0411553f4be24fcccd5617f3bdd"
+      },
+      {
+        "path": "sprites/crops/onion/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "d05363b483e32bac18ba055296ecc5306f71f8294ccda2d3993bc9b05e436a4e"
+      },
+      {
+        "path": "sprites/crops/onion/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "1417048e506cf0f8f96479ebc364bb762b9f79b5f72c7ec9d7506037777e134e"
+      },
+      {
+        "path": "sprites/crops/onion/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "fd039bc0ed72aa590fe3f08e92c5060642dcc365c6a69eefa4c099e31d3c0da4"
+      },
+      {
+        "path": "sprites/crops/onion/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "575629e5b887c025e57df16f8f21a85c4d992abaf70b814a5630708b471d7a1a"
+      },
+      {
+        "path": "sprites/crops/onion/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "b37eac768de8ecdeb860893ec4b6d1dd2d25031c2df10d78155a058a8b855d4b"
+      },
+      {
+        "path": "sprites/crops/pechay/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "1e833a69cb6e25b6e1fb66847e46c578f54e27d81ce2712de043a8586bfe260f"
+      },
+      {
+        "path": "sprites/crops/pechay/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "4024800e489115e87da11dc6d4a3dd23a4cbf4acbe6193fc67a386784e0a5180"
+      },
+      {
+        "path": "sprites/crops/pechay/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "389b8fb4c9f96781b6f4a86289c6130f7db985e06001054724a13c4ca548d636"
+      },
+      {
+        "path": "sprites/crops/pechay/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "10cde7a57d88ec7ef6a01bfe368a230a41afc32f03a8639384b55d78ff89aa23"
+      },
+      {
+        "path": "sprites/crops/pechay/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "9b1e059ae58646863a5c6a170ec2f1a44083d11984bb3b61c2314ea2eaa7efd6"
+      },
+      {
+        "path": "sprites/crops/pipino/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "f6f3cccb5b5d7097565fdf64315d1baf89caaa17f7b56b13b1ab1837e3300bea"
+      },
+      {
+        "path": "sprites/crops/pipino/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "4edc4c59894d5bdfd704db099bcb0d08ed6dcee58c4f1b39f20fbf7e3173dd93"
+      },
+      {
+        "path": "sprites/crops/pipino/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "53143b629e7517a949dbd562ff5673e01b895b6df87d7c13271030cce12f2315"
+      },
+      {
+        "path": "sprites/crops/pipino/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "8b5d16996c7f573ad3ae54c00ec9f80f8567d4ffb1879183a84879d2f93b58cd"
+      },
+      {
+        "path": "sprites/crops/pipino/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "c3c07fe17381a939b4e131f42be5b196955bace888c34e0f0b7a98e7328bc25e"
+      },
+      {
+        "path": "sprites/crops/pumpkin/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "9a4f39f531879f150c1131b2d80f837af09513068b7ee3bcff9a48d39c70670b"
+      },
+      {
+        "path": "sprites/crops/pumpkin/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "1814317edd66d4d2af7e54959a263516c4c65dd418937fec1bb569cd6c071910"
+      },
+      {
+        "path": "sprites/crops/pumpkin/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "96b0d817218468c2582d854c047b7468d56bd4e03ae549ef224f91d9772e08f5"
+      },
+      {
+        "path": "sprites/crops/pumpkin/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "ce2f30f5bd9972cea1500d68163da8a3556bb41a220ee5e424c8f5ea3ecc73d6"
+      },
+      {
+        "path": "sprites/crops/pumpkin/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "b83e51103b2df196a9fe101403aed87e3b5a5cd37332c9ff474e8edd1e7de00a"
+      },
+      {
+        "path": "sprites/crops/sili/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "9b8e863a7bc1ebe1bde6336408db56fb52fae5d9b4a564f8aebe391fd36c8835"
+      },
+      {
+        "path": "sprites/crops/sili/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "de7b828bb196e6c3f1c7768a087cf98ec7fd6b1d6a2db5c0d2a41bab334289bd"
+      },
+      {
+        "path": "sprites/crops/sili/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "4d77f2a7f852e89866248b393132a3569d0cb9a38c30e51351ad47cf75f1a762"
+      },
+      {
+        "path": "sprites/crops/sili/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "2f5e8cbeb190ad145f818cc825d2059a228371f3cdf5cda7a3688536c5ced129"
+      },
+      {
+        "path": "sprites/crops/sili/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "c7b31b33c7c415f0c8fa0041250dddbb1010281ef210087aba1eb48132c7ed2a"
+      },
+      {
+        "path": "sprites/crops/stringbeans/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "c77e95b0d60a916ac943110b268941550cfd334e9f0855cc33616b43d8b6af35"
+      },
+      {
+        "path": "sprites/crops/stringbeans/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "8677d38c24defb0807fb0bb7e8bd70752f9393da5da6c67cd75b8533657157a5"
+      },
+      {
+        "path": "sprites/crops/stringbeans/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "31b80355c583aa32179715dbce13a2266a6b1482507efde1669d48992c048138"
+      },
+      {
+        "path": "sprites/crops/stringbeans/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "31b80355c583aa32179715dbce13a2266a6b1482507efde1669d48992c048138"
+      },
+      {
+        "path": "sprites/crops/stringbeans/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "47b26bcf4ddebac80cb64def3e1e7c2801057024d92b49053c4a1c6ff5105d79"
+      },
+      {
+        "path": "sprites/crops/tomato/stage1.png",
+        "filename": "stage1.png",
+        "sha256": "2032f664177228a6579b0ad13b7fccadcf0c00400e1ff87c5fddcc2077658b99"
+      },
+      {
+        "path": "sprites/crops/tomato/stage2.png",
+        "filename": "stage2.png",
+        "sha256": "dcc03e606758e18a0cbd3788e3c79ec64dbebbf77b43bc19111f82051b4e3e61"
+      },
+      {
+        "path": "sprites/crops/tomato/stage3.png",
+        "filename": "stage3.png",
+        "sha256": "bcd84e3256bff1a78ed2a304b350bddec82bc7045b01ac6fbdf75ed9b7dd0df9"
+      },
+      {
+        "path": "sprites/crops/tomato/stage4.png",
+        "filename": "stage4.png",
+        "sha256": "a355bbba60d13aa40285efaab4bef6e5aeb1ba156ee3da0fe35babd149c4442b"
+      },
+      {
+        "path": "sprites/crops/tomato/stage5.png",
+        "filename": "stage5.png",
+        "sha256": "da8014856165fa1eb11f9228235310d806986a39f9e68adebce02bd824e34cd5"
+      }
+    ],
+    "photos": [
+      {
+        "path": "photos/crops/carrot_primary.webp",
+        "filename": "carrot_primary.webp",
+        "sha256": "ef53b895c5eff1cd07199fa7b2b771dab7e6bea3e6d2cc05cfab03fa224d51d3"
+      },
+      {
+        "path": "photos/crops/eggplant_primary.webp",
+        "filename": "eggplant_primary.webp",
+        "sha256": "c0d69dd84f9b4302b316be71719c593dc9bd4b4ebe06a80d69865e2a028abcce"
+      },
+      {
+        "path": "photos/crops/stringbeans_primary.webp",
+        "filename": "stringbeans_primary.webp",
+        "sha256": "00d9029105331294e7104a435104a87ecd1131633f2fab71263fc9f39569fec3"
+      },
+      {
+        "path": "photos/crops/thumb_stringbeans_primary.webp",
+        "filename": "thumb_stringbeans_primary.webp",
+        "sha256": "195d616cf36b324aa870b632cbe43a43e28a19e06472ce9ac25ff91f04f9ec68"
+      }
+    ],
+    "metadata": [
+      {
+        "path": "metadata/crops/ampalaya.json",
+        "filename": "ampalaya.json",
+        "sha256": "aa4d7dbc6e7279fe4332e12c11131037360fe784501249c04fe0da3c1d1800e4"
+      },
+      {
+        "path": "metadata/crops/cabbage.json",
+        "filename": "cabbage.json",
+        "sha256": "2116bf92a82639fb228fb81d5e37f3b4bc9c9c133918a32b60c50b8a7501acc8"
+      },
+      {
+        "path": "metadata/crops/carrot.json",
+        "filename": "carrot.json",
+        "sha256": "1374a57cb079ddc72c177760dcff8ef327e98b6ff7fe7454db88bcee06707c3e"
+      },
+      {
+        "path": "metadata/crops/corn.json",
+        "filename": "corn.json",
+        "sha256": "dfc88a543ba13f5ef8c54cf78cbe019183788a9752debf76b9459fdba547e41b"
+      },
+      {
+        "path": "metadata/crops/eggplant.json",
+        "filename": "eggplant.json",
+        "sha256": "ead394b5c1a4eb8dfbd8711090eafe47529f1cb85ee22bed7817daa740c52bbf"
+      },
+      {
+        "path": "metadata/crops/kangkong.json",
+        "filename": "kangkong.json",
+        "sha256": "0070f70085b6a6a2c835f040b08abaee696073ef18766920d9c87618d5742f17"
+      },
+      {
+        "path": "metadata/crops/lettuce.json",
+        "filename": "lettuce.json",
+        "sha256": "8675be07ffa2dfbd4070283f4cb536beea2a1c114dc4805bc1ed2fae8f5ede3e"
+      },
+      {
+        "path": "metadata/crops/okra.json",
+        "filename": "okra.json",
+        "sha256": "e17cdee3c83b52ac60dc501a9c0e28f71d547f002968f643483ec5c580ff101d"
+      },
+      {
+        "path": "metadata/crops/onion.json",
+        "filename": "onion.json",
+        "sha256": "962d24aa0c9bd2639ac6a52e0d4f657ed976792f4b7f73e81736c291669b7f99"
+      },
+      {
+        "path": "metadata/crops/pechay.json",
+        "filename": "pechay.json",
+        "sha256": "95398f90850a84e0e9a0abc327f12f66dc034a3dcce539fc484f06d3e749b845"
+      },
+      {
+        "path": "metadata/crops/pipino.json",
+        "filename": "pipino.json",
+        "sha256": "de73b213f05029afd2c4c7d59b6e3bfee3cfbfa96809b97f695bb780ee8d981c"
+      },
+      {
+        "path": "metadata/crops/pumpkin.json",
+        "filename": "pumpkin.json",
+        "sha256": "7cf526342cef607c54dc95556b04552bcebf34dc8243ae02db4f202bfa25dce1"
+      },
+      {
+        "path": "metadata/crops/sili.json",
+        "filename": "sili.json",
+        "sha256": "b19131a2d937ebc5e7c0b0eac505eb6367a4cb1ed8273d6d0ca79f742d3071cf"
+      },
+      {
+        "path": "metadata/crops/sitaw.json",
+        "filename": "sitaw.json",
+        "sha256": "f00b8edb49d0112c3dfc13effe5d762ce0464efb711a7199c2313dd5cc997786"
+      },
+      {
+        "path": "metadata/crops/stringbeans.json",
+        "filename": "stringbeans.json",
+        "sha256": "d478b619261962ebadc1ecb6f8fb24436a37b06b13dc1218a07127c5ad277bee"
+      },
+      {
+        "path": "metadata/crops/tomato.json",
+        "filename": "tomato.json",
+        "sha256": "7d170f4e098badaf64077880bff186595a77c0065932dc063ca84f1d035167d6"
+      },
+      {
+        "path": "metadata/diseases/eggplant_fruit_shoot_borer.json",
+        "filename": "eggplant_fruit_shoot_borer.json",
+        "sha256": "e1612f615f3f8ac9f415e57d7a915cceb91224d6264f8fae37b643756176b6d2"
+      },
+      {
+        "path": "metadata/diseases/pechay_cutworm.json",
+        "filename": "pechay_cutworm.json",
+        "sha256": "fdbebad4a38c889de18360a6aef476f8a5869b2e046bb62a73d3cb0f30faf2d3"
+      },
+      {
+        "path": "metadata/diseases/tomato_early_blight.json",
+        "filename": "tomato_early_blight.json",
+        "sha256": "adf7b431006f4ad75a7350941bb557e22be97f3494ca374598bdb8c1ca66dea1"
+      }
+    ]
+  }
+}

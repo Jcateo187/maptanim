@@ -1,0 +1,68 @@
+{
+  "id": "crop_carrot",
+  "category": "crop",
+  "common_name": "Carrot",
+  "local_name_ph": "Karots",
+  "scientific_name": "Daucus carota",
+  "taxonomic_family": "Apiaceae",
+  "crop_type": "Root",
+  "growing_specifications": {
+    "days_to_harvest": "85-95 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "15 - 24 C",
+    "description": "High-value root crop cultivated extensively in high-altitude zones of Benguet and Mountain Province, Philippines."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_karots_terracotta_f1",
+      "variety_name": "Terracotta F1",
+      "local_name_ph": "Karots Terracotta F1",
+      "growth_duration_days": 85,
+      "stage_days": {
+        "stage1_sprout": 7,
+        "stage2_seedling": 17,
+        "stage3_vegetative": 32,
+        "stage4_flowering": 22,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "COOL",
+        "HIGHLAND"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Smooth cylindrical hybrid carrot cultivar with intense orange root core, preferred in highland Benguet farms.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-30"
+    },
+    {
+      "variety_id": "var_karots_kuroda_improved",
+      "variety_name": "Kuroda Improved",
+      "local_name_ph": "Karots Kuroda Improved",
+      "growth_duration_days": 95,
+      "stage_days": {
+        "stage1_sprout": 8,
+        "stage2_seedling": 20,
+        "stage3_vegetative": 36,
+        "stage4_flowering": 24,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "HIGHLAND"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Heat-tolerant tropical carrot cultivar producing thick, stump-rooted carrots suitable for medium-elevation soils.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-09"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1582515073490-39981397c445?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1582515073490-39981397c445?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1582515073490-39981397c445",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "76811cacc4a9f1e9bcec55ec9c54687768c042dbc5b1bfdef53fc3cf978a7ffc"
+  }
+}

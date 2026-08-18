@@ -1,0 +1,67 @@
+{
+  "id": "crop_tomato",
+  "category": "crop",
+  "common_name": "Tomato",
+  "local_name_ph": "Kamatis",
+  "scientific_name": "Solanum lycopersicum",
+  "taxonomic_family": "Solanaceae",
+  "crop_type": "Solanaceous",
+  "growing_specifications": {
+    "days_to_harvest": "60-72 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "20 - 30 C",
+    "description": "High-demand culinary Solanaceous fruit vegetable grown in Ilocos, Bukidnon, and Central Luzon."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_kamatis_diamante_max_f1",
+      "variety_name": "Diamante Max F1",
+      "local_name_ph": "Kamatis Diamante Max F1",
+      "growth_duration_days": 60,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 13,
+        "stage3_vegetative": 20,
+        "stage4_flowering": 16,
+        "stage5_harvest": 6
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Premier Tomato Yellow Leaf Curl Virus (TyLCV) resistant commercial cultivar adapted for year-round Philippine cultivation.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-05"
+    },
+    {
+      "variety_id": "var_kamatis_apollo",
+      "variety_name": "Apollo",
+      "local_name_ph": "Kamatis Apollo",
+      "growth_duration_days": 72,
+      "stage_days": {
+        "stage1_sprout": 6,
+        "stage2_seedling": 15,
+        "stage3_vegetative": 24,
+        "stage4_flowering": 20,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "DRY"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 12,
+      "description": "Popular open-pollinated lowland tomato variety producing firm, fleshy deep-red fruits ideal for dry season harvest.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-17"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "e542c5dd5a1edd7a555e5d0ef59ba350d31dd13113566694123430f52d7ee7df"
+  }
+}

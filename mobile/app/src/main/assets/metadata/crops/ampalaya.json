@@ -1,0 +1,222 @@
+{
+  "id": "crop_ampalaya",
+  "category": "crop",
+  "common_name": "Bitter Gourd",
+  "local_name_ph": "Ampalaya",
+  "scientific_name": "Momordica charantia",
+  "taxonomic_family": "Cucurbitaceae",
+  "crop_type": "Cucurbit / Vine",
+  "growing_specifications": {
+    "days_to_harvest": "55 days",
+    "optimal_soil_ph": "6.0 - 6.7",
+    "optimal_temperature_c": "24 - 35 C",
+    "watering_interval_days": 2,
+    "fertilize_interval_days": 10,
+    "description": "High-value medicinal and culinary climbing vine famous for its crisp, bitter green fruit containing charantin and polypeptide-p. It is a staple commercial crop across the Philippines (Pinakbet, Ginisang Ampalaya) cultivated with bamboo trellises."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Bitter Gourd classified under Cucurbit / Vine?",
+      "summary": "Ampalaya belongs to the botanical family Cucurbitaceae (gourd family). It exhibits distinct vining morphology with climbing tendrils and monoecious flowers that require trellis management.",
+      "points": [
+        "Climbing Habit & Tendrils: The plant develops slender herbaceous vines with auxiliary tendrils that grasp supports, elevating foliage and fruit off wet ground to prevent fungal decay and soil-borne pests.",
+        "Monoecious Flowering Biology: Separate male (staminate) and female (pistillate) yellow flowers bloom on the same vine, requiring insect pollinators (such as honeybees) for successful fertilization and fruit development.",
+        "Pepo Fruit Classification: Produces a specialized berry with a thick, ribbed, and warty exterior rind containing charantin and momordicin, the bioactive compounds responsible for its signature therapeutic bitterness."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is the harvest maturity set to 55 days?",
+      "summary": "Commercial harvesting at 50–55 days from transplanting captures peak fruit crispness, optimal market size, and prevents fruit over-ripening and seed hardening.",
+      "points": [
+        "Germination & Seedling Phase (Days 1–16): Seeds emerge in 5–7 days, followed by true leaf expansion and transplanting readiness.",
+        "Vegetative Trellis Climbing (Days 17–34): Rapid branch elongation, lateral shoot pruning, and trellis canopy establishment.",
+        "Anthesis to Fruit Maturation (Days 35–55): Female flowers bloom and develop into market-ready gourds within 15–20 days after pollination.",
+        "Risk of Over-Ripening (>60 Days): Delayed harvesting causes fruits to turn yellow-orange, develop fibrous spongy flesh, and split open, making them unmarketable."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Bitter Gourd need watering every 2 days?",
+      "summary": "Ampalaya possesses a shallow fibrous root system and broad foliage with high transpiration rates during rapid fruit cell expansion.",
+      "points": [
+        "Critical Fruit Expansion: Developing fruits contain over 92% water. Inconsistent irrigation during fruit enlargement causes stunted, twisted, or excessively bitter gourds.",
+        "Moisture Stress Prevention: Letting soil dry out for 3 or more days induces blossom and fruitlet abortion, reducing overall harvest yields.",
+        "Root Aeration & Disease Control: Daily waterlogging suffocates roots and invites Phytophthora root rot and damping-off. A 2-day furrow or drip cycle maintains optimal 60–70% field moisture capacity."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Bitter Gourd require pH 6.0–6.7 and Well-Draining Loam?",
+      "summary": "A slightly acidic to neutral root zone maximizes essential phosphorus, magnesium, and trace mineral uptake needed for heavy continuous flowering.",
+      "points": [
+        "Maximum Nutrient Uptake: In the pH 6.0–6.7 range, phosphorus and potassium are most bioavailable, stimulating vigorous root branching and continuous blossom setting.",
+        "Drainage & Compost Integration: Loam or sandy loam enriched with decomposed organic manure retains moisture without standing water, safeguarding roots from waterborne pathogens."
+      ]
+    }
+  },
+  "varieties": [
+    {
+      "variety_id": "var_ampalaya_jade_star_xl_f1",
+      "variety_name": "Jade Star XL F1",
+      "local_name_ph": "Ampalaya Jade Star XL F1",
+      "growth_duration_days": 55,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 11,
+        "stage3_vegetative": 18,
+        "stage4_flowering": 14,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "30 - 35 cm",
+      "bitterness_level": "Moderate (Market Standard)",
+      "disease_resistance": "High tolerance to Papaya Ringspot Virus - Cucurbit Strain (PRSV-W) and Leaf Spot",
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Deep green extra-long hybrid bitter gourd developed by East-West Seed. Features thick, prominent ridges, high fruit firmness, and excellent post-harvest shelf life for long-distance transport.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-30"
+    },
+    {
+      "variety_id": "var_ampalaya_galaxy_f1",
+      "variety_name": "Galaxy F1",
+      "local_name_ph": "Ampalaya Galaxy F1",
+      "growth_duration_days": 58,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 12,
+        "stage3_vegetative": 20,
+        "stage4_flowering": 14,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "32 - 38 cm",
+      "bitterness_level": "Moderate to High",
+      "disease_resistance": "Strong tolerance to Downy Mildew and Anthracnose",
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "WET"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Premium commercial hybrid cultivar renowned for heavy prolific fruit setting, uniform cylindrical shape, and glossy dark green skin favored by wet-season commercial growers.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-03"
+    },
+    {
+      "variety_id": "var_ampalaya_mestisa_f1",
+      "variety_name": "Mestisa F1",
+      "local_name_ph": "Ampalaya Mestisa F1",
+      "growth_duration_days": 52,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 17,
+        "stage4_flowering": 13,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "25 - 30 cm",
+      "bitterness_level": "Mild to Moderate (Crisp & Tender)",
+      "disease_resistance": "Moderate tolerance to Bacterial Wilt and Gummy Stem Blight",
+      "optimal_seasons": [
+        "DRY",
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 12,
+      "description": "Intermediate-light green hybrid with blunt, smooth ridges and tender flesh. Preferred by urban restaurants and home cooks for its gentle bitterness and rapid 52-day turnaround.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-27"
+    },
+    {
+      "variety_id": "var_ampalaya_sta_rita_native",
+      "variety_name": "Sta. Rita (Native Pinakbet)",
+      "local_name_ph": "Ampalayang Native / Sta. Rita",
+      "growth_duration_days": 50,
+      "stage_days": {
+        "stage1_sprout": 6,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 16,
+        "stage4_flowering": 12,
+        "stage5_harvest": 6
+      },
+      "fruit_length_cm": "15 - 20 cm",
+      "bitterness_level": "Very High (Authentic Traditional Bitterness)",
+      "disease_resistance": "High natural hardiness against local insect pests and environmental stress",
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "Traditional open-pollinated heirloom variety from Pampanga and Ilocos. Characterized by pointed, short tapered fruits with intense bitterness and distinctive aroma prized for authentic Ilocano Pinakbet.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-25"
+    },
+    {
+      "variety_id": "var_ampalaya_emerald_bilog",
+      "variety_name": "Emerald / Bilog",
+      "local_name_ph": "Ampalayang Bilog / Emerald",
+      "growth_duration_days": 48,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 15,
+        "stage4_flowering": 12,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "12 - 16 cm (Stout / Ovoid)",
+      "bitterness_level": "Mild to Moderate",
+      "disease_resistance": "Tolerant to high heat and intermittent drought",
+      "optimal_seasons": [
+        "DRY",
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Short, stout ovoid bitter gourd popular in Visayas and Mindanao. Quick to mature (48 days) with thick juicy walls ideal for stuffing with ground pork or quick egg stir-fries.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-23"
+    },
+    {
+      "variety_id": "var_ampalaya_makiling_f1",
+      "variety_name": "Makiling F1 (IPB Hybrid)",
+      "local_name_ph": "Ampalaya Makiling F1",
+      "growth_duration_days": 56,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 11,
+        "stage3_vegetative": 19,
+        "stage4_flowering": 14,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "28 - 32 cm",
+      "bitterness_level": "Moderate",
+      "disease_resistance": "Specially bred for Bacterial Wilt and Cucurbit Virus Resistance",
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "WET"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Public-sector scientific hybrid developed by the Institute of Plant Breeding (IPB - UPLB). High yielding with strong field endurance in wet-season tropical conditions.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-01"
+    }
+  ],
+  "reference_source": {
+    "source_organization": "Department of Agriculture - Bureau of Plant Industry (DA-BPI) & East-West Seed Knowledge Transfer",
+    "publication_title": "Philippine National Standard for Fresh Bitter Gourd (PNS/BAFPS 23:2007) & Commercial Vegetable Production Guide",
+    "source_url": "https://buplant.da.gov.ph",
+    "secondary_url": "https://www.eastwestseed.com/philippines",
+    "author": "DA-BPI National Crop Research and Development Center & UPLB-IPB",
+    "license": "Philippine Open Agricultural Extension & Research Standard",
+    "purpose_statement": "This data provides Filipino farmers with certified agronomic standards, preventing crop failure through evidence-based trellis management, balanced watering intervals, and variety selection."
+  },
+  "media": {
+    "primary_photo_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Momordica_charantia_22042014_%282%29.JPG/800px-Momordica_charantia_22042014_%282%29.JPG",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Momordica_charantia_22042014_%282%29.JPG/800px-Momordica_charantia_22042014_%282%29.JPG",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Momordica_charantia_22042014_%282%29.JPG",
+    "author": "Wikimedia Commons / Agricultural Public Domain",
+    "license": "Creative Commons Attribution-ShareAlike 3.0",
+    "hash_sha256": "0eeb9dd94c58225cfcbc1b5e9975860f9acd91e695d82bdb388327cf18266d13"
+  }
+}

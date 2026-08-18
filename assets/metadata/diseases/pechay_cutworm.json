@@ -1,0 +1,35 @@
+{
+  "id": "pechay_cutworm",
+  "category": "disease",
+  "common_name": "Common Cutworm",
+  "local_name_ph": "Uod sa Pechay",
+  "scientific_name": "Spodoptera litura",
+  "taxonomic_family": "Noctuidae",
+  "affected_crops": [
+    "Pechay",
+    "Cabbage",
+    "String Beans"
+  ],
+  "symptoms": [
+    "Irregular skeletonized feeding holes on leafy greens",
+    "Young seedlings severed at ground level during nighttime feeding",
+    "Larvae hiding in soil crevices at base of crop during daytime"
+  ],
+  "treatment_protocol": {
+    "organic": "Bacillus thuringiensis (Bt) bio-insecticide application or neem seed kernel extract",
+    "chemical": "Spinetoram or Indoxacarb spray targeting early larval instars",
+    "cultural_prevention": "Deep plowing before planting to expose pupae to solar radiation and birds, light traps"
+  },
+  "optimal_conditions": {
+    "temperature_range_c": "22-30",
+    "humidity_threshold_pct": 70
+  },
+  "media": {
+    "primary_photo_url": "photos/diseases/pechay_cutworm_primary.webp",
+    "thumbnail_url": "photos/diseases/thumb_pechay_cutworm_primary.webp",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Spodoptera_litura_caterpillar.jpg/800px-Spodoptera_litura_caterpillar.jpg",
+    "author": "PlantVillage / Penn State University",
+    "license": "CC-BY 4.0",
+    "hash_sha256": "pending_download"
+  }
+}

@@ -101,11 +101,11 @@ class HomeViewModel(
                             id = "farm_${farmerId.take(8)}",
                             farmerId = farmerId,
                             farmName = "My Vegetable Farm",
-                            location = "Murcia, Negros Occidental",
-                            totalAreaSqm = 1000f,
                             createdAt = LocalDate.now().toString(),
                             updatedAt = LocalDate.now().toString()
                         )
+
+
                         RepositoryProvider.farmRepository.upsertFarm(defaultFarm)
                         activeFarmId = defaultFarm.id
                         _uiState.update { it.copy(activeFarm = defaultFarm) }

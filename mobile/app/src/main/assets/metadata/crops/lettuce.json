@@ -1,0 +1,47 @@
+{
+  "id": "crop_lettuce",
+  "category": "crop",
+  "common_name": "Lettuce",
+  "local_name_ph": "Litsugas",
+  "scientific_name": "Lactuca sativa",
+  "taxonomic_family": "Asteraceae",
+  "crop_type": "Leafy Green",
+  "growing_specifications": {
+    "days_to_harvest": "45 days",
+    "optimal_soil_ph": "6.0 - 7.0",
+    "optimal_temperature_c": "15 - 25 C",
+    "description": "High-value crisp leafy salad crop cultivated in highland and urban greenhouse soil beds."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_lettuce_grand_rapids",
+      "variety_name": "Grand Rapids",
+      "local_name_ph": "Litsugas Grand Rapids",
+      "growth_duration_days": 45,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 18,
+        "stage4_flowering": 9,
+        "stage5_harvest": 4
+      },
+      "optimal_seasons": [
+        "COOL",
+        "HIGHLAND"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 7,
+      "description": "Loose-leaf light green frilly lettuce cultivar widely grown in Benguet and Bukidnon hydro/soil farms.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-20"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "02ab228e90d05f4c6cd893dee2ecb77a4ec73b88e74501fd27084449c57d6ea2"
+  }
+}

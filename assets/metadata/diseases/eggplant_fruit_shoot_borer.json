@@ -1,0 +1,33 @@
+{
+  "id": "eggplant_fruit_shoot_borer",
+  "category": "disease",
+  "common_name": "Eggplant Fruit and Shoot Borer",
+  "local_name_ph": "Uod sa Talong (FSB)",
+  "scientific_name": "Leucinodes orbonalis",
+  "taxonomic_family": "Crambidae",
+  "affected_crops": [
+    "Eggplant"
+  ],
+  "symptoms": [
+    "Wilting of terminal shoots in young eggplant vegetative stage",
+    "Boring holes in developing eggplant fruits with frass accumulation",
+    "Internal fruit rotting making produce unmarketable"
+  ],
+  "treatment_protocol": {
+    "organic": "Pheromone traps (Leucinodes lure), release of Trichogramma chilonis parasitoid wasps",
+    "chemical": "Emamectin benzoate or Chlorantraniliprole foliar spray during egg hatching window",
+    "cultural_prevention": "Prompt removal and destruction of wilted shoots and infested fruits, net barrier cultivation"
+  },
+  "optimal_conditions": {
+    "temperature_range_c": "25-33",
+    "humidity_threshold_pct": 75
+  },
+  "media": {
+    "primary_photo_url": "photos/diseases/eggplant_fruit_shoot_borer_primary.webp",
+    "thumbnail_url": "photos/diseases/thumb_eggplant_fruit_shoot_borer_primary.webp",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Leucinodes_orbonalis.jpg/800px-Leucinodes_orbonalis.jpg",
+    "author": "PlantVillage / Penn State University",
+    "license": "CC-BY 4.0",
+    "hash_sha256": "pending_download"
+  }
+}

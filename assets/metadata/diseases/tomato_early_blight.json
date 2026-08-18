@@ -1,0 +1,35 @@
+{
+  "id": "tomato_early_blight",
+  "category": "disease",
+  "common_name": "Early Blight",
+  "local_name_ph": "Blight sa Kamatis",
+  "scientific_name": "Alternaria solani",
+  "taxonomic_family": "Solanaceae",
+  "affected_crops": [
+    "Tomato",
+    "Eggplant",
+    "Potato"
+  ],
+  "symptoms": [
+    "Concentric dark brown rings ('target board' pattern) on mature leaves",
+    "Yellow halo surrounding brown necrotic spots",
+    "Stem lesions near soil line leading to collar rot"
+  ],
+  "treatment_protocol": {
+    "organic": "Apply copper-based fungicide or neem oil solution every 7-10 days",
+    "chemical": "Chlorothalonil or Mancozeb application upon first symptom appearance",
+    "cultural_prevention": "Crop rotation with non-solanaceous crops, drip irrigation to avoid wet foliage, staking plants"
+  },
+  "optimal_conditions": {
+    "temperature_range_c": "24-29",
+    "humidity_threshold_pct": 80
+  },
+  "media": {
+    "primary_photo_url": "photos/diseases/tomato_early_blight_primary.webp",
+    "thumbnail_url": "photos/diseases/thumb_tomato_early_blight_primary.webp",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Alternaria_solani_01.jpg",
+    "author": "PlantVillage / Penn State University",
+    "license": "CC-BY 4.0",
+    "hash_sha256": "pending_download"
+  }
+}
