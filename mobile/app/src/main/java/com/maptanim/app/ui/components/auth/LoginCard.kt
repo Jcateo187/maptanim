@@ -142,30 +142,13 @@ fun LoginCard(
             Spacer(modifier = Modifier.height(20.dp))
 
             PrimaryButton(
-
                 text = "Sign In",
-
                 onClick = {
-
-                    if (
-
-                        email.isNotBlank() &&
-                        password.isNotBlank()
-
-                    ) {
-
-                        authViewModel.signIn(
-
-                            email = email,
-
-                            password = password
-
-                        )
-
-                    }
-
+                    authViewModel.signIn(
+                        email = email,
+                        password = password
+                    )
                 }
-
             )
 
             if (uiState.isLoading) {

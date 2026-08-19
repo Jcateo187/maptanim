@@ -35,6 +35,7 @@ import com.maptanim.app.core.audio.SoundEffect
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
+import kotlinx.coroutines.launch
 
 /**
  * SettingsScreen — Dedicated Settings page in MapTanim.
@@ -52,6 +53,7 @@ fun SettingsScreen(
     var sfxVolume by remember { mutableFloatStateOf(soundManager.sfxVolume) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var enableNotifications by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -221,8 +223,11 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         showLogoutConfirmDialog = false
-                        navController.navigate(Routes.WELCOME) {
-                            popUpTo(Routes.HOME) { inclusive = true }
+                        coroutineScope.launch {
+                            com.maptanim.app.data.repository.RepositoryProvider.userRepository.logout()
+                            navController.navigate(Routes.WELCOME) {
+                                popUpTo(Routes.HOME) { inclusive = true }
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))

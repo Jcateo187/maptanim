@@ -140,33 +140,15 @@ fun RegisterCard(
             Spacer(modifier = Modifier.height(20.dp))
 
             PrimaryButton(
-
                 text = "Create Account",
-
                 onClick = {
-
-                    if (
-
-                        email.isNotBlank() &&
-                        password.isNotBlank() &&
-                        confirmPassword.isNotBlank() &&
-                        password == confirmPassword &&
-                        acceptedTerms
-
-                    ) {
-
-                        authViewModel.signUp(
-
-                            email = email,
-
-                            password = password
-
-                        )
-
-                    }
-
+                    authViewModel.signUp(
+                        email = email,
+                        password = password,
+                        confirmPassword = confirmPassword,
+                        acceptedTerms = acceptedTerms
+                    )
                 }
-
             )
 
             if (uiState.isLoading) {

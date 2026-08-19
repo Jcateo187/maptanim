@@ -48,9 +48,33 @@ class HomeViewModel(
     private var activeFarmId: String? = null
     private var currentFarmerId: String? = null
 
+    private var farmDataJob: kotlinx.coroutines.Job? = null
+    private var farmsObserveJob: kotlinx.coroutines.Job? = null
+
     init {
         resolveUserAndLoadFarm()
         observeUserProfile()
+        observeActiveFarmChanges()
+    }
+
+    /**
+     * Reactively observe active farm changes triggered from Profile / Modals anywhere in the app.
+     */
+    private fun observeActiveFarmChanges() {
+        viewModelScope.launch {
+            com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().activeFarmChanges.collect { (userId, newFarmId) ->
+                val currentId = currentFarmerId ?: "guest"
+                if (userId == currentId || (userId == null && currentId == "guest")) {
+                    val farms = getFarmsUseCase(currentId).firstOrNull() ?: emptyList()
+                    val farm = farms.firstOrNull { it.id == newFarmId }
+                    if (farm != null) {
+                        activeFarmId = farm.id
+                        _uiState.update { it.copy(activeFarm = farm) }
+                        loadFarmData(farm.id)
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -70,41 +94,46 @@ class HomeViewModel(
         }
     }
 
+    fun refresh() {
+        resolveUserAndLoadFarm()
+    }
+
     private fun resolveUserAndLoadFarm() {
         // Load real profile data from Supabase (cloud) for bound accounts
         viewModelScope.launch {
             (RepositoryProvider.userRepository as? com.maptanim.app.data.repository.UserRepositoryImpl)?.loadUserProfile()
         }
         val user = SupabaseClient.client.auth.currentUserOrNull()
-        if (user != null) {
-            currentFarmerId = user.id
-            initialize(user.id)
-        } else {
-            // Guest session — uses local Room data only
-            loadFarmData("farm-1")
-        }
+        val farmerId = user?.id ?: "guest"
+        currentFarmerId = farmerId
+        initialize(farmerId)
     }
 
     fun initialize(farmerId: String) {
         currentFarmerId = farmerId
-        viewModelScope.launch {
+        farmsObserveJob?.cancel()
+        farmsObserveJob = viewModelScope.launch {
             getFarmsUseCase(farmerId)
                 .collect { farms ->
-                    val farm = farms.firstOrNull()
+                    val savedActiveId = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().getActiveFarmId(farmerId)
+                    val farm = farms.firstOrNull { it.id == savedActiveId } ?: farms.firstOrNull()
                     if (farm != null) {
+                        val isDifferentFarm = activeFarmId != farm.id
+                        val isRenamed = _uiState.value.activeFarm?.farmName != farm.farmName
                         activeFarmId = farm.id
                         _uiState.update { it.copy(activeFarm = farm) }
-                        loadFarmData(farm.id)
+                        if (isDifferentFarm || isRenamed || _uiState.value.plots.isEmpty()) {
+                            loadFarmData(farm.id)
+                        }
                     } else {
                         // Create initial default farm if newly registered user
                         val defaultFarm = Farm(
-                            id = "farm_${farmerId.take(8)}",
+                            id = if (farmerId == "guest") "farm-1" else "farm_${farmerId.take(8)}",
                             farmerId = farmerId,
                             farmName = "My Vegetable Farm",
                             createdAt = LocalDate.now().toString(),
                             updatedAt = LocalDate.now().toString()
                         )
-
 
                         RepositoryProvider.farmRepository.upsertFarm(defaultFarm)
                         activeFarmId = defaultFarm.id
@@ -115,55 +144,56 @@ class HomeViewModel(
         }
     }
 
-    private fun loadFarmData(farmId: String) {
-        val today = LocalDate.now().toString()
-        val farmerId = currentFarmerId ?: "guest"
+    fun loadFarmData(farmId: String) {
+        farmDataJob?.cancel()
+        farmDataJob = viewModelScope.launch {
+            val today = LocalDate.now().toString()
+            val farmerId = currentFarmerId ?: "guest"
 
-        // One-time cleanup: delete old hardcoded demo plots that were previously seeded
-        viewModelScope.launch {
+            // One-time cleanup: delete old hardcoded demo plots that were previously seeded
             val oldPlotIds = listOf("plot-1", "plot-2", "plot-3", "plot-4")
             oldPlotIds.forEach { plotId ->
                 try { RepositoryProvider.cropPlotRepository.deletePlot(plotId) } catch (_: Exception) {}
             }
-        }
 
-        viewModelScope.launch {
-            getFarmSummaryUseCase(farmId).collect { summary ->
-                _uiState.update { it.copy(farmSummary = summary) }
-            }
-        }
-
-        viewModelScope.launch {
-            getTodayTasksUseCase(farmId, today).collect { tasks ->
-                _uiState.update { it.copy(todayTasks = tasks) }
-            }
-        }
-
-        viewModelScope.launch {
-            getUnreadNotificationCountUseCase(farmerId).collect { count ->
-                _uiState.update { it.copy(notificationCount = count) }
-            }
-        }
-
-        viewModelScope.launch {
-            combine(
-                getFarmPlotsUseCase(farmId),
-                getTodayTasksUseCase(farmId, today)
-            ) { plots, tasks ->
-                plots.map { plot ->
-                    val plotTasks = tasks.filter { it.plotId == plot.id }
-                    plot.toRenderData(
-                        activeTasks = plotTasks.map { task ->
-                            TaskPinData(
-                                taskId   = task.id,
-                                taskType = task.taskType,
-                                plotId   = task.plotId
-                            )
-                        }
-                    )
+            launch {
+                getFarmSummaryUseCase(farmId).collect { summary ->
+                    _uiState.update { it.copy(farmSummary = summary) }
                 }
-            }.collect { renderPlots ->
-                _uiState.update { it.copy(plots = renderPlots, isLoading = false) }
+            }
+
+            launch {
+                getTodayTasksUseCase(farmId, today).collect { tasks ->
+                    _uiState.update { it.copy(todayTasks = tasks) }
+                }
+            }
+
+            launch {
+                getUnreadNotificationCountUseCase(farmerId).collect { count ->
+                    _uiState.update { it.copy(notificationCount = count) }
+                }
+            }
+
+            launch {
+                combine(
+                    getFarmPlotsUseCase(farmId),
+                    getTodayTasksUseCase(farmId, today)
+                ) { plots, tasks ->
+                    plots.map { plot ->
+                        val plotTasks = tasks.filter { it.plotId == plot.id }
+                        plot.toRenderData(
+                            activeTasks = plotTasks.map { task ->
+                                TaskPinData(
+                                    taskId   = task.id,
+                                    taskType = task.taskType,
+                                    plotId   = task.plotId
+                                )
+                            }
+                        )
+                    }
+                }.collect { renderPlots ->
+                    _uiState.update { it.copy(plots = renderPlots, isLoading = false) }
+                }
             }
         }
     }

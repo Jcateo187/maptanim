@@ -56,7 +56,13 @@ class EditViewModel(
     /** Resolved active farm ID — matches HomeViewModel's resolution logic */
     private var activeFarmId: String = "farm-1"
 
+    private var farmLayoutJob: kotlinx.coroutines.Job? = null
+
     init {
+        resolveActiveFarmId()
+    }
+
+    fun refresh() {
         resolveActiveFarmId()
     }
 
@@ -64,19 +70,22 @@ class EditViewModel(
         val user = try { SupabaseClient.client.auth.currentUserOrNull() } catch (_: Exception) { null }
         if (user != null) {
             viewModelScope.launch {
+                val savedActiveId = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().getActiveFarmId(user.id)
                 val farms = RepositoryProvider.farmRepository.observeFarms(user.id).firstOrNull()
-                val farm = farms?.firstOrNull()
-                activeFarmId = farm?.id ?: "farm_${user.id.take(8)}"
+                val farm = farms?.firstOrNull { it.id == savedActiveId } ?: farms?.firstOrNull()
+                activeFarmId = farm?.id ?: savedActiveId ?: "farm_${user.id.take(8)}"
                 loadFarmLayout(activeFarmId)
             }
         } else {
-            activeFarmId = "farm-1"
+            val savedActiveId = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().getActiveFarmId("guest")
+            activeFarmId = savedActiveId ?: "farm-1"
             loadFarmLayout(activeFarmId)
         }
     }
 
     private fun loadFarmLayout(farmId: String) {
-        viewModelScope.launch {
+        farmLayoutJob?.cancel()
+        farmLayoutJob = viewModelScope.launch {
             cropPlotRepository.observePlots(farmId).collect { plots ->
                 val renderPlots = plots.map { it.toRenderData() }
                 val zones = plots.map { plot ->
@@ -99,7 +108,8 @@ class EditViewModel(
                         editedPlots = plots,
                         plots = renderPlots,
                         cropZones = zones,
-                        isLoading = false
+                        isLoading = false,
+                        hasUnsavedChanges = false
                     )
                 }
             }
@@ -620,6 +630,42 @@ class EditViewModel(
         undoStack.clear()
         redoStack.clear()
         deselect()
+    }
+
+    fun saveAsDraft(onComplete: () -> Unit = {}) {
+        if (!_uiState.value.hasUnsavedChanges) {
+            onComplete()
+            return
+        }
+        viewModelScope.launch {
+            val currentPlots = _uiState.value.editedPlots
+            cropPlotRepository.savePlots(currentPlots)
+
+            val currentZones = _uiState.value.cropZones
+            val domainZones = currentZones.map { zoneData ->
+                com.maptanim.app.domain.model.CropZone(
+                    id = zoneData.id,
+                    plotId = zoneData.plotId,
+                    cropName = zoneData.cropName,
+                    cropId = zoneData.cropName?.lowercase(),
+                    offsetX = zoneData.offsetX,
+                    offsetY = zoneData.offsetY,
+                    widthM = zoneData.widthM,
+                    heightM = zoneData.heightM,
+                    spacingM = zoneData.spacingM,
+                    createdAt = Instant.now().toString(),
+                    updatedAt = Instant.now().toString()
+                )
+            }
+            cropZoneRepository.saveZones(domainZones)
+
+            _uiState.update { state ->
+                state.copy(
+                    hasUnsavedChanges = false
+                )
+            }
+            onComplete()
+        }
     }
 
     private fun updatePlotsState(updatedPlots: List<CropPlot>) {

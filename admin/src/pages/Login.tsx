@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, ShieldCheck, Info } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
@@ -9,8 +9,7 @@ export const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
-  const { login, isConfigured } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +111,7 @@ export const Login: React.FC = () => {
             }}
           >
             <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: '#059669' }} />
-            <span>Protected by Vercel Deployment Auth</span>
+            <span>MapTanim Administrator Portal</span>
           </div>
         </div>
 
@@ -265,8 +264,8 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          {/* Options: Remember Me & Config Help */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Options: Remember Me */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
@@ -284,56 +283,7 @@ export const Login: React.FC = () => {
                 Remember session
               </span>
             </label>
-
-            <button
-              type="button"
-              onClick={() => setShowHelp(!showHelp)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#059669',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
-              <Info style={{ width: '0.75rem', height: '0.75rem' }} />
-              <span>Vercel Auth Info</span>
-            </button>
           </div>
-
-          {/* Collapsible Info Drawer */}
-          {showHelp && (
-            <div
-              style={{
-                padding: '0.875rem',
-                borderRadius: '0.75rem',
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                fontSize: '0.75rem',
-                color: '#475569',
-                lineHeight: 1.5,
-              }}
-            >
-              <p style={{ margin: '0 0 0.5rem 0', fontWeight: 700, color: '#1E293B' }}>
-                How to set Admin Credentials in Vercel:
-              </p>
-              <ol style={{ margin: 0, paddingLeft: '1.25rem' }}>
-                <li>Go to <strong>Vercel Dashboard → Project Settings → Environment Variables</strong></li>
-                <li>Add <code style={{ backgroundColor: '#E2E8F0', padding: '1px 4px', borderRadius: '4px' }}>VITE_ADMIN_EMAIL</code> (e.g. <code>admin@maptanim.com</code>)</li>
-                <li>Add <code style={{ backgroundColor: '#E2E8F0', padding: '1px 4px', borderRadius: '4px' }}>VITE_ADMIN_PASSWORD</code> (your secret password)</li>
-                <li>Redeploy or promote to apply changes!</li>
-              </ol>
-              {!isConfigured && (
-                <p style={{ margin: '0.5rem 0 0 0', color: '#059669', fontWeight: 600 }}>
-                  💡 Default Initial Login: <code>admin@maptanim.com</code> / <code>admin123456</code>
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Submit Button */}
           <div style={{ paddingTop: '0.5rem' }}>

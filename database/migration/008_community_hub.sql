@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS public.community_posts (
     id                  TEXT            PRIMARY KEY DEFAULT ('post_' || substr(md5(random()::text || clock_timestamp()::text), 1, 16)),
     author_id           UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
     author_name         VARCHAR(150)    NOT NULL DEFAULT 'Mobile Farmer',
-    author_location     VARCHAR(255)    DEFAULT 'Murcia, Negros Occidental',
     author_avatar_url   TEXT,
     category            VARCHAR(50)     NOT NULL DEFAULT 'GENERAL',
     title               VARCHAR(255)    NOT NULL,
@@ -25,7 +24,6 @@ CREATE TABLE IF NOT EXISTS public.community_comments (
     post_id             TEXT            NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE,
     author_id           UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
     author_name         VARCHAR(150)    NOT NULL DEFAULT 'Farmer Partner',
-    author_location     VARCHAR(255)    DEFAULT 'Murcia',
     author_avatar_url   TEXT,
     content             TEXT            NOT NULL,
     created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()

@@ -98,7 +98,7 @@ fun TodaysTasksOverlay(
                 }
 
                 // Filter Tabs (All / Pending / Completed)
-                TabRow(
+                PrimaryTabRow(
                     selectedTabIndex = selectedFilterIndex,
                     containerColor = Color(0xFF2A3424),
                     contentColor = ForestGreen
