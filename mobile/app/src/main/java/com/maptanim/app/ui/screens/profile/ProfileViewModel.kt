@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.data.repository.UserRepositoryImpl
+import com.maptanim.app.core.preferences.FarmPreferencesManager
 import com.maptanim.app.domain.model.AvatarItem
 import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.domain.model.Farm
@@ -13,6 +14,7 @@ import com.maptanim.app.domain.model.UserProfile
 import com.maptanim.app.domain.model.getDaysRemainingForNicknameChange
 import com.maptanim.app.domain.repository.UserRepository
 import io.github.jan.supabase.auth.auth
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +27,20 @@ data class ProfileUiState(
     val availableAvatars: List<AvatarItem> = emptyList(),
     val notifications: List<NotificationItem> = emptyList(),
     val farms: List<Farm> = emptyList(),
+    val activeFarmId: String? = null,
     val userPosts: List<CommunityPost> = emptyList(),
     val harvestHistory: List<com.maptanim.app.domain.model.HarvestRecord> = emptyList(),
+
+    // Farm creation & rename states
+    val showCreateFarmModal: Boolean = false,
+    val createFarmNameInput: String = "",
+    val createFarmError: String? = null,
+    val farmToRename: Farm? = null,
+    val renameFarmInput: String = "",
+    val renameFarmError: String? = null,
+    val farmToDelete: Farm? = null,
+    val isOperationInProgress: Boolean = false,
+    val operationProgressMessage: String? = null,
 
     // Avatar picker modal states
     val showAvatarPickerModal: Boolean = false,
@@ -91,8 +105,16 @@ class ProfileViewModel(
         viewModelScope.launch {
             val user = SupabaseClient.client.auth.currentUserOrNull()
             val userId = user?.id ?: "guest"
+            val savedActiveFarmId = FarmPreferencesManager.getInstance().getActiveFarmId(userId)
             RepositoryProvider.farmRepository.observeFarms(userId).collect { farms ->
-                _uiState.update { it.copy(farms = farms) }
+                val currentActive = _uiState.value.activeFarmId ?: savedActiveFarmId
+                val effectiveActive = if (farms.any { it.id == currentActive }) currentActive else farms.firstOrNull()?.id
+                _uiState.update {
+                    it.copy(
+                        farms = farms,
+                        activeFarmId = effectiveActive
+                    )
+                }
             }
         }
 
@@ -284,6 +306,172 @@ class ProfileViewModel(
         _uiState.update { it.copy(successMessage = null) }
     }
 
+    // ─── Farm Flow Handlers ──────────────────────────────────────────────────
+
+    fun openCreateFarm() {
+        _uiState.update {
+            it.copy(
+                showCreateFarmModal = true,
+                createFarmNameInput = "",
+                createFarmError = null
+            )
+        }
+    }
+
+    fun closeCreateFarm() {
+        _uiState.update { it.copy(showCreateFarmModal = false, createFarmError = null) }
+    }
+
+    fun updateCreateFarmNameInput(name: String) {
+        _uiState.update { it.copy(createFarmNameInput = name, createFarmError = null) }
+    }
+
+    fun confirmCreateFarm() {
+        val name = _uiState.value.createFarmNameInput.trim()
+        if (name.isBlank()) {
+            _uiState.update { it.copy(createFarmError = "Farm name cannot be empty") }
+            return
+        }
+        if (name.length < 2) {
+            _uiState.update { it.copy(createFarmError = "Farm name must be at least 2 characters") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOperationInProgress = true, operationProgressMessage = "Creating farm workspace...") }
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: "guest"
+            val newFarmId = "farm_${UUID.randomUUID().toString().take(8)}"
+            val now = java.time.LocalDate.now().toString()
+            val newFarm = Farm(
+                id = newFarmId,
+                farmerId = userId,
+                farmName = name,
+                createdAt = now,
+                updatedAt = now
+            )
+            RepositoryProvider.farmRepository.upsertFarm(newFarm)
+            FarmPreferencesManager.getInstance().setActiveFarmId(userId, newFarmId)
+            _uiState.update {
+                it.copy(
+                    showCreateFarmModal = false,
+                    createFarmNameInput = "",
+                    activeFarmId = newFarmId,
+                    isOperationInProgress = false,
+                    operationProgressMessage = null,
+                    successMessage = "Farm '$name' created successfully!"
+                )
+            }
+        }
+    }
+
+    fun openRenameFarm(farm: Farm) {
+        _uiState.update {
+            it.copy(
+                farmToRename = farm,
+                renameFarmInput = farm.farmName,
+                renameFarmError = null
+            )
+        }
+    }
+
+    fun closeRenameFarm() {
+        _uiState.update { it.copy(farmToRename = null, renameFarmError = null) }
+    }
+
+    fun updateRenameFarmNameInput(name: String) {
+        _uiState.update { it.copy(renameFarmInput = name, renameFarmError = null) }
+    }
+
+    fun confirmRenameFarm() {
+        val farm = _uiState.value.farmToRename ?: return
+        val newName = _uiState.value.renameFarmInput.trim()
+        if (newName.isBlank()) {
+            _uiState.update { it.copy(renameFarmError = "Farm name cannot be empty") }
+            return
+        }
+        if (newName == farm.farmName) {
+            _uiState.update { it.copy(farmToRename = null) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOperationInProgress = true, operationProgressMessage = "Renaming farm...") }
+            val updatedFarm = farm.copy(
+                farmName = newName,
+                updatedAt = java.time.LocalDate.now().toString()
+            )
+            RepositoryProvider.farmRepository.upsertFarm(updatedFarm)
+            _uiState.update {
+                it.copy(
+                    farmToRename = null,
+                    renameFarmInput = "",
+                    isOperationInProgress = false,
+                    operationProgressMessage = null,
+                    successMessage = "Farm renamed to '$newName'!"
+                )
+            }
+        }
+    }
+
+    fun openDeleteFarm(farm: Farm) {
+        _uiState.update { it.copy(farmToDelete = farm) }
+    }
+
+    fun closeDeleteFarm() {
+        _uiState.update { it.copy(farmToDelete = null) }
+    }
+
+    fun confirmDeleteFarm() {
+        val farm = _uiState.value.farmToDelete ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOperationInProgress = true, operationProgressMessage = "Deleting farm...") }
+            RepositoryProvider.farmRepository.deleteFarm(farm.id)
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: "guest"
+            val remainingFarms = _uiState.value.farms.filter { it.id != farm.id }
+            val newActiveId = if (_uiState.value.activeFarmId == farm.id) {
+                remainingFarms.firstOrNull()?.id
+            } else {
+                _uiState.value.activeFarmId
+            }
+            if (newActiveId != null) {
+                FarmPreferencesManager.getInstance().setActiveFarmId(userId, newActiveId)
+            } else {
+                FarmPreferencesManager.getInstance().clearActiveFarmId(userId)
+            }
+            _uiState.update {
+                it.copy(
+                    farmToDelete = null,
+                    activeFarmId = newActiveId,
+                    isOperationInProgress = false,
+                    operationProgressMessage = null,
+                    successMessage = "Farm '${farm.farmName}' deleted."
+                )
+            }
+        }
+    }
+
+    fun selectActiveFarm(farmId: String) {
+        viewModelScope.launch {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id ?: "guest"
+            _uiState.update { it.copy(isOperationInProgress = true, operationProgressMessage = "Switching active farm...") }
+            FarmPreferencesManager.getInstance().setActiveFarmId(userId, farmId)
+            val selectedFarm = _uiState.value.farms.firstOrNull { it.id == farmId }
+            val name = selectedFarm?.farmName ?: "Farm"
+            kotlinx.coroutines.delay(200)
+            _uiState.update {
+                it.copy(
+                    activeFarmId = farmId,
+                    isOperationInProgress = false,
+                    operationProgressMessage = null,
+                    successMessage = "Active farm set to '$name'!"
+                )
+            }
+        }
+    }
+
     // ─── Notification Flow Handlers ─────────────────────────────────────────
 
     fun selectNotification(notification: NotificationItem) {
@@ -373,5 +561,13 @@ class ProfileViewModel(
 
     fun cancelLogout() {
         _uiState.update { it.copy(showLogoutConfirmDialog = false) }
+    }
+
+    fun logout(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showLogoutConfirmDialog = false) }
+            com.maptanim.app.data.repository.RepositoryProvider.userRepository.logout()
+            onComplete()
+        }
     }
 }

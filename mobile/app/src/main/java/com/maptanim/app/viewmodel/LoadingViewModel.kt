@@ -46,8 +46,10 @@ class LoadingViewModel : ViewModel() {
             delay(300)
 
             try {
-                val initializer = AppInitializationController()
-                initializer.initialize()
+                kotlinx.coroutines.withTimeoutOrNull(1500L) {
+                    val initializer = AppInitializationController()
+                    initializer.initialize()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }

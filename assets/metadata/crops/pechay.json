@@ -1,0 +1,46 @@
+{
+  "id": "crop_pechay",
+  "category": "crop",
+  "common_name": "Pechay / Bok Choy",
+  "local_name_ph": "Pechay",
+  "scientific_name": "Brassica rapa subsp. chinensis",
+  "taxonomic_family": "Brassicaceae",
+  "crop_type": "Leafy Green",
+  "growing_specifications": {
+    "days_to_harvest": "28 days",
+    "optimal_soil_ph": "5.8 - 6.8",
+    "optimal_temperature_c": "20 - 30 C",
+    "description": "Fast-growing short-duration leafy green staple in urban and rural Philippine market gardens."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_pechay_pavon",
+      "variety_name": "Pavon",
+      "local_name_ph": "Pechay Pavon",
+      "growth_duration_days": 28,
+      "stage_days": {
+        "stage1_sprout": 3,
+        "stage2_seedling": 7,
+        "stage3_vegetative": 10,
+        "stage4_flowering": 5,
+        "stage5_harvest": 3
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 7,
+      "description": "Standard dark green broad-leaved Philippine pechay cultivar with thick white petiole.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-03"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "0eeb9dd94c58225cfcbc1b5e9975860f9acd91e695d82bdb388327cf18266d13"
+  }
+}

@@ -1,0 +1,29 @@
+name: DevOps Infrastructure Lint & Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'deployment/**'
+      - '.github/workflows/devops-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'deployment/**'
+
+jobs:
+  validate-devops:
+    name: Validate Docker & Configuration Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Dockerfile Syntax
+        run: |
+          docker build --check -f deployment/Dockerfile.admin admin/
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          docker compose -f deployment/docker-compose.yml config --quiet

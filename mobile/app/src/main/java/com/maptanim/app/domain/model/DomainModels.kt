@@ -8,11 +8,11 @@ data class Farm(
     val id: String,
     val farmerId: String,
     val farmName: String,      // e.g. "Murcia Farm"
-    val location: String,      // e.g. "Murcia, Negros Occidental"
-    val totalAreaSqm: Float?,
     val createdAt: String,
     val updatedAt: String
 )
+
+
 
 // ─── CropPlot ─────────────────────────────────────────────────────────────
 
@@ -231,7 +231,6 @@ data class FarmObject(
 data class CommunityPost(
     val id: String,
     val authorName: String,
-    val authorLocation: String,          // e.g. "Murcia, Negros Occidental"
     val authorAvatarUrl: String? = null,
     val category: String,                // "PEST_ALERT", "FARMING_TIP", "EQUIPMENT", "GENERAL"
     val title: String,
@@ -247,8 +246,21 @@ data class CommunityComment(
     val id: String,
     val postId: String,
     val authorName: String,
-    val authorLocation: String? = null,
     val content: String,
     val timestamp: String
+)
+
+
+data class CommunityReport(
+    val id: String,
+    val reporterName: String,
+    val targetType: String,             // "POST", "USER", "COMMENT"
+    val targetId: String,
+    val targetName: String,
+    val targetContent: String? = null,
+    val reason: String,
+    val details: String? = null,
+    val status: String = "PENDING",     // "PENDING", "INVESTIGATING", "RESOLVED", "DISMISSED"
+    val createdAt: String = "Just now"
 )
 

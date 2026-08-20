@@ -1,5 +1,6 @@
 package com.maptanim.app.ui.screens.edit
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,6 +63,10 @@ fun FarmEditorScreen(
     var activeCropName by remember { mutableStateOf("") }
     var activeCropId by remember { mutableStateOf("") }
     var isRightPanelVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        editViewModel.refresh()
+    }
 
     LaunchedEffect(tutorialUiState.currentStep, isRightPanelVisible) {
         if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.SPOTLIGHT_EDIT_BUTTON) {
@@ -169,7 +174,13 @@ fun FarmEditorScreen(
                 }
             }
 
-            // Exit Button
+            // System Back Handler — Discard unsaved changes on exit
+            BackHandler {
+                editViewModel.discardChanges()
+                navController.popBackStack()
+            }
+
+            // Exit Button (Discards uncommitted in-memory edits and navigates back)
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color(0xFFC62828),

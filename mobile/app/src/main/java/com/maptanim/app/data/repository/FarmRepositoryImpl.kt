@@ -61,8 +61,6 @@ private fun Farm.toDto() = FarmDto(
     id = id,
     farmer_id = farmerId,
     farm_name = farmName,
-    location = location,
-    total_area_sqm = totalAreaSqm,
     created_at = createdAt,
     updated_at = updatedAt
 )
@@ -71,8 +69,8 @@ private fun FarmDto.toDomain(): Farm = Farm(
     id = id,
     farmerId = farmer_id,
     farmName = farm_name,
-    location = location ?: "",
-    totalAreaSqm = total_area_sqm,
     createdAt = created_at ?: "",
     updatedAt = updated_at ?: ""
 )
+
+

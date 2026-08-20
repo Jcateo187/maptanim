@@ -1,0 +1,46 @@
+{
+  "id": "crop_kangkong",
+  "category": "crop",
+  "common_name": "Water Spinach",
+  "local_name_ph": "Kangkong",
+  "scientific_name": "Ipomoea aquatica",
+  "taxonomic_family": "Convolvulaceae",
+  "crop_type": "Leafy Green",
+  "growing_specifications": {
+    "days_to_harvest": "30 days",
+    "optimal_soil_ph": "5.5 - 7.0",
+    "optimal_temperature_c": "22 - 35 C",
+    "description": "Fast-growing semi-aquatic leafy green vegetable cultivated widely across Philippine waterways and moist soil beds."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_kangkong_tsing_chiang",
+      "variety_name": "Tsing Chiang",
+      "local_name_ph": "Kangkong Tsing Chiang",
+      "growth_duration_days": 30,
+      "stage_days": {
+        "stage1_sprout": 3,
+        "stage2_seedling": 7,
+        "stage3_vegetative": 12,
+        "stage4_flowering": 5,
+        "stage5_harvest": 3
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 7,
+      "description": "Upland broad-leaf water spinach variety with tender stems and high iron content.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-05"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "91ad368c7afe9b7d68a726247bd26193fb0bb8cc0b586cc00d0f967623916890"
+  }
+}

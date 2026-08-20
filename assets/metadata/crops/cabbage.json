@@ -1,0 +1,47 @@
+{
+  "id": "crop_cabbage",
+  "category": "crop",
+  "common_name": "Cabbage",
+  "local_name_ph": "Repolyo",
+  "scientific_name": "Brassica oleracea var. capitata",
+  "taxonomic_family": "Brassicaceae",
+  "crop_type": "Leafy / Brassica",
+  "growing_specifications": {
+    "days_to_harvest": "60 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "15 - 25 C",
+    "description": "Cool-season highland head vegetable cultivated in CAR and Bukidnon plateau regions."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_repolyo_ks_cross_f1",
+      "variety_name": "K-S Cross F1",
+      "local_name_ph": "Repolyo K-S Cross F1",
+      "growth_duration_days": 60,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 13,
+        "stage3_vegetative": 20,
+        "stage4_flowering": 16,
+        "stage5_harvest": 6
+      },
+      "optimal_seasons": [
+        "LOWLAND",
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Heat-tolerant flat-headed cabbage hybrid performing well in lowland tropical Philippine field conditions.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-05"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "337a4b091bf2d8858dd7c9c3d1ae1a53efb320e9d4bcfb388203f472d69a129f"
+  }
+}

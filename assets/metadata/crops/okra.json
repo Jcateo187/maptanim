@@ -1,0 +1,47 @@
+{
+  "id": "crop_okra",
+  "category": "crop",
+  "common_name": "Okra",
+  "local_name_ph": "Okra",
+  "scientific_name": "Abelmoschus esculentus",
+  "taxonomic_family": "Malvaceae",
+  "crop_type": "Fruit Vegetable",
+  "growing_specifications": {
+    "days_to_harvest": "45 days",
+    "optimal_soil_ph": "6.0 - 7.0",
+    "optimal_temperature_c": "25 - 35 C",
+    "description": "Drought-tolerant mucilaginous pod vegetable with continuous harvesting cycle for several months."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_okra_smooth_green",
+      "variety_name": "Smooth Green",
+      "local_name_ph": "Okra Smooth Green",
+      "growth_duration_days": 45,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 14,
+        "stage4_flowering": 10,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "WET",
+        "DRY"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "Spineless green okra cultivar producing tender five-angled pods preferred for export and domestic markets.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-20"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "1fed576bf48ab5d504cc031c5483cd30aac166476419b81dcaa1aa49e5005381"
+  }
+}

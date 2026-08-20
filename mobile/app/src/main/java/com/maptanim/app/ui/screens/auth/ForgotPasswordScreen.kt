@@ -22,16 +22,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.maptanim.app.R
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.components.buttons.PrimaryButton
 import com.maptanim.app.ui.components.textfields.AppTextField
+import com.maptanim.app.viewmodel.AuthViewModel
 
 @Composable
 fun ForgotPasswordScreen(
-    navController: NavController
+    navController: NavController,
+    authViewModel: AuthViewModel = viewModel()
 ) {
+    val uiState by authViewModel.uiState.collectAsState()
     var email by remember { mutableStateOf("") }
-    var resetSent by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -93,19 +97,32 @@ fun ForgotPasswordScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     PrimaryButton(
-                        text = if (resetSent) "Reset Link Sent!" else "Send Reset Link",
+                        text = if (uiState.isSuccess) "Reset Link Sent!" else "Send Reset Link",
                         onClick = {
-                            if (email.isNotBlank()) {
-                                resetSent = true
-                            }
+                            authViewModel.resetPassword(email)
                         }
                     )
 
-                    if (resetSent) {
+                    if (uiState.isLoading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator()
+                    }
+
+                    if (uiState.isSuccess) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Check your email inbox for instructions to reset your password.",
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF2E7D32),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    uiState.errorMessage?.let {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

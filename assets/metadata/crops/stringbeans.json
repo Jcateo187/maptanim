@@ -1,0 +1,23 @@
+{
+  "id": "crop_stringbeans",
+  "category": "crop",
+  "common_name": "String Beans",
+  "local_name_ph": "Sitaw",
+  "scientific_name": "Vigna unguiculata subsp. sesquipedalis",
+  "taxonomic_family": "Fabaceae",
+  "crop_type": "Podded / Legume",
+  "growing_specifications": {
+    "days_to_harvest": "60-90 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "20 - 32 C",
+    "description": "Priority Philippine vegetable crop (Sitaw) essential for sustainable smallholder farming."
+  },
+  "media": {
+    "primary_photo_url": "photos/crops/stringbeans_primary.webp",
+    "thumbnail_url": "photos/crops/thumb_stringbeans_primary.webp",
+    "source_url": "https://commons.wikimedia.org/w/index.php?search=Vigna%20unguiculata%20subsp.%20sesquipedalis",
+    "author": "Wikimedia Commons / DA-PH",
+    "license": "CC-BY 4.0",
+    "hash_sha256": "pending_processing"
+  }
+}

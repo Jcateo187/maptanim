@@ -1,0 +1,67 @@
+{
+  "id": "crop_onion",
+  "category": "crop",
+  "common_name": "Onion",
+  "local_name_ph": "Sibuyas",
+  "scientific_name": "Allium cepa",
+  "taxonomic_family": "Amaryllidaceae",
+  "crop_type": "Bulb",
+  "growing_specifications": {
+    "days_to_harvest": "100-110 days",
+    "optimal_soil_ph": "6.0 - 7.0",
+    "optimal_temperature_c": "18 - 28 C",
+    "description": "Major commercial cash crop in Nueva Ecija and Mindoro, producing red pinoy and yellow granex cultivars."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_sibuyas_red_pinoy_f1",
+      "variety_name": "Red Pinoy F1",
+      "local_name_ph": "Sibuyas Red Pinoy F1",
+      "growth_duration_days": 110,
+      "stage_days": {
+        "stage1_sprout": 10,
+        "stage2_seedling": 22,
+        "stage3_vegetative": 40,
+        "stage4_flowering": 28,
+        "stage5_harvest": 10
+      },
+      "optimal_seasons": [
+        "DRY"
+      ],
+      "watering_interval_days": 4,
+      "fertilize_interval_days": 14,
+      "description": "Leading Philippine red bulb onion hybrid with exceptional bulb firmness, pungency and long storage shelf life.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-24"
+    },
+    {
+      "variety_id": "var_sibuyas_yellow_granex",
+      "variety_name": "Yellow Granex",
+      "local_name_ph": "Sibuyas Yellow Granex",
+      "growth_duration_days": 100,
+      "stage_days": {
+        "stage1_sprout": 9,
+        "stage2_seedling": 21,
+        "stage3_vegetative": 35,
+        "stage4_flowering": 27,
+        "stage5_harvest": 8
+      },
+      "optimal_seasons": [
+        "DRY"
+      ],
+      "watering_interval_days": 4,
+      "fertilize_interval_days": 14,
+      "description": "Sweet yellow short-day onion variety producing large semi-flat bulbs grown extensively in Nueva Ecija.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-14"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "deb9308eed86d6b14aff948a120b67ed9148e338d55d6b07452c843b0db32b59"
+  }
+}

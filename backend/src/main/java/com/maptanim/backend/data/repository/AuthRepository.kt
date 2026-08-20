@@ -136,4 +136,13 @@ class AuthRepository {
         }
     }
 
+    suspend fun resetPassword(email: String): Result<Unit> {
+        return try {
+            client.auth.resetPasswordForEmail(email)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
 }

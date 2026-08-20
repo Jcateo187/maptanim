@@ -1,0 +1,46 @@
+{
+  "id": "crop_pumpkin",
+  "category": "crop",
+  "common_name": "Squash / Pumpkin",
+  "local_name_ph": "Kalabasa",
+  "scientific_name": "Cucurbita moschata",
+  "taxonomic_family": "Cucurbitaceae",
+  "crop_type": "Cucurbit / Vine",
+  "growing_specifications": {
+    "days_to_harvest": "80 days",
+    "optimal_soil_ph": "5.5 - 6.8",
+    "optimal_temperature_c": "24 - 33 C",
+    "description": "Rich in Vitamin A, prostrate vining crop heavily planted in lowland raised soil beds across the Philippines."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_kalabasa_suprema_f1",
+      "variety_name": "Suprema F1",
+      "local_name_ph": "Kalabasa Suprema F1",
+      "growth_duration_days": 80,
+      "stage_days": {
+        "stage1_sprout": 6,
+        "stage2_seedling": 14,
+        "stage3_vegetative": 28,
+        "stage4_flowering": 24,
+        "stage5_harvest": 8
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Top hybrid squash in the Philippines featuring flat ribbed fruits with deep orange flesh and high virus resistance.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-25"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "403f6b1be6379da001e327f46a9a2b7674c9848cb4734ac4823a6a2463f15179"
+  }
+}

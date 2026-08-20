@@ -1,0 +1,68 @@
+{
+  "id": "crop_sitaw",
+  "category": "crop",
+  "common_name": "Yardlong String Beans",
+  "local_name_ph": "Sitaw",
+  "scientific_name": "Vigna unguiculata subsp. sesquipedalis",
+  "taxonomic_family": "Fabaceae",
+  "crop_type": "Podded / Legume",
+  "growing_specifications": {
+    "days_to_harvest": "48-52 days",
+    "optimal_soil_ph": "5.5 - 6.5",
+    "optimal_temperature_c": "25 - 35 C",
+    "description": "Essential Bahay Kubo staple vining legume grown across Philippine lowlands with high protein content and nitrogen-fixing soil benefits."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_sitaw_sandigan_f1",
+      "variety_name": "Sandigan F1",
+      "local_name_ph": "Sitaw Sandigan F1",
+      "growth_duration_days": 48,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 8,
+        "stage3_vegetative": 16,
+        "stage4_flowering": 14,
+        "stage5_harvest": 6
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "High-yielding hybrid variety resistant to bean pod borer with long, straight dark green pods.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-23"
+    },
+    {
+      "variety_id": "var_sitaw_galante_f1",
+      "variety_name": "Galante F1",
+      "local_name_ph": "Sitaw Galante F1",
+      "growth_duration_days": 52,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 9,
+        "stage3_vegetative": 16,
+        "stage4_flowering": 15,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "DRY"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "Heat-tolerant lowland variety with dense vine growth and uniform pod length.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-27"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
+    "thumbnail_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
+    "source_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0",
+    "author": "Unsplash Agricultural Collection",
+    "license": "Unsplash Free License",
+    "hash_sha256": "6abc96be5f05675159b35a9fb1c1854fbaeb9f0f1fd2d24eb1af8c90b8397e50"
+  }
+}
