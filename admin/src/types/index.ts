@@ -193,5 +193,95 @@ export interface CommunityReport {
   resolvedAt?: string;
 }
 
+// ─── Crop Lifecycle Types ──────────────────────────────────────────────────
 
+export type GrowthStage = 'GERMINATION' | 'SEEDLING' | 'VEGETATIVE' | 'FLOWERING' | 'RIPENING' | 'HARVEST';
+export type TileStatusType = 'EMPTY' | 'PLANTED' | 'GROWING' | 'READY_TO_HARVEST' | 'HARVESTED' | 'FALLOW';
+
+/** Admin-managed crop enrichment profile with growth durations and agronomic guides */
+export interface CropProfile {
+  id: string;
+  cropId: string;
+  /** Configurable duration in days for each of the 6 growth stages */
+  growthStageDurations: Record<GrowthStage, number>;
+  plantingInstructions?: string;
+  pestRisks?: string;
+  fertilizerSchedule?: string;
+  wateringGuide?: string;
+  /** External image URLs (free hosting, no Supabase Storage) */
+  imageUrls: string[];
+  thumbnailUrl?: string;
+  createdByAdmin: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Single cell in the 45×45 isometric farm grid — plain white tile */
+export interface FarmTile {
+  id: string;
+  farmId: string;
+  gridX: number;
+  gridY: number;
+  status: TileStatusType;
+  currentCropId?: string;
+  tileLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Drag-drop crop placement on a tile — supports resizable crops */
+export interface TilePlanting {
+  id: string;
+  tileId: string;
+  cropId: string;
+  cropName: string;
+  cropVariety?: string;
+  widthM: number;
+  heightM: number;
+  offsetX: number;
+  offsetY: number;
+  currentStage: GrowthStage;
+  stageChangedAt: string;
+  plantedAt: string;
+  expectedHarvestDate?: string;
+  cropProfileId?: string;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Monitoring/observation log & scheduled tasks for an active planting */
+export interface PlantingMonitor {
+  id: string;
+  plantingId: string;
+  cropId: string;
+  cropName: string;
+  cropVariety?: string;
+  monitorType: TaskType;
+  value?: number;
+  unit?: string;
+  notes?: string;
+  dueDate?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  recordedAt: string;
+  createdAt: string;
+}
+
+/** Harvest record for a completed tile planting */
+export interface PlantingHarvest {
+  id: string;
+  plantingId: string;
+  cropName: string;
+  cropVariety?: string;
+  yieldKg: number;
+  yieldUnits?: number;
+  qualityGrade?: string;
+  harvestDate: string;
+  growingDays?: number;
+  notes?: string;
+  createdAt: string;
+}
 

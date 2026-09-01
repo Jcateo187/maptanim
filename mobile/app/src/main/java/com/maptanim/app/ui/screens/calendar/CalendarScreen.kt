@@ -153,13 +153,10 @@ fun CalendarScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
-                            val daysOfWeek = listOf(
-                                DayOfWeek.SUNDAY, DayOfWeek.MONDAY, DayOfWeek.TUESDAY,
-                                DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY
-                            )
-                            daysOfWeek.forEach { day ->
+                            val daysOfWeek = listOf("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
+                            daysOfWeek.forEach { dayName ->
                                 Text(
-                                    text = day.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase(),
+                                    text = dayName,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = ForestGreen,

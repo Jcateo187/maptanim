@@ -49,11 +49,12 @@ fun LeftToolbar(
         )
 
         // ── 2. Today's Tasks HUD Button ───────────────────────────────────
+        val pendingTaskCount = uiState.todayTasks.count { !it.isCompleted }
         HudLeftButton(
             icon = Icons.AutoMirrored.Filled.Assignment,
             iconBgColor = Color(0xFF1E88E5),
             title = "Today's Tasks",
-            subtitle = "${uiState.todayTasks.size.coerceAtLeast(4)} Tasks",
+            subtitle = if (pendingTaskCount > 0) "$pendingTaskCount Pending" else "${uiState.todayTasks.size} Done",
             onClick = onTasksClick
         )
     }
