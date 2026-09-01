@@ -3,7 +3,7 @@ name: Android CI/CD Pipeline
 on:
   workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, Refinement ]
     paths:
       - 'mobile/**'
       - 'backend/**'
@@ -12,7 +12,7 @@ on:
       - 'settings.gradle.kts'
       - '.github/workflows/android-ci.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, Refinement ]
     paths:
       - 'mobile/**'
       - 'backend/**'
@@ -56,7 +56,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload to Firebase App Distribution
-        if: ${{ (secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' || secrets.FIREBASE_TOKEN != '') && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/Refinement' }}
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
