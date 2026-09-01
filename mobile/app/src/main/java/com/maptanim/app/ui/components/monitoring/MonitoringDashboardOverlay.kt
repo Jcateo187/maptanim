@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +46,8 @@ import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.data.repository.getPestAssetImagePath
 import com.maptanim.app.domain.model.CompanionRelation
 import com.maptanim.app.domain.model.PestGuide
+import com.maptanim.app.domain.model.Season
+import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.dss.knowledgebase.CompanionEntry
 import com.maptanim.app.dss.knowledgebase.GrowingTip
@@ -154,135 +158,303 @@ fun MonitoringDashboardOverlay(
                     }
 
                     if (activeSelectedPlant == null) {
-                        // ── SCREEN 1: Crop Selection (4 Columns Landscape Grid) ──────
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            // Top Bar (Search, Category Filter, Close X)
+                        // ── SCREEN 1: Crop Selection with 6 Soil Types & Seasonal Side Nav ──
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // ── LEFT SIDE NAV: Soil Types & Seasons ──────────────────────
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 color = Color(0xFF1B2317),
-                                modifier = Modifier.fillMaxWidth()
+                                border = BorderStroke(1.dp, Color(0xFF2E4D3E)),
+                                modifier = Modifier
+                                    .width(190.dp)
+                                    .fillMaxHeight()
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    // Search Bar
+                                    // 1. My Farm Crops Mode
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFF2A3424),
-                                        border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
-                                        modifier = Modifier.weight(1f)
+                                        color = if (uiState.filterMode == MonitoringFilterMode.ALL_FARM_CROPS) ForestGreen else Color(0xFF243020),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.selectNavSection(MonitoringNavSection.OVERVIEW) }
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Search,
-                                                contentDescription = null,
-                                                tint = White.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(16.dp)
-                                            )
+                                            Icon(Icons.Default.Park, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            BasicTextField(
-                                                value = uiState.searchQuery,
-                                                onValueChange = { viewModel.updateSearchQuery(it) },
-                                                singleLine = true,
-                                                textStyle = TextStyle(
-                                                    color = White,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Medium
-                                                ),
-                                                cursorBrush = SolidColor(ForestGreen),
-                                                decorationBox = { innerTextField ->
-                                                    if (uiState.searchQuery.isEmpty()) {
-                                                        Text(
-                                                            text = "Search planted crops...",
-                                                            color = White.copy(alpha = 0.45f),
-                                                            fontSize = 12.sp
-                                                        )
-                                                    }
-                                                    innerTextField()
-                                                },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
+                                            Text("🌱 Farm Plants (${uiState.plantedCrops.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = White)
                                         }
                                     }
 
-                                    // Category Dropdown
-                                    Box {
+                                    HorizontalDivider(color = Color(0xFF2E4D3E), thickness = 0.8.dp, modifier = Modifier.padding(vertical = 2.dp))
+
+                                    // 2. 6 Soil Types Section Header
+                                    Text(
+                                        text = "6 SOIL TYPES",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForestGreen,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+
+                                    val soilTypesList = listOf(
+                                        Triple(SoilType.LOAM, "Loam Soil", Color(0xFF8D6E63)),
+                                        Triple(SoilType.CLAY, "Clay Soil", Color(0xFFD84315)),
+                                        Triple(SoilType.SANDY, "Sandy Soil", Color(0xFFFDD835)),
+                                        Triple(SoilType.SILTY, "Silty Soil", Color(0xFF78909C)),
+                                        Triple(SoilType.PEATY, "Peaty Soil", Color(0xFF4E342E)),
+                                        Triple(SoilType.CHALKY, "Chalky Soil", Color(0xFFECEFF1))
+                                    )
+
+                                    soilTypesList.forEach { (soil, label, dotColor) ->
+                                        val isSelected = uiState.filterMode == MonitoringFilterMode.BY_SOIL_TYPE && uiState.selectedSoilType == soil
                                         Surface(
-                                            onClick = { viewModel.toggleCategoryDropdown(true) },
                                             shape = RoundedCornerShape(8.dp),
-                                            color = Color(0xFF2A3424),
-                                            border = BorderStroke(1.dp, ForestGreen)
+                                            color = if (isSelected) ForestGreen else Color(0xFF243020),
+                                            border = if (isSelected) BorderStroke(1.dp, White.copy(alpha = 0.5f)) else null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.selectSoilType(soil) }
                                         ) {
                                             Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(Icons.Default.Category, contentDescription = null, tint = White, modifier = Modifier.size(14.dp))
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(uiState.selectedCategory.label, fontSize = 11.sp, color = White, fontWeight = FontWeight.SemiBold)
-                                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
-                                            }
-                                        }
-
-                                        DropdownMenu(
-                                            expanded = uiState.isCategoryDropdownExpanded,
-                                            onDismissRequest = { viewModel.toggleCategoryDropdown(false) },
-                                            modifier = Modifier.background(Color(0xFF1B2317))
-                                        ) {
-                                            CropCategoryFilter.values().forEach { category ->
-                                                DropdownMenuItem(
-                                                    text = { Text(category.label, color = White, fontSize = 12.sp) },
-                                                    onClick = { viewModel.selectCategory(category) }
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .clip(CircleShape)
+                                                        .background(dotColor)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = label,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = White
                                                 )
                                             }
                                         }
                                     }
 
-                                    // Close Button
-                                    IconButton(
-                                        onClick = onDismiss,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(Icons.Default.Close, contentDescription = "Close Monitoring", tint = White, modifier = Modifier.size(20.dp))
+                                    HorizontalDivider(color = Color(0xFF2E4D3E), thickness = 0.8.dp, modifier = Modifier.padding(vertical = 2.dp))
+
+                                    // 3. Seasonal Section Header
+                                    Text(
+                                        text = "SEASONAL WINDOWS",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForestGreen,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+
+                                    val seasonsList = listOf(
+                                        Pair(Season.DRY, "☀️ Dry Season (Tag-araw)"),
+                                        Pair(Season.WET, "🌧️ Wet Season (Tag-ulan)"),
+                                        Pair(Season.YEAR_ROUND, "🔄 Year-Round (Buong Taon)")
+                                    )
+
+                                    seasonsList.forEach { (season, label) ->
+                                        val isSelected = uiState.filterMode == MonitoringFilterMode.BY_SEASON && uiState.selectedSeason == season
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) ForestGreen else Color(0xFF243020),
+                                            border = if (isSelected) BorderStroke(1.dp, White.copy(alpha = 0.5f)) else null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.selectSeason(season) }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = White
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // 4-Column Crop Cards Grid
-                            if (filteredCrops.isEmpty()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
+                            // ── RIGHT MAIN PANE: Search, Category Filter & Crops Grid ──────
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .weight(1f)
+                            ) {
+                                // Top Filter Bar
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFF1B2317),
+                                    border = BorderStroke(1.dp, Color(0xFF2E4D3E)),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(Icons.Default.Park, contentDescription = null, tint = White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text("No monitored crops found", color = White.copy(alpha = 0.6f), fontSize = 14.sp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Active Mode Badge
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = ForestGreen.copy(alpha = 0.25f),
+                                            border = BorderStroke(1.dp, ForestGreen)
+                                        ) {
+                                            val badgeText = when (uiState.filterMode) {
+                                                MonitoringFilterMode.BY_SOIL_TYPE -> "Soil: ${uiState.selectedSoilType.name}"
+                                                MonitoringFilterMode.BY_SEASON -> "Season: ${uiState.selectedSeason.name}"
+                                                MonitoringFilterMode.ALL_FARM_CROPS -> "My Farm Crops"
+                                            }
+                                            Text(
+                                                text = badgeText,
+                                                color = White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+
+                                        // Search Bar
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF2A3424),
+                                            border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Search,
+                                                    contentDescription = null,
+                                                    tint = White.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                BasicTextField(
+                                                    value = uiState.searchQuery,
+                                                    onValueChange = { viewModel.updateSearchQuery(it) },
+                                                    singleLine = true,
+                                                    textStyle = TextStyle(
+                                                        color = White,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Medium
+                                                    ),
+                                                    cursorBrush = SolidColor(ForestGreen),
+                                                    decorationBox = { innerTextField ->
+                                                        if (uiState.searchQuery.isEmpty()) {
+                                                            Text(
+                                                                text = "Search crops in this section...",
+                                                                color = White.copy(alpha = 0.45f),
+                                                                fontSize = 12.sp
+                                                            )
+                                                        }
+                                                        innerTextField()
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
+                                        }
+
+                                        // Category Dropdown
+                                        Box {
+                                            Surface(
+                                                onClick = { viewModel.toggleCategoryDropdown(true) },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF2A3424),
+                                                border = BorderStroke(1.dp, ForestGreen)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Default.Category, contentDescription = null, tint = White, modifier = Modifier.size(14.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(uiState.selectedCategory.label, fontSize = 11.sp, color = White, fontWeight = FontWeight.SemiBold)
+                                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+
+                                            DropdownMenu(
+                                                expanded = uiState.isCategoryDropdownExpanded,
+                                                onDismissRequest = { viewModel.toggleCategoryDropdown(false) },
+                                                modifier = Modifier.background(Color(0xFF1B2317))
+                                            ) {
+                                                CropCategoryFilter.values().forEach { category ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(category.label, color = White, fontSize = 12.sp) },
+                                                        onClick = { viewModel.selectCategory(category) }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Close Button
+                                        IconButton(
+                                            onClick = onDismiss,
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Close Monitoring", tint = White, modifier = Modifier.size(20.dp))
+                                        }
                                     }
                                 }
-                            } else {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(4),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    items(filteredCrops) { crop ->
-                                        CropSelectionGridCard(
-                                            crop = crop,
-                                            onSelect = { activeSelectedPlantId = crop.id }
-                                        )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // 4-Column Landscape Crop Cards Grid
+                                if (filteredCrops.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(Icons.Default.Park, contentDescription = null, tint = White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = when (uiState.filterMode) {
+                                                    MonitoringFilterMode.BY_SOIL_TYPE -> "No crops found for ${uiState.selectedSoilType.name} with category ${uiState.selectedCategory.label}"
+                                                    MonitoringFilterMode.BY_SEASON -> "No crops found for ${uiState.selectedSeason.name} Season with category ${uiState.selectedCategory.label}"
+                                                    MonitoringFilterMode.ALL_FARM_CROPS -> "No monitored farm crops found"
+                                                },
+                                                color = White.copy(alpha = 0.6f),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(4),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(filteredCrops) { crop ->
+                                            CropSelectionGridCard(
+                                                crop = crop,
+                                                onSelect = { activeSelectedPlantId = crop.id }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -301,7 +473,7 @@ fun MonitoringDashboardOverlay(
                                         onClick = { activeSelectedPlantId = null },
                                         modifier = Modifier.size(32.dp)
                                     ) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to List", tint = White, modifier = Modifier.size(20.dp))
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to List", tint = White, modifier = Modifier.size(20.dp))
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(getCropEmoji(crop.cropName), fontSize = 20.sp)
@@ -330,7 +502,7 @@ fun MonitoringDashboardOverlay(
                                 modifier = Modifier.fillMaxSize(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // 6-Section Side Navigation
+                                // 6-Section Side Navigation (Overview, Timeline, Calendar, Companions, Growing Tips, Pest & Disease)
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = Color(0xFF1B2317),
@@ -354,7 +526,7 @@ fun MonitoringDashboardOverlay(
                                             )
 
                                             val navSections = listOf(
-                                                MonitoringNavSection.MY_PLANTS,
+                                                MonitoringNavSection.OVERVIEW,
                                                 MonitoringNavSection.TIMELINE,
                                                 MonitoringNavSection.CALENDAR,
                                                 MonitoringNavSection.COMPANIONS,
@@ -385,7 +557,7 @@ fun MonitoringDashboardOverlay(
                                     ) {
                                         item {
                                             when (uiState.selectedNavSection) {
-                                                MonitoringNavSection.MY_PLANTS -> MyPlantsTabSection(
+                                                MonitoringNavSection.OVERVIEW -> MyPlantsTabSection(
                                                     crop = crop,
                                                     onHarvestClick = { selectedCropForHarvest = crop },
                                                     onCompleteTask = { taskType ->
@@ -408,6 +580,13 @@ fun MonitoringDashboardOverlay(
                                                     onNavigateToLibrary = {
                                                         onDismiss()
                                                         onNavigateToLibrary()
+                                                    }
+                                                )
+                                                else -> MyPlantsTabSection(
+                                                    crop = crop,
+                                                    onHarvestClick = { selectedCropForHarvest = crop },
+                                                    onCompleteTask = { taskType ->
+                                                        viewModel.completeDssTask(crop.id, crop.farmId, taskType)
                                                     }
                                                 )
                                             }
@@ -551,11 +730,13 @@ private fun CropSelectionGridCard(
                 shape = RoundedCornerShape(6.dp),
                 color = Color(0xFF2A3424)
             ) {
+                val label = crop.cropVariety?.let { "$it • ${crop.stageName}" } ?: crop.stageName
                 Text(
-                    text = crop.stageName,
+                    text = label,
                     fontSize = 8.sp,
                     color = White,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                 )
             }
@@ -581,7 +762,9 @@ private fun NavSectionItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val icon = when (section) {
-                MonitoringNavSection.MY_PLANTS -> Icons.Default.Eco
+                MonitoringNavSection.OVERVIEW -> Icons.Default.Dashboard
+                MonitoringNavSection.SOIL_TYPES -> Icons.Default.Terrain
+                MonitoringNavSection.SEASONAL -> Icons.Default.WbSunny
                 MonitoringNavSection.TIMELINE -> Icons.Default.Timeline
                 MonitoringNavSection.CALENDAR -> Icons.Default.CalendarMonth
                 MonitoringNavSection.COMPANIONS -> Icons.Default.Groups
@@ -593,8 +776,8 @@ private fun NavSectionItem(
             Text(
                 text = section.title,
                 fontSize = 11.sp,
-                color = White,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = White
             )
         }
     }
@@ -1804,7 +1987,7 @@ private fun PestDiseaseTabSection(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.MenuBook, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(16.dp))
+                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "📚 View Complete Pest & Crop Library in Knowledge Base",

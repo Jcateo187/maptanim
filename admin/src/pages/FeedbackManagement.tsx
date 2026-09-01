@@ -135,7 +135,7 @@ export const FeedbackManagement: React.FC = () => {
               <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs space-y-1.5 ml-2 sm:ml-4">
                 <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs">
                   <CornerDownRight className="w-3.5 h-3.5" />
-                  <span>Extension Officer Advisory (Sent to Farmer Mobile App)</span>
+                  <span>Admin Response (Sent to Farmer Mobile App)</span>
                 </div>
                 <p className="text-slate-800 leading-relaxed pl-5 font-medium">
                   "{item.adminReply}"
@@ -161,7 +161,7 @@ export const FeedbackManagement: React.FC = () => {
                 className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{item.adminReply ? 'Edit Advisory' : 'Send Advisory & Reply'}</span>
+                <span>{item.adminReply ? 'Edit Response' : 'Reply to Farmer'}</span>
               </button>
             </div>
           </div>
@@ -173,7 +173,7 @@ export const FeedbackManagement: React.FC = () => {
         <Modal
           isOpen={Boolean(selectedTicket)}
           onClose={() => setSelectedTicket(null)}
-          title="Send Extension Advisory & Dispatch Mobile Notification"
+          title="Send Admin Response & Dispatch Mobile Notification"
           maxWidth="lg"
         >
           <div className="space-y-4 text-xs">
@@ -194,13 +194,13 @@ export const FeedbackManagement: React.FC = () => {
 
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px]">
-                Official Extension Advisory:
+                Admin Response:
               </label>
               <textarea
                 rows={4}
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type your official agronomic advisory or support response here..."
+                placeholder="Type your admin response or advice here..."
                 className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 text-slate-900 resize-none"
               />
             </div>
@@ -229,7 +229,7 @@ export const FeedbackManagement: React.FC = () => {
                   className="h-8 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Dispatching...' : 'Dispatch Advisory'}</span>
+                  <span>{submitting ? 'Sending...' : 'Send Response'}</span>
                 </button>
               </div>
             </div>

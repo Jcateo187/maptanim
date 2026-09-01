@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "605883983200",
+    "project_id": "maptanim-77851",
+    "storage_bucket": "maptanim-77851.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605883983200:android:1e5411b580262a2b422a05",
+        "android_client_info": {
+          "package_name": "com.maptanim.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfdKYg_V2cN0IdmIieQiUnWNVR66L21II"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

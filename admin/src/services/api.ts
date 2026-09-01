@@ -1,4 +1,4 @@
-import { Farmer, Farm, BedPlot, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats, CommunityPost, CommunityComment, CommunityReport, ReportStatus } from '../types';
+import { Farmer, Farm, BedPlot, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats, CommunityPost, CommunityComment, CommunityReport, ReportStatus, CropProfile, FarmTile, TilePlanting, PlantingMonitor, PlantingHarvest } from '../types';
 import { MOCK_CROPS, MOCK_DSS_RULES, MOCK_FARMS, MOCK_BEDS, MOCK_FEEDBACK, MOCK_LOGS, MOCK_STATS } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabase';
 
@@ -826,6 +826,263 @@ class ApiService {
   // System Audit Logs
   async getAuditLogs(): Promise<SystemAuditLog[]> {
     return Promise.resolve(this.logs);
+  }
+
+  // ===========================================================================
+  // Crop Profiles (Admin-managed crop enrichment data)
+  // Uses Supabase service_role key for writes via the configured client.
+  // ===========================================================================
+
+  async getCropProfiles(): Promise<CropProfile[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('crop_profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (data) {
+          return data.map((row: any) => ({
+            id: row.id,
+            cropId: row.crop_id,
+            growthStageDurations: row.growth_stage_durations || {},
+            plantingInstructions: row.planting_instructions,
+            pestRisks: row.pest_risks,
+            fertilizerSchedule: row.fertilizer_schedule,
+            wateringGuide: row.watering_guide,
+            imageUrls: row.image_urls || [],
+            thumbnailUrl: row.thumbnail_url,
+            createdByAdmin: row.created_by_admin,
+            isPublished: row.is_published,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch crop profiles:', err);
+      }
+    }
+    return [];
+  }
+
+  async createCropProfile(profile: Omit<CropProfile, 'id' | 'createdAt' | 'updatedAt'>): Promise<CropProfile | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('crop_profiles')
+          .insert({
+            crop_id: profile.cropId,
+            growth_stage_durations: profile.growthStageDurations,
+            planting_instructions: profile.plantingInstructions,
+            pest_risks: profile.pestRisks,
+            fertilizer_schedule: profile.fertilizerSchedule,
+            watering_guide: profile.wateringGuide,
+            image_urls: profile.imageUrls,
+            thumbnail_url: profile.thumbnailUrl,
+            created_by_admin: profile.createdByAdmin,
+            is_published: profile.isPublished,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        this.logAction('CREATE_CROP_PROFILE', 'Crop Library', `Created crop profile for crop_id: ${profile.cropId}`);
+        if (data) {
+          return {
+            id: data.id,
+            cropId: data.crop_id,
+            growthStageDurations: data.growth_stage_durations || {},
+            plantingInstructions: data.planting_instructions,
+            pestRisks: data.pest_risks,
+            fertilizerSchedule: data.fertilizer_schedule,
+            wateringGuide: data.watering_guide,
+            imageUrls: data.image_urls || [],
+            thumbnailUrl: data.thumbnail_url,
+            createdByAdmin: data.created_by_admin,
+            isPublished: data.is_published,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+          };
+        }
+      } catch (err) {
+        console.error('Failed to create crop profile:', err);
+      }
+    }
+    return null;
+  }
+
+  async updateCropProfile(id: string, updates: Partial<CropProfile>): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        const payload: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (updates.growthStageDurations !== undefined) payload.growth_stage_durations = updates.growthStageDurations;
+        if (updates.plantingInstructions !== undefined) payload.planting_instructions = updates.plantingInstructions;
+        if (updates.pestRisks !== undefined) payload.pest_risks = updates.pestRisks;
+        if (updates.fertilizerSchedule !== undefined) payload.fertilizer_schedule = updates.fertilizerSchedule;
+        if (updates.wateringGuide !== undefined) payload.watering_guide = updates.wateringGuide;
+        if (updates.imageUrls !== undefined) payload.image_urls = updates.imageUrls;
+        if (updates.thumbnailUrl !== undefined) payload.thumbnail_url = updates.thumbnailUrl;
+        if (updates.isPublished !== undefined) payload.is_published = updates.isPublished;
+
+        const { error } = await supabase
+          .from('crop_profiles')
+          .update(payload)
+          .eq('id', id);
+        if (error) throw error;
+        this.logAction('UPDATE_CROP_PROFILE', 'Crop Library', `Updated crop profile ${id}`);
+        return true;
+      } catch (err) {
+        console.error('Failed to update crop profile:', err);
+      }
+    }
+    return false;
+  }
+
+  async deleteCropProfile(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('crop_profiles')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        this.logAction('DELETE_CROP_PROFILE', 'Crop Library', `Deleted crop profile ${id}`);
+        return true;
+      } catch (err) {
+        console.error('Failed to delete crop profile:', err);
+      }
+    }
+    return false;
+  }
+
+  // ===========================================================================
+  // Read-Only Monitoring: Farm Tiles, Plantings, Harvests
+  // Admin dashboard reads farmer data for analytics and oversight.
+  // ===========================================================================
+
+  async getFarmTiles(farmId?: string): Promise<FarmTile[]> {
+    if (isSupabaseConfigured) {
+      try {
+        let query = supabase.from('farm_tiles').select('*');
+        if (farmId) query = query.eq('farm_id', farmId);
+        const { data, error } = await query.order('grid_y').order('grid_x');
+        if (error) throw error;
+        if (data) {
+          return data.map((row: any) => ({
+            id: row.id,
+            farmId: row.farm_id,
+            gridX: row.grid_x,
+            gridY: row.grid_y,
+            status: row.status,
+            currentCropId: row.current_crop_id,
+            tileLabel: row.tile_label,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch farm tiles:', err);
+      }
+    }
+    return [];
+  }
+
+  async getTilePlantings(tileId?: string): Promise<TilePlanting[]> {
+    if (isSupabaseConfigured) {
+      try {
+        let query = supabase.from('tile_plantings').select('*');
+        if (tileId) query = query.eq('tile_id', tileId);
+        const { data, error } = await query.order('planted_at', { ascending: false });
+        if (error) throw error;
+        if (data) {
+          return data.map((row: any) => ({
+            id: row.id,
+            tileId: row.tile_id,
+            cropId: row.crop_id,
+            cropName: row.crop_name,
+            cropVariety: row.crop_variety,
+            widthM: row.width_m,
+            heightM: row.height_m,
+            offsetX: row.offset_x,
+            offsetY: row.offset_y,
+            currentStage: row.current_stage,
+            stageChangedAt: row.stage_changed_at,
+            plantedAt: row.planted_at,
+            expectedHarvestDate: row.expected_harvest_date,
+            cropProfileId: row.crop_profile_id,
+            isActive: row.is_active,
+            notes: row.notes,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch tile plantings:', err);
+      }
+    }
+    return [];
+  }
+
+  async getPlantingMonitors(cropId?: string, plantingId?: string): Promise<PlantingMonitor[]> {
+    if (isSupabaseConfigured) {
+      try {
+        let query = supabase.from('planting_monitors').select('*');
+        if (cropId) query = query.eq('crop_id', cropId);
+        if (plantingId) query = query.eq('planting_id', plantingId);
+        const { data, error } = await query.order('recorded_at', { ascending: false });
+        if (error) throw error;
+        if (data) {
+          return data.map((row: any) => ({
+            id: row.id,
+            plantingId: row.planting_id,
+            cropId: row.crop_id,
+            cropName: row.crop_name,
+            cropVariety: row.crop_variety,
+            monitorType: row.monitor_type,
+            value: row.value,
+            unit: row.unit,
+            notes: row.notes,
+            dueDate: row.due_date,
+            isCompleted: row.is_completed ?? false,
+            completedAt: row.completed_at,
+            recordedAt: row.recorded_at,
+            createdAt: row.created_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch planting monitors:', err);
+      }
+    }
+    return [];
+  }
+
+  async getPlantingHarvests(): Promise<PlantingHarvest[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('planting_harvests')
+          .select('*')
+          .order('harvest_date', { ascending: false });
+        if (error) throw error;
+        if (data) {
+          return data.map((row: any) => ({
+            id: row.id,
+            plantingId: row.planting_id,
+            cropName: row.crop_name,
+            cropVariety: row.crop_variety,
+            yieldKg: row.yield_kg,
+            yieldUnits: row.yield_units,
+            qualityGrade: row.quality_grade,
+            harvestDate: row.harvest_date,
+            growingDays: row.growing_days,
+            notes: row.notes,
+            createdAt: row.created_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch planting harvests:', err);
+      }
+    }
+    return [];
   }
 
   private logAction(action: string, targetModule: string, details: string) {

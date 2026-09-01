@@ -264,3 +264,76 @@ data class CommunityReport(
     val createdAt: String = "Just now"
 )
 
+// ─── FarmTile (isometric 45×45 grid cell) ──────────────────────────────────
+
+data class FarmTile(
+    val id: String,
+    val farmId: String,
+    val gridX: Int,                     // Column in the 45×45 isometric grid
+    val gridY: Int,                     // Row in the 45×45 isometric grid
+    val status: String,                 // TileStatus enum name
+    val currentCropId: String?,         // FK to crops table, null if empty
+    val tileLabel: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = ""
+)
+
+// ─── TilePlanting (drag-drop crop placement on a tile) ────────────────────
+
+data class TilePlanting(
+    val id: String,
+    val tileId: String,                 // FK to farm_tiles
+    val cropId: String,                 // FK to crops reference table
+    val cropName: String,
+    val cropVariety: String? = null,    // e.g. "Diamante Max F1", "Red Creole"
+    val widthM: Float,                  // Resizable crop width on tile
+    val heightM: Float,                 // Resizable crop height on tile
+    val offsetX: Float = 0f,            // Position offset within tile
+    val offsetY: Float = 0f,
+    val currentStage: String,           // CropGrowthStage enum name (6 stages)
+    val stageChangedAt: String,
+    val plantedAt: String,
+    val expectedHarvestDate: String?,
+    val cropProfileId: String? = null,  // FK to crop_profiles for growth durations
+    val isActive: Boolean = true,
+    val notes: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = ""
+)
+
+// ─── PlantingMonitor (care/observation logs & crop-specific tasks) ──────────
+
+data class PlantingMonitor(
+    val id: String,
+    val plantingId: String,             // FK to tile_plantings
+    val cropId: String,                 // Direct FK to crop for soil/season side nav filtering
+    val cropName: String,
+    val cropVariety: String? = null,
+    val monitorType: String,            // TaskType enum name: WATER, FERTILIZE, PEST_ALERT, etc.
+    val value: Float? = null,           // Measurement value (liters, kg, etc.)
+    val unit: String? = null,           // Unit label ("L", "kg", "mL")
+    val notes: String? = null,
+    val dueDate: String? = null,        // Due date for Today's Tasks
+    val isCompleted: Boolean = false,
+    val completedAt: String? = null,
+    val recordedAt: String,
+    val createdAt: String = ""
+)
+
+// ─── PlantingHarvest (yield record for a completed planting) ──────────────
+
+data class PlantingHarvest(
+    val id: String,
+    val plantingId: String,             // FK to tile_plantings
+    val cropName: String,
+    val cropVariety: String? = null,
+    val yieldKg: Float = 0f,
+    val yieldUnits: Int? = null,        // Alternative unit count (e.g. number of ears)
+    val qualityGrade: String? = "Grade A",
+    val harvestDate: String,
+    val growingDays: Int? = null,        // Calculated: harvestDate - plantedAt
+    val notes: String? = null,
+    val createdAt: String = ""
+)
+
+

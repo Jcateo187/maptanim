@@ -1,6 +1,7 @@
 name: Android CI/CD Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
     paths:
@@ -53,6 +54,17 @@ jobs:
           name: maptanim-debug-apk
           path: mobile/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
+
+      - name: Upload to Firebase App Distribution
+        if: ${{ (secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' || secrets.FIREBASE_TOKEN != '') && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: testers
+          file: mobile/app/build/outputs/apk/debug/app-debug.apk
+          releaseNotes: "Automated build: ${{ github.event.head_commit.message || 'Manual CI Build' }}"
 
       - name: Upload Lint Report Artifact
         uses: actions/upload-artifact@v4
