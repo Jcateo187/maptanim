@@ -20,31 +20,31 @@ class DssEngineTest {
         val today = LocalDate.of(2026, 8, 6)
         val daysToHarvest = 60
 
-        // Day 3 -> GERMINATION
+        // Day 3 -> SPROUT (0.05 < 0.15)
         val germinationStage = growthStageCalculator.calculate(today.minusDays(3), daysToHarvest, today)
-        assertEquals(GrowthStage.GERMINATION, germinationStage)
+        assertEquals(GrowthStage.SPROUT, germinationStage)
 
-        // Day 14 -> EARLY_VEGETATIVE
+        // Day 14 -> SEEDLING (0.233 < 0.35)
         val earlyVegStage = growthStageCalculator.calculate(today.minusDays(14), daysToHarvest, today)
-        assertEquals(GrowthStage.EARLY_VEGETATIVE, earlyVegStage)
+        assertEquals(GrowthStage.SEEDLING, earlyVegStage)
 
-        // Day 28 -> MID_VEGETATIVE
+        // Day 28 -> VEGETATIVE (0.466 < 0.65)
         val midVegStage = growthStageCalculator.calculate(today.minusDays(28), daysToHarvest, today)
-        assertEquals(GrowthStage.MID_VEGETATIVE, midVegStage)
+        assertEquals(GrowthStage.VEGETATIVE, midVegStage)
 
-        // Day 42 -> FLOWERING
+        // Day 42 -> FLOWERING (0.70 < 0.90)
         val floweringStage = growthStageCalculator.calculate(today.minusDays(42), daysToHarvest, today)
         assertEquals(GrowthStage.FLOWERING, floweringStage)
 
-        // Day 55 -> FRUITING
+        // Day 55 -> HARVEST_READY (0.916 >= 0.90)
         val fruitingStage = growthStageCalculator.calculate(today.minusDays(55), daysToHarvest, today)
-        assertEquals(GrowthStage.FRUITING, fruitingStage)
+        assertEquals(GrowthStage.HARVEST_READY, fruitingStage)
 
-        // Day 60 -> HARVEST_READY
+        // Day 60 -> HARVEST_READY (1.0 >= 0.90)
         val harvestReadyStage = growthStageCalculator.calculate(today.minusDays(60), daysToHarvest, today)
         assertEquals(GrowthStage.HARVEST_READY, harvestReadyStage)
 
-        // Day 70 -> OVERDUE
+        // Day 70 -> OVERDUE (70 > 60)
         val overdueStage = growthStageCalculator.calculate(today.minusDays(70), daysToHarvest, today)
         assertEquals(GrowthStage.OVERDUE, overdueStage)
     }
