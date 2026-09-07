@@ -92,13 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Brand Logo Shield */}
           <div className="flex flex-col items-center gap-2">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center relative group cursor-pointer">
-              <div className="w-11 h-11 rounded-2xl bg-[#14232C] border border-[#223B49] flex items-center justify-center text-[#4CAF50] shadow-[0_0_15px_rgba(76,175,80,0.25)] hover:border-[#4CAF50] transition-colors">
-                <Shield className="w-6 h-6 stroke-[2.2]" />
-                <Sprout className="w-3.5 h-3.5 absolute text-[#00E676]" />
+              <div className="w-11 h-11 rounded-2xl bg-[#14232C] border border-[#223B49] flex items-center justify-center p-1.5 shadow-[0_0_15px_rgba(76,175,80,0.25)] hover:border-[#4CAF50] transition-colors">
+                <img src="/app_logo.png" alt="MapTanim" className="w-full h-full object-contain" />
               </div>
               {/* Tooltip */}
               <span className="absolute left-16 px-2.5 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                MapTanim DSS
+                MapTanim Dashboard
               </span>
             </div>
 

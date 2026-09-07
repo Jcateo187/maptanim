@@ -509,10 +509,10 @@ export const DashboardOverview: React.FC = () => {
             <div className="bg-[#182933] border border-[#223B49] rounded-2xl p-5 flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-emerald-400" />
-                <h4 className="text-sm font-bold text-white">About MapTanim Admin</h4>
+                <h4 className="text-sm font-bold text-white">About MapTanim Dashboard</h4>
               </div>
               <p className="text-xs text-[#8A9BA8] leading-relaxed">
-                MapTanim Admin is the zero-code control panel for the mobile knowledge base.
+                MapTanim Dashboard is the zero-code control panel for the mobile knowledge base.
                 Admins manage the <strong className="text-white">15 core Philippine crops</strong> in Supabase —
                 the mobile app automatically downloads updates as a <strong className="text-emerald-400">System Update</strong> notification. No app code changes needed.
               </p>
