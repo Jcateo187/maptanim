@@ -9,7 +9,7 @@ interface CommunityRepository {
     fun observeCommentsForPost(postId: String): Flow<List<CommunityComment>>
     suspend fun refreshPosts()
     suspend fun toggleLikePost(postId: String)
-    suspend fun addPost(title: String, category: String, content: String, authorName: String)
+    suspend fun addPost(title: String, category: String, content: String, authorName: String): Result<Unit>
     suspend fun addComment(postId: String, content: String, authorName: String)
     suspend fun submitReport(
         targetType: String,

@@ -28,7 +28,7 @@ The engine automatically calculates:
 
 # 2. Philippine Crop Variety & Growth Timeline Matrix
 
-Below is the verified agronomic matrix for the 12 priority Philippine vegetable crops and their top registered commercial and heritage cultivars (DA-PhilRice / East-West Seed / IPB standards).
+Below is the verified agronomic matrix for the 15 approved Philippine vegetable crops and their top registered commercial and heritage cultivars (DA-PhilRice / East-West Seed / IPB standards).
 
 | Local Name | Crop Species | Commercial Variety | Growth Duration (Total Days) | Optimal PH Planting Season | Stage 1 (Sprout) | Stage 2 (Seedling) | Stage 3 (Vegetative) | Stage 4 (Flowering) | Stage 5 (Harvest Ready) |
 |---|---|---|---|---|---|---|---|---|---|
@@ -50,6 +50,9 @@ Below is the verified agronomic matrix for the 12 priority Philippine vegetable 
 | **Ampalaya** 🥒| Bitter Gourd | *Jade Star XL F1* | **55 Days** | Year-Round | Days 1–5 | Days 6–16 | Days 17–34 | Days 35–48 | Days 49–55+ |
 | **Okra** 🌿 | Okra | *Smooth Green* | **45 Days** | Wet / Dry Season | Days 1–4 | Days 5–14 | Days 15–28 | Days 29–38 | Days 39–45+ |
 | **Sili** 🌶️ | Chili Pepper | *Django F1 (Siling Haba)*| **65 Days** | Year-Round | Days 1–6 | Days 7–20 | Days 21–42 | Days 43–58 | Days 59–65+ |
+| **Pipino** 🥒 | Cucumber | *Morelos F1* | **50 Days** | Year-Round | Days 1–4 | Days 5–14 | Days 15–30 | Days 31–44 | Days 45–50+ |
+| **Kangkong** 🥬| Water Spinach | *Tsina Broadleaf* | **30 Days** | Year-Round | Days 1–3 | Days 4–10 | Days 11–20 | Days 21–25 | Days 26–30+ |
+| **Litsugas** 🥗| Lettuce | *General F1* | **45 Days** | Cool / Wet Season | Days 1–4 | Days 5–14 | Days 15–28 | Days 29–38 | Days 39–45+ |
 
 ---
 

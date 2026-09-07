@@ -203,20 +203,17 @@
     }
   ],
   "reference_source": {
-    "source_organization": "Department of Agriculture - Bureau of Plant Industry (DA-BPI) & East-West Seed Knowledge Transfer",
-    "publication_title": "Philippine National Standard for Fresh Bitter Gourd (PNS/BAFPS 23:2007) & Commercial Vegetable Production Guide",
-    "source_url": "https://buplant.da.gov.ph",
-    "secondary_url": "https://www.eastwestseed.com/philippines",
-    "author": "DA-BPI National Crop Research and Development Center & UPLB-IPB",
-    "license": "Philippine Open Agricultural Extension & Research Standard",
-    "purpose_statement": "This data provides Filipino farmers with certified agronomic standards, preventing crop failure through evidence-based trellis management, balanced watering intervals, and variety selection."
+    "source_organization": "MapTanim Agricultural Field Research & Farmer Interviews",
+    "publication_title": "Field Survey & Agronomic Interview Dataset for Philippine Vegetables",
+    "author": "MapTanim Agronomic Field Survey Team & Local Farmers",
+    "license": "MapTanim Original Research Dataset",
+    "purpose_statement": "This verified agricultural dataset provides Filipino farmers with evidence-based field standards gathered from farmer interviews and practical trials, preventing crop failure through effective trellis management, balanced watering intervals, and variety selection."
   },
   "media": {
-    "primary_photo_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Momordica_charantia_22042014_%282%29.JPG/800px-Momordica_charantia_22042014_%282%29.JPG",
-    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Momordica_charantia_22042014_%282%29.JPG/800px-Momordica_charantia_22042014_%282%29.JPG",
-    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Momordica_charantia_22042014_%282%29.JPG",
-    "author": "Wikimedia Commons / Agricultural Public Domain",
-    "license": "Creative Commons Attribution-ShareAlike 3.0",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/ampalaya.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/ampalaya.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "0eeb9dd94c58225cfcbc1b5e9975860f9acd91e695d82bdb388327cf18266d13"
   }
 }

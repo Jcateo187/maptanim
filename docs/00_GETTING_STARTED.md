@@ -147,10 +147,8 @@ cd MapTanim
    python scripts/generate_philippine_metadata.py
    ```
 
-3. **Test Image & Asset URLs**:
-   ```bash
-   python scripts/test_unsplash_urls.py
-   ```
+3. **Verify Metadata & Assets**:
+   Crop metadata assets are stored in `assets/metadata/crops/*.json` and `mobile/app/src/main/assets/metadata/crops/` using local generated visuals (`crops_images/*.png`).
 
 ---
 

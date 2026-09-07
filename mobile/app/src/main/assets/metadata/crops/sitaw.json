@@ -58,11 +58,11 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
-    "hash_sha256": "6abc96be5f05675159b35a9fb1c1854fbaeb9f0f1fd2d24eb1af8c90b8397e50"
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+    "source_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+    "author": "MapTanim Original AI-Generated Asset",
+    "license": "Proprietary / MapTanim Educational & Agricultural Use Only",
+    "hash_sha256": "original_maptanim_sitaw"
   }
 }

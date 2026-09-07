@@ -34,34 +34,39 @@ data class CropEntity(
     @ColumnInfo(name = "description") val description: String?
 )
 
-fun CropEntity.toDomain(): Crop = Crop(
-    id = id,
-    name = name,
-    localName = localName,
-    botanicalName = botanicalName,
-    category = category,
-    daysToHarvest = daysToHarvest,
-    wateringIntervalDays = wateringIntervalDays,
-    fertilizeIntervalDays = fertilizeIntervalDays,
-    nRatio = nRatio,
-    pRatio = pRatio,
-    kRatio = kRatio,
-    optimalPhMin = optimalPhMin,
-    optimalPhMax = optimalPhMax,
-    idealSoils = idealSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
-    suitableSoils = suitableSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
-    toleratedSoils = toleratedSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
-    pestRiskSeason = pestRiskSeasonCsv.split(",").filter { it.isNotBlank() },
-    seasonality = seasonalityCsv.split(",").filter { it.isNotBlank() },
-    imageUrl = imageUrl,
-    companionPlants = companionPlantsCsv.split(",").filter { it.isNotBlank() },
-    avoidPlants = avoidPlantsCsv.split(",").filter { it.isNotBlank() },
-    commonPests = commonPestsCsv.split(",").filter { it.isNotBlank() },
-    harvestIndicators = harvestIndicators,
-    description = description
-)
+fun CropEntity.toDomain(): Crop {
+    com.maptanim.app.data.datasource.CropMetadataAssetDataSource.registerCropImageUrl(id, name, imageUrl)
+    return Crop(
+        id = id,
+        name = name,
+        localName = localName,
+        botanicalName = botanicalName,
+        category = category,
+        daysToHarvest = daysToHarvest,
+        wateringIntervalDays = wateringIntervalDays,
+        fertilizeIntervalDays = fertilizeIntervalDays,
+        nRatio = nRatio,
+        pRatio = pRatio,
+        kRatio = kRatio,
+        optimalPhMin = optimalPhMin,
+        optimalPhMax = optimalPhMax,
+        idealSoils = idealSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
+        suitableSoils = suitableSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
+        toleratedSoils = toleratedSoilsCsv.split(",").mapNotNull { parseSoilType(it) },
+        pestRiskSeason = pestRiskSeasonCsv.split(",").filter { it.isNotBlank() },
+        seasonality = seasonalityCsv.split(",").filter { it.isNotBlank() },
+        imageUrl = imageUrl,
+        companionPlants = companionPlantsCsv.split(",").filter { it.isNotBlank() },
+        avoidPlants = avoidPlantsCsv.split(",").filter { it.isNotBlank() },
+        commonPests = commonPestsCsv.split(",").filter { it.isNotBlank() },
+        harvestIndicators = harvestIndicators,
+        description = description
+    )
+}
 
-fun Crop.toEntity(): CropEntity = CropEntity(
+fun Crop.toEntity(): CropEntity {
+    com.maptanim.app.data.datasource.CropMetadataAssetDataSource.registerCropImageUrl(id, name, imageUrl)
+    return CropEntity(
     id = id,
     name = name,
     localName = localName,
@@ -87,6 +92,7 @@ fun Crop.toEntity(): CropEntity = CropEntity(
     harvestIndicators = harvestIndicators,
     description = description
 )
+}
 
 private fun parseSoilType(name: String): SoilType? = try {
     SoilType.valueOf(name.trim())

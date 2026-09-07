@@ -79,12 +79,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+            "source_url": "file:///android_asset/metadata/crops_images/sitaw.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -138,12 +138,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1615485290382-441e4d049cb5")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/eggplant.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/eggplant.png",
+            "source_url": "file:///android_asset/metadata/crops_images/eggplant.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -197,12 +197,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1592924357228-91a4daadcfea")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/tomato.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/tomato.png",
+            "source_url": "file:///android_asset/metadata/crops_images/tomato.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -256,12 +256,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1582515073490-39981397c445?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1582515073490-39981397c445?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1582515073490-39981397c445",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1582515073490-39981397c445")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/carrot.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/carrot.png",
+            "source_url": "file:///android_asset/metadata/crops_images/carrot.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -315,12 +315,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1518977676601-b53f82aba655",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1518977676601-b53f82aba655")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/onion.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/onion.png",
+            "source_url": "file:///android_asset/metadata/crops_images/onion.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -357,12 +357,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1570586437263-ab629fccc818")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+            "source_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -416,12 +416,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1551754655-cd27e38d2076")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/corn.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/corn.png",
+            "source_url": "file:///android_asset/metadata/crops_images/corn.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -458,12 +458,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/cabbage.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/cabbage.png",
+            "source_url": "file:///android_asset/metadata/crops_images/cabbage.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -500,12 +500,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1540420773420-3366772f4999")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/pechay.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/pechay.png",
+            "source_url": "file:///android_asset/metadata/crops_images/pechay.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -542,12 +542,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1540420773420-3366772f4999")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/ampalaya.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/ampalaya.png",
+            "source_url": "file:///android_asset/metadata/crops_images/ampalaya.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -584,12 +584,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1464226184884-fa280b87c399")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/okra.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/okra.png",
+            "source_url": "file:///android_asset/metadata/crops_images/okra.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -626,12 +626,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1588252303782-cb80119abd6d")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/sili.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/sili.png",
+            "source_url": "file:///android_asset/metadata/crops_images/sili.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -668,12 +668,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1449300079323-02e209d9d3a6")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/pipino.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/pipino.png",
+            "source_url": "file:///android_asset/metadata/crops_images/pipino.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -710,12 +710,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1576045057995-568f588f82fb")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/kangkong.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/kangkong.png",
+            "source_url": "file:///android_asset/metadata/crops_images/kangkong.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     },
     {
@@ -752,12 +752,12 @@ CROPS_DATA = [
             }
         ],
         "media": {
-            "primary_photo_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=800&q=80",
-            "thumbnail_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=800&q=80",
-            "source_url": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1",
-            "author": "Unsplash Agricultural Collection",
-            "license": "Unsplash Free License",
-            "hash_sha256": compute_string_sha256("https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1")
+            "primary_photo_url": "file:///android_asset/metadata/crops_images/lettuce.png",
+            "thumbnail_url": "file:///android_asset/metadata/crops_images/lettuce.png",
+            "source_url": "file:///android_asset/metadata/crops_images/lettuce.png",
+            "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+            "license": "MapTanim Original Asset",
+            "hash_sha256": ""
         }
     }
 ]
@@ -769,7 +769,7 @@ def main():
     mobile_crops_dir.mkdir(parents=True, exist_ok=True)
 
     today_str = datetime.now().strftime("%Y-%m-%d")
-    print(f"[Metadata Generator] Processing Real Agronimic Metadata with working Unsplash CDN URLs (Date: {today_str})...")
+    print(f"[Metadata Generator] Processing Real Agronomic Metadata with local AI generated visuals (Date: {today_str})...")
 
     for crop in CROPS_DATA:
         for var in crop.get("varieties", []):

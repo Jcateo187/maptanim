@@ -83,3 +83,4 @@ Replaces high-level Compose gesture wrappers with low-level pointer event handli
 - 📄 [35. Asset Planning & Sprites](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md)
 - 📄 [38. Audio & Sound Assets Planning](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md)
 - 📄 [39. Crop View Interaction & Variety Simulation](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md)
+- 📄 [43. 2D Isometric Projection Reference & Developer Cookbook](file:///d:/Development/MapTanim/docs/43_ISOMETRIC_PROJECTION_GUIDE.md)

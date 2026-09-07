@@ -1,6 +1,5 @@
 package com.maptanim.app.ui.screens.knowledgebase
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,30 +8,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.data.datasource.CropVarietyInfo
@@ -93,17 +85,6 @@ fun CropDetailDialog(
 
     var activeWhyTopic by remember { mutableStateOf<WhyTopic?>(null) }
 
-    fun openWebLink(url: String) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -130,7 +111,7 @@ fun CropDetailDialog(
                             .background(Color(0xFF101E15)),
                         contentAlignment = Alignment.Center
                     ) {
-                        val heroImage = CropMetadataAssetDataSource.getCropAssetImagePath(crop.id, crop.name)
+                        val heroImage = CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
                         AsyncImage(
                             model = heroImage,
                             contentDescription = crop.name,
@@ -555,13 +536,14 @@ fun CropDetailDialog(
                         }
 
                         // ─── OFFICIAL DATA SOURCE, OWNER & PURPOSE ───────────────────────
+                        // ─── FIELD RESEARCH & FARMER INTERVIEW DATA PROFILE ───────────────────────
                         SectionCard(
-                            title = "🏛️ Verified Data Source & Official References",
+                            title = "📋 Field Research & Agronomic Profile",
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "Authority & Research Body:",
+                                    text = "Data Source & Provenance:",
                                     color = Color(0xFFA5D6A7),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -574,7 +556,7 @@ fun CropDetailDialog(
                                 )
 
                                 Text(
-                                    text = "Standard Document:",
+                                    text = "Survey Dataset:",
                                     color = Color(0xFFA5D6A7),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -600,50 +582,6 @@ fun CropDetailDialog(
                                     fontSize = 12.sp,
                                     lineHeight = 18.sp
                                 )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // Clickable Official Links
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { openWebLink(refSource.sourceUrl) },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                                        shape = RoundedCornerShape(10.dp),
-                                        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.OpenInBrowser,
-                                            contentDescription = "Open Source",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = Color.White
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("DA-BPI Website", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                                    }
-
-                                    refSource.secondaryUrl?.let { secUrl ->
-                                        OutlinedButton(
-                                            onClick = { openWebLink(secUrl) },
-                                            modifier = Modifier.weight(1f),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF81C784)),
-                                            shape = RoundedCornerShape(10.dp),
-                                            contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Science,
-                                                contentDescription = "Seed Guide",
-                                                modifier = Modifier.size(16.dp),
-                                                tint = Color(0xFF81C784)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Seed Catalog", fontSize = 12.sp, color = Color(0xFF81C784), fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

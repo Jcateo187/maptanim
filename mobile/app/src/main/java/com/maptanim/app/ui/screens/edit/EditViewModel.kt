@@ -8,6 +8,7 @@ import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.EditTool
 import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.domain.repository.CropPlotRepository
+import com.maptanim.app.domain.repository.CropRepository
 import com.maptanim.app.domain.repository.CropZoneRepository
 import com.maptanim.app.domain.repository.FarmObjectRepository
 import com.maptanim.app.renderer.AssetLoader
@@ -16,6 +17,7 @@ import com.maptanim.app.renderer.canvas.FarmCanvasRenderer
 import com.maptanim.app.renderer.model.CropZoneRenderData
 import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.renderer.model.toRenderData
+import com.maptanim.app.ui.components.editcomponents.croptray.toCropOption
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +46,8 @@ sealed interface EditAction {
 class EditViewModel(
     private val cropPlotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,
     private val cropZoneRepository: CropZoneRepository = RepositoryProvider.cropZoneRepository,
-    private val farmObjectRepository: FarmObjectRepository = RepositoryProvider.farmObjectRepository
+    private val farmObjectRepository: FarmObjectRepository = RepositoryProvider.farmObjectRepository,
+    private val cropRepository: CropRepository = RepositoryProvider.cropRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditUiState())
@@ -60,10 +63,39 @@ class EditViewModel(
 
     init {
         resolveActiveFarmId()
+        observeAvailableCrops()
     }
 
     fun refresh() {
         resolveActiveFarmId()
+        refreshCropsFromRemote()
+    }
+
+    private fun observeAvailableCrops() {
+        viewModelScope.launch {
+            cropRepository.observeAllCrops().collect { crops ->
+                if (crops.isNotEmpty()) {
+                    val cropOptions = crops.map { it.toCropOption() }
+                    _uiState.update { it.copy(availableCrops = cropOptions) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            try {
+                cropRepository.refreshCrops()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun refreshCropsFromRemote() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncingCrops = true) }
+            try {
+                cropRepository.refreshCrops()
+            } finally {
+                _uiState.update { it.copy(isSyncingCrops = false) }
+            }
+        }
     }
 
     private fun resolveActiveFarmId() {

@@ -143,15 +143,85 @@ The AgriLibrary serves as a cached, offline-accessible repository containing:
 
 ---
 
-## 7. Summary of Changes & Document Map
+## 8. Approved 15 Philippine Crops Scope & Offline-First Assets Architecture
+
+To ensure strict agronomic accuracy, copyright safety, and instant offline responsiveness without cloud bandwidth bottlenecks, MapTanim establishes the **15 Approved Philippine Crops Baseline**:
+
+### 8.1 Approved 15 Crops Matrix
+1. **Bitter Gourd (*Ampalaya*)** (`FRUIT`) — Cucurbitaceae
+2. **Cabbage (*Repolyo*)** (`LEAFY`) — Brassicaceae
+3. **Carrot (*Karot*)** (`ROOT`) — Apiaceae
+4. **Corn (*Mais*)** (`FRUIT`) — Poaceae
+5. **Eggplant (*Talong*)** (`FRUIT`) — Solanaceae
+6. **Water Spinach (*Kangkong*)** (`LEAFY`) — Convolvulaceae
+7. **Lettuce (*Litsugas*)** (`LEAFY`) — Asteraceae
+8. **Okra (*Okra*)** (`FRUIT`) — Malvaceae
+9. **Onion (*Sibuyas*)** (`BULB`) — Amaryllidaceae
+10. **Pechay (*Pechay*)** (`LEAFY`) — Brassicaceae
+11. **Cucumber (*Pipino*)** (`FRUIT`) — Cucurbitaceae
+12. **Squash (*Kalabasa*)** (`FRUIT`) — Cucurbitaceae
+13. **Chili Pepper (*Sili*)** (`FRUIT`) — Solanaceae
+14. **Yardlong String Bean (*Sitaw*)** (`FRUIT`) — Fabaceae
+15. **Tomato (*Kamatis*)** (`FRUIT`) — Solanaceae
+
+> [!NOTE]
+> PostgreSQL database schema enforces strict `category_enum ('BULB', 'STEM', 'SHOOT', 'LEAFY', 'FLOWER', 'FRUIT', 'ROOT', 'TUBER')`. Podded vegetables (*Sitaw*), Grains (*Corn*), and Cucurbit fruits are classified under `'FRUIT'` in the schema. Non-approved exploratory crops have been completely expunged from the codebase.
+
+### 8.2 Zero-Cloud Asset Architecture (No Cloudflare Required)
+- **Local APK Bundling**: All 15 visual assets are bundled directly inside the Android APK at `file:///android_asset/metadata/crops_images/<crop>.png`.
+- **Zero Cloud Storage**: Eliminates reliance on Supabase Storage buckets or external CDNs (such as Cloudflare) for Version 1.
+- **Copyright Safe**: All graphics are custom MapTanim original assets paired with verified DA-BPI scientific data.
+- **100% Offline Capability**: Farmers can launch the app, view crop details, plan spatial plots, and inspect varieties in deep rural areas without internet connectivity.
+
+---
+
+## 9. Dynamic Admin DSS & Mobile Information Broadcast Pipeline
+
+A core architectural tenet of MapTanim is that **the Web Admin can update DSS rules, agronomic guidelines, crop parameters, and publish advisories without any mobile app code changes, recompilation, or app store re-releases.**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                 DYNAMIC ADMIN-TO-MOBILE KNOWLEDGE PIPELINE                  │
+├───────────────────────────────┬─────────────────────────────────────────────┤
+│ Web Admin Dashboard           │ Mobile Android Farmer Client               │
+├───────────────────────────────┼─────────────────────────────────────────────┤
+│ 1. DSS Rules Management       │ 1. App Launch Synchronization               │
+│    • Edit companion rules     │    • AppInitializationController fetches    │
+│    • Set beneficial/antagonist│      updated dss_rules & reference_crops    │
+│ 2. Crop Library Management    │ 2. Dynamic Rule Evaluation                  │
+│    • Update pH, timeline,     │    • CompanionDataProvider & DssRuleEngine  │
+│      spacing, irrigation      │      evaluate remote rules + offline cache  │
+│ 3. Broadcast Advisory Modal   │ 3. Real-Time HUD Alerts                     │
+│    • Crop Updates, DA-BPI     │    • Unread notification badge on TopBar    │
+│      Guides, System Bulletins │    • Filterable categories & detail modals  │
+└───────────────────────────────┴─────────────────────────────────────────────┘
+```
+
+### 9.1 Live Sync Pipeline Mechanics
+1. **Remote Rule Synchronization**:
+   - Web Admin inserts or updates companion rules in Supabase `public.dss_rules`.
+   - On mobile app startup, `AppInitializationController.initializeCoreSync()` invokes `DssRuleRepository.fetchFromRemote()`, saving rules into Room local SQLite.
+   - `CompanionDataProvider` queries local Room cache first, gracefully falling back to pre-packaged DA-BPI baseline pairings when offline.
+2. **Dynamic Crop Guideline Synchronization**:
+   - Admin modifications in `CropLibrary.tsx` persist to Supabase `reference_crops`.
+   - `CropRepository.fetchFromRemote()` syncs these parameters to the mobile app seamlessly.
+3. **Global Broadcast Advisories**:
+   - Web Admin uses the "Broadcast Update to Mobile" modal to push informational updates (`CROP_UPDATE`, `AGRONOMIC_GUIDE`, `SYSTEM_UPDATE`).
+   - Advisories are inserted into Supabase `notifications` with `user_id = NULL` (global broadcast).
+   - `UserRepository.refreshNotifications()` pulls global broadcasts and user alerts, persisting them to Room `NotificationDao` and emitting reactive state updates to `ProfileViewModel` and `HomeViewModel` (HUD TopBar bell count).
+
+---
+
+## 10. Summary of Changes & Document Map
 
 | Document | Primary Updates Applied |
 |---|---|
 | **[02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md](file:///d:/Development/MapTanim/docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md)** | Updated FR-01 (Email OTP only), FR-03 (Direct soil canvas), FR-05 (Monitoring Hub overlays), FR-07 (DIY Trellis Library). |
 | **[09_AUTHENTICATION.md](file:///d:/Development/MapTanim/docs/09_AUTHENTICATION.md)** | Standardized on Email OTP (Gmail SMTP / Supabase Auth); removed paid SMS gateway endpoints. |
 | **[16_INTERACTIVE_PLOT_MAPPING.md](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md)** | Specified 2D soil grid rendering without grid overlay badges; moved companion overlays to Monitoring Hub. |
-| **[20_DECISION_SUPPORT_SYSTEM.md](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)** | Detailed DSS Monitoring Hub overlay logic for companion pair checking and growth stage advisories. |
+| **[20_DECISION_SUPPORT_SYSTEM.md](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md)** | Detailed DSS Monitoring Hub overlay logic, dynamic `dss_rules` synchronization, and offline fallback engine. |
 | **[21_KNOWLEDGE_BASE.md](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md)** | Added DIY Support Structures & Trellising reference guide specifications under AgriLibrary. |
+| **[23_NOTIFICATION_SYSTEM.md](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)** | Documented Web Admin Broadcast system (`user_id IS NULL`), multi-type advisory filters, and Room-backed HUD badge. |
 | **[33_ROADMAP.md](file:///d:/Development/MapTanim/docs/33_ROADMAP.md)** | Updated roadmap to reflect simplified auth, offline rule engine, and library-based DIY trellises. |
 
 ---
@@ -166,3 +236,4 @@ The AgriLibrary serves as a cached, offline-accessible repository containing:
 - 📄 [22. Calendar Engine](file:///d:/Development/MapTanim/docs/22_CALENDAR.md)
 - 📄 [23. Notification System](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md)
 - 📄 [36. Crop Variety Timeline & Seasonality](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md)
+

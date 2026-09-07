@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     nickname                VARCHAR(100),
     avatar                  TEXT,
-    onboarding_completed    BOOLEAN NOT NULL DEFAULT FALSE,
+    nickname_updated_at     TIMESTAMPTZ,
+    tutorial_completed_at   TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

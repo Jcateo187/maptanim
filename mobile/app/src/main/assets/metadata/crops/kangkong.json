@@ -36,11 +36,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/kangkong.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/kangkong.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "91ad368c7afe9b7d68a726247bd26193fb0bb8cc0b586cc00d0f967623916890"
   }
 }

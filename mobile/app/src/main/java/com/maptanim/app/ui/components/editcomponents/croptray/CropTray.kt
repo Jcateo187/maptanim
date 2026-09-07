@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,41 +27,87 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import com.maptanim.app.domain.model.Crop
 
 data class CropOption(
     val id: String,
     val name: String,
-    val emoji: String,
+    val localName: String? = null,
+    val emoji: String = "🌱",
     val category: String,
     val lifeType: String = "Seasonal",
     val imageFileName: String = "${id}.png",
+    val imageUrl: String? = null,
     val hasAsset: Boolean = true
 )
 
+fun Crop.toCropOption(): CropOption {
+    val cleanId = id.lowercase().replace(" ", "_")
+    val defaultAssetFileName = when (cleanId) {
+        "stringbeans", "sitaw", "string_beans" -> "sitaw.png"
+        "eggplant", "talong" -> "eggplant.png"
+        "tomato", "kamatis" -> "tomato.png"
+        "onion", "sibuyas" -> "onion.png"
+        "pumpkin", "squash", "kalabasa" -> "pumpkin.png"
+        "corn", "mais" -> "corn.png"
+        "cabbage", "repolyo" -> "cabbage.png"
+        "pechay" -> "pechay.png"
+        "ampalaya", "bittergourd", "bitter_gourd" -> "ampalaya.png"
+        "okra" -> "okra.png"
+        "sili", "chili", "chili_pepper", "pepper" -> "sili.png"
+        "cucumber", "pipino" -> "pipino.png"
+        "kangkong", "water_spinach" -> "kangkong.png"
+        "lettuce", "litsugas" -> "lettuce.png"
+        "carrot", "karot" -> "carrot.png"
+        else -> "${cleanId}.png"
+    }
+
+    val emojiIcon = when (category.lowercase()) {
+        "root" -> "🥕"
+        "fruit" -> "🍅"
+        "leafy" -> "🥬"
+        "podded" -> "🫘"
+        "bulb" -> "🧅"
+        "stem" -> "🌽"
+        else -> "🌱"
+    }
+
+    return CropOption(
+        id = id,
+        name = name,
+        localName = localName,
+        emoji = emojiIcon,
+        category = category.ifBlank { "Vegetable" },
+        lifeType = "Seasonal",
+        imageFileName = defaultAssetFileName,
+        imageUrl = imageUrl,
+        hasAsset = !imageUrl.isNullOrBlank()
+    )
+}
+
 val AVAILABLE_CROP_CATALOG = listOf(
-    CropOption("carrot", "Carrot", "🥕", "Root", lifeType = "Seasonal", imageFileName = "carrot.png"),
-    CropOption("stringbeans", "String Beans", "🫘", "Podded", lifeType = "Seasonal", imageFileName = "sitaw.png"),
-    CropOption("eggplant", "Eggplant", "🍆", "Fruit", lifeType = "Permanent", imageFileName = "eggplant.png"),
-    CropOption("tomato", "Tomato", "🍅", "Fruit", lifeType = "Semi Permanent", imageFileName = "tomato.png"),
-    CropOption("onion", "Onion", "🧅", "Bulb", lifeType = "Seasonal", imageFileName = "onion.png"),
-    CropOption("pumpkin", "Squash", "🎃", "Fruit", lifeType = "Seasonal", imageFileName = "pumpkin.png"),
-    CropOption("corn", "Corn", "🌽", "Stem", lifeType = "Seasonal", imageFileName = "corn.png"),
-    CropOption("cabbage", "Cabbage", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "cabbage.png"),
-    CropOption("pechay", "Pechay", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "pechay.png"),
-    CropOption("ampalaya", "Ampalaya", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "ampalaya.png"),
-    CropOption("okra", "Okra", "🌿", "Fruit", lifeType = "Seasonal", imageFileName = "okra.png"),
-    CropOption("sili", "Chili Pepper", "🌶️", "Fruit", lifeType = "Permanent", imageFileName = "sili.png"),
-    CropOption("cucumber", "Cucumber", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "pipino.png"),
-    CropOption("kangkong", "Kangkong", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "kangkong.png"),
-    CropOption("lettuce", "Lettuce", "🥗", "Leafy", lifeType = "Seasonal", imageFileName = "lettuce.png")
+    CropOption("carrot", "Carrot", "Karot", "🥕", "Root", lifeType = "Seasonal", imageFileName = "carrot.png"),
+    CropOption("stringbeans", "String Beans", "Sitaw", "🫘", "Podded", lifeType = "Seasonal", imageFileName = "sitaw.png"),
+    CropOption("eggplant", "Eggplant", "Talong", "🍆", "Fruit", lifeType = "Permanent", imageFileName = "eggplant.png"),
+    CropOption("tomato", "Tomato", "Kamatis", "🍅", "Fruit", lifeType = "Semi Permanent", imageFileName = "tomato.png"),
+    CropOption("onion", "Onion", "Sibuyas", "🧅", "Bulb", lifeType = "Seasonal", imageFileName = "onion.png"),
+    CropOption("pumpkin", "Squash", "Kalabasa", "🎃", "Fruit", lifeType = "Seasonal", imageFileName = "pumpkin.png"),
+    CropOption("corn", "Corn", "Mais", "🌽", "Stem", lifeType = "Seasonal", imageFileName = "corn.png"),
+    CropOption("cabbage", "Cabbage", "Repolyo", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "cabbage.png"),
+    CropOption("pechay", "Pechay", "Pechay", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "pechay.png"),
+    CropOption("ampalaya", "Ampalaya", "Ampalaya", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "ampalaya.png"),
+    CropOption("okra", "Okra", "Okra", "🌿", "Fruit", lifeType = "Seasonal", imageFileName = "okra.png"),
+    CropOption("sili", "Chili Pepper", "Sili", "🌶️", "Fruit", lifeType = "Permanent", imageFileName = "sili.png"),
+    CropOption("cucumber", "Cucumber", "Pipino", "🥒", "Fruit", lifeType = "Seasonal", imageFileName = "pipino.png"),
+    CropOption("kangkong", "Kangkong", "Kangkong", "🥬", "Leafy", lifeType = "Seasonal", imageFileName = "kangkong.png"),
+    CropOption("lettuce", "Lettuce", "Litsugas", "🥗", "Leafy", lifeType = "Seasonal", imageFileName = "lettuce.png")
 )
 
 val CATEGORY_OPTIONS = listOf(
@@ -69,14 +116,17 @@ val CATEGORY_OPTIONS = listOf(
 
 /**
  * CropTray — Right-side crop selection panel with CoC-style Drag & Drop support.
+ * Dynamically populated from local Room database / Supabase Storage sync.
  */
 @Composable
 fun CropTray(
     modifier: Modifier = Modifier,
     selectedCropName: String? = null,
     availableCrops: List<CropOption> = AVAILABLE_CROP_CATALOG,
+    isSyncing: Boolean = false,
+    onSyncRequested: (() -> Unit)? = null,
     onCropSelected: (cropName: String, cropId: String) -> Unit = { _, _ -> },
-    onCropDragStart: (cropName: String, cropId: String, screenOffset: Offset) -> Unit = { _, _, _ -> },
+    onCropDragStart: (cropName: String, cropId: String, imageUrl: String?, screenOffset: Offset) -> Unit = { _, _, _, _ -> },
     onCropDragging: (screenOffset: Offset) -> Unit = { _ -> },
     onCropDragEnd: (screenOffset: Offset) -> Unit = { _ -> },
     onClose: () -> Unit = {}
@@ -101,7 +151,9 @@ fun CropTray(
     val filteredCrops = remember(selectedCategory, activeSearchQuery, availableCrops) {
         availableCrops.filter { crop ->
             val categoryMatch = selectedCategory == "All" || crop.category.equals(selectedCategory, ignoreCase = true)
-            val searchMatch = activeSearchQuery.isBlank() || crop.name.contains(activeSearchQuery, ignoreCase = true)
+            val searchMatch = activeSearchQuery.isBlank() ||
+                    crop.name.contains(activeSearchQuery, ignoreCase = true) ||
+                    (!crop.localName.isNullOrBlank() && crop.localName.contains(activeSearchQuery, ignoreCase = true))
 
             categoryMatch && searchMatch
         }
@@ -143,6 +195,28 @@ fun CropTray(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF43A047)
                     )
+                    if (onSyncRequested != null) {
+                        IconButton(
+                            onClick = onSyncRequested,
+                            enabled = !isSyncing,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            if (isSyncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFF1B5E20)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Sync crops from cloud",
+                                    tint = Color(0xFF1B5E20),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 IconButton(
@@ -361,7 +435,7 @@ fun CropTray(
                             crop = crop,
                             isSelected = isSelected,
                             onClick = { onCropSelected(crop.name, crop.id) },
-                            onDragStart = { offset -> onCropDragStart(crop.name, crop.id, offset) },
+                            onDragStart = { offset -> onCropDragStart(crop.name, crop.id, crop.imageUrl, offset) },
                             onDragging = onCropDragging,
                             onDragEnd = onCropDragEnd
                         )
@@ -423,7 +497,7 @@ private fun CropChipCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Crop image from assets/metadata/crops_images
+            // Crop image from Supabase Storage / remote URL or fallback to assets/metadata/crops_images
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -431,9 +505,10 @@ private fun CropChipCard(
                     .background(if (isSelected) Color(0xFFC8E6C9) else Color(0xFFE8F5E9).copy(alpha = 0.7f)),
                 contentAlignment = Alignment.Center
             ) {
-                val assetUri = "file:///android_asset/metadata/crops_images/${crop.imageFileName}"
+                val imageModel: Any = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
+
                 AsyncImage(
-                    model = assetUri,
+                    model = imageModel,
                     contentDescription = crop.name,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -443,8 +518,13 @@ private fun CropChipCard(
             }
 
             Column(modifier = Modifier.weight(1f)) {
+                val displayName = if (!crop.localName.isNullOrBlank() && !crop.name.contains(crop.localName, ignoreCase = true)) {
+                    "${crop.name} (${crop.localName})"
+                } else {
+                    crop.name
+                }
                 Text(
-                    text = crop.name,
+                    text = displayName,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 11.sp,
                     color = if (isSelected) Color(0xFF1B5E20) else Color.Black,

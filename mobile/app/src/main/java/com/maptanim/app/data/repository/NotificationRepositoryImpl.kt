@@ -19,14 +19,14 @@ class NotificationRepositoryImpl(
         return notificationDao?.observeAllNotifications(userId)?.map { entities ->
             entities.map { it.toDomain() }
         } ?: notificationsCache.map { notifications ->
-            notifications.filter { it.userId == userId }
+            notifications.filter { it.userId == userId || it.userId == null }
         }
     }
 
     override fun observeUnreadCount(userId: String): Flow<Int> {
         return notificationDao?.observeUnreadCount(userId)
             ?: notificationsCache.map { notifications ->
-                notifications.count { it.userId == userId && !it.isRead }
+                notifications.count { (it.userId == userId || it.userId == null) && !it.isRead }
             }
     }
 

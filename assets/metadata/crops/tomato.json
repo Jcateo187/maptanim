@@ -57,11 +57,11 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
-    "hash_sha256": "e542c5dd5a1edd7a555e5d0ef59ba350d31dd13113566694123430f52d7ee7df"
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/tomato.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/tomato.png",
+    "source_url": "file:///android_asset/metadata/crops_images/tomato.png",
+    "author": "MapTanim Original AI-Generated Asset",
+    "license": "Proprietary / MapTanim Educational & Agricultural Use Only",
+    "hash_sha256": "original_maptanim_tomato"
   }
 }

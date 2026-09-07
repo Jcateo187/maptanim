@@ -285,7 +285,8 @@ object FarmCanvasRenderer {
         }
 
         plantsToRender.forEach { plant ->
-            val cropClean = when (plant.cropName.lowercase().replace(" ", "")) {
+            val rawName = plant.cropName.lowercase().replace(" ", "").replace("_", "")
+            val cropClean = when (rawName) {
                 "stringbeans", "sitaw", "beans" -> "crop_stringbeans"
                 "eggplant", "talong" -> "crop_eggplant"
                 "tomato", "kamatis" -> "crop_tomato"
@@ -300,7 +301,21 @@ object FarmCanvasRenderer {
                 "cucumber", "pipino" -> "crop_pipino"
                 "kangkong", "waterspinach" -> "crop_kangkong"
                 "lettuce", "litsugas" -> "crop_lettuce"
-                else -> "crop_carrot"
+                "carrot", "karot" -> "crop_carrot"
+                else -> {
+                    val normalized = plant.cropName.lowercase().replace(" ", "_")
+                    if (context != null && AssetLoader.loadFromAssets(context, "crops/crop_${normalized}_1.png") != null) {
+                        "crop_$normalized"
+                    } else when {
+                        rawName.contains("leaf") || rawName.contains("spinach") || rawName.contains("mustard") || rawName.contains("greens") -> "crop_pechay"
+                        rawName.contains("fruit") || rawName.contains("berry") || rawName.contains("melon") || rawName.contains("gourd") -> "crop_tomato"
+                        rawName.contains("root") || rawName.contains("radish") || rawName.contains("potato") || rawName.contains("kamote") -> "crop_carrot"
+                        rawName.contains("bean") || rawName.contains("pea") || rawName.contains("monggo") || rawName.contains("legume") -> "crop_stringbeans"
+                        rawName.contains("garlic") || rawName.contains("bawang") || rawName.contains("shallot") -> "crop_onion"
+                        rawName.contains("herb") || rawName.contains("grass") || rawName.contains("spice") -> "crop_sili"
+                        else -> "crop_carrot"
+                    }
+                }
             }
 
             val stage = plant.growthStage.coerceIn(1, 5)

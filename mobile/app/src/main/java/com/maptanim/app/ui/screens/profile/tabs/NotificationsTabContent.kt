@@ -3,9 +3,11 @@ package com.maptanim.app.ui.screens.profile.tabs
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import com.maptanim.app.ui.screens.profile.ProfileUiState
 import com.maptanim.app.ui.screens.profile.ProfileViewModel
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
+import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationsTabContent(
@@ -35,9 +38,10 @@ fun NotificationsTabContent(
     val filteredNotifications = remember(uiState.notifications, selectedFilter) {
         when (selectedFilter) {
             "UNREAD" -> uiState.notifications.filter { !it.isRead }
-            "SUPPORT" -> uiState.notifications.filter { it.type.uppercase().contains("SUPPORT") || it.type.uppercase().contains("REPLY") }
-            "SYSTEM" -> uiState.notifications.filter { it.type.uppercase().contains("SYSTEM") }
+            "GUIDE" -> uiState.notifications.filter { it.type.uppercase().contains("AGRONOMIC") || it.type.uppercase().contains("GUIDE") }
             "CROP" -> uiState.notifications.filter { it.type.uppercase().contains("CROP") }
+            "SYSTEM" -> uiState.notifications.filter { it.type.uppercase().contains("SYSTEM") || it.type.uppercase().contains("ADMIN") }
+            "SUPPORT" -> uiState.notifications.filter { it.type.uppercase().contains("SUPPORT") || it.type.uppercase().contains("REPLY") }
             "BUG" -> uiState.notifications.filter { it.type.uppercase().contains("BUG") }
             else -> uiState.notifications
         }
@@ -47,17 +51,20 @@ fun NotificationsTabContent(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Filter Chips for Admin & System Bulletins
+        // Filter Chips for Admin & System Bulletins with horizontal scrolling
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
         ) {
             listOf(
                 "ALL" to "All Updates",
                 "UNREAD" to "Unread",
-                "SUPPORT" to "Support Advisories",
+                "GUIDE" to "Agronomic Guides",
+                "CROP" to "Crops Updated",
                 "SYSTEM" to "System Announcements",
-                "CROP" to "Crops Added",
+                "SUPPORT" to "Support Advisories",
                 "BUG" to "Bug Fixes"
             ).forEach { (filterKey, label) ->
                 val isSelected = selectedFilter == filterKey
@@ -109,10 +116,17 @@ fun NotificationsTabContent(
         }
     }
 
+    var isDownloadingUpdate by remember { mutableStateOf(false) }
+    var updateDownloadedMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
     // Detail Dialog Modal
     uiState.selectedNotification?.let { notif ->
         AlertDialog(
-            onDismissRequest = { viewModel.dismissNotificationDetail() },
+            onDismissRequest = {
+                updateDownloadedMessage = null
+                viewModel.dismissNotificationDetail()
+            },
             title = {
                 Text(notif.title, fontWeight = FontWeight.Bold, color = White)
             },
@@ -120,11 +134,85 @@ fun NotificationsTabContent(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(notif.message, color = White.copy(alpha = 0.85f), fontSize = 14.sp)
                     Text("Time: ${notif.timestamp}", color = White.copy(alpha = 0.5f), fontSize = 11.sp)
+
+                    val isSystemUpdate = notif.type.uppercase().contains("SYSTEM") ||
+                            notif.type.uppercase().contains("CROP") ||
+                            notif.title.contains("Update", ignoreCase = true) ||
+                            notif.title.contains("Pananim", ignoreCase = true)
+
+                    if (isSystemUpdate) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF2E7D32).copy(alpha = 0.2f),
+                            border = BorderStroke(1.dp, Color(0xFF43A047)),
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "System Update Available",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF81C784)
+                                )
+                                Text(
+                                    text = "I-download ang pinakabagong pananim at mga patakaran mula sa DA / Central Database nang walang bagong app update.",
+                                    fontSize = 11.sp,
+                                    color = White.copy(alpha = 0.7f)
+                                )
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            isDownloadingUpdate = true
+                                            try {
+                                                com.maptanim.app.data.repository.RepositoryProvider.cropRepository.refreshCrops()
+                                                updateDownloadedMessage = "Matagumpay na na-download ang bagong datos!"
+                                            } catch (e: Exception) {
+                                                updateDownloadedMessage = "Error sa pag-download: ${e.message}"
+                                            } finally {
+                                                isDownloadingUpdate = false
+                                            }
+                                        }
+                                    },
+                                    enabled = !isDownloadingUpdate,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                ) {
+                                    if (isDownloadingUpdate) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = White
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Dina-download ang datos...", fontSize = 12.sp, color = White)
+                                    } else {
+                                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp), tint = White)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("I-download ang Bagong Datos (Sync)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = White)
+                                    }
+                                }
+
+                                if (updateDownloadedMessage != null) {
+                                    Text(
+                                        text = updateDownloadedMessage!!,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF81C784),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.dismissNotificationDetail() },
+                    onClick = {
+                        updateDownloadedMessage = null
+                        viewModel.dismissNotificationDetail()
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
                 ) {
                     Text("OK", color = White)
@@ -169,6 +257,7 @@ private fun NotificationCardItem(
                         .clip(CircleShape)
                         .background(
                             when {
+                                notif.type.uppercase().contains("AGRONOMIC") || notif.type.uppercase().contains("GUIDE") -> Color(0xFF00897B)
                                 notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Color(0xFF8E24AA)
                                 notif.type.uppercase().contains("CROP") -> Color(0xFF4CAF50)
                                 notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Color(0xFFFFA000)
@@ -180,6 +269,7 @@ private fun NotificationCardItem(
                 ) {
                     Icon(
                         imageVector = when {
+                            notif.type.uppercase().contains("AGRONOMIC") || notif.type.uppercase().contains("GUIDE") -> Icons.Default.MenuBook
                             notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Icons.Default.SupportAgent
                             notif.type.uppercase().contains("CROP") -> Icons.Default.Eco
                             notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Icons.Default.Build

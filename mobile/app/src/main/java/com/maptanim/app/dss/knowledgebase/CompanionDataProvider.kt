@@ -23,6 +23,19 @@ data class CompanionEntry(
  */
 object CompanionDataProvider {
 
+    @Volatile
+    private var dynamicMatrix: List<CompanionEntry>? = null
+
+    val activeCompanionMatrix: List<CompanionEntry>
+        get() = dynamicMatrix ?: defaultCompanionMatrix
+
+    fun updateMatrix(entries: List<CompanionEntry>) {
+        dynamicMatrix = entries
+    }
+
+    val companionMatrix: List<CompanionEntry>
+        get() = activeCompanionMatrix
+
     /**
      * Returns the relationship between two crops.
      * Order-independent: getRelationship("Tomato", "Carrot") == getRelationship("Carrot", "Tomato")
@@ -30,7 +43,7 @@ object CompanionDataProvider {
     fun getRelationship(cropA: String, cropB: String): CompanionEntry? {
         val a = cropA.lowercase().trim()
         val b = cropB.lowercase().trim()
-        return companionMatrix.firstOrNull { entry ->
+        return activeCompanionMatrix.firstOrNull { entry ->
             (entry.cropA.lowercase() == a && entry.cropB.lowercase() == b) ||
             (entry.cropA.lowercase() == b && entry.cropB.lowercase() == a)
         }
@@ -41,7 +54,7 @@ object CompanionDataProvider {
      */
     fun getCompanionsFor(cropName: String): List<CompanionEntry> {
         val name = cropName.lowercase().trim()
-        return companionMatrix.filter { entry ->
+        return activeCompanionMatrix.filter { entry ->
             entry.cropA.lowercase() == name || entry.cropB.lowercase() == name
         }
     }
@@ -51,7 +64,7 @@ object CompanionDataProvider {
      */
     fun getBeneficialCompanions(cropName: String): List<String> {
         val name = cropName.lowercase().trim()
-        return companionMatrix
+        return activeCompanionMatrix
             .filter { it.relationship == CompanionRelation.BENEFICIAL }
             .filter { it.cropA.lowercase() == name || it.cropB.lowercase() == name }
             .map { if (it.cropA.lowercase() == name) it.cropB else it.cropA }
@@ -62,16 +75,16 @@ object CompanionDataProvider {
      */
     fun getAntagonistCrops(cropName: String): List<String> {
         val name = cropName.lowercase().trim()
-        return companionMatrix
+        return activeCompanionMatrix
             .filter { it.relationship == CompanionRelation.ANTAGONIST }
             .filter { it.cropA.lowercase() == name || it.cropB.lowercase() == name }
             .map { if (it.cropA.lowercase() == name) it.cropB else it.cropA }
     }
 
-    // ── Full Companion Planting Matrix ────────────────────────────────────
+    // ── Full Baseline Companion Planting Matrix ───────────────────────────
     // Source: DA-BPI Philippine Intercropping Guidelines & Published Research
 
-    val companionMatrix: List<CompanionEntry> = listOf(
+    val defaultCompanionMatrix: List<CompanionEntry> = listOf(
         // ── TOMATO RELATIONSHIPS ──────────────────────────────────────────
         CompanionEntry(
             "Tomato", "Lettuce", CompanionRelation.BENEFICIAL,

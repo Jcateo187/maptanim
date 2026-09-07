@@ -2,6 +2,7 @@ package com.maptanim.app.data
 
 import com.maptanim.app.domain.model.Crop
 import com.maptanim.app.domain.model.SoilType
+import com.maptanim.app.ui.components.editcomponents.croptray.toCropOption
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -43,5 +44,38 @@ class CropRepositoryTest {
         assertEquals(70, sampleCrop.daysToHarvest)
         assertEquals(2, sampleCrop.companionPlants.size)
         assertEquals("Lettuce", sampleCrop.companionPlants[0])
+    }
+
+    @Test
+    fun testCropToCropOptionMapping() {
+        val cropWithCustomUrl = Crop(
+            id = "crop_dragonfruit",
+            name = "Dragon Fruit",
+            localName = "Pitahaya",
+            botanicalName = "Selenicereus costaricensis",
+            category = "Fruit",
+            daysToHarvest = 180,
+            wateringIntervalDays = 3,
+            fertilizeIntervalDays = 14,
+            nRatio = 1.0f,
+            pRatio = 1.0f,
+            kRatio = 2.0f,
+            optimalPhMin = 6.0f,
+            optimalPhMax = 7.0f,
+            idealSoils = listOf(SoilType.LOAM),
+            suitableSoils = listOf(SoilType.SANDY),
+            toleratedSoils = emptyList(),
+            pestRiskSeason = listOf("WET"),
+            seasonality = listOf("YEAR_ROUND"),
+            imageUrl = "https://cdn.maptanim.com/crops/dragonfruit.webp"
+        )
+
+        val cropOption = cropWithCustomUrl.toCropOption()
+        assertEquals("crop_dragonfruit", cropOption.id)
+        assertEquals("Dragon Fruit", cropOption.name)
+        assertEquals("Pitahaya", cropOption.localName)
+        assertEquals("Fruit", cropOption.category)
+        assertEquals("https://cdn.maptanim.com/crops/dragonfruit.webp", cropOption.imageUrl)
+        assertEquals(true, cropOption.hasAsset)
     }
 }

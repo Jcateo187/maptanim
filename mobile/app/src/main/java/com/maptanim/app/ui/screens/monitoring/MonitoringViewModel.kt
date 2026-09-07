@@ -10,6 +10,7 @@ import com.maptanim.app.domain.model.*
 import com.maptanim.app.domain.repository.ActivityRepository
 import com.maptanim.app.domain.repository.CropPlotRepository
 import com.maptanim.app.domain.repository.CropRepository
+import com.maptanim.app.domain.repository.DssRuleRepository
 import com.maptanim.app.domain.repository.KnowledgeBaseRepository
 import com.maptanim.app.dss.engine.CompanionAlert
 import com.maptanim.app.dss.engine.DssEngine
@@ -124,25 +125,22 @@ class MonitoringViewModel(
     private val cropRepository: CropRepository = RepositoryProvider.cropRepository,
     private val knowledgeBaseRepository: KnowledgeBaseRepository = RepositoryProvider.knowledgeBaseRepository,
     private val activityRepository: ActivityRepository = RepositoryProvider.activityRepository,
+    private val dssRuleRepository: DssRuleRepository = RepositoryProvider.dssRuleRepository,
     private val dssEngine: DssEngine = DssEngine()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MonitoringUiState())
     val uiState: StateFlow<MonitoringUiState> = _uiState.asStateFlow()
 
-    private val dssRules: List<DssRule> by lazy {
-        CompanionDataProvider.companionMatrix.mapIndexed { index, entry ->
-            DssRule(
-                id = "rule_$index",
-                cropA = entry.cropA,
-                cropB = entry.cropB,
-                relationship = entry.relationship,
-                notes = entry.reason
-            )
-        }
-    }
-
     init {
+        // Sync dynamic DSS rules from Supabase in background
+        viewModelScope.launch {
+            try {
+                dssRuleRepository.fetchFromRemote()
+            } catch (_: Exception) {
+                // Offline fallback continues smoothly
+            }
+        }
         observeLivePlantedCrops()
     }
 
@@ -153,15 +151,16 @@ class MonitoringViewModel(
                 plotRepository.observeAllPlotsWithCrop(farmerId),
                 cropRepository.observeAllCrops(),
                 knowledgeBaseRepository.observePestGuides(),
+                dssRuleRepository.observeRules(),
                 tickerFlow()
-            ) { plots: List<CropPlot>, crops: List<Crop>, allPests: List<PestGuide>, currentMs: Long ->
+            ) { plots: List<CropPlot>, crops: List<Crop>, allPests: List<PestGuide>, dynamicRules: List<DssRule>, currentMs: Long ->
                 val today = LocalDate.now()
 
-                // Fetch activities for all plots to feed into DSS
+                // Fetch activities for all plots to feed into DSS with dynamic admin rules
                 val dssResult = dssEngine.evaluate(
                     plots = plots,
                     crops = crops,
-                    rules = dssRules,
+                    rules = dynamicRules,
                     activities = emptyList(), // real-time activities evaluated per plot
                     today = today
                 )

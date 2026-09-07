@@ -403,27 +403,46 @@ An automated Python processing pipeline will handle downloaded photos:
 
 ---
 
-# 14. Cloud Storage Architecture
+# 14. Cloud & Local Storage Architecture (Zero-Supabase-Egress Architecture)
 
-Hosted via **Supabase Storage**:
+> [!IMPORTANT]
+> **Supabase Quota Protection Directive**:
+> Under no circumstances shall raw image binary files (PNG/JPEG) be stored directly inside Supabase Storage buckets. Supabase free tier imposes strict storage limits (1 GB) and egress quotas (2 GB/month). Serving uncompressed 2.8 MB images over Supabase would exhaust monthly egress limits within only a few dozen farmer downloads.
+>
+> Therefore, MapTanim enforces a **Decentralized Multi-Tier Storage Architecture**:
+> - **Tier 1 (Core 15 Crops - Bundled Assets)**: All 15 first-version crops and stage sprites are bundled directly inside the Android APK (`file:///android_asset/metadata/crops_images/`). 
+>   - *Supabase Storage Used*: **0.00 MB**
+>   - *Egress Consumed*: **0.00 MB**
+>   - *Network Latency*: **0 ms (100% Offline Capable)**
+> - **Tier 2 (Decentralized CDN / Cloudflare R2 / S3 Free Tier)**: For dynamic community-added crop varieties or administrative expansions, images are hosted on Cloudflare R2 (10 GB free, $0 egress fees) or Firebase Storage.
+> - **Tier 3 (Supabase PostgreSQL Metadata Only)**: Supabase strictly manages relational data, growth durations, DSS companion matrix, and remote URLs (e.g. `image_url` string column).
 
 ```text
-supabase-storage/
-├── sprites/
-│   ├── crops/
-│   ├── trellises/
-│   ├── soil/
-│   └── ui/
-├── photos/
-│   ├── crops/
-│   ├── diseases/
-│   ├── pests/
-│   └── weeds/
-├── metadata/
-│   ├── crops/
-│   └── diseases/
-└── guides/
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      MAPTANIM STORAGE SEPARATION                        │
+├────────────────────────────────────┬────────────────────────────────────┤
+│     SUPABASE (POSTGRESQL DB)       │      IMAGE & BINARY STORAGE        │
+├────────────────────────────────────┼────────────────────────────────────┤
+│  ✔ Crop names & scientific names   │  ✔ Android APK Assets (Tier 1)     │
+│  ✔ Days to harvest & stage days    │    - 15 core crops bundled locally │
+│  ✔ Optimal soil pH & NPK ratios    │    - Zero cloud bandwidth egress   │
+│  ✔ Dynamic DSS companion rules     │  ✔ Cloudflare R2 / CDN (Tier 2)    │
+│  ✔ Farmer farms & plot geometry    │    - Zero egress fees for updates  │
+│  ✔ External Image URLs (strings)   │  ✘ NEVER stored in Supabase Bucket │
+└────────────────────────────────────┴────────────────────────────────────┘
 ```
+
+---
+
+# 14.1 AI-Generated Original Asset Workflow (ChatGPT / DALL-E)
+
+To eliminate copyright infringement risk, all photographic and illustrative assets in MapTanim are generated using AI tools (ChatGPT / DALL-E) by the core development team:
+1. **100% Original Artwork**: Zero stock photos (no Shutterstock, no Getty, no unverified scraping).
+2. **DA/BPI Scientific Accuracy**: While visual appearance is AI-generated, agricultural metadata (spacing, maturity days, botanical classification, companion compatibility) is strictly DA-BPI verified.
+3. **Automated Processing Pipeline**:
+   - Run `python scripts/process_generated_assets.py` or `powershell -File scripts/process_generated_assets.ps1`.
+   - Compresses 2.8 MB raw PNGs to ~35-50 KB WebP format (98% size reduction).
+   - Generates `asset_manifest.json` with SHA-256 integrity checksums.
 
 ---
 

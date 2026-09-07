@@ -25,7 +25,6 @@ erDiagram
         uuid id PK "FK → auth.users"
         varchar nickname
         text avatar
-        boolean onboarding_completed
         timestamptz nickname_updated_at
         timestamptz tutorial_completed_at
     }

@@ -57,11 +57,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/eggplant.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/eggplant.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "e2a6d9a3b11ff7a5d8991cdff1f1c1c6c71cc321974b68a0340237ee0ea361e9"
   }
 }

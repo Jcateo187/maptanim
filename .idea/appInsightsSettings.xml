@@ -9,10 +9,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.maptanim.app" />
+                  <option name="mobileSdkAppId" value="1:605883983200:android:1e5411b580262a2b422a05" />
+                  <option name="projectId" value="maptanim-77851" />
+                  <option name="projectNumber" value="605883983200" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

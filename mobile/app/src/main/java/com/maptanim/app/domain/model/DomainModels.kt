@@ -230,6 +230,7 @@ data class FarmObject(
 
 data class CommunityPost(
     val id: String,
+    val authorId: String? = null,
     val authorName: String,
     val authorAvatarUrl: String? = null,
     val category: String,                // "PEST_ALERT", "FARMING_TIP", "EQUIPMENT", "GENERAL"
@@ -237,7 +238,7 @@ data class CommunityPost(
     val content: String,
     val likesCount: Int = 0,
     val commentsCount: Int = 0,
-    val timestamp: String,               // e.g. "2 hours ago"
+    val timestamp: String = "Just now",               // e.g. "2 hours ago"
     val isLikedByMe: Boolean = false,
     val tags: List<String> = emptyList()
 )

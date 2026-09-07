@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.data.repository.UserRepositoryImpl
+import com.maptanim.app.core.preferences.CommunityPreferencesManager
 import com.maptanim.app.core.preferences.FarmPreferencesManager
 import com.maptanim.app.domain.model.AvatarItem
 import com.maptanim.app.domain.model.CommunityPost
@@ -18,6 +19,7 @@ import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -125,10 +127,40 @@ class ProfileViewModel(
             }
         }
 
-        // Observe real community posts & forum activity
+        // Observe real community posts & forum activity for current user
+        // ONLY show:
+        // 1. Posts authored by the user
+        // 2. Posts reacted to (liked) by the user
+        // If the user did not post it and did not react to it, do not show in profile.
         viewModelScope.launch {
-            RepositoryProvider.communityRepository.observePosts().collect { posts ->
-                _uiState.update { it.copy(userPosts = posts) }
+            combine(
+                userRepository.observeUserProfile(),
+                RepositoryProvider.communityRepository.observePosts()
+            ) { profile, allPosts ->
+                val currentUserId = try {
+                    SupabaseClient.client.auth.currentUserOrNull()?.id
+                } catch (e: Exception) {
+                    null
+                } ?: profile.id.ifBlank { null }
+
+                val userNickname = profile.nickname.trim()
+                val userEmailPrefix = profile.boundEmail?.substringBefore('@')?.trim()
+                val myLocalPostIds = CommunityPreferencesManager.getInstance().getMyPostIds(currentUserId)
+                val myLocalLikedIds = CommunityPreferencesManager.getInstance().getLikedPostIds(currentUserId)
+
+                allPosts.filter { post ->
+                    val isAuthoredByMe = (currentUserId != null && post.authorId != null && post.authorId == currentUserId) ||
+                            (userNickname.isNotBlank() && post.authorName.equals(userNickname, ignoreCase = true)) ||
+                            (!userEmailPrefix.isNullOrBlank() && post.authorName.equals(userEmailPrefix, ignoreCase = true)) ||
+                            post.authorName.equals("You", ignoreCase = true) ||
+                            post.id in myLocalPostIds
+
+                    val isReactedByMe = post.isLikedByMe || post.id in myLocalLikedIds
+
+                    isAuthoredByMe || isReactedByMe
+                }
+            }.collect { filteredPosts ->
+                _uiState.update { it.copy(userPosts = filteredPosts) }
             }
         }
     }

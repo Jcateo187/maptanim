@@ -10,7 +10,6 @@ interface ProfileSyncRequest {
   user_id: string;
   nickname?: string;
   avatar_url?: string;
-  onboarding_completed?: boolean;
 }
 
 serve(async (req) => {
@@ -38,7 +37,6 @@ serve(async (req) => {
           id: body.user_id,
           nickname: body.nickname,
           avatar: body.avatar_url,
-          onboarding_completed: body.onboarding_completed ?? true,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "id" }

@@ -11,7 +11,7 @@ enum class VegetableCategory {
     LEAFY,    // Pechay, Kangkong, Lettuce
     FLOWER,   // Broccoli, Cauliflower
     FRUIT,    // Tomato, Eggplant, Squash, Okra, Cucumber, Pepper, Corn
-    ROOT,     // Carrot, Radish
+    ROOT,     // Carrot
     TUBER     // Potato, Sweet Potato
 }
 

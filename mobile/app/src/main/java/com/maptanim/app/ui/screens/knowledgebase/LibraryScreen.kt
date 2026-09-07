@@ -652,7 +652,7 @@ private fun CropCard(
             modifier = Modifier.fillMaxSize()
         ) {
             // Crop image fitting the entire card with corner radius clipping
-            val cropImg = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.getCropAssetImagePath(crop.id, crop.name)
+            val cropImg = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
             AsyncImage(
                 model = cropImg,
                 contentDescription = crop.name,
@@ -1072,7 +1072,7 @@ private fun SeasonalWindowCard(info: SeasonalWindowInfo) {
             modifier = Modifier.fillMaxSize()
         ) {
             // Crop image fitting the entire card with corner radius clipping
-            val cropImg = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.getCropAssetImagePath(info.cropName, info.cropName)
+            val cropImg = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(null, info.cropName)
             AsyncImage(
                 model = cropImg,
                 contentDescription = info.cropName,

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
@@ -48,6 +50,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.maptanim.app.core.preferences.CommunityPreferencesManager
 import com.maptanim.app.domain.model.CommunityComment
 import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.ui.theme.ForestGreen
@@ -120,49 +123,50 @@ fun CommunityScreen(
         }
     }
 
+    LaunchedEffect(uiState.postNotice) {
+        if (uiState.postNotice != null) {
+            delay(4500)
+            viewModel.clearPostNotice()
+        }
+    }
+
     // Chat State
     var chatMessageInput by remember { mutableStateOf("") }
     var isChatInputFocused by remember { mutableStateOf(false) }
     var convSearchQuery by remember { mutableStateOf("") }
+    var friendConvSearchQuery by remember { mutableStateOf("") }
+    var showAddFriendDialog by remember { mutableStateOf(false) }
 
-    val chatChannels = remember {
-        listOf(
-            ChatChannel("gen", "General Farmers Chat", "Public Community", iconEmoji = "🌾", unreadCount = 2),
-            ChatChannel("james", "Farmer James", "Online", iconEmoji = "👨‍🌾"),
-            ChatChannel("maria", "Maria Santos", "Active 5m ago", iconEmoji = "👩‍🌾"),
-            ChatChannel("pedro", "Ka Pedring", "Online", iconEmoji = "👨‍🌾")
-        )
+    val chatChannels = remember(uiState.friends) {
+        uiState.friends.map { m ->
+            ChatChannel(m.id, m.name, m.statusText, iconEmoji = "👨‍🌾")
+        }
     }
-    var selectedChannelId by remember { mutableStateOf(chatChannels.first().id) }
-    val selectedChannel = chatChannels.firstOrNull { it.id == selectedChannelId } ?: chatChannels.first()
+    var selectedChannelId by remember { mutableStateOf<String?>(null) }
 
-    val generalChatMessages = remember {
-        mutableStateListOf(
-            CommunityChatMessage("other", "Mang Juan", "Magandang araw mga kasama! Kamusta ang tanim nating talong ngayon?", "10:15 AM"),
-            CommunityChatMessage("me", "You", "Maayos naman po, maganda ang naging resulta ng bio-fertilizer.", "10:18 AM"),
-            CommunityChatMessage("other", "Farmer Elena", "May tips ba kayo laban sa fruit borer sa ampalaya?", "10:22 AM"),
-            CommunityChatMessage("other", "Ka Pedring", "Gumamit po kayo ng neem oil spray bawat linggo, epektibo po iyon.", "10:25 AM")
-        )
+    LaunchedEffect(chatChannels) {
+        if (chatChannels.isNotEmpty()) {
+            if (selectedChannelId == null || chatChannels.none { it.id == selectedChannelId }) {
+                selectedChannelId = chatChannels.first().id
+            }
+        } else {
+            selectedChannelId = null
+        }
     }
+    val selectedChannel = chatChannels.firstOrNull { it.id == selectedChannelId }
 
     val directChatMessages = remember {
-        mutableStateMapOf(
-            "james" to mutableStateListOf(
-                CommunityChatMessage("other", "Farmer James", "Kumusta Boss! May available ka bang sitaw seeds?", "9:30 AM"),
-                CommunityChatMessage("me", "You", "Meron dito Sandigan F1, magkano kailangan mo?", "9:45 AM")
-            ),
-            "maria" to mutableStateListOf(
-                CommunityChatMessage("other", "Maria Santos", "Salamat sa tip sa drip irrigation, gumana ng maayos!", "Yesterday")
-            ),
-            "pedro" to mutableStateListOf(
-                CommunityChatMessage("other", "Ka Pedring", "Mag-aani kami ng kamatis sa Sabado, baka gusto mong sumama sa trading post.", "8:00 AM")
-            )
-        )
+        mutableStateMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateList<CommunityChatMessage>>()
     }
 
-    val rawActiveMessages = when (selectedChannelId) {
-        "gen" -> generalChatMessages
-        else -> directChatMessages.getOrPut(selectedChannelId) { mutableStateListOf() }
+    val rawActiveMessages = remember(selectedChannelId) {
+        if (selectedChannelId != null) {
+            directChatMessages.getOrPut(selectedChannelId!!) {
+                mutableStateListOf()
+            }
+        } else {
+            mutableStateListOf()
+        }
     }
 
     val activeMessages = remember(rawActiveMessages.size, convSearchQuery, rawActiveMessages) {
@@ -176,9 +180,27 @@ fun CommunityScreen(
         }
     }
 
-    val displayPosts = remember(uiState.posts, showOnlyMyPosts) {
+    val filteredChannels = remember(chatChannels, friendConvSearchQuery, directChatMessages) {
+        if (friendConvSearchQuery.isBlank()) {
+            chatChannels
+        } else {
+            chatChannels.filter { channel ->
+                val nameMatch = channel.name.contains(friendConvSearchQuery, ignoreCase = true)
+                val messageMatch = directChatMessages[channel.id]?.any { msg ->
+                    msg.text.contains(friendConvSearchQuery, ignoreCase = true)
+                } == true
+                nameMatch || messageMatch
+            }
+        }
+    }
+
+    val displayPosts = remember(uiState.posts, showOnlyMyPosts, uiState.currentUserName) {
         if (showOnlyMyPosts) {
-            uiState.posts.filter { it.authorName.contains("James", ignoreCase = true) || it.authorName.contains("You", ignoreCase = true) }
+            uiState.posts.filter {
+                (uiState.currentUserName.isNotBlank() && it.authorName.equals(uiState.currentUserName, ignoreCase = true)) ||
+                it.authorName.contains("You", ignoreCase = true) ||
+                CommunityPreferencesManager.getInstance().isMyPost(null, it.id)
+            }
         } else {
             uiState.posts
         }
@@ -246,11 +268,13 @@ fun CommunityScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // ── Status Toast / Notice Banner ────────────────────────────
-                uiState.reportNotice?.let { notice ->
+                val activeNotice = uiState.reportNotice ?: uiState.postNotice
+                val isErrorNotice = uiState.reportNotice == null && uiState.postNoticeIsError
+                activeNotice?.let { notice ->
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF1B5E20).copy(alpha = 0.95f),
-                        border = BorderStroke(1.dp, Color(0xFF81C784)),
+                        color = if (isErrorNotice) Color(0xFFB71C1C).copy(alpha = 0.95f) else Color(0xFF1B5E20).copy(alpha = 0.95f),
+                        border = BorderStroke(1.dp, if (isErrorNotice) Color(0xFFFF8A80) else Color(0xFF81C784)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -259,9 +283,9 @@ fun CommunityScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CheckCircle,
+                                imageVector = if (isErrorNotice) Icons.Default.ReportProblem else Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF81C784),
+                                tint = if (isErrorNotice) Color(0xFFFF8A80) else Color(0xFF81C784),
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
@@ -272,7 +296,10 @@ fun CommunityScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(
-                                onClick = { viewModel.clearReportNotice() },
+                                onClick = {
+                                    if (uiState.reportNotice != null) viewModel.clearReportNotice()
+                                    if (uiState.postNotice != null) viewModel.clearPostNotice()
+                                },
                                 modifier = Modifier.size(16.dp)
                             ) {
                                 Icon(
@@ -553,10 +580,15 @@ fun CommunityScreen(
                                     .weight(1f)
                             ) {
                                 InlineCreatePostView(
+                                    currentUserName = uiState.currentUserName,
+                                    isPublishing = uiState.isPublishingPost,
                                     onCancel = { feedSubMode = FeedSubMode.FEED_LIST },
                                     onSubmit = { title, category, content, authorName ->
-                                        viewModel.createPost(title, category, content, authorName)
-                                        feedSubMode = FeedSubMode.FEED_LIST
+                                        viewModel.createPost(title, category, content, authorName) { success ->
+                                            if (success) {
+                                                feedSubMode = FeedSubMode.FEED_LIST
+                                            }
+                                        }
                                     }
                                 )
 
@@ -574,6 +606,7 @@ fun CommunityScreen(
                                     InlinePostDetailView(
                                         post = post,
                                         comments = uiState.selectedPostComments,
+                                        currentUserName = uiState.currentUserName,
                                         onBack = {
                                             viewModel.selectPost(null)
                                             feedSubMode = FeedSubMode.FEED_LIST
@@ -628,75 +661,197 @@ fun CommunityScreen(
                                     .padding(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(
-                                    text = "CONVERSATIONS",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF81C784),
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                // Header: CONVERSATIONS + Add Friend Button
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    items(chatChannels) { channel ->
-                                        val isSelected = channel.id == selectedChannelId
-                                        Surface(
-                                            onClick = { selectedChannelId = channel.id },
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = if (isSelected) ForestGreen else Color(0xFF1D2F22),
-                                            border = BorderStroke(
-                                                0.8.dp,
-                                                if (isSelected) Color(0xFF81C784) else White.copy(alpha = 0.05f)
-                                            ),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                // Channel Avatar
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(24.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (isSelected) Color(0xFF1B5E20) else getAvatarColor(channel.name)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(channel.iconEmoji, fontSize = 11.sp)
-                                                }
+                                    Text(
+                                        text = "CONVERSATIONS",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF81C784)
+                                    )
+                                    IconButton(
+                                        onClick = { showAddFriendDialog = true },
+                                        modifier = Modifier.size(22.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PersonAdd,
+                                            contentDescription = "Add Friend",
+                                            tint = Color(0xFF81C784),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
 
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = channel.name,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                        color = White,
-                                                        maxLines = 1
-                                                    )
-                                                    Text(
-                                                        text = channel.statusText,
-                                                        fontSize = 9.sp,
-                                                        color = if (isSelected) White.copy(alpha = 0.85f) else Color(0xFF81C784),
-                                                        maxLines = 1
-                                                    )
-                                                }
-                                                if (channel.unreadCount > 0 && !isSelected) {
+                                // Search bar for friend and conversation
+                                var isFriendSearchFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(28.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isFriendSearchFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
+                                    border = BorderStroke(0.8.dp, if (isFriendSearchFocused) Color(0xFF81C784) else White.copy(alpha = 0.12f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "Search",
+                                            tint = Color(0xFF81C784),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Box(
+                                            modifier = Modifier.weight(1f),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            if (friendConvSearchQuery.isEmpty()) {
+                                                Text(
+                                                    "Search chats...",
+                                                    color = White.copy(alpha = 0.45f),
+                                                    fontSize = 9.sp
+                                                )
+                                            }
+                                            BasicTextField(
+                                                value = friendConvSearchQuery,
+                                                onValueChange = { friendConvSearchQuery = it },
+                                                singleLine = true,
+                                                textStyle = TextStyle(color = White, fontSize = 9.5.sp),
+                                                cursorBrush = SolidColor(Color(0xFF81C784)),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .onFocusChanged { isFriendSearchFocused = it.isFocused }
+                                            )
+                                        }
+                                        if (friendConvSearchQuery.isNotEmpty()) {
+                                            IconButton(
+                                                onClick = { friendConvSearchQuery = "" },
+                                                modifier = Modifier.size(14.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Clear,
+                                                    contentDescription = "Clear",
+                                                    tint = White,
+                                                    modifier = Modifier.size(9.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (chatChannels.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 20.dp),
+                                        contentAlignment = Alignment.TopCenter
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("👥", fontSize = 20.sp)
+                                            Text(
+                                                text = "No friends yet",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = White.copy(alpha = 0.8f)
+                                            )
+                                            Text(
+                                                text = "Tap + to add friends",
+                                                fontSize = 8.5.sp,
+                                                color = Color(0xFF81C784),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                } else if (filteredChannels.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 20.dp),
+                                        contentAlignment = Alignment.TopCenter
+                                    ) {
+                                        Text(
+                                            text = "No chats found",
+                                            fontSize = 9.5.sp,
+                                            color = White.copy(alpha = 0.5f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        items(filteredChannels) { channel ->
+                                            val isSelected = channel.id == selectedChannelId
+                                            Surface(
+                                                onClick = { selectedChannelId = channel.id },
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = if (isSelected) ForestGreen else Color(0xFF1D2F22),
+                                                border = BorderStroke(
+                                                    0.8.dp,
+                                                    if (isSelected) Color(0xFF81C784) else White.copy(alpha = 0.05f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    // Channel Avatar
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(16.dp)
+                                                            .size(24.dp)
                                                             .clip(CircleShape)
-                                                            .background(Color(0xFFE53935)),
+                                                            .background(if (isSelected) Color(0xFF1B5E20) else getAvatarColor(channel.name)),
                                                         contentAlignment = Alignment.Center
                                                     ) {
+                                                        Text(channel.iconEmoji, fontSize = 11.sp)
+                                                    }
+
+                                                    Column(modifier = Modifier.weight(1f)) {
                                                         Text(
-                                                            text = "${channel.unreadCount}",
+                                                            text = channel.name,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                                             color = White,
-                                                            fontSize = 9.sp,
-                                                            fontWeight = FontWeight.Bold
+                                                            maxLines = 1
                                                         )
+                                                        Text(
+                                                            text = channel.statusText,
+                                                            fontSize = 9.sp,
+                                                            color = if (isSelected) White.copy(alpha = 0.85f) else Color(0xFF81C784),
+                                                            maxLines = 1
+                                                        )
+                                                    }
+                                                    if (channel.unreadCount > 0 && !isSelected) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(16.dp)
+                                                                .clip(CircleShape)
+                                                                .background(Color(0xFFE53935)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = "${channel.unreadCount}",
+                                                                color = White,
+                                                                fontSize = 9.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -706,316 +861,388 @@ fun CommunityScreen(
                             }
                         }
 
-                        // Right: Active Conversation Area (Left: Avatar + Username, Center: Active Status, Right: Search bar)
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color(0xFF142117),
-                            border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.35f))
-                        ) {
-                            Column(
+                        // Right: Active Conversation Area or Empty State
+                        if (selectedChannel == null) {
+                            Surface(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.SpaceBetween
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF142117),
+                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.35f))
                             ) {
-                                // Conversation Header
-                                Row(
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(34.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .fillMaxSize()
+                                        .padding(20.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // Left: Avatar & User / Channel Name
+                                    Text("💬", fontSize = 34.sp)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = if (chatChannels.isEmpty()) "No Conversations Yet" else "No Conversation Selected",
+                                        color = White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (chatChannels.isEmpty())
+                                            "Add friends using the + button to start messaging!"
+                                        else
+                                            "Select a friend on the left to view messages.",
+                                        color = White.copy(alpha = 0.6f),
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    if (chatChannels.isEmpty()) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = { showAddFriendDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PersonAdd,
+                                                contentDescription = null,
+                                                tint = White,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Add Friend", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = White)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF142117),
+                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.35f))
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // Conversation Header
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(34.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Left: Avatar & User / Channel Name
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(getAvatarColor(selectedChannel.name)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(selectedChannel.iconEmoji, fontSize = 12.sp)
+                                            }
+                                            Text(
+                                                text = selectedChannel.name,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = White,
+                                                maxLines = 1
+                                            )
+                                        }
+
+                                        // Center: Active Status
+                                        Text(
+                                            text = selectedChannel.statusText,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF81C784)
+                                        )
+
+                                        // Right: Conversation Search Input & Report User
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            var isConvSearchFocused by remember { mutableStateOf(false) }
+                                            val convSearchScale by animateFloatAsState(if (isConvSearchFocused) 1.03f else 1.0f, label = "convSearchScale")
+
+                                            Surface(
+                                                modifier = Modifier
+                                                    .width(130.dp)
+                                                    .height(30.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = convSearchScale
+                                                        scaleY = convSearchScale
+                                                    },
+                                                shape = RoundedCornerShape(15.dp),
+                                                color = if (isConvSearchFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
+                                                border = BorderStroke(1.dp, if (isConvSearchFocused) Color(0xFF81C784) else White.copy(alpha = 0.12f))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Search,
+                                                        contentDescription = "Search messages",
+                                                        tint = Color(0xFF81C784),
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier.weight(1f),
+                                                        contentAlignment = Alignment.CenterStart
+                                                    ) {
+                                                        if (convSearchQuery.isEmpty()) {
+                                                            Text(
+                                                                "Search chat...",
+                                                                color = White.copy(alpha = 0.45f),
+                                                                fontSize = 10.sp
+                                                            )
+                                                        }
+                                                        BasicTextField(
+                                                            value = convSearchQuery,
+                                                            onValueChange = { convSearchQuery = it },
+                                                            singleLine = true,
+                                                            textStyle = TextStyle(color = White, fontSize = 10.sp),
+                                                            cursorBrush = SolidColor(Color(0xFF81C784)),
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .onFocusChanged { isConvSearchFocused = it.isFocused }
+                                                        )
+                                                    }
+                                                    if (convSearchQuery.isNotEmpty()) {
+                                                        IconButton(onClick = { convSearchQuery = "" }, modifier = Modifier.size(16.dp)) {
+                                                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = White, modifier = Modifier.size(11.dp))
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // Report User Button
+                                            IconButton(
+                                                onClick = {
+                                                    activeReportTarget = ReportTarget(
+                                                        type = "USER",
+                                                        id = selectedChannel.id,
+                                                        name = selectedChannel.name,
+                                                        content = "Chat Participant: ${selectedChannel.name}"
+                                                    )
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Flag,
+                                                    contentDescription = "Report user",
+                                                    tint = Color(0xFFFF8A80).copy(alpha = 0.85f),
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        color = White.copy(alpha = 0.08f)
+                                    )
+
+                                    // Messages Stream
+                                    if (activeMessages.isEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "No messages yet",
+                                                color = White.copy(alpha = 0.4f),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    } else {
+                                        LazyColumn(
+                                            state = chatListState,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            items(activeMessages) { msg ->
+                                                val isMe = msg.sender == "me"
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+                                                    verticalAlignment = Alignment.Bottom
+                                                ) {
+                                                    if (!isMe) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(22.dp)
+                                                                .clip(CircleShape)
+                                                                .background(getAvatarColor(msg.senderName)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = msg.senderName.take(1).uppercase(),
+                                                                color = White,
+                                                                fontSize = 9.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.width(5.dp))
+                                                    }
+
+                                                    Surface(
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        color = if (isMe) ForestGreen else Color(0xFF1E2F23),
+                                                        border = BorderStroke(
+                                                            0.8.dp,
+                                                            if (isMe) Color(0xFF81C784).copy(alpha = 0.5f) else White.copy(alpha = 0.08f)
+                                                        ),
+                                                        modifier = Modifier.widthIn(max = 280.dp)
+                                                    ) {
+                                                        Column(modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) {
+                                                            if (!isMe) {
+                                                                Text(
+                                                                    text = msg.senderName,
+                                                                    fontSize = 9.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = Color(0xFF81C784)
+                                                                )
+                                                            }
+                                                            Text(
+                                                                text = msg.text,
+                                                                color = White,
+                                                                fontSize = 11.sp,
+                                                                lineHeight = 14.sp
+                                                            )
+                                                            Text(
+                                                                text = msg.timestamp,
+                                                                color = if (isMe) White.copy(alpha = 0.7f) else White.copy(alpha = 0.4f),
+                                                                fontSize = 8.sp,
+                                                                modifier = Modifier.align(Alignment.End)
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (isMe) {
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(24.dp)
+                                                                .clip(CircleShape)
+                                                                .background(Color(0xFF2E7D32)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = uiState.currentUserName.take(1).uppercase().ifBlank { "Y" },
+                                                                color = White,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // ── Message Input Row with Zoom-in & Focus Pop ──
+                                    val chatInputScale by animateFloatAsState(
+                                        targetValue = if (isChatInputFocused) 1.02f else 1.0f,
+                                        label = "chatInputScale"
+                                    )
+                                    val chatInputHeight by animateDpAsState(
+                                        targetValue = if (isChatInputFocused) 44.dp else 36.dp,
+                                        label = "chatInputHeight"
+                                    )
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(getAvatarColor(selectedChannel.name)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(selectedChannel.iconEmoji, fontSize = 12.sp)
-                                        }
-                                        Text(
-                                            text = selectedChannel.name,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = White,
-                                            maxLines = 1
-                                        )
-                                    }
-
-                                    // Center: Active Status
-                                    Text(
-                                        text = selectedChannel.statusText,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF81C784)
-                                    )
-
-                                    // Right: Conversation Search Input & Report User
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        var isConvSearchFocused by remember { mutableStateOf(false) }
-                                        val convSearchScale by animateFloatAsState(if (isConvSearchFocused) 1.03f else 1.0f, label = "convSearchScale")
-
                                         Surface(
                                             modifier = Modifier
-                                                .width(130.dp)
-                                                .height(30.dp)
+                                                .weight(1f)
+                                                .height(chatInputHeight)
                                                 .graphicsLayer {
-                                                    scaleX = convSearchScale
-                                                    scaleY = convSearchScale
+                                                    scaleX = chatInputScale
+                                                    scaleY = chatInputScale
                                                 },
-                                            shape = RoundedCornerShape(15.dp),
-                                            color = if (isConvSearchFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
-                                            border = BorderStroke(1.dp, if (isConvSearchFocused) Color(0xFF81C784) else White.copy(alpha = 0.12f))
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = if (isChatInputFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
+                                            border = BorderStroke(1.dp, if (isChatInputFocused) Color(0xFF81C784) else White.copy(alpha = 0.15f))
                                         ) {
-                                            Row(
+                                            Box(
                                                 modifier = Modifier
                                                     .fillMaxSize()
-                                                    .padding(horizontal = 8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    .padding(horizontal = 14.dp),
+                                                contentAlignment = Alignment.CenterStart
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Search,
-                                                    contentDescription = "Search messages",
-                                                    tint = Color(0xFF81C784),
-                                                    modifier = Modifier.size(13.dp)
-                                                )
-                                                Box(
-                                                    modifier = Modifier.weight(1f),
-                                                    contentAlignment = Alignment.CenterStart
-                                                ) {
-                                                    if (convSearchQuery.isEmpty()) {
-                                                        Text(
-                                                            "Search chat...",
-                                                            color = White.copy(alpha = 0.45f),
-                                                            fontSize = 10.sp
-                                                        )
-                                                    }
-                                                    BasicTextField(
-                                                        value = convSearchQuery,
-                                                        onValueChange = { convSearchQuery = it },
-                                                        singleLine = true,
-                                                        textStyle = TextStyle(color = White, fontSize = 10.sp),
-                                                        cursorBrush = SolidColor(Color(0xFF81C784)),
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .onFocusChanged { isConvSearchFocused = it.isFocused }
+                                                if (chatMessageInput.isEmpty()) {
+                                                    Text(
+                                                        "Message ${selectedChannel.name}...",
+                                                        color = White.copy(alpha = 0.45f),
+                                                        fontSize = 11.sp
                                                     )
                                                 }
-                                                if (convSearchQuery.isNotEmpty()) {
-                                                    IconButton(onClick = { convSearchQuery = "" }, modifier = Modifier.size(16.dp)) {
-                                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = White, modifier = Modifier.size(11.dp))
-                                                    }
-                                                }
+                                                BasicTextField(
+                                                    value = chatMessageInput,
+                                                    onValueChange = { chatMessageInput = it },
+                                                    singleLine = true,
+                                                    textStyle = TextStyle(
+                                                        color = White,
+                                                        fontSize = if (isChatInputFocused) 12.sp else 11.sp
+                                                    ),
+                                                    cursorBrush = SolidColor(Color(0xFF81C784)),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .onFocusChanged { isChatInputFocused = it.isFocused }
+                                                )
                                             }
                                         }
 
-                                        // Report User Button
                                         IconButton(
                                             onClick = {
-                                                activeReportTarget = ReportTarget(
-                                                    type = "USER",
-                                                    id = selectedChannel.id,
-                                                    name = selectedChannel.name,
-                                                    content = "Chat Participant in channel: ${selectedChannel.name}"
-                                                )
+                                                if (chatMessageInput.isNotBlank() && selectedChannelId != null) {
+                                                    val list = directChatMessages.getOrPut(selectedChannelId!!) { mutableStateListOf() }
+                                                    list.add(
+                                                        CommunityChatMessage("me", uiState.currentUserName.ifBlank { "You" }, chatMessageInput.trim())
+                                                    )
+                                                    chatMessageInput = ""
+                                                }
                                             },
-                                            modifier = Modifier.size(28.dp)
+                                            modifier = Modifier
+                                                .size(if (isChatInputFocused) 40.dp else 34.dp)
+                                                .clip(CircleShape)
+                                                .background(ForestGreen)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Flag,
-                                                contentDescription = "Report user",
-                                                tint = Color(0xFFFF8A80).copy(alpha = 0.85f),
+                                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                                contentDescription = "Send",
+                                                tint = White,
                                                 modifier = Modifier.size(15.dp)
                                             )
                                         }
-                                    }
-                                }
-
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    color = White.copy(alpha = 0.08f)
-                                )
-
-                                // Messages Stream
-                                LazyColumn(
-                                    state = chatListState,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(activeMessages) { msg ->
-                                        val isMe = msg.sender == "me"
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
-                                            verticalAlignment = Alignment.Bottom
-                                        ) {
-                                            if (!isMe) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(22.dp)
-                                                        .clip(CircleShape)
-                                                        .background(getAvatarColor(msg.senderName)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = msg.senderName.take(1).uppercase(),
-                                                        color = White,
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.width(5.dp))
-                                            }
-
-                                            Surface(
-                                                shape = RoundedCornerShape(12.dp),
-                                                color = if (isMe) ForestGreen else Color(0xFF1E2F23),
-                                                border = BorderStroke(
-                                                    0.8.dp,
-                                                    if (isMe) Color(0xFF81C784).copy(alpha = 0.5f) else White.copy(alpha = 0.08f)
-                                                ),
-                                                modifier = Modifier.widthIn(max = 280.dp)
-                                            ) {
-                                                Column(modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) {
-                                                    if (!isMe) {
-                                                        Text(
-                                                            text = msg.senderName,
-                                                            fontSize = 9.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = Color(0xFF81C784)
-                                                        )
-                                                    }
-                                                    Text(
-                                                        text = msg.text,
-                                                        color = White,
-                                                        fontSize = 11.sp,
-                                                        lineHeight = 14.sp
-                                                    )
-                                                    Text(
-                                                        text = msg.timestamp,
-                                                        color = if (isMe) White.copy(alpha = 0.7f) else White.copy(alpha = 0.4f),
-                                                        fontSize = 8.sp,
-                                                        modifier = Modifier.align(Alignment.End)
-                                                    )
-                                                }
-                                            }
-
-                                            if (isMe) {
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(24.dp)
-                                                        .clip(CircleShape)
-                                                        .background(Color(0xFF2E7D32)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = "Y",
-                                                        color = White,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // ── Message Input Row with Zoom-in & Focus Pop ──
-                                val chatInputScale by animateFloatAsState(
-                                    targetValue = if (isChatInputFocused) 1.02f else 1.0f,
-                                    label = "chatInputScale"
-                                )
-                                val chatInputHeight by animateDpAsState(
-                                    targetValue = if (isChatInputFocused) 44.dp else 36.dp,
-                                    label = "chatInputHeight"
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Surface(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(chatInputHeight)
-                                            .graphicsLayer {
-                                                scaleX = chatInputScale
-                                                scaleY = chatInputScale
-                                            },
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (isChatInputFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
-                                        border = BorderStroke(1.dp, if (isChatInputFocused) Color(0xFF81C784) else White.copy(alpha = 0.15f))
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 14.dp),
-                                            contentAlignment = Alignment.CenterStart
-                                        ) {
-                                            if (chatMessageInput.isEmpty()) {
-                                                Text(
-                                                    "Message ${selectedChannel.name}...",
-                                                    color = White.copy(alpha = 0.45f),
-                                                    fontSize = 11.sp
-                                                )
-                                            }
-                                            BasicTextField(
-                                                value = chatMessageInput,
-                                                onValueChange = { chatMessageInput = it },
-                                                singleLine = true,
-                                                textStyle = TextStyle(
-                                                    color = White,
-                                                    fontSize = if (isChatInputFocused) 12.sp else 11.sp
-                                                ),
-                                                cursorBrush = SolidColor(Color(0xFF81C784)),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .onFocusChanged { isChatInputFocused = it.isFocused }
-                                            )
-                                        }
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            if (chatMessageInput.isNotBlank()) {
-                                                rawActiveMessages.add(
-                                                    CommunityChatMessage("me", "You", chatMessageInput.trim())
-                                                )
-                                                chatMessageInput = ""
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .size(if (isChatInputFocused) 40.dp else 34.dp)
-                                            .clip(CircleShape)
-                                            .background(ForestGreen)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.Send,
-                                            contentDescription = "Send",
-                                            tint = White,
-                                            modifier = Modifier.size(15.dp)
-                                        )
                                     }
                                 }
                             }
@@ -1043,6 +1270,22 @@ fun CommunityScreen(
                 }
             )
         }
+
+        // ── Add Friend Dialog ────────────────────────────────────────────────
+        if (showAddFriendDialog) {
+            AddFriendDialog(
+                members = uiState.communityMembers,
+                friends = uiState.friends,
+                currentUserId = uiState.currentUserId,
+                onDismiss = { showAddFriendDialog = false },
+                onAddFriend = { memberId ->
+                    viewModel.addFriend(memberId)
+                },
+                onSelectFriend = { memberId ->
+                    selectedChannelId = memberId
+                }
+            )
+        }
     }
 }
 
@@ -1050,6 +1293,8 @@ fun CommunityScreen(
 
 @Composable
 private fun InlineCreatePostView(
+    currentUserName: String = "You",
+    isPublishing: Boolean = false,
     onCancel: () -> Unit,
     onSubmit: (title: String, category: String, content: String, authorName: String) -> Unit
 ) {
@@ -1071,8 +1316,8 @@ private fun InlineCreatePostView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = White, modifier = Modifier.size(18.dp))
+                IconButton(onClick = onCancel, enabled = !isPublishing, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = if (isPublishing) White.copy(alpha = 0.3f) else White, modifier = Modifier.size(18.dp))
                 }
                 Box(
                     modifier = Modifier
@@ -1081,14 +1326,15 @@ private fun InlineCreatePostView(
                         .background(Color(0xFF2E7D32)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Y", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(currentUserName.take(1).uppercase().ifBlank { "Y" }, color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
                 Text("Create Community Post", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = White)
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
                     onClick = onCancel,
+                    enabled = !isPublishing,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = White.copy(alpha = 0.7f)),
                     border = BorderStroke(1.dp, White.copy(alpha = 0.2f)),
                     shape = RoundedCornerShape(14.dp),
@@ -1100,23 +1346,32 @@ private fun InlineCreatePostView(
 
                 Button(
                     onClick = {
-                        if (title.isNotBlank() && content.isNotBlank()) {
-                            onSubmit(title, "GENERAL", content, "Farmer Partner")
+                        if (title.isNotBlank() && content.isNotBlank() && !isPublishing) {
+                            onSubmit(title, "GENERAL", content, currentUserName)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                    enabled = title.isNotBlank() && content.isNotBlank(),
+                    enabled = title.isNotBlank() && content.isNotBlank() && !isPublishing,
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                     modifier = Modifier.height(30.dp)
                 ) {
-                    Text("Publish Post", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = White)
+                    if (isPublishing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(13.dp),
+                            color = White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("Publishing...", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = White)
+                    } else {
+                        Text("Publish Post", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = White)
+                    }
                 }
             }
         }
 
-        // Title Input (Pixel-perfect vertically centered placeholder & text)
-
+        // Title Input
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1143,7 +1398,8 @@ private fun InlineCreatePostView(
                 }
                 BasicTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = { if (!isPublishing) title = it },
+                    readOnly = isPublishing,
                     singleLine = true,
                     textStyle = TextStyle(
                         color = White,
@@ -1158,7 +1414,7 @@ private fun InlineCreatePostView(
             }
         }
 
-        // Content Input (Clean vertically aligned multiline text area)
+        // Content Input
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1185,7 +1441,8 @@ private fun InlineCreatePostView(
                 }
                 BasicTextField(
                     value = content,
-                    onValueChange = { content = it },
+                    onValueChange = { if (!isPublishing) content = it },
+                    readOnly = isPublishing,
                     textStyle = TextStyle(
                         color = White,
                         fontSize = 11.sp,
@@ -1208,6 +1465,7 @@ private fun InlineCreatePostView(
 private fun InlinePostDetailView(
     post: CommunityPost,
     comments: List<CommunityComment>,
+    currentUserName: String = "You",
     onBack: () -> Unit,
     onLikeToggle: (String) -> Unit,
     onAddComment: (postId: String, content: String, authorName: String) -> Unit,
@@ -1450,7 +1708,7 @@ private fun InlinePostDetailView(
             IconButton(
                 onClick = {
                     if (newCommentText.isNotBlank()) {
-                        onAddComment(post.id, newCommentText.trim(), "Farmer Partner")
+                        onAddComment(post.id, newCommentText.trim(), currentUserName)
                         newCommentText = ""
                     }
                 },
@@ -1861,6 +2119,279 @@ private fun CommunityReportDialog(
                             fontWeight = FontWeight.Bold,
                             color = White
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Add Friend Dialog ───────────────────────────────────────────────────────
+
+@Composable
+private fun AddFriendDialog(
+    members: List<CommunityMember>,
+    friends: List<CommunityMember>,
+    currentUserId: String?,
+    onDismiss: () -> Unit,
+    onAddFriend: (String) -> Unit,
+    onSelectFriend: (String) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val friendIds = remember(friends) { friends.map { it.id }.toSet() }
+
+    val filteredMembers = remember(members, searchQuery, currentUserId) {
+        val nonSelf = if (currentUserId.isNullOrBlank()) members else members.filter { it.id != currentUserId }
+        if (searchQuery.isBlank()) {
+            nonSelf
+        } else {
+            nonSelf.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .widthIn(min = 340.dp, max = 480.dp)
+                .fillMaxWidth(0.9f)
+                .heightIn(max = 420.dp)
+                .padding(6.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF142417)),
+            border = BorderStroke(1.2.dp, ForestGreen.copy(alpha = 0.6f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            tint = Color(0xFF81C784),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Add Friends",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = White
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Search Bar
+                var isSearchFocused by remember { mutableStateOf(false) }
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp),
+                    shape = RoundedCornerShape(17.dp),
+                    color = if (isSearchFocused) Color(0xFF223B2A) else Color(0xFF1B2E21),
+                    border = BorderStroke(1.dp, if (isSearchFocused) Color(0xFF81C784) else White.copy(alpha = 0.15f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = Color(0xFF81C784),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    "Search by name or handle...",
+                                    color = White.copy(alpha = 0.45f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                singleLine = true,
+                                textStyle = TextStyle(color = White, fontSize = 11.sp),
+                                cursorBrush = SolidColor(Color(0xFF81C784)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { isSearchFocused = it.isFocused }
+                            )
+                        }
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { searchQuery = "" },
+                                modifier = Modifier.size(18.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Member List
+                if (filteredMembers.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (searchQuery.isNotBlank()) "No members match \"$searchQuery\"" else "No community members found.",
+                            color = White.copy(alpha = 0.5f),
+                            fontSize = 11.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filteredMembers) { member ->
+                            val isAlreadyFriend = friendIds.contains(member.id)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF1B2E21),
+                                border = BorderStroke(0.8.dp, White.copy(alpha = 0.08f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(getAvatarColor(member.name)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = member.name.take(1).uppercase(),
+                                                color = White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                        Column {
+                                            Text(
+                                                text = member.name,
+                                                color = White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            )
+                                            Text(
+                                                text = member.statusText,
+                                                color = Color(0xFF81C784),
+                                                fontSize = 9.sp
+                                            )
+                                        }
+                                    }
+
+                                    if (isAlreadyFriend) {
+                                        Surface(
+                                            onClick = {
+                                                onSelectFriend(member.id)
+                                                onDismiss()
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = Color(0xFF2E7D32).copy(alpha = 0.3f),
+                                            border = BorderStroke(1.dp, Color(0xFF81C784))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF81C784),
+                                                    modifier = Modifier.size(11.dp)
+                                                )
+                                                Text(
+                                                    text = "Chat",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF81C784)
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                onAddFriend(member.id)
+                                                onSelectFriend(member.id)
+                                                onDismiss()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                            shape = RoundedCornerShape(12.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(26.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Add,
+                                                contentDescription = null,
+                                                tint = White,
+                                                modifier = Modifier.size(11.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = "Add",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

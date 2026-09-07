@@ -185,13 +185,13 @@ object CropMetadataAssetDataSource {
                         val refObj = jsonObj.optJSONObject("reference_source")
                         if (refObj != null) {
                             refSource = ReferenceSourceInfo(
-                                organization = refObj.optString("source_organization", "Department of Agriculture - BPI"),
-                                publicationTitle = refObj.optString("publication_title", "Philippine National Standards (PNS) & Commercial Vegetable Guide"),
-                                sourceUrl = refObj.optString("source_url", "https://buplant.da.gov.ph"),
+                                organization = refObj.optString("source_organization", "MapTanim Agricultural Field Research & Farmer Interviews"),
+                                publicationTitle = refObj.optString("publication_title", "Field Survey & Agronomic Interview Dataset"),
+                                sourceUrl = refObj.optString("source_url", ""),
                                 secondaryUrl = if (refObj.has("secondary_url")) refObj.optString("secondary_url") else null,
-                                author = refObj.optString("author", "National Crop Research Center"),
-                                license = refObj.optString("license", "Philippine Open Agricultural Standard"),
-                                purposeStatement = refObj.optString("purpose_statement", "Provides certified agronomic standards for Filipino farmers to optimize yield and reduce risk.")
+                                author = refObj.optString("author", "MapTanim Agronomic Field Survey Team"),
+                                license = refObj.optString("license", "MapTanim Original Research Dataset"),
+                                purposeStatement = refObj.optString("purpose_statement", "Provides agronomic field data gathered from local farmer interviews to optimize yield and reduce planting risk.")
                             )
                         }
 
@@ -294,7 +294,7 @@ object CropMetadataAssetDataSource {
                 summary = "${crop.name} (${crop.localName ?: ""}) belongs to the $catName horticultural category based on botanical structure, edible plant parts, and commercial cultivation methods.",
                 points = listOf(
                     "Morphological Structure: Growth habits, leaf-to-stem ratios, and reproductive structures determine nutrient requirements and field spacing.",
-                    "Culinary & Harvest Usage: Grouped under Philippine Department of Agriculture classifications to help growers target specific market demand windows."
+                    "Culinary & Harvest Usage: Grouped under Philippine agronomic crop classifications to help growers target specific market demand windows."
                 )
             ),
             harvestWhy = WhyDetailInfo(
@@ -331,14 +331,50 @@ object CropMetadataAssetDataSource {
         }
 
         return ReferenceSourceInfo(
-            organization = "Department of Agriculture - Bureau of Plant Industry (DA-BPI)",
-            publicationTitle = "Philippine National Standards (PNS) for Fresh Vegetables & Commercial Production Guides",
-            sourceUrl = "https://buplant.da.gov.ph",
-            secondaryUrl = "https://www.eastwestseed.com/philippines",
-            author = "DA-BPI National Crop Research & UPLB Institute of Plant Breeding",
-            license = "Philippine Open Agricultural Extension & Research Standard",
-            purposeStatement = "This verified agricultural dataset provides Filipino growers with evidence-based standards, eliminating guesswork in planting dates, irrigation cycles, and variety selection."
+            organization = "MapTanim Agricultural Field Research & Farmer Interviews",
+            publicationTitle = "Field Survey & Agronomic Interview Dataset for Philippine Vegetables",
+            sourceUrl = "",
+            secondaryUrl = null,
+            author = "MapTanim Agronomic Field Survey Team & Local Farmers",
+            license = "MapTanim Original Research Dataset",
+            purposeStatement = "This verified agricultural dataset provides Filipino growers with evidence-based standards gathered directly from local farmer interviews and field trials, eliminating guesswork in planting dates, irrigation cycles, and variety selection."
         )
+    }
+
+    private val dynamicCropImages = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    fun registerCropImageUrl(cropId: String?, cropName: String?, imageUrl: String?) {
+        if (imageUrl.isNullOrBlank()) return
+        val trimmed = imageUrl.trim()
+        cropId?.let { dynamicCropImages[it.lowercase()] = trimmed }
+        cropName?.let { dynamicCropImages[it.lowercase()] = trimmed }
+    }
+
+    fun resolveCropImage(cropId: String?, cropName: String?, imageUrl: String? = null): String {
+        val candidate = if (!imageUrl.isNullOrBlank()) {
+            imageUrl.trim()
+        } else {
+            (cropId?.let { dynamicCropImages[it.lowercase()] }
+                ?: cropName?.let { dynamicCropImages[it.lowercase()] })
+        }
+
+        if (!candidate.isNullOrBlank()) {
+            val trimmed = candidate.trim()
+            if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("content://") || trimmed.startsWith("file://")) {
+                return trimmed
+            }
+            if (trimmed.startsWith("/metadata/crops_images/") || trimmed.contains("crops_images/")) {
+                val fileName = trimmed.substringAfterLast('/')
+                return "file:///android_asset/metadata/crops_images/$fileName"
+            }
+        }
+
+        return getCropAssetImagePath(cropId, cropName)
+    }
+
+    fun resolveCropImage(crop: Crop?): String {
+        if (crop == null) return getCropAssetImagePath(null, null)
+        return resolveCropImage(crop.id, crop.name, crop.imageUrl)
     }
 
     fun getCropAssetImagePath(cropId: String?, cropName: String?): String {

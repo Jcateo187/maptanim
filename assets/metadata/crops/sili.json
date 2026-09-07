@@ -36,11 +36,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1588252303782-cb80119abd6d",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/sili.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/sili.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "6b5fc1191759af2ed8841884783af5fc0ef578fce9f784f0c242e406df5687de"
   }
 }

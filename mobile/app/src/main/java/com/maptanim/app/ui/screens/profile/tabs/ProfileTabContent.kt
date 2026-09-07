@@ -557,14 +557,33 @@ fun ProfileTabContent(
                         }
 
                         if (uiState.userPosts.isEmpty()) {
-                            Text(
-                                text = "No recent community activity.",
-                                fontSize = 12.sp,
-                                color = White.copy(alpha = 0.6f)
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "No community forum activity yet.",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = White.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = "Discussions you post or react to with ❤️ will appear here.",
+                                    fontSize = 10.sp,
+                                    color = White.copy(alpha = 0.45f)
+                                )
+                            }
                         } else {
                             val visiblePosts = uiState.userPosts.take(3)
                             visiblePosts.forEach { post ->
+                                val isAuthoredByMe = (post.authorId != null && post.authorId == uiState.userProfile.id) ||
+                                        (uiState.userProfile.nickname.isNotBlank() && post.authorName.equals(uiState.userProfile.nickname, ignoreCase = true)) ||
+                                        (uiState.userProfile.boundEmail != null && post.authorName.equals(uiState.userProfile.boundEmail.substringBefore('@'), ignoreCase = true)) ||
+                                        post.authorName.equals("You", ignoreCase = true)
+
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = Color(0xFF141A12),
@@ -578,20 +597,56 @@ fun ProfileTabContent(
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
                                                 text = post.title,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 12.sp,
-                                                color = White
+                                                color = White,
+                                                modifier = Modifier.weight(1f, fill = false),
+                                                maxLines = 1
                                             )
-                                            Text(
-                                                text = post.category,
-                                                fontSize = 10.sp,
-                                                color = ForestGreen,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (isAuthoredByMe) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = ForestGreen.copy(alpha = 0.22f)
+                                                    ) {
+                                                        Text(
+                                                            text = "✍️ Your Post",
+                                                            fontSize = 9.sp,
+                                                            color = ForestGreen,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                } else {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = Color(0xFFFF5252).copy(alpha = 0.18f)
+                                                    ) {
+                                                        Text(
+                                                            text = "❤️ Reacted",
+                                                            fontSize = 9.sp,
+                                                            color = Color(0xFFFF7272),
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Text(
+                                                    text = post.category,
+                                                    fontSize = 10.sp,
+                                                    color = ForestGreen,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
                                         }
                                         Text(
                                             text = post.content,
@@ -606,10 +661,13 @@ fun ProfileTabContent(
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                                             ) {
                                                 Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
                                                 Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                                if (!isAuthoredByMe && post.authorName.isNotBlank()) {
+                                                    Text("• by ${post.authorName}", fontSize = 10.sp, color = White.copy(alpha = 0.45f))
+                                                }
                                             }
 
                                             Text(
@@ -652,6 +710,8 @@ fun ProfileTabContent(
     if (isForumExpanded) {
         FullCommunityActivityModal(
             posts = uiState.userPosts,
+            currentUserNickname = uiState.userProfile.nickname,
+            currentUserId = uiState.userProfile.id,
             onDismiss = { isForumExpanded = false }
         )
     }

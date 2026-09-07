@@ -48,7 +48,7 @@ def test_edge_function_contracts():
     dss_req = {"farm_id": "00000000-0000-0000-0000-000000000001"}
     assert "farm_id" in dss_req, "Missing farm_id in evaluate-dss payload"
 
-    profile_req = {"user_id": "00000000-0000-0000-0000-000000000001", "nickname": "JuanFarmer", "onboarding_completed": True}
+    profile_req = {"user_id": "00000000-0000-0000-0000-000000000001", "nickname": "JuanFarmer"}
     assert "user_id" in profile_req and "nickname" in profile_req, "Invalid sync-profile payload"
     print("      [OK] Edge Function contracts validation passed.")
 

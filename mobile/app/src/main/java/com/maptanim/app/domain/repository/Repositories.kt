@@ -92,6 +92,7 @@ interface CropRepository {
     fun observeAllCrops(): Flow<List<Crop>>
     fun observeCropByName(name: String): Flow<Crop?>
     suspend fun upsertCrops(crops: List<Crop>)
+    suspend fun refreshCrops(): Result<Unit>
 }
 
 // ─── NotificationRepository ────────────────────────────────────────────────

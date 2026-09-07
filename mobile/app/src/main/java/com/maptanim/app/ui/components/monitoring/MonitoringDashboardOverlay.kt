@@ -671,7 +671,7 @@ private fun CropSelectionGridCard(
                     .background(Color(0xFF2A3424)),
                 contentAlignment = Alignment.Center
             ) {
-                val cropImg = CropMetadataAssetDataSource.getCropAssetImagePath(crop.cropName, crop.cropName)
+                val cropImg = CropMetadataAssetDataSource.resolveCropImage(crop.cropId, crop.cropName, crop.imageUrl)
                 AsyncImage(
                     model = cropImg,
                     contentDescription = crop.cropName,
@@ -1753,7 +1753,7 @@ private fun GrowingTipsTabSection(crop: MonitoredPlant) {
                         color = ForestGreen
                     ) {
                         Text(
-                            text = "DA-BPI STANDARD",
+                            text = "AGRONOMIC STANDARD",
                             fontSize = 8.sp,
                             color = White,
                             fontWeight = FontWeight.Bold,

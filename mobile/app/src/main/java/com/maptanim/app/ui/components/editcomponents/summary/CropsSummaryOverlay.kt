@@ -229,7 +229,7 @@ fun CropsSummaryOverlay(
                             val cropName = plot.cropName ?: "Vegetable"
                             val cropId = plot.cropId ?: cropName.lowercase()
                             val imageUri = remember(cropId, cropName) {
-                                CropMetadataAssetDataSource.getCropAssetImagePath(cropId, cropName)
+                                CropMetadataAssetDataSource.resolveCropImage(cropId, cropName)
                             }
 
                             val currentVariety = selectedVarieties[plot.id] ?: getDefaultVariety(cropName)

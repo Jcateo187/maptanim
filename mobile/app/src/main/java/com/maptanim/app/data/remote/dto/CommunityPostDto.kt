@@ -46,6 +46,7 @@ fun CommunityPostDto.toDomain(isLikedByMe: Boolean = false): CommunityPost {
 
     return CommunityPost(
         id = id,
+        authorId = author_id,
         authorName = author_name,
         authorAvatarUrl = author_avatar_url,
         category = category,
@@ -62,6 +63,7 @@ fun CommunityPostDto.toDomain(isLikedByMe: Boolean = false): CommunityPost {
 fun CommunityPost.toDto(): CommunityPostDto {
     return CommunityPostDto(
         id = id,
+        author_id = authorId,
         author_name = authorName,
         author_avatar_url = authorAvatarUrl,
         category = category,

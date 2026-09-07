@@ -36,11 +36,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1570586437263-ab629fccc818",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "403f6b1be6379da001e327f46a9a2b7674c9848cb4734ac4823a6a2463f15179"
   }
 }
