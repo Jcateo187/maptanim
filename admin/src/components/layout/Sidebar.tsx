@@ -1,16 +1,16 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  Users,
+  LayoutGrid,
+  Wallet,
+  PieChart,
+  Calendar,
+  BarChart2,
+  HelpCircle,
+  Shield,
   Sprout,
-  Compass,
-  MessageSquare,
-  LifeBuoy,
-  FileText,
-  LogOut,
-  ChevronRight,
+  X,
+  Workflow,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -19,114 +19,165 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onClose }) => {
-  const { user, logout } = useAuth();
+interface NavButton {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  tab: string;
+}
 
-  const menuItems = [
-    { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'farmers', label: 'Farmers', icon: Users },
-    { id: 'crops', label: 'Crops Library', icon: Sprout },
-    { id: 'dss', label: 'DSS Matrix', icon: Compass },
-    { id: 'community', label: 'Community Hub', icon: MessageSquare },
-    { id: 'feedback', label: 'Farmer Support', icon: LifeBuoy },
-    { id: 'logs', label: 'System Logs', icon: FileText },
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  setActiveTab,
+  isOpen = false,
+  onClose,
+}) => {
+  const mainNavItems: NavButton[] = [
+    {
+      id: 'overview',
+      label: 'Dashboard',
+      icon: LayoutGrid,
+      tab: 'overview',
+    },
+    {
+      id: 'users',
+      label: 'Farmers & Finances',
+      icon: Wallet,
+      tab: 'users',
+    },
+    {
+      id: 'crops',
+      label: 'Crop Breakdown',
+      icon: PieChart,
+      tab: 'crops',
+    },
+    {
+      id: 'dss',
+      label: 'Seasonal Schedules',
+      icon: Calendar,
+      tab: 'dss',
+    },
+    {
+      id: 'community',
+      label: 'Community Analytics',
+      icon: BarChart2,
+      tab: 'community',
+    },
   ];
 
-  const handleSelectTab = (tabId: string) => {
-    setActiveTab(tabId);
+  const handleNavClick = (tab: string) => {
+    setActiveTab(tab);
     if (onClose) onClose();
   };
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile Drawer Overlay */}
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs lg:hidden animate-fadeIn"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden backdrop-blur-xs"
           aria-hidden="true"
         />
       )}
 
+      {/* Slim Modern Icon Sidebar - Flush to Left Edge, Fixed to Viewport Height */}
       <aside
-        className={`w-[240px] bg-[#1E2638] text-slate-300 flex flex-col min-h-screen select-none transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 lg:static lg:z-auto shrink-0 shadow-2xl lg:shadow-none ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`w-[78px] h-screen shrink-0 bg-[#111C23] flex flex-col items-center py-6 select-none z-50 border-r border-[#1C2E3A] transition-transform duration-200 ease-in-out fixed inset-y-0 left-0 md:sticky md:top-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        {/* Brand Header */}
-        <div className="h-[72px] px-5 flex items-center justify-between border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center p-1.5 shadow-md shadow-emerald-950/40 shrink-0">
-              <img src="/app_logo.png" alt="MapTanim" className="w-full h-full object-contain brightness-0 invert" />
+        {/* Top Section: Brand Logo Shield & Navigation Stack */}
+        <div className="flex flex-col items-center w-full gap-6">
+          {/* Brand Logo Shield */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center relative group cursor-pointer">
+              <div className="w-11 h-11 rounded-2xl bg-[#14232C] border border-[#223B49] flex items-center justify-center text-[#4CAF50] shadow-[0_0_15px_rgba(76,175,80,0.25)] hover:border-[#4CAF50] transition-colors">
+                <Shield className="w-6 h-6 stroke-[2.2]" />
+                <Sprout className="w-3.5 h-3.5 absolute text-[#00E676]" />
+              </div>
+              {/* Tooltip */}
+              <span className="absolute left-16 px-2.5 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                MapTanim DSS
+              </span>
             </div>
-            <div>
-              <h2 className="font-extrabold text-[15px] text-white tracking-tight flex items-center gap-1.5">
-                MapTanim
-              </h2>
-              <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">Agroecological DSS</p>
-            </div>
+
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="md:hidden p-1.5 text-[#8A9BA8] hover:text-white transition cursor-pointer"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              aria-label="Close menu"
-            >
-              ✕
-            </button>
-          )}
+          {/* Vertical Navigation Icons - Positioned at the Top */}
+          <nav className="flex flex-col items-center gap-4 w-full">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.tab;
+
+              return (
+                <div key={item.id} className="relative group">
+                  <button
+                    onClick={() => handleNavClick(item.tab)}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                      isActive
+                        ? 'bg-[#4CAF50]/15 text-[#00E676] shadow-[0_0_20px_rgba(0,230,118,0.45)] border border-[#4CAF50]/40'
+                        : 'text-[#647888] hover:text-[#C7D0D8] hover:bg-[#162732]'
+                    }`}
+                    aria-label={item.label}
+                  >
+                    <Icon className="w-5 h-5 stroke-[2.2]" />
+                  </button>
+
+                  {/* Floating Clean Label Tooltip */}
+                  <span className="absolute left-14 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-semibold text-[#F4F4F4] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 shadow-xl">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Navigation List */}
-        <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleSelectTab(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer group ${
-                  isActive
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                  <span>{item.label}</span>
-                </div>
+        {/* Bottom: Flowchart & Help / Settings Icons */}
+        <div className="flex flex-col items-center gap-2.5 mt-auto pt-4">
+          <div className="relative group">
+            <a
+              href="/flowchart.html"
+              target="_blank"
+              rel="noreferrer"
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-[#4CAF50] hover:text-[#00E676] hover:bg-[#4CAF50]/15 border border-[#4CAF50]/30 transition-all cursor-pointer shadow-[0_0_10px_rgba(76,175,80,0.15)]"
+              aria-label="System Flowchart & Architecture"
+            >
+              <Workflow className="w-5 h-5 stroke-[2.2]" />
+            </a>
 
-                {isActive && <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* User Account Profile */}
-        <div className="p-3 mx-3 mb-3 rounded-xl bg-white/5 border border-white/5 text-xs text-slate-300 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-bold text-xs flex items-center justify-center shrink-0">
-              {user?.name ? user.name.charAt(0) : 'A'}
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-white text-[12px] truncate">
-                {user?.name || 'Administrator'}
-              </p>
-              <p className="text-[10px] text-slate-500 truncate">
-                {user?.email || 'admin@maptanim.ph'}
-              </p>
-            </div>
+            <span className="absolute left-14 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-semibold text-[#F4F4F4] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 shadow-xl">
+              System Flowchart & Architecture
+            </span>
           </div>
 
-          <button
-            onClick={logout}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
-            title="Log out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => handleNavClick('logs')}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'bg-[#4CAF50]/15 text-[#00E676] border border-[#4CAF50]/30 shadow-[0_0_15px_rgba(76,175,80,0.3)]'
+                  : 'text-[#647888] hover:text-[#C7D0D8] hover:bg-[#162732]'
+              }`}
+              aria-label="Settings & Help"
+            >
+              <HelpCircle className="w-5 h-5 stroke-[2.2]" />
+            </button>
+
+            <span className="absolute left-14 bottom-2 px-3 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-semibold text-[#F4F4F4] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 shadow-xl">
+              Audit & System Help
+            </span>
+          </div>
         </div>
       </aside>
     </>

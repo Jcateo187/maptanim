@@ -32,19 +32,20 @@ export const Login: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem 1.5rem',
-        backgroundColor: '#0F172A',
-        backgroundImage: 'radial-gradient(at top right, #1E293B 0%, #0F172A 100%)',
+        backgroundColor: '#112230',
+        backgroundImage: 'radial-gradient(at top right, #183145 0%, #112230 100%)',
         boxSizing: 'border-box',
+        fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: '460px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '1.5rem',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+          backgroundColor: '#2B3136',
+          borderRadius: '1.25rem',
+          border: '1px solid #38434D',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           padding: '2.5rem',
           boxSizing: 'border-box',
         }}
@@ -57,13 +58,13 @@ export const Login: React.FC = () => {
                 width: '4.5rem',
                 height: '4.5rem',
                 borderRadius: '1.25rem',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
+                backgroundColor: '#183145',
+                border: '1px solid #38434D',
                 padding: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.15)',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.25)',
               }}
             >
               <img
@@ -78,7 +79,7 @@ export const Login: React.FC = () => {
             style={{
               fontSize: '1.5rem',
               fontWeight: 800,
-              color: '#0F172A',
+              color: '#F4F4F4',
               letterSpacing: '-0.025em',
               margin: '0 0 0.35rem 0',
             }}
@@ -88,7 +89,7 @@ export const Login: React.FC = () => {
           <p
             style={{
               fontSize: '0.8125rem',
-              color: '#64748B',
+              color: '#C7D0D8',
               margin: 0,
             }}
           >
@@ -103,14 +104,14 @@ export const Login: React.FC = () => {
               marginTop: '0.75rem',
               padding: '0.25rem 0.625rem',
               borderRadius: '9999px',
-              backgroundColor: '#F1F5F9',
-              border: '1px solid #E2E8F0',
+              backgroundColor: '#183145',
+              border: '1px solid #38434D',
               fontSize: '0.6875rem',
               fontWeight: 600,
-              color: '#475569',
+              color: '#C7D0D8',
             }}
           >
-            <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: '#059669' }} />
+            <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: '#4CAF50' }} />
             <span>MapTanim Administrator Portal</span>
           </div>
         </div>
@@ -122,9 +123,9 @@ export const Login: React.FC = () => {
               style={{
                 padding: '0.75rem 1rem',
                 borderRadius: '0.75rem',
-                backgroundColor: '#FFF1F2',
-                border: '1px solid #FECDD3',
-                color: '#BE123C',
+                backgroundColor: 'rgba(231, 111, 81, 0.15)',
+                border: '1px solid rgba(231, 111, 81, 0.4)',
+                color: '#FF8A65',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
                 lineHeight: 1.4,
@@ -140,7 +141,7 @@ export const Login: React.FC = () => {
               style={{
                 fontSize: '0.8125rem',
                 fontWeight: 700,
-                color: '#334155',
+                color: '#F4F4F4',
               }}
             >
               Admin Email
@@ -152,7 +153,7 @@ export const Login: React.FC = () => {
                   left: '1rem',
                   width: '1.125rem',
                   height: '1.125rem',
-                  color: '#94A3B8',
+                  color: '#8A9BA8',
                   pointerEvents: 'none',
                 }}
               />
@@ -169,19 +170,19 @@ export const Login: React.FC = () => {
                   paddingRight: '1rem',
                   fontSize: '0.875rem',
                   borderRadius: '0.75rem',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#0F172A',
+                  border: '1px solid #38434D',
+                  backgroundColor: '#1D2429',
+                  color: '#F4F4F4',
                   outline: 'none',
                   boxSizing: 'border-box',
                   transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#059669';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.15)';
+                  e.target.style.borderColor = '#4CAF50';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(76, 175, 80, 0.25)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#CBD5E1';
+                  e.target.style.borderColor = '#38434D';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -194,7 +195,7 @@ export const Login: React.FC = () => {
               style={{
                 fontSize: '0.8125rem',
                 fontWeight: 700,
-                color: '#334155',
+                color: '#F4F4F4',
               }}
             >
               Admin Password
@@ -206,7 +207,7 @@ export const Login: React.FC = () => {
                   left: '1rem',
                   width: '1.125rem',
                   height: '1.125rem',
-                  color: '#94A3B8',
+                  color: '#8A9BA8',
                   pointerEvents: 'none',
                 }}
               />
@@ -223,19 +224,19 @@ export const Login: React.FC = () => {
                   paddingRight: '2.875rem',
                   fontSize: '0.875rem',
                   borderRadius: '0.75rem',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#0F172A',
+                  border: '1px solid #38434D',
+                  backgroundColor: '#1D2429',
+                  color: '#F4F4F4',
                   outline: 'none',
                   boxSizing: 'border-box',
                   transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#059669';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.15)';
+                  e.target.style.borderColor = '#4CAF50';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(76, 175, 80, 0.25)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#CBD5E1';
+                  e.target.style.borderColor = '#38434D';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -247,7 +248,7 @@ export const Login: React.FC = () => {
                   right: '0.75rem',
                   background: 'none',
                   border: 'none',
-                  color: '#94A3B8',
+                  color: '#8A9BA8',
                   cursor: 'pointer',
                   padding: '0.25rem',
                   display: 'flex',
@@ -275,11 +276,11 @@ export const Login: React.FC = () => {
                   width: '1rem',
                   height: '1rem',
                   borderRadius: '0.25rem',
-                  accentColor: '#059669',
+                  accentColor: '#4CAF50',
                   cursor: 'pointer',
                 }}
               />
-              <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>
+              <span style={{ fontSize: '0.75rem', color: '#C7D0D8', fontWeight: 500 }}>
                 Remember session
               </span>
             </label>
@@ -299,19 +300,19 @@ export const Login: React.FC = () => {
                 gap: '0.5rem',
                 borderRadius: '0.75rem',
                 border: 'none',
-                backgroundColor: '#059669',
+                backgroundColor: '#4CAF50',
                 color: '#FFFFFF',
                 fontSize: '0.875rem',
                 fontWeight: 700,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 6px -1px rgba(5, 150, 105, 0.25)',
+                boxShadow: '0 4px 6px -1px rgba(76, 175, 80, 0.3)',
                 transition: 'background-color 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#047857';
+                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#388E3C';
               }}
               onMouseLeave={(e) => {
-                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#059669';
+                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#4CAF50';
               }}
             >
               <span>{loading ? 'Verifying Credentials...' : 'Sign In to Portal'}</span>

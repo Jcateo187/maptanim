@@ -1,76 +1,359 @@
 /* Tailwind CSS v4 Import */
 @import "tailwindcss";
 
-:root {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+@theme {
+  --color-forest: #4CAF50;
+  --color-forest-50: #F1F8E9;
+  --color-forest-100: #DCEDC8;
+  --color-forest-200: #C5E1A5;
+  --color-forest-300: #A5D6A7;
+  --color-forest-400: #81C784;
+  --color-forest-500: #4CAF50;
+  --color-forest-600: #388E3C;
+  --color-forest-700: #2E7D32;
+  --color-forest-800: #1B5E20;
+  --color-forest-900: #0E3813;
+
+  --color-leaf: #6FAF5A;
+  --color-fresh: #9FD87C;
+  --color-sunlight: #E8D20A;
+  --color-night-blue: #4C579E;
+  --color-slate-blue: #00BCD4;
+  --color-charcoal: #183145;
+  --color-charcoal-dark: #112230;
+  --color-card-dark: #2B3136;
+  --color-card-light: #F6F7F8;
+  --color-canvas: #112230;
+  --color-text-dark: #1F2933;
+  --color-text-secondary: #C7D0D8;
+  --color-text-muted: #8A9BA8;
+  --color-success: #52B788;
+  --color-warning: #F4A261;
+  --color-danger: #E76F51;
+
+  --color-emerald-50: #F1F8E9;
+  --color-emerald-100: #DCEDC8;
+  --color-emerald-200: #C5E1A5;
+  --color-emerald-300: #A5D6A7;
+  --color-emerald-400: #81C784;
+  --color-emerald-500: #4CAF50;
+  --color-emerald-600: #388E3C;
+  --color-emerald-700: #2E7D32;
+  --color-emerald-800: #1B5E20;
+  --color-emerald-900: #0E3813;
 }
 
-* {
-  margin: 0;
-  padding: 0;
+:root {
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Dashboard Spacing System Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* MAPTANIM Mobile Dark Palette System (Single Fixed Theme) */
+  --color-forest-green: #4CAF50;
+  --color-leaf-green: #6FAF5A;
+  --color-fresh-green: #9FD87C;
+  --color-night-blue: #4C579E;
+  --color-slate-blue: #00BCD4;
+  --color-charcoal: #183145;
+  --color-charcoal-dark: #112230;
+
+  --color-bg-dark: #112230;
+  --color-card-dark: #2B3136;
+  --color-border-dark: #38434D;
+  --color-input-dark: #1D2429;
+
+  --color-text-primary: #F4F4F4;
+  --color-text-secondary: #C7D0D8;
+  --color-text-muted: #8A9BA8;
+
+  --color-success: #52B788;
+  --color-info: #00BCD4;
+  --color-warning: #F4A261;
+  --color-danger: #E76F51;
+
+  /* Core Global Theme Variables */
+  --color-bg: #112230;
+  --color-card: #2B3136;
+  --color-border: #38434D;
+  --color-text: #F4F4F4;
+  --color-secondary: #C7D0D8;
+  --color-navy: #183145;
+  --color-green: #4CAF50;
+}
+
+*, ::before, ::after {
   box-sizing: border-box;
+}
+
+html, body, #root {
+  background-color: #14232C !important;
+  color: #F4F4F4 !important;
+  color-scheme: dark;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #F4F6F9;
-  color: #1E293B;
-  font-size: 0.9375rem;
+  font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── FORCE ALL TEXT READABLE ON WHITE SURFACES ─── */
-/* Prevent any white-on-white or invisible text */
-.card *,
-.admin-card *,
-.glass-card *,
-[class*="bg-white"] * {
-  color: inherit;
+/* ─── TYPOGRAPHY HIERARCHY (Mobile Dark Theme) ─── */
+.page-title {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #F4F4F4 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em;
 }
 
-/* Ensure headings are always dark */
+.section-title {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #F4F4F4 !important;
+  line-height: 1.35 !important;
+}
+
+.card-title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #F4F4F4 !important;
+  line-height: 1.4 !important;
+}
+
+.kpi-value {
+  font-size: 32px !important;
+  line-height: 1.1 !important;
+  font-weight: 700 !important;
+  color: #F4F4F4 !important;
+}
+
+.kpi-label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  color: #C7D0D8 !important;
+  text-transform: uppercase !important;
+}
+
+.kpi-description {
+  font-size: 13px !important;
+  color: #8A9BA8 !important;
+}
+
+.body-text {
+  font-size: 14px !important;
+  color: #F4F4F4 !important;
+  line-height: 1.5 !important;
+}
+
+.secondary-text {
+  font-size: 13px !important;
+  color: #C7D0D8 !important;
+  line-height: 1.4 !important;
+}
+
+.meta-text {
+  font-size: 12px !important;
+  color: #8A9BA8 !important;
+  line-height: 1.4 !important;
+}
+
+.text-muted {
+  color: #8A9BA8 !important;
+}
+
+/* Ensure all headings are crisp white */
 h1, h2, h3, h4, h5, h6 {
-  color: #0F172A;
+  color: #F4F4F4;
 }
 
-/* Ensure table text is always dark */
-table, table th, table td, table tr {
-  color: #334155;
+/* ─── DASHBOARD SPACING & LAYOUT SYSTEM ─── */
+.dashboard-container {
+  padding: 24px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
-/* ─── PURE WHITE CARD SURFACES ─── */
+.dashboard-gap-y {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.content-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .content-grid-2col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.content-grid-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .content-grid-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── MOBILE DARK CARD DESIGN (CardDark #2B3136 & Border #38434D) ─── */
+.kpi-card,
+.dashboard-card,
 .card,
 .admin-card,
 .glass-card {
-  background-color: #FFFFFF !important;
-  border-radius: 1.25rem !important;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
-  border: 1px solid #E2E8F0 !important;
-  padding: 1.5rem !important;
-  transition: all 0.15s ease;
-  box-sizing: border-box;
+  background-color: #2B3136 !important;
+  border: 1px solid #38434D !important;
+  border-radius: 14px !important;
+  color: #F4F4F4 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Table cell comfortable padding */
-table th {
-  padding: 0.875rem 1rem !important;
+.kpi-card {
+  padding: 20px 24px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-table td {
-  padding: 1rem 1rem !important;
+.kpi-card:hover,
+.dashboard-card:hover,
+.card:hover,
+.admin-card:hover,
+.glass-card:hover {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Override any dark backgrounds that may leak in */
-.dark .card,
-.dark .admin-card,
-.dark .glass-card,
-.dark [class*="bg-white"] {
-  background-color: #FFFFFF !important;
-  color: #1E293B !important;
+/* Re-style Tailwind bg-white to mobile CardDark */
+.bg-white {
+  background-color: #2B3136 !important;
+  border-color: #38434D !important;
+  color: #F4F4F4 !important;
+}
+
+/* Re-style inset containers (e.g. search bars, secondary panels) */
+.bg-\[\#F8FAFB\],
+.bg-\[\#F7FAF7\],
+.bg-\[\#F5F7F8\],
+.bg-slate-50,
+.bg-slate-100 {
+  background-color: #1D2429 !important;
+  border-color: #38434D !important;
+  color: #F4F4F4 !important;
+}
+
+/* ─── FORM INPUTS (Dark Inset Surface) ─── */
+input,
+select,
+textarea,
+.input-field {
+  background-color: #1D2429 !important;
+  border: 1px solid #38434D !important;
+  color: #F4F4F4 !important;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.input-field:focus {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8A9BA8 !important;
+}
+
+.select-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23C7D0D8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.15em 1.15em;
+  padding-right: 2.25rem !important;
+}
+
+/* ─── TABLES (Dark Themed Data Tables) ─── */
+table {
+  color: #F4F4F4 !important;
+  border-collapse: collapse;
+}
+
+table thead,
+table thead tr,
+table thead th {
+  background-color: #183145 !important;
+  color: #C7D0D8 !important;
+  border-color: #38434D !important;
+  font-weight: 700;
+}
+
+table tbody tr {
+  border-color: #38434D !important;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+table tbody td {
+  border-color: #38434D !important;
+  color: #F4F4F4 !important;
+}
+
+.divide-y > * + * {
+  border-color: #38434D !important;
 }
 
 /* ─── STANDARDIZED BUTTONS ─── */
@@ -91,69 +374,48 @@ table td {
   white-space: nowrap;
 }
 
-.btn-primary {
-  background-color: #059669;
-  color: #FFFFFF;
-  box-shadow: 0 1px 2px 0 rgba(5, 150, 105, 0.2);
+.btn-primary,
+.btn-action-green {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  background-color: #4CAF50 !important;
+  color: #FFFFFF !important;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.btn-primary:hover {
-  background-color: #047857;
+.btn-primary:hover,
+.btn-action-green:hover {
+  background-color: #388E3C !important;
 }
 
 .btn-secondary {
-  background-color: #FFFFFF;
-  color: #475569;
-  border: 1px solid #CBD5E1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  background-color: #2B3136 !important;
+  color: #C7D0D8 !important;
+  border: 1px solid #38434D !important;
 }
 
 .btn-secondary:hover {
-  background-color: #F8FAFC;
-  color: #1E293B;
+  background-color: #38434D !important;
+  color: #FFFFFF !important;
 }
 
 .btn-danger {
-  background-color: #EF4444;
-  color: #FFFFFF;
+  background-color: #E76F51 !important;
+  color: #FFFFFF !important;
 }
 
 .btn-danger:hover {
-  background-color: #DC2626;
-}
-
-/* ─── FORM INPUTS ─── */
-.input-field {
-  display: block;
-  width: 100%;
-  height: 2.5rem;
-  padding: 0 0.875rem;
-  font-size: 0.875rem;
-  font-family: var(--font-sans);
-  border-radius: 0.625rem;
-  border: 1px solid #CBD5E1;
-  background-color: #FFFFFF;
-  color: #0F172A;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.input-field:focus {
-  border-color: #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
-}
-
-.input-with-icon {
-  padding-left: 2.75rem !important;
-}
-
-.select-field {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1.15em 1.15em;
-  padding-right: 2.25rem !important;
+  background-color: #D35400 !important;
 }
 
 /* ─── ANIMATIONS ─── */
@@ -182,14 +444,36 @@ table td {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #112230;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #38434D;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #4CAF50;
+}
+
+/* ─── FULL-SCREEN DASHBOARD SPACING & GLOW UTILITIES ─── */
+.dashboard-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+  width: 100% !important;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-stack {
+    gap: 28px !important;
+  }
+}
+
+.glow-green {
+  filter: drop-shadow(0 0 8px rgba(0, 230, 118, 0.75)) drop-shadow(0 0 16px rgba(0, 230, 118, 0.35));
+}
+
+.glow-amber {
+  filter: drop-shadow(0 0 8px rgba(255, 167, 38, 0.75)) drop-shadow(0 0 16px rgba(255, 167, 38, 0.35));
 }

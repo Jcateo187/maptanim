@@ -1,7 +1,7 @@
 // TypeScript Interfaces for MapTanim Admin Dashboard
 
-export type UserRole = 'FARMER' | 'ADMINISTRATOR' | 'GUEST';
-export type AccountStatus = 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+export type UserRole = 'FARMER' | 'ADMINISTRATOR' | 'FIELD_OFFICER' | 'GUEST';
+export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
 export type SoilType = 'LOAM' | 'CLAY' | 'SANDY' | 'SILTY' | 'PEATY' | 'CHALKY';
 export type SeasonType = 'DRY' | 'WET' | 'YEAR_ROUND';
 export type CategoryType = 'BULB' | 'STEM' | 'SHOOT' | 'LEAFY' | 'FLOWER' | 'FRUIT' | 'ROOT' | 'TUBER' | 'PODDED';
@@ -20,6 +20,36 @@ export interface Farmer {
   avatarUrl?: string;
   createdAt: string;
   lastLoginAt: string;
+  lastActiveAt?: string;
+  daysInactive?: number;
+  deviceInfo?: string;
+  isOnline?: boolean;
+  activitySummary?: string;
+}
+
+export interface UserActivityLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  module: string;
+  timestamp: string;
+  details?: string;
+  status: 'ONLINE' | 'ACTIVE' | 'IDLE' | 'INACTIVE';
+}
+
+export interface UserTrackingMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  suspendedUsers: number;
+  pendingUsers: number;
+  activeRate: number;
+  dailyActiveUsers: number;
+  weeklyActiveUsers: number;
+  statusDistribution: { name: string; value: number; color: string; count: number }[];
+  activityTrends: { period: string; active: number; inactive: number; newRegistrations: number }[];
+  activityByModule: { module: string; count: number; color: string }[];
 }
 
 export interface Farm {
@@ -57,19 +87,36 @@ export type BedPlot = CropZone;
 export interface Crop {
   id: string;
   name: string;
+  localName?: string;
   botanicalName: string;
+  taxonomicFamily?: string;
   category: CategoryType;
   idealSoil: SoilType;
+  suitableSoils?: SoilType[];
   season: SeasonType;
   daysToHarvest: number;
+  wateringIntervalDays?: number;
+  fertilizeIntervalDays?: number;
   waterReqMmPerWeek: number;
   npkRequirement: {
     nitrogen: number;
     phosphorus: number;
     potassium: number;
   };
+  optimalPhMin?: number;
+  optimalPhMax?: number;
+  growthStages?: {
+    sprout: number;
+    seedling: number;
+    vegetative: number;
+    flowering: number;
+    harvest: number;
+  };
   companionCropsGood: string[]; // crop names/ids
   companionCropsBad: string[];
+  harvestIndicators?: string;
+  description?: string;
+  commonPests?: string[];
   imageUrl: string;
   activePlantingCount?: number;
 }
@@ -134,6 +181,30 @@ export interface SystemAuditLog {
   ipAddress: string;
 }
 
+export interface TopPlantedVariety {
+  varietyName: string;
+  cropName: string;
+  plantCount: number;
+  color: string;
+}
+
+export interface HarvestDateRecord {
+  date: string;
+  displayDate: string;
+  fullDate: string;
+  harvestCount: number;
+  yieldKg: number;
+  topCrop: string;
+}
+
+export interface HarvestDateAnalytics {
+  peakHarvestDate: string;
+  peakHarvestYieldKg: number;
+  peakHarvestPlotCount: number;
+  peakHarvestCrop: string;
+  dateRecords: HarvestDateRecord[];
+}
+
 export interface DashboardStats {
   totalFarmers: number;
   activeFarms: number;
@@ -143,6 +214,18 @@ export interface DashboardStats {
   monthlyYield: { month: string; yieldKg: number; targetKg: number }[];
   cropDistribution: { category: string; value: number; color: string }[];
   farmerRegistrations: { date: string; count: number }[];
+  // New live fields
+  totalCrops: number;
+  totalFeedback: number;
+  totalPostReports: number;
+  pendingReports: number;
+  topPlantedCrops: { cropName: string; plantCount: number; color: string; varietyName?: string }[];
+  topPlantedVarieties: TopPlantedVariety[];
+  harvestDateAnalytics: HarvestDateAnalytics;
+  weeklyRegistrations: { day: string; newUsers: number; returningUsers: number }[];
+  activeUsersToday: number;
+  totalCommunityPosts: number;
+  systemNotificationsCount: number;
 }
 
 export type CommunityCategory = 'PEST_ALERT' | 'FARMING_TIP' | 'EQUIPMENT' | 'GENERAL' | 'OFFICIAL_ADVISORY';
@@ -285,3 +368,25 @@ export interface PlantingHarvest {
   createdAt: string;
 }
 
+/** Information Update and Advisory Broadcast payload for mobile farmers */
+export type BroadcastNotificationType =
+  | 'CROP_UPDATE'
+  | 'AGRONOMIC_GUIDE'
+  | 'SYSTEM_UPDATE';
+
+export interface BroadcastUpdatePayload {
+  title: string;
+  body: string;
+  notificationType: BroadcastNotificationType;
+  targetCrop?: string;
+}
+
+export interface BroadcastNotification {
+  id: string;
+  title: string;
+  body: string;
+  notificationType: string;
+  createdAt: string;
+  targetCrop?: string;
+  isRead?: boolean;
+}

@@ -3,7 +3,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { DashboardOverview } from './pages/DashboardOverview';
-import { FarmerManagement } from './pages/FarmerManagement';
+import { UserManagement } from './pages/UserManagement';
 import { CropLibrary } from './pages/CropLibrary';
 import { DSSRuleEditor } from './pages/DSSRuleEditor';
 import { CommunityHub } from './pages/CommunityHub';
@@ -24,8 +24,10 @@ const MainContent: React.FC = () => {
         switch (activeTab) {
           case 'overview':
             return <DashboardOverview />;
+          case 'users':
+            return <UserManagement />;
           case 'farmers':
-            return <FarmerManagement />;
+            return <UserManagement initialTab="directory" />;
           case 'crops':
             return <CropLibrary />;
           case 'dss':

@@ -8,12 +8,12 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', size = 'sm' }) => {
   const styles: Record<string, string> = {
-    success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-    warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    danger: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-    info: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
-    purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-    neutral: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    success: 'bg-[#4CAF50]/20 text-[#4CAF50] border-[#4CAF50]/40',
+    warning: 'bg-[#F4A261]/20 text-[#F4A261] border-[#F4A261]/40',
+    danger: 'bg-[#E76F51]/20 text-[#E76F51] border-[#E76F51]/40',
+    info: 'bg-[#00BCD4]/20 text-[#00BCD4] border-[#00BCD4]/40',
+    purple: 'bg-[#4C579E]/25 text-[#A5D6A7] border-[#4C579E]/40',
+    neutral: 'bg-[#1D2429] text-[#C7D0D8] border-[#38434D]',
   };
 
   const pad = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm';

@@ -1,0 +1,112 @@
+﻿{
+    "license":  "Proprietary / MapTanim Educational Use Only (Zero Copyright / AI Generated)",
+    "crops":  {
+                  "eggplant":  {
+                                   "size_kb":  2628.07,
+                                   "sha256":  "9484633F288791BE1DA5B0556CA812CDA39C5B1587E81325E6A90861E62364BE",
+                                   "file_name":  "eggplant.png",
+                                   "canonical_key":  "eggplant",
+                                   "local_uri":  "file:///android_asset/metadata/crops_images/eggplant.png"
+                               },
+                  "onion":  {
+                                "size_kb":  2682.06,
+                                "sha256":  "5E71A33E8CF6347D8097A0F76BBF13806F64CE8B65A08882777408E0605D2621",
+                                "file_name":  "onion.png",
+                                "canonical_key":  "onion",
+                                "local_uri":  "file:///android_asset/metadata/crops_images/onion.png"
+                            },
+                  "cabbage":  {
+                                  "size_kb":  2635.34,
+                                  "sha256":  "12081DE17A30CC28C577577EEB00D5DBDB1464774FE2B46B22AE71133CD8BBC0",
+                                  "file_name":  "cabbage.png",
+                                  "canonical_key":  "cabbage",
+                                  "local_uri":  "file:///android_asset/metadata/crops_images/cabbage.png"
+                              },
+                  "lettuce":  {
+                                  "size_kb":  2604.7,
+                                  "sha256":  "F843E3E9A67C8F127DF8DE35535C7A1C558FC5D5764C6EFF718FF6EFD9629AC0",
+                                  "file_name":  "lettuce.png",
+                                  "canonical_key":  "lettuce",
+                                  "local_uri":  "file:///android_asset/metadata/crops_images/lettuce.png"
+                              },
+                  "carrot":  {
+                                 "size_kb":  2708.24,
+                                 "sha256":  "95B8812E2C22250482B38FF21A5AC1614BA1A69CAD5B16095640BEFE665F38AA",
+                                 "file_name":  "carrot.png",
+                                 "canonical_key":  "carrot",
+                                 "local_uri":  "file:///android_asset/metadata/crops_images/carrot.png"
+                             },
+                  "sitaw":  {
+                                "size_kb":  2801.39,
+                                "sha256":  "4D3F026B7A1643E24296AE0C71BBE01E09F44EDE68ED116182EFE0D745396C71",
+                                "file_name":  "sitaw.png",
+                                "canonical_key":  "sitaw",
+                                "local_uri":  "file:///android_asset/metadata/crops_images/sitaw.png"
+                            },
+                  "kangkong":  {
+                                   "size_kb":  2700.49,
+                                   "sha256":  "AFF170F53ECB4C525DE9DB8E29BCB72CDBFC6077F2AC71136E6F85BCC7A78B98",
+                                   "file_name":  "kangkong.png",
+                                   "canonical_key":  "kangkong",
+                                   "local_uri":  "file:///android_asset/metadata/crops_images/kangkong.png"
+                               },
+                  "pumpkin":  {
+                                  "size_kb":  2745.68,
+                                  "sha256":  "5F9FC0D0515FDA7C2BD7FCF1396647E308CBB9124BDC0EEBA78FF02468DD73EA",
+                                  "file_name":  "pumpkin.png",
+                                  "canonical_key":  "pumpkin",
+                                  "local_uri":  "file:///android_asset/metadata/crops_images/pumpkin.png"
+                              },
+                  "pechay":  {
+                                 "size_kb":  2687.1,
+                                 "sha256":  "17EDB2944CC0903F3ACD84E256E2B9203760C53EA2BBB4D3AB5BF75DCD33AF47",
+                                 "file_name":  "pechay.png",
+                                 "canonical_key":  "pechay",
+                                 "local_uri":  "file:///android_asset/metadata/crops_images/pechay.png"
+                             },
+                  "pipino":  {
+                                 "size_kb":  2691.53,
+                                 "sha256":  "1CEDD6CCEF511408A81385C11C6F50300C7393B3D5823283FABB86F83FA48264",
+                                 "file_name":  "pipino.png",
+                                 "canonical_key":  "pipino",
+                                 "local_uri":  "file:///android_asset/metadata/crops_images/pipino.png"
+                             },
+                  "ampalaya":  {
+                                   "size_kb":  2806.94,
+                                   "sha256":  "2634AD55ECE44E6C0A13799E387B803479B7D7AEAC0BD564FF2BD93DA6F7D257",
+                                   "file_name":  "ampalaya.png",
+                                   "canonical_key":  "ampalaya",
+                                   "local_uri":  "file:///android_asset/metadata/crops_images/ampalaya.png"
+                               },
+                  "okra":  {
+                               "size_kb":  2763.62,
+                               "sha256":  "B3949AF5652452E54BDFEB8708DF2DE780B7A5921784BEC7E7F349289397A5B1",
+                               "file_name":  "okra.png",
+                               "canonical_key":  "okra",
+                               "local_uri":  "file:///android_asset/metadata/crops_images/okra.png"
+                           },
+                  "tomato":  {
+                                 "size_kb":  2551.8,
+                                 "sha256":  "DCFFB5EA1D6BD72E68343BAB3FBEB37AAB0630369FC1C51730B668E7DDD1C8D0",
+                                 "file_name":  "tomato.png",
+                                 "canonical_key":  "tomato",
+                                 "local_uri":  "file:///android_asset/metadata/crops_images/tomato.png"
+                             },
+                  "sili":  {
+                               "size_kb":  2659.11,
+                               "sha256":  "6447B2FA153A4816852167368648427057020D79C1221EB49FDCC9F5319E10CE",
+                               "file_name":  "sili.png",
+                               "canonical_key":  "sili",
+                               "local_uri":  "file:///android_asset/metadata/crops_images/sili.png"
+                           },
+                  "corn":  {
+                               "size_kb":  2622.56,
+                               "sha256":  "400465E894EB1670D0C9E26C3D1FD67228618B598C255470156559EBA790F313",
+                               "file_name":  "corn.png",
+                               "canonical_key":  "corn",
+                               "local_uri":  "file:///android_asset/metadata/crops_images/corn.png"
+                           }
+              },
+    "author":  "MapTanim Creative \u0026 Agricultural Development Team",
+    "version":  "1.0.0"
+}

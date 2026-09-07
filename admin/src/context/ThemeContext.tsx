@@ -6,19 +6,27 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  isDarkMode: false,
+  isDarkMode: true,
   toggleTheme: () => {},
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
-    // Static white mode across entire admin system
-    document.documentElement.classList.remove('dark');
-    localStorage.removeItem('maptanim_admin_theme');
+    // Permanent mobile dark theme
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
+    document.documentElement.style.backgroundColor = '#0b151a';
+    document.documentElement.style.colorScheme = 'dark';
+    try {
+      localStorage.removeItem('theme');
+      localStorage.setItem('maptanim_admin_theme', 'dark');
+    } catch {
+      // ignore storage access errors
+    }
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode: false, toggleTheme: () => {} }}>
+    <ThemeContext.Provider value={{ isDarkMode: true, toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );
