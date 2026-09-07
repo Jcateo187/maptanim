@@ -23,15 +23,10 @@ data class HomeUiState(
     val farmSummary: FarmSummary = FarmSummary(),
     val plots: List<PlotRenderData> = emptyList(),
     val notificationCount: Int = 0,
+    val systemUpdateAvailable: Boolean = false,
+    val systemUpdateTitle: String? = null,
     val canvasMode: CanvasMode = CanvasMode.VIEW,
-    val weatherInfo: WeatherInfo? = null,
     val error: String? = null
-)
-
-data class WeatherInfo(
-    val temperatureCelsius: Float,
-    val description: String,
-    val iconCode: String
 )
 
 class HomeViewModel(
@@ -99,9 +94,13 @@ class HomeViewModel(
     }
 
     private fun resolveUserAndLoadFarm() {
-        // Load real profile data from Supabase (cloud) for bound accounts
+        // Load real profile data and latest information updates from Supabase (cloud)
         viewModelScope.launch {
             (RepositoryProvider.userRepository as? com.maptanim.app.data.repository.UserRepositoryImpl)?.loadUserProfile()
+            RepositoryProvider.userRepository.refreshNotifications()
+            try {
+                RepositoryProvider.cropRepository.refreshCrops()
+            } catch (_: Exception) {}
         }
         val user = SupabaseClient.client.auth.currentUserOrNull()
         val farmerId = user?.id ?: "guest"
@@ -175,6 +174,27 @@ class HomeViewModel(
             }
 
             launch {
+                RepositoryProvider.notificationRepository.observeAllNotifications(farmerId).collect { notifs ->
+                    val systemUpdate = notifs.firstOrNull { notif ->
+                        !notif.isRead && (
+                            notif.title.contains("System", ignoreCase = true) ||
+                            notif.title.contains("Update", ignoreCase = true) ||
+                            notif.title.contains("Pananim", ignoreCase = true) ||
+                            notif.title.contains("Crop", ignoreCase = true) ||
+                            (notif.body?.contains("crop", ignoreCase = true) == true) ||
+                            (notif.body?.contains("update", ignoreCase = true) == true)
+                        )
+                    }
+                    _uiState.update {
+                        it.copy(
+                            systemUpdateAvailable = systemUpdate != null,
+                            systemUpdateTitle = systemUpdate?.title
+                        )
+                    }
+                }
+            }
+
+            launch {
                 combine(
                     getFarmPlotsUseCase(farmId),
                     getTodayTasksUseCase(farmId, today)
@@ -195,6 +215,30 @@ class HomeViewModel(
                     _uiState.update { it.copy(plots = renderPlots, isLoading = false) }
                 }
             }
+        }
+    }
+
+    fun downloadSystemUpdate() {
+        viewModelScope.launch {
+            try {
+                RepositoryProvider.cropRepository.refreshCrops()
+                val user = SupabaseClient.client.auth.currentUserOrNull()
+                val farmerId = user?.id ?: "guest"
+                val notifs = RepositoryProvider.notificationRepository.observeAllNotifications(farmerId).firstOrNull() ?: emptyList()
+                notifs.filter { notif ->
+                    !notif.isRead && (
+                        notif.title.contains("System", ignoreCase = true) ||
+                        notif.title.contains("Update", ignoreCase = true) ||
+                        notif.title.contains("Pananim", ignoreCase = true) ||
+                        notif.title.contains("Crop", ignoreCase = true) ||
+                        (notif.body?.contains("crop", ignoreCase = true) == true) ||
+                        (notif.body?.contains("update", ignoreCase = true) == true)
+                    )
+                }.forEach { notif ->
+                    RepositoryProvider.notificationRepository.markRead(notif.id)
+                }
+                _uiState.update { it.copy(systemUpdateAvailable = false, systemUpdateTitle = null) }
+            } catch (_: Exception) {}
         }
     }
 

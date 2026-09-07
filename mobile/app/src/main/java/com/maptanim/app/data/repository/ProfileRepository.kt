@@ -164,5 +164,17 @@ class ProfileRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun getAllProfiles(): List<ProfileDto> {
+        return try {
+            SupabaseClient.client
+                .from("profiles")
+                .select()
+                .decodeList<ProfileDto>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 }
 

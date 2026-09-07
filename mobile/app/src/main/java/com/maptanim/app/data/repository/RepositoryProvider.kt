@@ -6,6 +6,7 @@ import com.maptanim.app.domain.repository.CommunityRepository
 import com.maptanim.app.domain.repository.CropPlotRepository
 import com.maptanim.app.domain.repository.CropRepository
 import com.maptanim.app.domain.repository.CropZoneRepository
+import com.maptanim.app.domain.repository.DssRuleRepository
 import com.maptanim.app.domain.repository.FarmObjectRepository
 import com.maptanim.app.domain.repository.FarmRepository
 import com.maptanim.app.domain.repository.KnowledgeBaseRepository
@@ -22,7 +23,11 @@ object RepositoryProvider {
     fun initialize(context: Context) {
         appContext = context.applicationContext
         if (database == null) {
-            database = AppDatabase.getInstance(context)
+            try {
+                database = AppDatabase.getInstance(context)
+            } catch (e: Throwable) {
+                android.util.Log.e("RepositoryProvider", "Failed to initialize AppDatabase: ${e.message}", e)
+            }
         }
     }
 
@@ -64,6 +69,9 @@ object RepositoryProvider {
     }
     val activityRepository: com.maptanim.app.domain.repository.ActivityRepository by lazy {
         ActivityRepositoryImpl(database!!.activityDao())
+    }
+    val dssRuleRepository: DssRuleRepository by lazy {
+        DssRuleRepositoryImpl(database?.dssRuleDao())
     }
 
     suspend fun clearAllLocalCache() {

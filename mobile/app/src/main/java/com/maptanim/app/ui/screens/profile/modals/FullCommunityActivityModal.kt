@@ -1,6 +1,7 @@
 package com.maptanim.app.ui.screens.profile.modals
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,28 +32,60 @@ import com.maptanim.app.ui.screens.profile.utils.formatActivityTime
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 
+enum class CommunityActivityFilter {
+    ALL,
+    MY_POSTS,
+    REACTED
+}
+
 @Composable
 fun FullCommunityActivityModal(
     posts: List<CommunityPost>,
+    currentUserNickname: String = "",
+    currentUserId: String? = null,
     onDismiss: () -> Unit
 ) {
+    var activityFilter by remember { mutableStateOf(CommunityActivityFilter.ALL) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedDateFilter by remember { mutableStateOf<String?>(null) }
     var showDatePickerModal by remember { mutableStateOf(false) }
     var currentPage by remember { mutableStateOf(1) }
     val itemsPerPage = 5
 
-    val filteredPosts = remember(posts, searchQuery, selectedDateFilter) {
+    fun isPostAuthoredByMe(post: CommunityPost): Boolean {
+        return (currentUserId != null && post.authorId != null && post.authorId == currentUserId) ||
+                (currentUserNickname.isNotBlank() && post.authorName.equals(currentUserNickname, ignoreCase = true)) ||
+                post.authorName.equals("You", ignoreCase = true)
+    }
+
+    val myPostsCount = remember(posts, currentUserNickname, currentUserId) {
+        posts.count { isPostAuthoredByMe(it) }
+    }
+    val reactedCount = remember(posts, currentUserNickname, currentUserId) {
+        posts.count { it.isLikedByMe && !isPostAuthoredByMe(it) }
+    }
+
+    val filteredPosts = remember(posts, searchQuery, selectedDateFilter, activityFilter, currentUserNickname, currentUserId) {
         posts.filter { post ->
+            val isAuthored = isPostAuthoredByMe(post)
+            val isReacted = post.isLikedByMe
+
+            val matchesFilter = when (activityFilter) {
+                CommunityActivityFilter.ALL -> true
+                CommunityActivityFilter.MY_POSTS -> isAuthored
+                CommunityActivityFilter.REACTED -> isReacted && !isAuthored
+            }
+
             val matchesSearch = searchQuery.isBlank() || (
                 post.title.contains(searchQuery, ignoreCase = true) ||
                 post.content.contains(searchQuery, ignoreCase = true) ||
-                post.category.contains(searchQuery, ignoreCase = true)
+                post.category.contains(searchQuery, ignoreCase = true) ||
+                post.authorName.contains(searchQuery, ignoreCase = true)
             )
             val matchesDate = selectedDateFilter.isNullOrBlank() || (
                 post.timestamp.contains(selectedDateFilter!!)
             )
-            matchesSearch && matchesDate
+            matchesFilter && matchesSearch && matchesDate
         }
     }
 
@@ -98,6 +131,55 @@ fun FullCommunityActivityModal(
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                    }
+                }
+
+                // Filter Pills: All Activity vs My Posts vs Reacted
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1B2418))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Surface(
+                        onClick = { activityFilter = CommunityActivityFilter.ALL; currentPage = 1 },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (activityFilter == CommunityActivityFilter.ALL) ForestGreen else Color.Transparent
+                    ) {
+                        Text(
+                            text = "All (${posts.size})",
+                            fontSize = 11.sp,
+                            fontWeight = if (activityFilter == CommunityActivityFilter.ALL) FontWeight.Bold else FontWeight.Normal,
+                            color = if (activityFilter == CommunityActivityFilter.ALL) White else White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                    Surface(
+                        onClick = { activityFilter = CommunityActivityFilter.MY_POSTS; currentPage = 1 },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (activityFilter == CommunityActivityFilter.MY_POSTS) ForestGreen else Color.Transparent
+                    ) {
+                        Text(
+                            text = "✍️ My Posts ($myPostsCount)",
+                            fontSize = 11.sp,
+                            fontWeight = if (activityFilter == CommunityActivityFilter.MY_POSTS) FontWeight.Bold else FontWeight.Normal,
+                            color = if (activityFilter == CommunityActivityFilter.MY_POSTS) White else White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                    Surface(
+                        onClick = { activityFilter = CommunityActivityFilter.REACTED; currentPage = 1 },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (activityFilter == CommunityActivityFilter.REACTED) ForestGreen else Color.Transparent
+                    ) {
+                        Text(
+                            text = "❤️ Reacted ($reactedCount)",
+                            fontSize = 11.sp,
+                            fontWeight = if (activityFilter == CommunityActivityFilter.REACTED) FontWeight.Bold else FontWeight.Normal,
+                            color = if (activityFilter == CommunityActivityFilter.REACTED) White else White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
                     }
                 }
 
@@ -168,7 +250,7 @@ fun FullCommunityActivityModal(
                             }
                         }
                         Text(
-                            text = "Showing all forum activity on $selectedDateFilter",
+                            text = "Showing forum activity on $selectedDateFilter",
                             fontSize = 10.sp,
                             color = White.copy(alpha = 0.6f)
                         )
@@ -185,7 +267,7 @@ fun FullCommunityActivityModal(
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = if (selectedDateFilter != null) "No forum activity found on $selectedDateFilter." else "No community posts match your search filter.",
+                                    text = if (selectedDateFilter != null) "No forum activity found on $selectedDateFilter." else "No forum activity matches your current filter.",
                                     color = White.copy(alpha = 0.6f),
                                     fontSize = 13.sp
                                 )
@@ -193,6 +275,7 @@ fun FullCommunityActivityModal(
                         }
                     } else {
                         items(pageItems) { post ->
+                            val isAuthored = isPostAuthoredByMe(post)
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = Color(0xFF1B2317),
@@ -205,10 +288,56 @@ fun FullCommunityActivityModal(
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(post.title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = White)
-                                        Text(post.category, fontSize = 10.sp, color = ForestGreen, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            text = post.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = White,
+                                            modifier = Modifier.weight(1f, fill = false),
+                                            maxLines = 1
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            if (isAuthored) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = ForestGreen.copy(alpha = 0.22f)
+                                                ) {
+                                                    Text(
+                                                        text = "✍️ Your Post",
+                                                        fontSize = 9.sp,
+                                                        color = ForestGreen,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            } else {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = Color(0xFFFF5252).copy(alpha = 0.18f)
+                                                ) {
+                                                    Text(
+                                                        text = "❤️ Reacted",
+                                                        fontSize = 9.sp,
+                                                        color = Color(0xFFFF7272),
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = post.category,
+                                                fontSize = 10.sp,
+                                                color = ForestGreen.copy(alpha = 0.85f),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
                                     }
                                     Text(post.content, fontSize = 11.sp, color = White.copy(alpha = 0.8f))
                                     Row(
@@ -216,9 +345,15 @@ fun FullCommunityActivityModal(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
                                             Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
                                             Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                            if (!isAuthored && post.authorName.isNotBlank()) {
+                                                Text("• by ${post.authorName}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                            }
                                         }
                                         Text("🕒 ${formatActivityTime(post.timestamp)}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = ForestGreen)
                                     }

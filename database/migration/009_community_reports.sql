@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS public.community_reports (
     id                  TEXT            PRIMARY KEY DEFAULT ('rep_' || substr(md5(random()::text || clock_timestamp()::text), 1, 16)),
     reporter_id         UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
-    reporter_name       VARCHAR(150)    NOT NULL DEFAULT 'Farmer Member',
+    reporter_name       VARCHAR(150)    NOT NULL,
     target_type         VARCHAR(50)     NOT NULL, -- 'POST', 'USER', 'COMMENT'
     target_id           TEXT            NOT NULL,
     target_name         VARCHAR(150)    NOT NULL,
@@ -42,10 +42,3 @@ CREATE POLICY "community_reports_delete_all" ON public.community_reports
 CREATE INDEX IF NOT EXISTS idx_community_reports_target ON public.community_reports(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_community_reports_status ON public.community_reports(status);
 CREATE INDEX IF NOT EXISTS idx_community_reports_created ON public.community_reports(created_at DESC);
-
--- 5. Seed Sample Community Moderation Reports
-INSERT INTO public.community_reports (id, reporter_name, target_type, target_id, target_name, target_content, reason, details, status, created_at)
-VALUES
-    ('rep_1', 'Ka Ryan Vasquez', 'POST', 'post_3', 'Aling Maria Juanillo', '🚜 Bamboo Stakes & Insect Netting Seed Swap — Extra Sitaw Seeds', 'Spam / Commercial Selling', 'Selling untreated seeds without phytosanitary clearance or certified label.', 'PENDING', NOW() - INTERVAL '3 hours'),
-    ('rep_2', 'Farmer Partner', 'USER', 'james', 'Farmer James', 'Farmer James direct messaging unsolicited links in community chat.', 'Harassment / Unsolicited Direct Messaging', 'Sent repetitive unsolicited promotional messages in direct chat.', 'PENDING', NOW() - INTERVAL '1 day')
-ON CONFLICT (id) DO NOTHING;

@@ -57,11 +57,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1551754655-cd27e38d2076",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/corn.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/corn.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "93c13c7444407b0681655326a8c30920a7186853b5a6a2b396279d521abdc46a"
   }
 }

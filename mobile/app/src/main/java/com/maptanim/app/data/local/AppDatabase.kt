@@ -18,9 +18,14 @@ import com.maptanim.app.data.local.entity.*
         NotificationEntity::class,
         SyncQueueEntity::class,
         HarvestEntity::class,
-        ActivityEntity::class
+        ActivityEntity::class,
+        FarmTileEntity::class,
+        TilePlantingEntity::class,
+        PlantingMonitorEntity::class,
+        PlantingHarvestEntity::class,
+        DssRuleEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,6 +39,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncQueueDao(): SyncQueueDao
     abstract fun harvestDao(): HarvestDao
     abstract fun activityDao(): ActivityDao
+    abstract fun farmTileDao(): FarmTileDao
+    abstract fun tilePlantingDao(): TilePlantingDao
+    abstract fun plantingMonitorDao(): PlantingMonitorDao
+    abstract fun plantingHarvestDao(): PlantingHarvestDao
+    abstract fun dssRuleDao(): DssRuleDao
 
     companion object {
         @Volatile

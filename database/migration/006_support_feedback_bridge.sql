@@ -35,5 +35,5 @@ CREATE POLICY "feedback_update_all" ON public.feedback FOR UPDATE USING (true);
 
 -- 5. Seed initial demonstration feedback item if table is empty
 INSERT INTO public.feedback (farmer_name, farm_name, category, subject, message, status)
-SELECT 'Juan Dela Cruz', 'Dela Cruz Organic Farm', 'PEST_DISEASE', 'Aphid Infestation on Tomato Beds', 'Noticed yellowing leaves and small insects under tomato leaves in Plot B. Requesting extension advice.', 'PENDING'
+SELECT 'Juan Dela Cruz', 'Dela Cruz Organic Farm', 'PEST_DISEASE', 'Aphid Infestation on Tomato Beds', 'Noticed yellowing leaves and small insects under tomato leaves in Plot B. Requesting advice.', 'PENDING'
 WHERE NOT EXISTS (SELECT 1 FROM public.feedback);

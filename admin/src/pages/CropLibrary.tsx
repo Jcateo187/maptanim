@@ -1,10 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Plus, Edit2, Trash2, Sprout, Droplets, Calendar, Filter, Bug, Mountain } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  Search, Plus, Edit2, Trash2, Sprout, Droplets, Calendar, Filter, Bug, Mountain,
+  UploadCloud, Image as ImageIcon, Check, RefreshCw, Smartphone, AlertCircle,
+  ExternalLink, Sparkles, Layers, ShieldCheck, Link2, Cloud, Settings, Terminal
+} from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Crop, SoilType, SeasonType, CategoryType, PestGuide, SoilGuide } from '../types';
 import { apiService } from '../services/api';
 import { MOCK_PESTS, MOCK_SOILS } from '../services/mockData';
+import { CropBreakdownModal } from '../components/crops/CropBreakdownModal';
+import { MobileCropBreakdownPreview } from '../components/crops/MobileCropBreakdownPreview';
+
+const OFFICIAL_METADATA_PRESETS = [
+  { label: 'Tomato (Kamatis)', url: '/metadata/crops_images/tomato.png', fileName: 'tomato.png' },
+  { label: 'Eggplant (Talong)', url: '/metadata/crops_images/eggplant.png', fileName: 'eggplant.png' },
+  { label: 'Chili Pepper (Sili)', url: '/metadata/crops_images/sili.png', fileName: 'sili.png' },
+  { label: 'Cabbage (Repolyo)', url: '/metadata/crops_images/cabbage.png', fileName: 'cabbage.png' },
+  { label: 'Pechay (Bok Choy)', url: '/metadata/crops_images/pechay.png', fileName: 'pechay.png' },
+  { label: 'Red Onion (Sibuyas)', url: '/metadata/crops_images/onion.png', fileName: 'onion.png' },
+  { label: 'Carrot (Karot)', url: '/metadata/crops_images/carrot.png', fileName: 'carrot.png' },
+  { label: 'Yardlong Bean (Sitaw)', url: '/metadata/crops_images/sitaw.png', fileName: 'sitaw.png' },
+  { label: 'Lettuce (Litsugas)', url: '/metadata/crops_images/lettuce.png', fileName: 'lettuce.png' },
+  { label: 'Cucumber (Pipino)', url: '/metadata/crops_images/pipino.png', fileName: 'pipino.png' },
+  { label: 'Bitter Gourd (Ampalaya)', url: '/metadata/crops_images/ampalaya.png', fileName: 'ampalaya.png' },
+  { label: 'Okra (Okra)', url: '/metadata/crops_images/okra.png', fileName: 'okra.png' },
+  { label: 'Sweet Corn (Mais)', url: '/metadata/crops_images/corn.png', fileName: 'corn.png' },
+  { label: 'Squash (Kalabasa)', url: '/metadata/crops_images/pumpkin.png', fileName: 'pumpkin.png' },
+  { label: 'Water Spinach (Kangkong)', url: '/metadata/crops_images/kangkong.png', fileName: 'kangkong.png' },
+];
+
+const ALL_SOIL_OPTIONS: SoilType[] = ['LOAM', 'CLAY', 'SANDY', 'SILTY', 'PEATY', 'CHALKY'];
 
 export const CropLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'CROPS' | 'PESTS' | 'SOILS'>('CROPS');
@@ -19,18 +45,61 @@ export const CropLibrary: React.FC = () => {
   const [selectedPest, setSelectedPest] = useState<PestGuide | null>(null);
   const [selectedSoil, setSelectedSoil] = useState<SoilGuide | null>(null);
 
+  // Mobile Crop Breakdown Dialog State
+  const [selectedCropForBreakdown, setSelectedCropForBreakdown] = useState<Crop | null>(null);
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState<boolean>(false);
+
+  const openBreakdownModal = (crop: Crop) => {
+    setSelectedCropForBreakdown(crop);
+    setIsBreakdownModalOpen(true);
+  };
+
+  const closeBreakdownModal = () => {
+    setIsBreakdownModalOpen(false);
+    setSelectedCropForBreakdown(null);
+  };
+
   // Form State
   const [name, setName] = useState('');
+  const [localName, setLocalName] = useState('');
   const [botanicalName, setBotanicalName] = useState('');
+  const [taxonomicFamily, setTaxonomicFamily] = useState('');
   const [category, setCategory] = useState<CategoryType>('ROOT');
   const [idealSoil, setIdealSoil] = useState<SoilType>('LOAM');
+  const [suitableSoils, setSuitableSoils] = useState<SoilType[]>(['LOAM']);
   const [season, setSeason] = useState<SeasonType>('YEAR_ROUND');
   const [daysToHarvest, setDaysToHarvest] = useState(75);
+  const [wateringIntervalDays, setWateringIntervalDays] = useState(2);
+  const [fertilizeIntervalDays, setFertilizeIntervalDays] = useState(14);
+  const [optimalPhMin, setOptimalPhMin] = useState(6.0);
+  const [optimalPhMax, setOptimalPhMax] = useState(6.8);
   const [waterReq, setWaterReq] = useState(40);
   const [nVal, setNVal] = useState(80);
   const [pVal, setPVal] = useState(60);
   const [kVal, setKVal] = useState(90);
+  const [stageSprout, setStageSprout] = useState(5);
+  const [stageSeedling, setStageSeedling] = useState(12);
+  const [stageVegetative, setStageVegetative] = useState(20);
+  const [stageFlowering, setStageFlowering] = useState(16);
+  const [stageHarvest, setStageHarvest] = useState(7);
+  const [harvestIndicators, setHarvestIndicators] = useState('');
+  const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [companionGoodStr, setCompanionGoodStr] = useState('Tomato, Lettuce');
+  const [companionBadStr, setCompanionBadStr] = useState('Fennel');
+  const [broadcastToMobile, setBroadcastToMobile] = useState<boolean>(true);
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  // Supabase Storage Manager State
+  const [isStorageModalOpen, setIsStorageModalOpen] = useState<boolean>(false);
+  const [isUploadingTestImage, setIsUploadingTestImage] = useState<boolean>(false);
+  const [testUploadUrl, setTestUploadUrl] = useState<string | null>(null);
+  const [isSyncingBatch, setIsSyncingBatch] = useState<boolean>(false);
+  const [syncBatchProgress, setSyncBatchProgress] = useState<string | null>(null);
+  const [syncBatchResult, setSyncBatchResult] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCrops = async () => {
     setLoading(true);
@@ -43,34 +112,100 @@ export const CropLibrary: React.FC = () => {
     loadCrops();
   }, []);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setUploadStatus('Uploading image to Supabase Storage...');
+    try {
+      const url = await apiService.uploadCropImage(file);
+      setImageUrl(url);
+      setUploadStatus('✔ Image uploaded successfully!');
+      setTimeout(() => setUploadStatus(null), 3000);
+    } catch (err) {
+      setUploadStatus('✘ Failed to upload image');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleTestUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingTestImage(true);
+    setTestUploadUrl(null);
+    try {
+      const url = await apiService.uploadCropImage(file);
+      setTestUploadUrl(url);
+    } catch (err: any) {
+      alert('Upload test failed: ' + (err?.message || err));
+    } finally {
+      setIsUploadingTestImage(false);
+    }
+  };
+
+  const handleBatchSyncMetadataImages = async () => {
+    setIsSyncingBatch(true);
+    setSyncBatchProgress('Starting batch sync...');
+    setSyncBatchResult(null);
+    try {
+      const res = await apiService.syncMetadataImagesToStorage((current, total, cropName) => {
+        setSyncBatchProgress(`Uploading ${current}/${total}: ${cropName}...`);
+      });
+      setSyncBatchResult(`✔ Successfully synced ${res.results.length} official crop images to Supabase Storage!`);
+      loadCrops();
+    } catch (err: any) {
+      setSyncBatchResult(`✘ Batch sync failed: ${err.message || err}`);
+    } finally {
+      setIsSyncingBatch(false);
+      setSyncBatchProgress(null);
+    }
+  };
+
   const handleSaveCrop = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const goodCompanions = companionGoodStr.split(',').map((s) => s.trim()).filter(Boolean);
+    const badCompanions = companionBadStr.split(',').map((s) => s.trim()).filter(Boolean);
+
+    const cropPayload = {
+      name,
+      localName: localName || undefined,
+      botanicalName,
+      taxonomicFamily: taxonomicFamily || undefined,
+      category,
+      idealSoil,
+      suitableSoils,
+      season,
+      daysToHarvest,
+      wateringIntervalDays,
+      fertilizeIntervalDays,
+      optimalPhMin,
+      optimalPhMax,
+      waterReqMmPerWeek: waterReq,
+      npkRequirement: { nitrogen: nVal, phosphorus: pVal, potassium: kVal },
+      growthStages: {
+        sprout: stageSprout,
+        seedling: stageSeedling,
+        vegetative: stageVegetative,
+        flowering: stageFlowering,
+        harvest: stageHarvest,
+      },
+      companionCropsGood: goodCompanions,
+      companionCropsBad: badCompanions,
+      harvestIndicators: harvestIndicators || `Harvest at peak maturity around ${daysToHarvest} days`,
+      description: description || `${name} (${localName || ''}) - Field research verified crop variety.`,
+      imageUrl: imageUrl || '/metadata/crops_images/tomato.png',
+    };
+
     if (editingCrop) {
-      await apiService.updateCrop(editingCrop.id, {
-        name,
-        botanicalName,
-        category,
-        idealSoil,
-        season,
-        daysToHarvest,
-        waterReqMmPerWeek: waterReq,
-        npkRequirement: { nitrogen: nVal, phosphorus: pVal, potassium: kVal },
-        imageUrl: imageUrl || editingCrop.imageUrl
-      });
+      await apiService.updateCrop(editingCrop.id, cropPayload, broadcastToMobile);
+      if (selectedCropForBreakdown?.id === editingCrop.id) {
+        setSelectedCropForBreakdown({ ...editingCrop, ...cropPayload, id: editingCrop.id });
+      }
     } else {
-      await apiService.addCrop({
-        name,
-        botanicalName,
-        category,
-        idealSoil,
-        season,
-        daysToHarvest,
-        waterReqMmPerWeek: waterReq,
-        npkRequirement: { nitrogen: nVal, phosphorus: pVal, potassium: kVal },
-        companionCropsGood: ['Tomato', 'Lettuce'],
-        companionCropsBad: ['Fennel'],
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80',
-      });
+      await apiService.addCrop(cropPayload, broadcastToMobile);
     }
     closeModal();
     loadCrops();
@@ -86,32 +221,68 @@ export const CropLibrary: React.FC = () => {
   const openAddModal = () => {
     setEditingCrop(null);
     setName('');
+    setLocalName('');
     setBotanicalName('');
+    setTaxonomicFamily('');
     setCategory('ROOT');
     setIdealSoil('LOAM');
+    setSuitableSoils(['LOAM']);
     setSeason('YEAR_ROUND');
-    setDaysToHarvest(75);
+    setDaysToHarvest(65);
+    setWateringIntervalDays(2);
+    setFertilizeIntervalDays(14);
+    setOptimalPhMin(6.0);
+    setOptimalPhMax(6.8);
     setWaterReq(40);
     setNVal(80);
     setPVal(60);
     setKVal(90);
+    setStageSprout(5);
+    setStageSeedling(12);
+    setStageVegetative(20);
+    setStageFlowering(16);
+    setStageHarvest(7);
+    setHarvestIndicators('');
+    setDescription('');
     setImageUrl('');
+    setCompanionGoodStr('Tomato, Lettuce');
+    setCompanionBadStr('Fennel');
+    setBroadcastToMobile(true);
+    setUploadStatus(null);
     setIsAddModalOpen(true);
   };
 
   const openEditModal = (crop: Crop) => {
     setEditingCrop(crop);
     setName(crop.name);
+    setLocalName(crop.localName || '');
     setBotanicalName(crop.botanicalName);
+    setTaxonomicFamily(crop.taxonomicFamily || '');
     setCategory(crop.category);
     setIdealSoil(crop.idealSoil);
+    setSuitableSoils(crop.suitableSoils && crop.suitableSoils.length > 0 ? crop.suitableSoils : [crop.idealSoil]);
     setSeason(crop.season);
     setDaysToHarvest(crop.daysToHarvest);
-    setWaterReq(crop.waterReqMmPerWeek);
+    setWateringIntervalDays(crop.wateringIntervalDays || 2);
+    setFertilizeIntervalDays(crop.fertilizeIntervalDays || 14);
+    setOptimalPhMin(crop.optimalPhMin || 6.0);
+    setOptimalPhMax(crop.optimalPhMax || 6.8);
+    setWaterReq(crop.waterReqMmPerWeek || 40);
     setNVal(crop.npkRequirement.nitrogen);
     setPVal(crop.npkRequirement.phosphorus);
     setKVal(crop.npkRequirement.potassium);
+    setStageSprout(crop.growthStages?.sprout || 5);
+    setStageSeedling(crop.growthStages?.seedling || 12);
+    setStageVegetative(crop.growthStages?.vegetative || 20);
+    setStageFlowering(crop.growthStages?.flowering || 16);
+    setStageHarvest(crop.growthStages?.harvest || 7);
+    setHarvestIndicators(crop.harvestIndicators || '');
+    setDescription(crop.description || '');
     setImageUrl(crop.imageUrl);
+    setCompanionGoodStr(crop.companionCropsGood ? crop.companionCropsGood.join(', ') : '');
+    setCompanionBadStr(crop.companionCropsBad ? crop.companionCropsBad.join(', ') : '');
+    setBroadcastToMobile(true);
+    setUploadStatus(null);
     setIsAddModalOpen(true);
   };
 
@@ -120,8 +291,15 @@ export const CropLibrary: React.FC = () => {
     setEditingCrop(null);
   };
 
+  const toggleSuitableSoil = (soil: SoilType) => {
+    setSuitableSoils((prev) =>
+      prev.includes(soil) ? (prev.length > 1 ? prev.filter((s) => s !== soil) : prev) : [...prev, soil]
+    );
+  };
+
   const filteredCrops = crops.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (c.localName && c.localName.toLowerCase().includes(search.toLowerCase())) ||
                           c.botanicalName.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === 'ALL' || c.category === categoryFilter;
     return matchesSearch && matchesCategory;
@@ -180,10 +358,27 @@ export const CropLibrary: React.FC = () => {
         </div>
 
         {activeTab === 'CROPS' && (
-          <button onClick={openAddModal} className="btn btn-primary text-xs h-9 px-3">
-            <Plus className="w-4 h-4" />
-            <span>Add Crop Record</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setTestUploadUrl(null);
+                setIsStorageModalOpen(true);
+              }}
+              className="btn btn-secondary text-xs h-9 px-3 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10 transition-all"
+              title="Supabase Storage Manager"
+            >
+              <Cloud className="w-4 h-4" />
+              <span className="hidden sm:inline">Storage Manager</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 font-bold text-emerald-600 dark:text-emerald-400">
+                Supabase Storage
+              </span>
+            </button>
+            <button onClick={openAddModal} className="btn btn-primary text-xs h-9 px-3">
+              <Plus className="w-4 h-4" />
+              <span>Add Crop Record</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -227,21 +422,36 @@ export const CropLibrary: React.FC = () => {
       {activeTab === 'CROPS' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCrops.map((crop) => (
-            <div key={crop.id} className="glass-card overflow-hidden group hover:border-emerald-500/50 transition-all duration-200 flex flex-col justify-between">
+            <div
+              key={crop.id}
+              onClick={() => openBreakdownModal(crop)}
+              className="glass-card overflow-hidden group hover:border-emerald-500/50 transition-all duration-200 flex flex-col justify-between cursor-pointer"
+            >
               <div>
                 <div className="h-44 relative overflow-hidden bg-slate-900">
                   <img
                     src={crop.imageUrl}
                     alt={crop.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/metadata/crops_images/tomato.png';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
                     <Badge variant="purple">{crop.category}</Badge>
+                    {crop.season && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">
+                        {crop.season}
+                      </span>
+                    )}
                   </div>
                   <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-base font-extrabold text-white leading-tight">
-                      {crop.name}
+                    <h3 className="text-base font-extrabold text-white leading-tight flex items-baseline gap-1.5">
+                      <span>{crop.name}</span>
+                      {crop.localName && (
+                        <span className="text-xs text-emerald-300 font-medium">({crop.localName})</span>
+                      )}
                     </h3>
                     <p className="text-xs text-emerald-400 italic font-mono mt-0.5">
                       {crop.botanicalName}
@@ -261,7 +471,9 @@ export const CropLibrary: React.FC = () => {
                       <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
                         <Droplets className="w-3 h-3 text-blue-500" /> Water
                       </p>
-                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.waterReqMmPerWeek} mm/wk</p>
+                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">
+                        Every {crop.wateringIntervalDays || 2}d
+                      </p>
                     </div>
                     <div className="text-center">
                       <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
@@ -277,23 +489,48 @@ export const CropLibrary: React.FC = () => {
                       N:{crop.npkRequirement.nitrogen} • P:{crop.npkRequirement.phosphorus} • K:{crop.npkRequirement.potassium}
                     </span>
                   </div>
+
+                  <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between text-[11px]">
+                    <span className="text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1">
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+                      Inspect Mobile UI Breakdown
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      View &rarr;
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/60">
-                <span className="text-[11px] text-slate-400">
-                  Active Plots: <strong className="text-slate-700 dark:text-slate-200 font-mono">{crop.activePlantingCount || 0}</strong>
-                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openBreakdownModal(crop);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition shadow-sm"
+                  title="Inspect Full Mobile UI Breakdown"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Breakdown</span>
+                </button>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => openEditModal(crop)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(crop);
+                    }}
                     className="p-2 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    title="Edit Crop"
+                    title="Edit Crop Profile"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteCrop(crop.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCrop(crop.id);
+                    }}
                     className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                     title="Delete Crop"
                   >
@@ -402,118 +639,7 @@ export const CropLibrary: React.FC = () => {
         </div>
       )}
 
-      {/* Add / Edit Crop Modal */}
-      {isAddModalOpen && (
-        <Modal
-          isOpen={isAddModalOpen}
-          onClose={closeModal}
-          title={editingCrop ? 'Edit Crop Profile' : 'Add Vegetable Crop'}
-          maxWidth="lg"
-        >
-          <form onSubmit={handleSaveCrop} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Crop Name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Carrot (Karot)"
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Botanical Name</label>
-                <input
-                  type="text"
-                  required
-                  value={botanicalName}
-                  onChange={(e) => setBotanicalName(e.target.value)}
-                  placeholder="e.g. Daucus carota"
-                  className="input-field"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Real Photo Image URL</label>
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/photo-..."
-                className="input-field"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value as CategoryType)} className="input-field select-field">
-                  <option value="ROOT">ROOT</option>
-                  <option value="LEAFY">LEAFY</option>
-                  <option value="PODDED">PODDED</option>
-                  <option value="FRUIT">FRUIT</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Ideal Soil</label>
-                <select value={idealSoil} onChange={(e) => setIdealSoil(e.target.value as SoilType)} className="input-field select-field">
-                  <option value="LOAM">LOAM</option>
-                  <option value="CLAY">CLAY</option>
-                  <option value="SANDY">SANDY</option>
-                  <option value="SILTY">SILTY</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Season</label>
-                <select value={season} onChange={(e) => setSeason(e.target.value as SeasonType)} className="input-field select-field">
-                  <option value="YEAR_ROUND">YEAR_ROUND</option>
-                  <option value="DRY">DRY</option>
-                  <option value="WET">WET</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Days to Harvest</label>
-                <input type="number" required value={daysToHarvest} onChange={(e) => setDaysToHarvest(Number(e.target.value))} className="input-field" />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Water Req (mm/week)</label>
-                <input type="number" required value={waterReq} onChange={(e) => setWaterReq(Number(e.target.value))} className="input-field" />
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-2">NPK Ratio Requirement (kg/ha)</label>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <span className="text-[10px] text-slate-400">Nitrogen (N)</span>
-                  <input type="number" value={nVal} onChange={(e) => setNVal(Number(e.target.value))} className="input-field mt-0.5" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">Phosphorus (P)</span>
-                  <input type="number" value={pVal} onChange={(e) => setPVal(Number(e.target.value))} className="input-field mt-0.5" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">Potassium (K)</span>
-                  <input type="number" value={kVal} onChange={(e) => setKVal(Number(e.target.value))} className="input-field mt-0.5" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeModal} className="btn btn-secondary text-xs h-9">Cancel</button>
-              <button type="submit" className="btn btn-primary text-xs h-9">
-                {editingCrop ? 'Save Changes' : 'Create Crop Record'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
 
       {/* Pest Detail Modal */}
       {selectedPest && (
@@ -534,23 +660,23 @@ export const CropLibrary: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 space-y-1">
-                <strong className="text-slate-900 dark:text-white">Affected Crops:</strong>
-                <p className="text-slate-600 dark:text-slate-300">{selectedPest.affectedCrops.join(', ')}</p>
+              <div className="p-3 rounded-xl bg-[#1D2429] border border-[#38434D] space-y-1">
+                <strong className="text-[#F4F4F4]">Affected Crops:</strong>
+                <p className="text-[#C7D0D8]">{selectedPest.affectedCrops.join(', ')}</p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 space-y-1">
-                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">🌿 Organic Control:</strong>
+              <div className="p-3.5 rounded-xl bg-[#4CAF50]/15 border border-[#4CAF50]/30 text-[#A5D6A7] space-y-1">
+                <strong className="text-[#4CAF50] font-bold">🌿 Organic Control:</strong>
                 <p>{selectedPest.organicControl}</p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-800 dark:text-rose-300 space-y-1">
-                <strong className="text-rose-600 dark:text-rose-400 font-bold">🧪 Chemical Control:</strong>
+              <div className="p-3.5 rounded-xl bg-[#E76F51]/15 border border-[#E76F51]/30 text-[#F4A261] space-y-1">
+                <strong className="text-[#E76F51] font-bold">🧪 Chemical Control:</strong>
                 <p>{selectedPest.chemicalControl}</p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-800 dark:text-blue-300 space-y-1">
-                <strong className="text-blue-600 dark:text-blue-400 font-bold">🛡️ Prevention Tips:</strong>
+              <div className="p-3.5 rounded-xl bg-[#00BCD4]/15 border border-[#00BCD4]/30 text-[#80DEEA] space-y-1">
+                <strong className="text-[#00BCD4] font-bold">🛡️ Prevention Tips:</strong>
                 <p>{selectedPest.preventionTips}</p>
               </div>
             </div>
@@ -571,33 +697,33 @@ export const CropLibrary: React.FC = () => {
           maxWidth="md"
         >
           <div className="space-y-4 text-xs">
-            <div className="h-48 relative rounded-xl overflow-hidden bg-slate-900">
+            <div className="h-48 relative rounded-xl overflow-hidden bg-[#112230]">
               <img src={selectedSoil.imageUrl} alt={selectedSoil.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#112230] via-transparent to-transparent" />
               <div className="absolute bottom-3 left-4">
-                <span className="text-amber-300 font-bold text-sm">{selectedSoil.localName}</span>
+                <span className="text-[#F4A261] font-bold text-sm">{selectedSoil.localName}</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{selectedSoil.description}</p>
+              <p className="text-[#C7D0D8] leading-relaxed">{selectedSoil.description}</p>
               
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Drainage Speed</span>
-                  <strong className="text-emerald-500 font-bold text-xs">{selectedSoil.drainageSpeed}</strong>
+                <div className="p-3 rounded-xl bg-[#1D2429] border border-[#38434D]">
+                  <span className="text-[10px] text-[#8A9BA8] font-bold uppercase block">Drainage Speed</span>
+                  <strong className="text-[#4CAF50] font-bold text-xs">{selectedSoil.drainageSpeed}</strong>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">pH Range</span>
-                  <strong className="text-amber-500 font-bold text-xs">{selectedSoil.phRange}</strong>
+                <div className="p-3 rounded-xl bg-[#1D2429] border border-[#38434D]">
+                  <span className="text-[10px] text-[#8A9BA8] font-bold uppercase block">pH Range</span>
+                  <strong className="text-[#F4A261] font-bold text-xs">{selectedSoil.phRange}</strong>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200">
+              <div className="p-3 rounded-xl bg-[#F4A261]/15 border border-[#F4A261]/30 text-[#F4A261]">
                 <strong>Texture Profile:</strong> {selectedSoil.texture}
               </div>
 
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200">
+              <div className="p-3 rounded-xl bg-[#4CAF50]/15 border border-[#4CAF50]/30 text-[#A5D6A7]">
                 <strong>Optimal Crop Matches:</strong> {selectedSoil.bestCrops.join(', ')}
               </div>
             </div>
@@ -609,190 +735,708 @@ export const CropLibrary: React.FC = () => {
         </Modal>
       )}
 
-      {/* Crop Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCrops.map((crop) => (
-          <div key={crop.id} className="glass-card overflow-hidden group hover:border-emerald-500/50 transition-all duration-200 flex flex-col justify-between">
-            <div>
-              <div className="h-36 relative overflow-hidden bg-slate-900">
-                <img
-                  src={crop.imageUrl}
-                  alt={crop.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
-                <div className="absolute top-3 right-3">
-                  <Badge variant="purple">{crop.category}</Badge>
-                </div>
-                <div className="absolute bottom-3 left-4 right-4">
-                  <h3 className="text-base font-extrabold text-white leading-tight">
-                    {crop.name}
-                  </h3>
-                  <p className="text-xs text-emerald-400 italic font-mono mt-0.5">
-                    {crop.botanicalName}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-3 text-xs">
-                <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-200 dark:border-slate-800">
-                  <div className="text-center">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                      <Calendar className="w-3 h-3 text-emerald-500" /> Harvest
-                    </p>
-                    <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.daysToHarvest} days</p>
-                  </div>
-                  <div className="text-center border-x border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                      <Droplets className="w-3 h-3 text-blue-500" /> Water
-                    </p>
-                    <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.waterReqMmPerWeek} mm/wk</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                      <Sprout className="w-3 h-3 text-amber-500" /> Soil
-                    </p>
-                    <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.idealSoil}</p>
-                  </div>
-                </div>
-
-                {/* NPK Ratio pill */}
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between border border-slate-200/60 dark:border-slate-800">
-                  <span className="font-bold text-slate-500 text-[11px]">NPK Ratio:</span>
-                  <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
-                    N:{crop.npkRequirement.nitrogen} • P:{crop.npkRequirement.phosphorus} • K:{crop.npkRequirement.potassium}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer Actions */}
-            <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/60">
-              <span className="text-[11px] text-slate-400">
-                Active Plots: <strong className="text-slate-700 dark:text-slate-200 font-mono">{crop.activePlantingCount || 0}</strong>
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => openEditModal(crop)}
-                  className="p-2 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  title="Edit Crop"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteCrop(crop.id)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
-                  title="Delete Crop"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add / Edit Crop Modal */}
+      {/* Add / Edit Crop Modal — Comprehensive Crop Uploader & Manager */}
       {isAddModalOpen && (
         <Modal
           isOpen={isAddModalOpen}
           onClose={closeModal}
-          title={editingCrop ? 'Edit Crop Profile' : 'Add Vegetable Crop'}
-          maxWidth="lg"
+          title={editingCrop ? `Edit Crop: ${editingCrop.name}` : 'Crop Uploader & Agronomic Suite'}
+          maxWidth="6xl"
+          position="top"
         >
           <form onSubmit={handleSaveCrop} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Crop Name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Carrot (Karot)"
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Botanical Name</label>
-                <input
-                  type="text"
-                  required
-                  value={botanicalName}
-                  onChange={(e) => setBotanicalName(e.target.value)}
-                  placeholder="e.g. Daucus carota"
-                  className="input-field"
-                />
-              </div>
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Left Column: Form Controls (7 cols) */}
+              <div className="lg:col-span-7 space-y-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+                {/* 1. Supabase Storage Image Upload Section */}
+                <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-xs">
+                      <UploadCloud className="w-4 h-4 text-emerald-500" />
+                      <span>Crop Image (Supabase Storage)</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Supabase Storage (Free • No Card)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTestUploadUrl(null);
+                          setIsStorageModalOpen(true);
+                        }}
+                        className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <Settings className="w-3 h-3" />
+                        <span>Storage Manager</span>
+                      </button>
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value as CategoryType)} className="input-field select-field">
-                  <option value="ROOT">ROOT</option>
-                  <option value="LEAFY">LEAFY</option>
-                  <option value="PODDED">PODDED</option>
-                  <option value="FRUIT">FRUIT</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Ideal Soil</label>
-                <select value={idealSoil} onChange={(e) => setIdealSoil(e.target.value as SoilType)} className="input-field select-field">
-                  <option value="LOAM">LOAM</option>
-                  <option value="CLAY">CLAY</option>
-                  <option value="SANDY">SANDY</option>
-                  <option value="SILTY">SILTY</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Season</label>
-                <select value={season} onChange={(e) => setSeason(e.target.value as SeasonType)} className="input-field select-field">
-                  <option value="YEAR_ROUND">YEAR_ROUND</option>
-                  <option value="DRY">DRY</option>
-                  <option value="WET">WET</option>
-                </select>
-              </div>
-            </div>
+                  {/* File Upload Controls */}
+                  <div className="flex items-center gap-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="btn btn-secondary text-xs h-9 px-3 flex items-center gap-1.5"
+                    >
+                      {isUploadingImage ? (
+                        <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
+                      ) : (
+                        <UploadCloud className="w-4 h-4 text-emerald-500" />
+                      )}
+                      <span>{isUploadingImage ? 'Uploading...' : 'Choose Image File'}</span>
+                    </button>
+                    <span className="text-[10px] text-slate-400">PNG, WebP, JPG up to 5MB</span>
+                  </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Days to Harvest</label>
-                <input type="number" required value={daysToHarvest} onChange={(e) => setDaysToHarvest(Number(e.target.value))} className="input-field" />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Water Req (mm/week)</label>
-                <input type="number" required value={waterReq} onChange={(e) => setWaterReq(Number(e.target.value))} className="input-field" />
-              </div>
-            </div>
+                  {uploadStatus && (
+                    <p className={`text-[11px] font-semibold ${uploadStatus.startsWith('✔') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {uploadStatus}
+                    </p>
+                  )}
 
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-2">NPK Ratio Requirement (kg/ha)</label>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <span className="text-[10px] text-slate-400">Nitrogen (N)</span>
-                  <input type="number" value={nVal} onChange={(e) => setNVal(Number(e.target.value))} className="input-field mt-0.5" />
+                  {/* Direct Image URL input */}
+                  <div>
+                    <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1 text-[11px]">
+                      Or Direct Image URL / Public Link:
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="https://ojilvcglpzbtpjxguhzj.supabase.co/... or /metadata/crops_images/tomato.png"
+                        className="input-field pr-8 text-xs font-mono"
+                      />
+                      {imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => window.open(imageUrl, '_blank')}
+                          className="absolute right-2 top-2.5 text-slate-400 hover:text-emerald-500"
+                          title="Open Image"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Preset Official Metadata Image shortcuts for quick testing */}
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-1 font-semibold">Official MapTanim Metadata Image Presets:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {OFFICIAL_METADATA_PRESETS.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setImageUrl(preset.url)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-medium border transition ${
+                            imageUrl === preset.url
+                              ? 'bg-emerald-500 text-white border-emerald-500'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-500'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">Phosphorus (P)</span>
-                  <input type="number" value={pVal} onChange={(e) => setPVal(Number(e.target.value))} className="input-field mt-0.5" />
+
+                {/* 2. Crop Identity & Botanical Classification */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                    🌱 Taxonomic & Local Identity (Field Research Standards)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Common Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Tomato, Carrot, Bitter Gourd"
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Local / Filipino Name</label>
+                      <input
+                        type="text"
+                        value={localName}
+                        onChange={(e) => setLocalName(e.target.value)}
+                        placeholder="e.g. Kamatis, Karot, Ampalaya"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Botanical Name (Scientific) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={botanicalName}
+                        onChange={(e) => setBotanicalName(e.target.value)}
+                        placeholder="e.g. Solanum lycopersicum"
+                        className="input-field italic"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Taxonomic Family</label>
+                      <input
+                        type="text"
+                        value={taxonomicFamily}
+                        onChange={(e) => setTaxonomicFamily(e.target.value)}
+                        placeholder="e.g. Solanaceae, Cucurbitaceae"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Horticultural Category *</label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value as CategoryType)}
+                        className="input-field select-field"
+                      >
+                        <option value="LEAFY">LEAFY (Pechay, Lettuce, Cabbage)</option>
+                        <option value="ROOT">ROOT (Carrot, Radish)</option>
+                        <option value="BULB">BULB (Onion, Garlic)</option>
+                        <option value="FRUIT">FRUIT (Tomato, Eggplant, Pepper, Squash)</option>
+                        <option value="PODDED">PODDED / LEGUME (String Beans, Okra)</option>
+                        <option value="STEM">STEM / GRAIN (Corn, Celery)</option>
+                        <option value="TUBER">TUBER (Potato, Camote)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Planting Season</label>
+                      <select
+                        value={season}
+                        onChange={(e) => setSeason(e.target.value as SeasonType)}
+                        className="input-field select-field"
+                      >
+                        <option value="YEAR_ROUND">YEAR_ROUND (Taon-taon)</option>
+                        <option value="DRY">DRY SEASON (Tag-araw)</option>
+                        <option value="WET">WET SEASON (Tag-ulan)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">Potassium (K)</span>
-                  <input type="number" value={kVal} onChange={(e) => setKVal(Number(e.target.value))} className="input-field mt-0.5" />
+
+                {/* 3. Agronomic Lifecycle & Irrigation */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    <span>Agronomic Timeline & Irrigation (Offline Mobile Schedules)</span>
+                  </h4>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Maturity (Days) *</label>
+                      <input
+                        type="number"
+                        min="15"
+                        max="300"
+                        required
+                        value={daysToHarvest}
+                        onChange={(e) => setDaysToHarvest(Number(e.target.value))}
+                        className="input-field font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Water Every (Days) *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="14"
+                        required
+                        value={wateringIntervalDays}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setWateringIntervalDays(v);
+                          setWaterReq(Math.round((7 / (v || 1)) * 12));
+                        }}
+                        className="input-field font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Fertilize Every (Days)</label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="60"
+                        required
+                        value={fertilizeIntervalDays}
+                        onChange={(e) => setFertilizeIntervalDays(Number(e.target.value))}
+                        className="input-field font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5 Growth Stages Duration */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 block mb-1.5 font-bold uppercase">
+                      Growth Stages Duration (Days Breakdown):
+                    </span>
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                      <div>
+                        <span className="text-[9px] text-slate-500 block font-bold">1. Sprout</span>
+                        <input
+                          type="number"
+                          value={stageSprout}
+                          onChange={(e) => setStageSprout(Number(e.target.value))}
+                          className="input-field text-center font-mono py-1"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-500 block font-bold">2. Seedling</span>
+                        <input
+                          type="number"
+                          value={stageSeedling}
+                          onChange={(e) => setStageSeedling(Number(e.target.value))}
+                          className="input-field text-center font-mono py-1"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-500 block font-bold">3. Vegetative</span>
+                        <input
+                          type="number"
+                          value={stageVegetative}
+                          onChange={(e) => setStageVegetative(Number(e.target.value))}
+                          className="input-field text-center font-mono py-1"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-500 block font-bold">4. Flowering</span>
+                        <input
+                          type="number"
+                          value={stageFlowering}
+                          onChange={(e) => setStageFlowering(Number(e.target.value))}
+                          className="input-field text-center font-mono py-1"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-500 block font-bold">5. Harvest</span>
+                        <input
+                          type="number"
+                          value={stageHarvest}
+                          onChange={(e) => setStageHarvest(Number(e.target.value))}
+                          className="input-field text-center font-mono py-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Soil Compatibility & NPK Bioavailability */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Sprout className="w-4 h-4 text-amber-500" />
+                    <span>Soil & Nutrient Bioavailability (Soil Grid Mapping)</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Ideal Soil *</label>
+                      <select
+                        value={idealSoil}
+                        onChange={(e) => setIdealSoil(e.target.value as SoilType)}
+                        className="input-field select-field font-bold"
+                      >
+                        {ALL_SOIL_OPTIONS.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Optimal pH Range (Min – Max)</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={optimalPhMin}
+                          onChange={(e) => setOptimalPhMin(Number(e.target.value))}
+                          placeholder="Min (e.g. 5.5)"
+                          className="input-field font-mono"
+                        />
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={optimalPhMax}
+                          onChange={(e) => setOptimalPhMax(Number(e.target.value))}
+                          placeholder="Max (e.g. 6.8)"
+                          className="input-field font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Suitable Soil Types (Multi-select)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {ALL_SOIL_OPTIONS.map((soil) => {
+                        const isSelected = suitableSoils.includes(soil);
+                        return (
+                          <button
+                            key={soil}
+                            type="button"
+                            onClick={() => toggleSuitableSoil(soil)}
+                            className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition ${
+                              isSelected
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 inline-block mr-1" />}
+                            {soil}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* NPK Ratio */}
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-1 font-bold uppercase">
+                      Recommended N-P-K Nutrient Ratio (kg/ha):
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400">Nitrogen (N)</span>
+                        <input
+                          type="number"
+                          value={nVal}
+                          onChange={(e) => setNVal(Number(e.target.value))}
+                          className="input-field font-mono"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400">Phosphorus (P)</span>
+                        <input
+                          type="number"
+                          value={pVal}
+                          onChange={(e) => setPVal(Number(e.target.value))}
+                          className="input-field font-mono"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400">Potassium (K)</span>
+                        <input
+                          type="number"
+                          value={kVal}
+                          onChange={(e) => setKVal(Number(e.target.value))}
+                          className="input-field font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Companion Planting & DSS Rules */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-emerald-500" />
+                    <span>Companion Planting & Decision Support (DSS Rules)</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Good Companions (Comma separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={companionGoodStr}
+                        onChange={(e) => setCompanionGoodStr(e.target.value)}
+                        placeholder="e.g. Tomato, Lettuce, Carrot"
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Incompatible Plants (Comma separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={companionBadStr}
+                        onChange={(e) => setCompanionBadStr(e.target.value)}
+                        placeholder="e.g. Fennel, Cabbage"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Harvest Indicators</label>
+                    <input
+                      type="text"
+                      value={harvestIndicators}
+                      onChange={(e) => setHarvestIndicators(e.target.value)}
+                      placeholder="e.g. Fruit turns glossy purple; firm flesh; calyx green"
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Extension & Agronomic Notes</label>
+                    <textarea
+                      rows={2}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Agronomic details, spacing tips, field cultivation recommendations..."
+                      className="input-field resize-none"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeModal} className="btn btn-secondary text-xs h-9">Cancel</button>
-              <button type="submit" className="btn btn-primary text-xs h-9">
-                {editingCrop ? 'Save Changes' : 'Create Crop Record'}
-              </button>
+              {/* Right Column: Live Mobile UI Breakdown Preview & System Broadcast (5 cols) */}
+              <div className="lg:col-span-5 space-y-4 flex flex-col justify-between max-h-[75vh] overflow-y-auto pl-1 pr-1 custom-scrollbar">
+                <div className="space-y-4">
+                  {/* Real-time Interactive Mobile UI Breakdown Preview */}
+                  <MobileCropBreakdownPreview
+                    name={name}
+                    localName={localName}
+                    botanicalName={botanicalName}
+                    taxonomicFamily={taxonomicFamily}
+                    category={category}
+                    idealSoil={idealSoil}
+                    suitableSoils={suitableSoils}
+                    season={season}
+                    daysToHarvest={daysToHarvest}
+                    wateringIntervalDays={wateringIntervalDays}
+                    optimalPhMin={optimalPhMin}
+                    optimalPhMax={optimalPhMax}
+                    nVal={nVal}
+                    pVal={pVal}
+                    kVal={kVal}
+                    stageSprout={stageSprout}
+                    stageSeedling={stageSeedling}
+                    stageVegetative={stageVegetative}
+                    stageFlowering={stageFlowering}
+                    stageHarvest={stageHarvest}
+                    harvestIndicators={harvestIndicators}
+                    description={description}
+                    imageUrl={imageUrl}
+                    companionGoodStr={companionGoodStr}
+                    companionBadStr={companionBadStr}
+                  />
+
+                  {/* Architecture & Quota Protection Info */}
+                  <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-[11px] space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 text-xs">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <span>Zero-Code Mobile Sync</span>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-[10px]">
+                      When saved, Supabase stores relational agronomic rules and image assets. The mobile app automatically syncs new and updated crops on launch or via System Update alert.
+                    </p>
+                  </div>
+
+                  {/* System Update Broadcast Toggle */}
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] space-y-1.5">
+                    <label className="flex items-start gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={broadcastToMobile}
+                        onChange={(e) => setBroadcastToMobile(e.target.checked)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold text-emerald-900 dark:text-emerald-200 block text-xs">
+                          📢 Broadcast System Update Alert
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug block mt-0.5">
+                          Alerts mobile farmers to download newly added or modified crops directly into their local offline map.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Form Action Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <button type="button" onClick={closeModal} className="btn btn-secondary text-xs h-10 px-4">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUploadingImage}
+                    className="btn btn-primary text-xs h-10 px-5 flex items-center gap-2 shadow-lg shadow-emerald-500/25"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{editingCrop ? 'Save Changes' : 'Publish Crop Record'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
         </Modal>
       )}
+
+      {/* Storage Gateway Modal (Supabase Storage) */}
+      {isStorageModalOpen && (
+        <Modal
+          isOpen={isStorageModalOpen}
+          onClose={() => setIsStorageModalOpen(false)}
+          title="Image Storage Manager (Supabase Storage)"
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-5 text-xs">
+            {/* Supabase Free Storage Active Banner */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30 flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-emerald-500 text-white shrink-0 shadow-md shadow-emerald-500/20">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+                  <span>Supabase Storage (100% Free • Connected)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                    Active Storage
+                  </span>
+                </h4>
+                <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                  Your connected Supabase project (<code className="font-mono text-emerald-500">ojilvcglpzbtpjxguhzj.supabase.co</code>) includes <strong>1 GB free image storage</strong> in the <code className="font-mono text-emerald-500">crop-images</code> bucket with permanent public URLs.
+                </p>
+              </div>
+            </div>
+
+            {/* Live Upload Verification Test */}
+            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2.5">
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                <UploadCloud className="w-4 h-4 text-emerald-500" />
+                <span>Verify Live Storage Upload</span>
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Upload a test image to confirm that Supabase storage writes and public image URLs are functioning end-to-end.
+              </p>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleTestUpload}
+                  disabled={isUploadingTestImage}
+                  className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-white hover:file:bg-emerald-600 cursor-pointer"
+                />
+                {isUploadingTestImage && (
+                  <span className="text-emerald-500 flex items-center gap-1 font-semibold text-[11px]">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploading to Supabase Storage...
+                  </span>
+                )}
+              </div>
+
+              {testUploadUrl && (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
+                  <img
+                    src={testUploadUrl}
+                    alt="Test upload"
+                    className="w-10 h-10 rounded-lg object-cover border border-emerald-500/30 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 block">
+                      ✔ Upload verified! Public Storage URL:
+                    </span>
+                    <a
+                      href={testUploadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline truncate block"
+                    >
+                      {testUploadUrl}
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bulk Sync All 15 Metadata Images */}
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  <span>Sync Official Metadata Images to Supabase</span>
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                  Authentic Assets
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Uploads all 15 authentic MapTanim crop illustrations directly into your Supabase Storage (<code className="font-mono text-emerald-600 dark:text-emerald-400">crop-images</code>) and updates the database URLs automatically.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleBatchSyncMetadataImages}
+                  disabled={isSyncingBatch}
+                  className="btn btn-primary text-xs h-9 px-4 flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+                >
+                  {isSyncingBatch ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4" />
+                  )}
+                  <span>{isSyncingBatch ? (syncBatchProgress || 'Syncing...') : 'Upload All 15 Metadata Images to Supabase'}</span>
+                </button>
+              </div>
+              {syncBatchResult && (
+                <p className={`text-[11px] font-semibold ${syncBatchResult.startsWith('✔') ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                  {syncBatchResult}
+                </p>
+              )}
+            </div>
+
+            {/* Storage Setup Guidance */}
+            <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-emerald-500" />
+                <span>Supabase Storage Bucket Configuration</span>
+              </span>
+              <div className="space-y-2 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200">
+                  <strong>✅ Zero-Card Supabase Storage:</strong> Supabase includes 1GB free storage and is directly connected. Ensure migration <code className="font-mono text-emerald-600 dark:text-emerald-300">017_setup_supabase_storage_bucket.sql</code> has been run in your Supabase SQL Editor to grant public image permissions, then click <em>Upload All 15 Metadata Images to Supabase</em> above!
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsStorageModalOpen(false)}
+                className="btn btn-secondary text-xs h-9 px-4"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Full Mobile UI Crop Breakdown Modal (Recreating CropDetailDialog.kt) */}
+      <CropBreakdownModal
+        crop={selectedCropForBreakdown}
+        isOpen={isBreakdownModalOpen}
+        onClose={closeBreakdownModal}
+        onEdit={(c) => {
+          closeBreakdownModal();
+          openEditModal(c);
+        }}
+      />
     </div>
   );
 };

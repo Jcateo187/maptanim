@@ -56,6 +56,22 @@ class UserRepositoryImpl(
             val allItems = (feedbackItems + notifItems).distinctBy { it.id }
             if (allItems.isNotEmpty()) {
                 notificationsState.value = allItems
+                try {
+                    val notifsToPersist = notifDtos.map { dto ->
+                        com.maptanim.app.domain.model.Notification(
+                            id = dto.id ?: java.util.UUID.randomUUID().toString(),
+                            userId = dto.userId ?: userId ?: "",
+                            title = dto.title.ifBlank { "Notification" },
+                            body = dto.body,
+                            taskType = null,
+                            isRead = dto.isRead,
+                            createdAt = dto.createdAt ?: ""
+                        )
+                    }
+                    RepositoryProvider.notificationRepository.upsertNotifications(notifsToPersist)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -157,6 +173,7 @@ class UserRepositoryImpl(
             if (it.id == notificationId) it.copy(isRead = true) else it
         }
         try {
+            RepositoryProvider.notificationRepository.markRead(notificationId)
             profileRepository.markNotificationRead(notificationId)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -166,6 +183,7 @@ class UserRepositoryImpl(
     override suspend fun deleteNotification(notificationId: String) {
         notificationsState.value = notificationsState.value.filter { it.id != notificationId }
         try {
+            RepositoryProvider.notificationRepository.markRead(notificationId)
             profileRepository.deleteNotification(notificationId)
         } catch (e: Exception) {
             e.printStackTrace()

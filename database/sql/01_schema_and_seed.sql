@@ -94,10 +94,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id                      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     nickname                VARCHAR(100),
     avatar                  TEXT,
-    onboarding_completed    BOOLEAN NOT NULL DEFAULT FALSE,
+    nickname_updated_at     TIMESTAMPTZ,
+    tutorial_completed_at   TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS onboarding_completed;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nickname_updated_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tutorial_completed_at TIMESTAMPTZ;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -117,11 +122,11 @@ CREATE POLICY "profiles_update_own" ON public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, nickname, onboarding_completed)
+  INSERT INTO public.profiles (id, nickname, nickname_updated_at)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1)),
-    FALSE
+    COALESCE(NEW.raw_user_meta_data->>'nickname', CASE WHEN NEW.email IS NOT NULL AND NEW.email <> '' THEN split_part(NEW.email, '@', 1) ELSE 'Farmer' END),
+    NOW()
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -134,39 +139,50 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Backfill profile records for any existing users in auth.users
-INSERT INTO public.profiles (id, nickname, onboarding_completed)
+INSERT INTO public.profiles (id, nickname)
 SELECT 
     id,
-    COALESCE(raw_user_meta_data->>'nickname', split_part(email, '@', 1)),
-    FALSE
+    COALESCE(raw_user_meta_data->>'nickname', split_part(email, '@', 1))
 FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
--- Table: public.crops (Static Reference Data)
+-- Table: public.crops (Dynamic Reference & Agronomic Data)
 CREATE TABLE IF NOT EXISTS public.crops (
-    id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    name                VARCHAR(50)     NOT NULL UNIQUE,
-    local_name          VARCHAR(100),
-    botanical_name      VARCHAR(150),
-    category            category_enum   NOT NULL,
-    days_to_harvest     INT             NOT NULL,
-    optimal_ph_min      FLOAT,
-    optimal_ph_max      FLOAT,
-    season              season_enum     NOT NULL DEFAULT 'YEAR_ROUND',
-    npk_n               FLOAT,
-    npk_p               FLOAT,
-    npk_k               FLOAT,
-    suitable_soils      soil_type_enum[],
-    image_url           TEXT,
-    description         TEXT,
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    id                      UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                    VARCHAR(50)     NOT NULL UNIQUE,
+    local_name              VARCHAR(100),
+    botanical_name          VARCHAR(150),
+    taxonomic_family        VARCHAR(100),
+    category                category_enum   NOT NULL,
+    days_to_harvest         INT             NOT NULL,
+    watering_interval_days  INT             NOT NULL DEFAULT 2,
+    fertilize_interval_days INT             NOT NULL DEFAULT 14,
+    optimal_ph_min          FLOAT,
+    optimal_ph_max          FLOAT,
+    optimal_temp_min        FLOAT           DEFAULT 20.0,
+    optimal_temp_max        FLOAT           DEFAULT 32.0,
+    season                  season_enum     NOT NULL DEFAULT 'YEAR_ROUND',
+    npk_n                   FLOAT,
+    npk_p                   FLOAT,
+    npk_k                   FLOAT,
+    suitable_soils          soil_type_enum[],
+    image_url               TEXT,
+    growth_stages           JSONB,
+    harvest_indicators      TEXT,
+    common_pests            TEXT[]          DEFAULT '{}',
+    companion_plants_good   TEXT[]          DEFAULT '{}',
+    companion_plants_bad    TEXT[]          DEFAULT '{}',
+    description             TEXT,
+    created_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE public.crops ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "crops_read_all" ON public.crops;
-CREATE POLICY "crops_read_all" ON public.crops
-    FOR SELECT USING (true);
+DROP POLICY IF EXISTS "crops_all" ON public.crops;
+CREATE POLICY "crops_all" ON public.crops
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- Table: public.farms
 CREATE TABLE IF NOT EXISTS public.farms (
@@ -354,19 +370,21 @@ CREATE POLICY "notifications_read_all" ON public.notifications
 
 INSERT INTO public.crops (name, local_name, botanical_name, category, days_to_harvest, optimal_ph_min, optimal_ph_max, season, suitable_soils, description)
 VALUES
-    ('Tomato', 'Kamatis', 'Solanum lycopersicum', 'FRUIT', 70, 6.0, 6.8, 'DRY', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'High-value fruit vegetable sensitive to moisture.'),
+    ('Tomato', 'Kamatis', 'Solanum lycopersicum', 'FRUIT', 60, 6.0, 6.8, 'DRY', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'High-value fruit vegetable sensitive to moisture.'),
     ('Eggplant', 'Talong', 'Solanum melongena', 'FRUIT', 75, 5.5, 6.8, 'YEAR_ROUND', ARRAY['LOAM', 'CLAY']::soil_type_enum[], 'Popular lowland vegetable, warm season crop.'),
-    ('Bell Pepper', 'Siling Pula', 'Capsicum annuum', 'FRUIT', 80, 6.0, 7.0, 'DRY', ARRAY['LOAM']::soil_type_enum[], 'Requires well-drained fertile soil.'),
-    ('Cabbage', 'Repolyo', 'Brassica oleracea var. capitata', 'LEAFY', 90, 6.0, 6.5, 'DRY', ARRAY['LOAM', 'SILTY']::soil_type_enum[], 'Cool-season leafy crop.'),
+    ('Chili Pepper', 'Siling Haba / Labuyo', 'Capsicum frutescens', 'FRUIT', 65, 6.0, 7.0, 'YEAR_ROUND', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Hot spice crop resilient to warm weather.'),
+    ('Cabbage', 'Repolyo', 'Brassica oleracea var. capitata', 'LEAFY', 60, 6.0, 6.5, 'DRY', ARRAY['LOAM', 'SILTY']::soil_type_enum[], 'Cool-season leafy crop.'),
+    ('Pechay', 'Pechay', 'Brassica rapa subsp. chinensis', 'LEAFY', 28, 6.0, 7.0, 'YEAR_ROUND', ARRAY['LOAM', 'SILTY', 'PEATY']::soil_type_enum[], 'Fast turnaround leafy brassica grown in lowland beds.'),
     ('Onion', 'Sibuyas', 'Allium cepa', 'BULB', 110, 6.0, 7.0, 'DRY', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Bulb crop sensitive to weed competition.'),
-    ('Carrot', 'Karot', 'Daucus carota', 'ROOT', 75, 5.8, 6.8, 'DRY', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Deep loose soil preferred for smooth root growth.'),
-    ('String Beans', 'Sitaw', 'Vigna unguiculata subsp. sesquipedalis', 'FRUIT', 55, 5.5, 6.5, 'YEAR_ROUND', ARRAY['LOAM']::soil_type_enum[], 'Nitrogen-fixing legume vegetable.'),
-    ('Lettuce', 'Litsugas', 'Lactuca sativa', 'LEAFY', 50, 6.0, 7.0, 'WET', ARRAY['LOAM', 'PEATY']::soil_type_enum[], 'Fast-growing tender leafy vegetable.'),
-    ('Cucumber', 'Pipino', 'Cucumis sativus', 'FRUIT', 60, 6.0, 6.8, 'YEAR_ROUND', ARRAY['LOAM']::soil_type_enum[], 'Vining fruit crop requiring support or space.'),
-    ('Okra', 'Okra', 'Abelmoschus esculentus', 'FRUIT', 55, 6.0, 7.5, 'WET', ARRAY['LOAM', 'CLAY']::soil_type_enum[], 'Drought-tolerant tropical vegetable.'),
-    ('Corn', 'Mais', 'Zea mays', 'FRUIT', 85, 5.8, 7.0, 'YEAR_ROUND', ARRAY['LOAM']::soil_type_enum[], 'Heavy feeder crop, good support structure.'),
+    ('Carrot', 'Karot', 'Daucus carota', 'ROOT', 85, 5.8, 6.8, 'DRY', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Deep loose soil preferred for smooth root growth.'),
+    ('Yardlong String Bean', 'Sitaw', 'Vigna unguiculata subsp. sesquipedalis', 'FRUIT', 48, 5.5, 6.5, 'YEAR_ROUND', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Nitrogen-fixing legume vegetable.'),
+    ('Lettuce', 'Litsugas', 'Lactuca sativa', 'LEAFY', 45, 6.0, 7.0, 'WET', ARRAY['LOAM', 'PEATY']::soil_type_enum[], 'Fast-growing tender leafy vegetable.'),
+    ('Cucumber', 'Pipino', 'Cucumis sativus', 'FRUIT', 50, 6.0, 6.8, 'YEAR_ROUND', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'Vining fruit crop requiring support or space.'),
+    ('Okra', 'Okra', 'Abelmoschus esculentus', 'FRUIT', 45, 6.0, 7.5, 'WET', ARRAY['LOAM', 'CLAY']::soil_type_enum[], 'Drought-tolerant tropical vegetable.'),
+    ('Corn', 'Mais', 'Zea mays', 'FRUIT', 65, 5.8, 7.0, 'YEAR_ROUND', ARRAY['LOAM', 'CLAY']::soil_type_enum[], 'Heavy feeder crop, good support structure.'),
     ('Squash', 'Kalabasa', 'Cucurbita moschata', 'FRUIT', 80, 5.6, 6.8, 'WET', ARRAY['LOAM', 'CLAY']::soil_type_enum[], 'Sprawling vine crop high in Vitamin A.'),
-    ('Kangkong', 'Kangkong', 'Ipomoea aquatica', 'LEAFY', 35, 5.3, 7.0, 'YEAR_ROUND', ARRAY['LOAM', 'SILTY', 'CLAY']::soil_type_enum[], 'Water spinach, fast growing leafy green.')
+    ('Water Spinach', 'Kangkong', 'Ipomoea aquatica', 'LEAFY', 30, 5.5, 7.0, 'YEAR_ROUND', ARRAY['LOAM', 'SILTY', 'PEATY']::soil_type_enum[], 'Water spinach, fast growing leafy green.'),
+    ('Bitter Gourd', 'Ampalaya', 'Momordica charantia', 'FRUIT', 55, 6.0, 6.7, 'YEAR_ROUND', ARRAY['LOAM', 'SANDY']::soil_type_enum[], 'High-value medicinal vining crop cultivated with bamboo trellises.')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
@@ -393,15 +411,15 @@ ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS public.community_posts (
     id                  TEXT            PRIMARY KEY DEFAULT ('post_' || substr(md5(random()::text || clock_timestamp()::text), 1, 16)),
     author_id           UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
-    author_name         VARCHAR(150)    NOT NULL DEFAULT 'Mobile Farmer',
+    author_name         VARCHAR(150)    NOT NULL,
     author_avatar_url   TEXT,
-    category            VARCHAR(50)     NOT NULL DEFAULT 'GENERAL',
+    category            VARCHAR(50)     NOT NULL,
     title               VARCHAR(255)    NOT NULL,
     content             TEXT            NOT NULL,
-    likes_count         INT             NOT NULL DEFAULT 0,
-    comments_count      INT             NOT NULL DEFAULT 0,
-    is_pinned           BOOLEAN         NOT NULL DEFAULT FALSE,
-    tags                TEXT[]          NOT NULL DEFAULT '{}',
+    likes_count         INT             NOT NULL,
+    comments_count      INT             NOT NULL,
+    is_pinned           BOOLEAN         NOT NULL,
+    tags                TEXT[]          NOT NULL,
     created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
@@ -411,7 +429,7 @@ CREATE TABLE IF NOT EXISTS public.community_comments (
     id                  TEXT            PRIMARY KEY DEFAULT ('comm_' || substr(md5(random()::text || clock_timestamp()::text), 1, 16)),
     post_id             TEXT            NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE,
     author_id           UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
-    author_name         VARCHAR(150)    NOT NULL DEFAULT 'Farmer Partner',
+    author_name         VARCHAR(150)    NOT NULL,
     author_avatar_url   TEXT,
     content             TEXT            NOT NULL,
     created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
@@ -438,35 +456,18 @@ CREATE POLICY "community_comments_update_all" ON public.community_comments FOR U
 DROP POLICY IF EXISTS "community_comments_delete_all" ON public.community_comments;
 CREATE POLICY "community_comments_delete_all" ON public.community_comments FOR DELETE USING (true);
 
-INSERT INTO public.community_posts (id, author_name, category, title, content, likes_count, comments_count, is_pinned, tags, created_at)
-VALUES
-    ('post_1', 'Mang Jose Parreño', 'PEST_ALERT', '🚨 Fall Armyworm Outbreak in Murcia & Talisay Bed Plots', 'Attention fellow vegetable growers! We spotted Fall Armyworm caterpillars on early sweet corn and bean plots around Barangay Canlandog, Murcia. Spraying Neem oil extract mixed with soapy water early morning has proven effective. Check your leaves for tiny hole punctures!', 18, 2, true, ARRAY['PestAlert', 'Armyworm', 'Corn', 'Murcia'], NOW() - INTERVAL '2 hours'),
-    ('post_2', 'Ka Ryan Vasquez', 'FARMING_TIP', '💡 High-Yield Tomato Diamante Max F1 Double A-Frame Trellising', 'For those planting Diamante Max F1 tomato this dry season, using a 2-meter bamboo A-frame trellis with nylon twine stringing doubled our yield harvest compared to single stake poles. It provides superior airflow and keeps lower branches off damp ground.', 24, 1, false, ARRAY['FarmingTip', 'Tomato', 'Trellis', 'HighYield'], NOW() - INTERVAL '5 hours'),
-    ('post_3', 'Aling Maria Juanillo', 'EQUIPMENT', '🚜 Bamboo Stakes & Insect Netting Seed Swap — Extra Sitaw Seeds', 'I have 50 extra bundles of treated 6ft bamboo stakes and 3 packets of certified Sitaw (String Beans) seeds available for trade in Silay. Looking to trade for surplus Pechay or Lettuce seeds. Send me a message!', 12, 0, false, ARRAY['SeedSwap', 'BambooStakes', 'Sitaw', 'Silay'], NOW() - INTERVAL '1 day'),
-    ('post_4', 'Tatay Juan Cateo', 'GENERAL', '❓ Best Organic Solution for Flea Beetles on Talong Leaves?', 'Magandang araw mga kasama. My 40-day old Eggplant (Talong) plot is starting to show small pinhole damage from flea beetles. Is baking soda spray or wood ash dusting better for organic pest control without burning young leaves?', 9, 1, false, ARRAY['Question', 'Eggplant', 'OrganicPestControl', 'Talong'], NOW() - INTERVAL '2 days')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO public.community_comments (id, post_id, author_name, content, created_at)
-VALUES
-    ('comm_1', 'post_1', 'Aling Danica', 'Salamat sa babala Mang Jose! Applied wood ash around our corn whorls this morning, so far it contained the spread.', NOW() - INTERVAL '1 hour'),
-    ('comm_2', 'post_1', 'Jason B.', 'You can also release Trichogramma parasitic wasps from the BPI office to control egg clusters naturally.', NOW() - INTERVAL '45 minutes'),
-    ('comm_3', 'post_2', 'James C.', 'Tested this A-frame method on plot 3 last week! Stems are upright even after heavy afternoon wind.', NOW() - INTERVAL '3 hours'),
-    ('comm_4', 'post_4', 'Ka Ryan Vasquez', 'Wood ash mixed with dry sand (1:1 ratio) dusted lightly early morning while dew is present works best against flea beetles!', NOW() - INTERVAL '1 day')
-ON CONFLICT (id) DO NOTHING;
-
-
 -- Table: public.community_reports
 CREATE TABLE IF NOT EXISTS public.community_reports (
     id                  TEXT            PRIMARY KEY DEFAULT ('rep_' || substr(md5(random()::text || clock_timestamp()::text), 1, 16)),
     reporter_id         UUID            REFERENCES auth.users(id) ON DELETE SET NULL,
-    reporter_name       VARCHAR(150)    NOT NULL DEFAULT 'Farmer Member',
+    reporter_name       VARCHAR(150)    NOT NULL,
     target_type         VARCHAR(50)     NOT NULL,
     target_id           TEXT            NOT NULL,
     target_name         VARCHAR(150)    NOT NULL,
     target_content      TEXT,
     reason              VARCHAR(100)    NOT NULL,
     details             TEXT,
-    status              VARCHAR(50)     NOT NULL DEFAULT 'PENDING',
+    status              VARCHAR(50)     NOT NULL,
     admin_notes         TEXT,
     created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     resolved_at         TIMESTAMPTZ
@@ -482,10 +483,3 @@ DROP POLICY IF EXISTS "community_reports_update_all" ON public.community_reports
 CREATE POLICY "community_reports_update_all" ON public.community_reports FOR UPDATE USING (true);
 DROP POLICY IF EXISTS "community_reports_delete_all" ON public.community_reports;
 CREATE POLICY "community_reports_delete_all" ON public.community_reports FOR DELETE USING (true);
-
-INSERT INTO public.community_reports (id, reporter_name, target_type, target_id, target_name, target_content, reason, details, status, created_at)
-VALUES
-    ('rep_1', 'Ka Ryan Vasquez', 'POST', 'post_3', 'Aling Maria Juanillo', '🚜 Bamboo Stakes & Insect Netting Seed Swap — Extra Sitaw Seeds', 'Spam / Commercial Selling', 'Selling untreated seeds without phytosanitary clearance or certified label.', 'PENDING', NOW() - INTERVAL '3 hours'),
-    ('rep_2', 'Farmer Partner', 'USER', 'james', 'Farmer James', 'Farmer James direct messaging unsolicited links in community chat.', 'Harassment / Unsolicited Direct Messaging', 'Sent repetitive unsolicited promotional messages in direct chat.', 'PENDING', NOW() - INTERVAL '1 day')
-ON CONFLICT (id) DO NOTHING;
-

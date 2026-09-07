@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MapTanim — System Architecture & Flowchart</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0d1a12;
+      --bg-card: rgba(22, 42, 30, 0.85);
+      --border-color: rgba(76, 175, 80, 0.25);
+      --accent-emerald: #4CAF50;
+      --text-main: #E8F5E9;
+      --text-muted: #81C784;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    h1 {
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #FFFFFF;
+    }
+    .badge {
+      font-size: 11px;
+      background: rgba(76, 175, 80, 0.2);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(76, 175, 80, 0.4);
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-weight: bold;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-emerald);
+      color: #0d1a12;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #66BB6A;
+      transform: translateY(-1px);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .card h2 {
+      font-size: 17px;
+      margin-bottom: 16px;
+      color: #A5D6A7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mermaid {
+      background: rgba(13, 26, 18, 0.95);
+      border-radius: 14px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .info-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(76, 175, 80, 0.2);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 13px;
+    }
+    .info-box strong {
+      color: #81C784;
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>🌱 MapTanim Agroecological Architecture <span class="badge">v2.0 • Live</span></h1>
+      <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+        Crop Breakdown UI • Live Preview • Community Forum • Pure Supabase Storage • Zero Cloudflare
+      </p>
+    </div>
+    <a href="https://miro.com/app/board/uXjVHxtgZgg=/" target="_blank" rel="noreferrer" class="btn">
+      🔗 Open on Miro Board
+    </a>
+  </header>
+
+  <div class="container">
+
+    <!-- 1. End-to-End System Flowchart -->
+    <div class="card">
+      <h2>🌐 1. Full Platform System Flowchart</h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph MobileApp["📱 Mobile Android Client (Jetpack Compose)"]
+        HS["HomeScreen<br/>(Real-time HUD)"]
+        FES["FarmEditorScreen<br/>(Isometric Grid & Drag-Drop)"]
+        CDD["CropDetailDialog<br/>(5-Stage Schedule • Why? Pills)"]
+        CFS["CommunityForumScreen<br/>(Authentic Threads • Zero Location)"]
+        VM["StateFlow ViewModels<br/>(Home, Edit, Library, Forum)"]
+
+        HS --> VM
+        FES --> VM
+        CDD --> VM
+        CFS --> VM
+    end
+
+    subgraph AdminPortal["🖥️ Admin Web Studio (React + TypeScript + Vite)"]
+        CL["CropLibrary & Catalog"]
+        CBM["CropBreakdownModal<br/>(1:1 Mobile UI Parity)"]
+        LMP["MobileCropBreakdownPreview<br/>(Real-Time Phone Mockup)"]
+        SSM["SupabaseStorageManager<br/>(1-Click Metadata Sync)"]
+        DSE["DSSRuleEditor<br/>(Companion Matrix)"]
+
+        CL --> CBM
+        CL --> LMP
+        CL --> SSM
+        CL --> DSE
+    end
+
+    subgraph IntelligentEngines["🧠 Core Intelligent Engines"]
+        ISO["2D Isometric Rendering Engine<br/>• Diamond Projection<br/>• Screen-to-World Math<br/>• Z-Ordering"]
+        DSS["Agroecological DSS Engine<br/>• Companion Matrix (+Bonus / -Risk)<br/>• Bioavailability & Spacing<br/>• Zero-GPS Calculation"]
+        ASSETS["Asset & Storage Pipeline<br/>• Local 30-50KB WebP Sprites<br/>• Supabase 'crop-images' Bucket<br/>• Zero External Unsplash Links"]
+    end
+
+    subgraph Persistence["💾 Persistence & Cloud Synchrony"]
+        ROOM[("Local Room Database<br/>SQLite Offline-First<br/>• Instant Startup<br/>• Rollback Protection")]
+        SUPA[("Supabase Cloud<br/>PostgreSQL Core<br/>• RLS Security<br/>• Forum Posts & Crops")]
+        STORAGE[("Supabase Storage<br/>crop-images Bucket<br/>• 1GB Free • $0 Egress")]
+    end
+
+    FES -->|Canvas Draw| ISO
+    VM -->|Agro Advice| DSS
+    VM -->|Offline DAO| ROOM
+    VM -->|PostgREST API| SUPA
+    AdminPortal -->|Direct SQL / Client| SUPA
+    AdminPortal -->|Image Uploads| STORAGE
+    STORAGE -.->|Catalog OTA Sync| ASSETS
+    ASSETS -->|Bundled Assets| MobileApp
+      </div>
+    </div>
+
+    <!-- 2. Crop Breakdown & Live Preview Flowchart -->
+    <div class="card">
+      <h2>🌿 2. Crop Breakdown & Real-Time Live Preview Synchronization</h2>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Admin as 👨‍🌾 Admin Agronomist
+    participant Form as Crop Form (Admin Studio)
+    participant Preview as Mobile Live Preview Mockup
+    participant Storage as Supabase Storage (crop-images)
+    participant DB as Supabase PostgreSQL
+    participant Mobile as 📱 Mobile Farmer App
+
+    Admin->>Form: Edit Crop Name, Category, Days, NPK
+    Admin->>Form: Adjust 5-Stage Schedule (Sprout, Veg, Bloom, Harvest)
+    Form->>Preview: Instant React state dispatch (0ms latency)
+    Preview-->>Admin: Renders identical mobile phone UI with "Why? 💡" pills
+
+    Admin->>Form: Upload Crop Illustration
+    Form->>Storage: Direct bucket upload (crop_<timestamp>.png)
+    Storage-->>Form: Returns public URL (ojilvcglpzbtpjxguhzj.supabase.co/...)
+    Form->>Preview: Live update hero image banner
+
+    Admin->>Form: Click "Publish Crop Record"
+    Form->>DB: INSERT/UPDATE crops + dss_rules
+    DB-->>Mobile: Real-time broadcast / Cache invalidate
+    Mobile->>Mobile: Room DB updates & local asset cache syncs
+    Mobile-->>Admin: Farmer opens CropDetailDialog with 100% matched data!
+      </div>
+    </div>
+
+    <!-- 3. Zero Cloudflare & Pure Supabase Pipeline -->
+    <div class="card">
+      <h2>☁️ 3. Zero Cloudflare & Pure Supabase Storage Architecture</h2>
+      <div class="mermaid">
+flowchart LR
+    subgraph Deprecated["❌ Legacy Cloudflare Setup (Completely Removed)"]
+        CFW["Cloudflare Worker<br/>(/upload, /health)"]
+        CFR2["Cloudflare R2 Bucket<br/>(Credit Card Required)"]
+        CFW --> CFR2
+    end
+
+    subgraph Modern["✅ Current Streamlined Pipeline (Active)"]
+        ADMIN["Admin Crop Studio<br/>(Direct Uploads & Batch Sync)"]
+        SUPASTOR["Supabase Storage<br/>(crop-images Bucket • 1GB Free)"]
+        LOCAL["Local Client WebP Assets<br/>(assets/metadata/crops_images)"]
+        MOBILE["Mobile App Image Resolver<br/>(Local Asset First, Fallback to CDN)"]
+
+        ADMIN -->|Direct multipart upload| SUPASTOR
+        SUPASTOR -->|OTA Catalog Sync| MOBILE
+        LOCAL -->|Instant Offline Read| MOBILE
+    end
+
+    style Deprecated fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#b71c1c
+    style Modern fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+      </div>
+
+      <div class="grid-2">
+        <div class="info-box">
+          <strong>🚀 Zero-Card / Zero-Overhead</strong>
+          Eliminated all Cloudflare Workers, custom endpoints, credit card requirements, and external image dependencies.
+        </div>
+        <div class="info-box">
+          <strong>⚡ Offline-First Native Resilience</strong>
+          Official 15 Philippine crops are pre-bundled in the Android APK as 30-50 KB WebP assets, ensuring zero latency on Philippine 4G/5G networks.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        primaryColor: '#2E7D32',
+        primaryTextColor: '#FFFFFF',
+        primaryBorderColor: '#4CAF50',
+        lineColor: '#66BB6A',
+        secondaryColor: '#1B5E20',
+        tertiaryColor: '#162A1E'
+      }
+    });
+  </script>
+</body>
+</html>

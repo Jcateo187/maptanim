@@ -34,7 +34,7 @@
 Filipino vegetable farmers—particularly in Negros Occidental—rely on:
 - **Handwritten notebooks** for planting records
 - **Memory** for watering and fertilization schedules
-- **Fragmented verbal advice** from neighbors or extension workers
+- **Fragmented verbal advice** from neighbors or informal sources
 
 This results in:
 - Missed harvest windows due to untracked planting dates

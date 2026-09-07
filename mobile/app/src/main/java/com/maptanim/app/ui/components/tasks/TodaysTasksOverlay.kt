@@ -1,13 +1,15 @@
 package com.maptanim.app.ui.components.tasks
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,40 +22,45 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.maptanim.app.domain.model.FarmTask
 import com.maptanim.app.domain.model.TaskType
+import com.maptanim.app.ui.screens.home.HomeViewModel
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 
-data class TaskItem(
-    val id: String,
-    val title: String,
-    val subtext: String,
-    val taskType: TaskType,
-    val isCompleted: Boolean = false
-)
-
 @Composable
 fun TodaysTasksOverlay(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
-    var tasks by remember {
-        mutableStateOf(
-            listOf(
-                TaskItem("t1", "Water String Beans", "String Beans Zone", TaskType.WATER),
-                TaskItem("t2", "Fertilize Eggplant", "Eggplant Zone", TaskType.FERTILIZE),
-                TaskItem("t3", "Harvest Carrot", "Carrot Zone - Ready for harvest", TaskType.HARVEST),
-                TaskItem("t4", "Check Pest Alert", "Tomato Zone - Inspect for Hornworms", TaskType.PEST_ALERT)
-            )
-        )
+    val homeUiState by homeViewModel.uiState.collectAsState()
+    val liveTasks = homeUiState.todayTasks
+
+    var selectedStatusIndex by remember { mutableStateOf(0) } // 0: All, 1: Pending, 2: Completed
+    var selectedCropFilter by remember { mutableStateOf<String?>(null) } // null = All crops
+
+    // List of unique crops with tasks today
+    val uniqueCrops = remember(liveTasks) {
+        liveTasks.mapNotNull { it.cropName?.ifBlank { null } ?: it.subLabel?.ifBlank { null } }.distinct()
     }
 
-    var selectedFilterIndex by remember { mutableStateOf(0) } // 0: All, 1: Pending, 2: Completed
-
-    val filteredTasks = when (selectedFilterIndex) {
-        1 -> tasks.filter { !it.isCompleted }
-        2 -> tasks.filter { it.isCompleted }
-        else -> tasks
+    // Filter tasks by status and crop
+    val filteredTasks = remember(liveTasks, selectedStatusIndex, selectedCropFilter) {
+        liveTasks.filter { task ->
+            val matchStatus = when (selectedStatusIndex) {
+                1 -> !task.isCompleted
+                2 -> task.isCompleted
+                else -> true
+            }
+            val taskCropName = task.cropName ?: task.subLabel
+            val matchCrop = selectedCropFilter == null || taskCropName.equals(selectedCropFilter, ignoreCase = true)
+            matchStatus && matchCrop
+        }
     }
+
+    val pendingCount = liveTasks.count { !it.isCompleted }
+    val completedCount = liveTasks.count { it.isCompleted }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -66,7 +73,7 @@ fun TodaysTasksOverlay(
                 modifier = Modifier
                     .padding(20.dp)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header Bar
                 Row(
@@ -85,11 +92,15 @@ fun TodaysTasksOverlay(
                                 .background(Color(0xFF1E88E5)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Assignment, contentDescription = null, tint = White, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = White, modifier = Modifier.size(18.dp))
                         }
                         Column {
                             Text("Today's Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = White)
-                            Text("DSS Data Algorithm Output", fontSize = 11.sp, color = White.copy(alpha = 0.6f))
+                            Text(
+                                if (selectedCropFilter != null) "Tasks for $selectedCropFilter" else "All Farm Tasks (${liveTasks.size})",
+                                fontSize = 11.sp,
+                                color = White.copy(alpha = 0.6f)
+                            )
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -97,54 +108,105 @@ fun TodaysTasksOverlay(
                     }
                 }
 
-                // Filter Tabs (All / Pending / Completed)
+                // ── 1. Status Filter Tabs (All / Pending / Completed) ──────
                 PrimaryTabRow(
-                    selectedTabIndex = selectedFilterIndex,
+                    selectedTabIndex = selectedStatusIndex,
                     containerColor = Color(0xFF2A3424),
                     contentColor = ForestGreen
                 ) {
                     Tab(
-                        selected = selectedFilterIndex == 0,
-                        onClick = { selectedFilterIndex = 0 },
-                        text = { Text("All (${tasks.size})", color = White, fontSize = 12.sp) }
+                        selected = selectedStatusIndex == 0,
+                        onClick = { selectedStatusIndex = 0 },
+                        text = { Text("All (${liveTasks.size})", color = White, fontSize = 12.sp) }
                     )
                     Tab(
-                        selected = selectedFilterIndex == 1,
-                        onClick = { selectedFilterIndex = 1 },
-                        text = { Text("Pending (${tasks.count { !it.isCompleted }})", color = White, fontSize = 12.sp) }
+                        selected = selectedStatusIndex == 1,
+                        onClick = { selectedStatusIndex = 1 },
+                        text = { Text("Pending ($pendingCount)", color = White, fontSize = 12.sp) }
                     )
                     Tab(
-                        selected = selectedFilterIndex == 2,
-                        onClick = { selectedFilterIndex = 2 },
-                        text = { Text("Completed (${tasks.count { it.isCompleted }})", color = White, fontSize = 12.sp) }
+                        selected = selectedStatusIndex == 2,
+                        onClick = { selectedStatusIndex = 2 },
+                        text = { Text("Completed ($completedCount)", color = White, fontSize = 12.sp) }
                     )
                 }
 
-                // Task List
+                // ── 2. Crop Selector Strip (Direct Crop Filtering) ────────
+                if (uniqueCrops.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "FILTER BY CROP:",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForestGreen
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedCropFilter == null,
+                                    onClick = { selectedCropFilter = null },
+                                    label = { Text("All Crops (${liveTasks.size})", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = ForestGreen,
+                                        selectedLabelColor = White,
+                                        containerColor = Color(0xFF243020),
+                                        labelColor = White.copy(alpha = 0.8f)
+                                    )
+                                )
+                            }
+                            items(uniqueCrops) { cropName ->
+                                val countForCrop = liveTasks.count { (it.cropName ?: it.subLabel).equals(cropName, ignoreCase = true) }
+                                FilterChip(
+                                    selected = selectedCropFilter.equals(cropName, ignoreCase = true),
+                                    onClick = {
+                                        selectedCropFilter = if (selectedCropFilter.equals(cropName, ignoreCase = true)) null else cropName
+                                    },
+                                    label = { Text("$cropName ($countForCrop)", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = ForestGreen,
+                                        selectedLabelColor = White,
+                                        containerColor = Color(0xFF243020),
+                                        labelColor = White.copy(alpha = 0.8f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── 3. Task List ──────────────────────────────────────────
                 if (filteredTasks.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
+                            .height(130.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No tasks found.", color = White.copy(alpha = 0.6f))
+                        Text(
+                            text = if (selectedCropFilter != null) "No tasks found for $selectedCropFilter." else "No tasks found for today.",
+                            color = White.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 300.dp),
+                            .heightIn(max = 280.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredTasks) { task ->
+                        items(filteredTasks, key = { it.id }) { task ->
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = if (task.isCompleted) Color(0xFF161E14) else Color(0xFF243020),
+                                border = if (task.isCompleted) null else BorderStroke(1.dp, Color(0xFF2E4D3E)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -154,50 +216,49 @@ fun TodaysTasksOverlay(
                                     ) {
                                         Checkbox(
                                             checked = task.isCompleted,
-                                            onCheckedChange = { checked ->
-                                                tasks = tasks.map {
-                                                    if (it.id == task.id) it.copy(isCompleted = checked) else it
-                                                }
+                                            onCheckedChange = {
+                                                homeViewModel.completeTask(task.id)
                                             },
                                             colors = CheckboxDefaults.colors(checkedColor = ForestGreen)
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Column {
                                             Text(
                                                 text = task.title,
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
+                                                fontSize = 13.sp,
                                                 color = if (task.isCompleted) White.copy(alpha = 0.5f) else White,
                                                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
                                             )
+                                            val subtext = listOfNotNull(task.subLabel, task.plotLabel.ifBlank { null }, "Due: ${task.dueDate}").joinToString(" • ")
                                             Text(
-                                                text = task.subtext,
+                                                text = subtext,
                                                 fontSize = 11.sp,
                                                 color = White.copy(alpha = 0.6f)
                                             )
                                         }
                                     }
 
-                                    // Type Badge
+                                    // Task Type Badge
                                     val badgeColor = when (task.taskType) {
                                         TaskType.WATER -> Color(0xFF1E88E5)
                                         TaskType.FERTILIZE -> Color(0xFF43A047)
                                         TaskType.HARVEST -> Color(0xFFFFA000)
                                         TaskType.PEST_ALERT -> Color(0xFFE53935)
-                                        else -> Color.Gray
+                                        else -> Color(0xFF8E24AA)
                                     }
 
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = badgeColor.copy(alpha = 0.25f),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor)
+                                        border = BorderStroke(1.dp, badgeColor)
                                     ) {
                                         Text(
-                                            text = task.taskType.name,
+                                            text = task.taskType.name.replace("_", " "),
                                             color = White,
-                                            fontSize = 10.sp,
+                                            fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
@@ -206,6 +267,7 @@ fun TodaysTasksOverlay(
                     }
                 }
 
+                // Footer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -214,7 +276,7 @@ fun TodaysTasksOverlay(
                         onClick = onDismiss,
                         colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
                     ) {
-                        Text("Close")
+                        Text("Done")
                     }
                 }
             }

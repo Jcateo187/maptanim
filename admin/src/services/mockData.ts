@@ -1,4 +1,4 @@
-import { Farmer, Farm, BedPlot, CropZone, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats } from '../types';
+import { Farmer, Farm, BedPlot, CropZone, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats, UserActivityLog, UserTrackingMetrics } from '../types';
 
 export const MOCK_FARMERS: Farmer[] = [
     {
@@ -8,11 +8,15 @@ export const MOCK_FARMERS: Farmer[] = [
         phoneNumber: '+63 917 123 4567',
         role: 'FARMER',
         status: 'ACTIVE',
-        farmName: 'Murcia Organic Farm',
+        farmName: 'Highland Organic Farm',
         activePlotsCount: 14,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         createdAt: '2026-01-15T08:30:00Z',
-        lastLoginAt: '2026-07-29T10:15:00Z',
+        lastLoginAt: '2026-09-05T21:15:00Z',
+        lastActiveAt: '10 minutes ago',
+        daysInactive: 0,
+        deviceInfo: 'Android 14 (MapTanim v1.2.4)',
+        isOnline: true,
+        activitySummary: 'Updated Plot A1 crop stage & logged soil moisture test',
     },
     {
         id: 'usr-002',
@@ -23,9 +27,13 @@ export const MOCK_FARMERS: Farmer[] = [
         status: 'ACTIVE',
         farmName: 'Vasquez Highland Crops',
         activePlotsCount: 22,
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
         createdAt: '2026-02-01T09:12:00Z',
-        lastLoginAt: '2026-07-28T16:45:00Z',
+        lastLoginAt: '2026-09-05T18:45:00Z',
+        lastActiveAt: '4 hours ago',
+        daysInactive: 0,
+        deviceInfo: 'Android 13 (MapTanim v1.2.4)',
+        isOnline: false,
+        activitySummary: 'Queried DSS companion rule for Cabbage and Tomato',
     },
     {
         id: 'usr-003',
@@ -37,7 +45,12 @@ export const MOCK_FARMERS: Farmer[] = [
         farmName: 'Green Valley Plot',
         activePlotsCount: 18,
         createdAt: '2026-03-10T14:20:00Z',
-        lastLoginAt: '2026-07-29T07:05:00Z',
+        lastLoginAt: '2026-09-04T07:05:00Z',
+        lastActiveAt: '1 day ago',
+        daysInactive: 1,
+        deviceInfo: 'Android 12 (MapTanim v1.2.2)',
+        isOnline: false,
+        activitySummary: 'Recorded harvest yield (180kg Eggplant)',
     },
     {
         id: 'usr-004',
@@ -45,11 +58,16 @@ export const MOCK_FARMERS: Farmer[] = [
         fullName: 'Maria Santos',
         phoneNumber: '+63 928 444 8888',
         role: 'FARMER',
-        status: 'PENDING',
+        status: 'INACTIVE',
         farmName: 'Santos Family Garden',
         activePlotsCount: 8,
-        createdAt: '2026-07-20T11:00:00Z',
-        lastLoginAt: '2026-07-20T11:05:00Z',
+        createdAt: '2026-04-12T11:00:00Z',
+        lastLoginAt: '2026-08-11T09:20:00Z',
+        lastActiveAt: '25 days ago',
+        daysInactive: 25,
+        deviceInfo: 'Android 11 (MapTanim v1.1.0)',
+        isOnline: false,
+        activitySummary: 'No field synchronization recorded in 25 days',
     },
     {
         id: 'usr-005',
@@ -62,8 +80,170 @@ export const MOCK_FARMERS: Farmer[] = [
         activePlotsCount: 0,
         createdAt: '2026-04-05T13:40:00Z',
         lastLoginAt: '2026-06-12T09:30:00Z',
+        lastActiveAt: '85 days ago',
+        daysInactive: 85,
+        deviceInfo: 'Android 10',
+        isOnline: false,
+        activitySummary: 'Account suspended due to policy violation in seed swap forum',
+    },
+    {
+        id: 'usr-006',
+        email: 'alicia.gonzales@gmail.com',
+        fullName: 'Alicia B. Gonzales',
+        phoneNumber: '+63 922 888 1234',
+        role: 'FARMER',
+        status: 'ACTIVE',
+        farmName: 'Gonzales Hydro Farm',
+        activePlotsCount: 16,
+        createdAt: '2026-05-18T10:00:00Z',
+        lastLoginAt: '2026-09-05T14:30:00Z',
+        lastActiveAt: '8 hours ago',
+        daysInactive: 0,
+        deviceInfo: 'Android 14 (MapTanim v1.2.4)',
+        isOnline: false,
+        activitySummary: 'Completed weekly irrigation task for Pechay beds',
+    },
+    {
+        id: 'usr-008',
+        email: 'tomas.dela_cruz@yahoo.com',
+        fullName: 'Tomas Dela Cruz',
+        phoneNumber: '+63 930 111 2233',
+        role: 'FARMER',
+        status: 'INACTIVE',
+        farmName: 'Dela Cruz Lowland Farm',
+        activePlotsCount: 5,
+        createdAt: '2026-03-22T08:45:00Z',
+        lastLoginAt: '2026-08-18T16:10:00Z',
+        lastActiveAt: '18 days ago',
+        daysInactive: 18,
+        deviceInfo: 'Android 12 (MapTanim v1.1.8)',
+        isOnline: false,
+        activitySummary: 'Dormant: No plot updates or tasks logged since harvest',
+    },
+    {
+        id: 'usr-009',
+        email: 'carolina.morales@gmail.com',
+        fullName: 'Carolina Morales',
+        phoneNumber: '+63 945 777 9988',
+        role: 'FARMER',
+        status: 'PENDING',
+        farmName: 'Morales Backyard Patch',
+        activePlotsCount: 3,
+        createdAt: '2026-09-04T15:20:00Z',
+        lastLoginAt: '2026-09-04T15:25:00Z',
+        lastActiveAt: '1 day ago',
+        daysInactive: 1,
+        deviceInfo: 'Android 13 (MapTanim v1.2.4)',
+        isOnline: false,
+        activitySummary: 'New registrant awaiting agricultural extension validation',
     },
 ];
+
+export const MOCK_USER_ACTIVITY_LOGS: UserActivityLog[] = [
+    {
+        id: 'act-001',
+        userId: 'usr-001',
+        userName: 'Jomarey D. Parreño',
+        action: 'CROP_ZONE_UPDATE',
+        module: 'Farm Operations',
+        timestamp: '10 minutes ago',
+        details: 'Transitioned Plot A1 (Carrots) to Growth Stage 3 (Vegetative)',
+        status: 'ONLINE',
+    },
+    {
+        id: 'act-002',
+        userId: 'usr-007',
+        userName: 'Engr. Eduardo Mendoza',
+        action: 'BROADCAST_ADVISORY',
+        module: 'DSS & Extension',
+        timestamp: '1 hour ago',
+        details: 'Issued Fall Armyworm alert to 48 corn farmers in Murcia sector',
+        status: 'ONLINE',
+    },
+    {
+        id: 'act-003',
+        userId: 'usr-002',
+        userName: 'John Ryan R. Vasquez',
+        action: 'DSS_RULE_QUERY',
+        module: 'Companion Matrix',
+        timestamp: '4 hours ago',
+        details: 'Consulted companion pairing for Cabbage and Tomato in Highland zone',
+        status: 'ACTIVE',
+    },
+    {
+        id: 'act-004',
+        userId: 'usr-006',
+        userName: 'Alicia B. Gonzales',
+        action: 'TASK_COMPLETED',
+        module: 'Field Tasks',
+        timestamp: '8 hours ago',
+        details: 'Marked weekly organic fertilizer application completed for 6 plots',
+        status: 'ACTIVE',
+    },
+    {
+        id: 'act-005',
+        userId: 'usr-003',
+        userName: 'Jason B. Juanillo',
+        action: 'HARVEST_LOG',
+        module: 'Yield Management',
+        timestamp: '1 day ago',
+        details: 'Logged 180kg Eggplant harvest (Grade A) from Green Valley Plot',
+        status: 'ACTIVE',
+    },
+    {
+        id: 'act-006',
+        userId: 'usr-008',
+        userName: 'Tomas Dela Cruz',
+        action: 'INACTIVE_WARNING',
+        module: 'Activity Tracker',
+        timestamp: '18 days ago',
+        details: 'Marked dormant: No synchronizations recorded past 14-day threshold',
+        status: 'INACTIVE',
+    },
+    {
+        id: 'act-007',
+        userId: 'usr-004',
+        userName: 'Maria Santos',
+        action: 'INACTIVE_WARNING',
+        module: 'Activity Tracker',
+        timestamp: '25 days ago',
+        details: 'Marked dormant: Offline since August 11, plot monitoring stalled',
+        status: 'INACTIVE',
+    },
+];
+
+export const MOCK_USER_TRACKING_METRICS: UserTrackingMetrics = {
+    totalUsers: 148,
+    activeUsers: 116,
+    inactiveUsers: 22,
+    suspendedUsers: 4,
+    pendingUsers: 6,
+    activeRate: 78.4,
+    dailyActiveUsers: 68,
+    weeklyActiveUsers: 116,
+    statusDistribution: [
+        { name: 'Active (Engaged)', value: 116, color: '#4CAF50', count: 116 },
+        { name: 'Inactive / Dormant', value: 22, color: '#F4A261', count: 22 },
+        { name: 'Pending Approval', value: 6, color: '#00BCD4', count: 6 },
+        { name: 'Suspended', value: 4, color: '#E76F51', count: 4 },
+    ],
+    activityTrends: [
+        { period: 'Mon', active: 98, inactive: 32, newRegistrations: 4 },
+        { period: 'Tue', active: 104, inactive: 28, newRegistrations: 7 },
+        { period: 'Wed', active: 108, inactive: 26, newRegistrations: 5 },
+        { period: 'Thu', active: 112, inactive: 24, newRegistrations: 9 },
+        { period: 'Fri', active: 119, inactive: 21, newRegistrations: 12 },
+        { period: 'Sat', active: 114, inactive: 23, newRegistrations: 8 },
+        { period: 'Sun', active: 116, inactive: 22, newRegistrations: 6 },
+    ],
+    activityByModule: [
+        { module: 'Farm Plots & Soil Grid', count: 480, color: '#4CAF50' },
+        { module: 'DSS Companion Rules', count: 345, color: '#00BCD4' },
+        { module: 'Yield & Harvest Logs', count: 260, color: '#6FAF5A' },
+        { module: 'Pest Advisory & Alerts', count: 195, color: '#F4A261' },
+        { module: 'Community Exchange', count: 140, color: '#4C579E' },
+    ],
+};
 
 
 
@@ -80,7 +260,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 30, phosphorus: 60, potassium: 60 },
         companionCropsGood: ['Corn', 'Cucumber', 'Eggplant'],
         companionCropsBad: ['Onion', 'Garlic'],
-        imageUrl: 'https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/sitaw.png',
         activePlantingCount: 38,
     },
     {
@@ -95,7 +275,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 100, phosphorus: 80, potassium: 120 },
         companionCropsGood: ['String Beans', 'Spinach', 'Pepper'],
         companionCropsBad: ['Fennel'],
-        imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/eggplant.png',
         activePlantingCount: 56,
     },
     {
@@ -110,7 +290,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 120, phosphorus: 100, potassium: 180 },
         companionCropsGood: ['Carrot', 'Onion', 'Basil'],
         companionCropsBad: ['Potato', 'Cabbage'],
-        imageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/tomato.png',
         activePlantingCount: 65,
     },
     {
@@ -125,7 +305,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 75, phosphorus: 120, potassium: 150 },
         companionCropsGood: ['Lettuce', 'Onion', 'Tomato'],
         companionCropsBad: ['Fennel', 'Dill'],
-        imageUrl: 'https://images.unsplash.com/photo-1598170845058-12ef4a457539?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/carrot.png',
         activePlantingCount: 42,
     },
     {
@@ -140,7 +320,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 90, phosphorus: 110, potassium: 130 },
         companionCropsGood: ['Tomato', 'Carrot', 'Pechay'],
         companionCropsBad: ['String Beans', 'Peas'],
-        imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cf?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/onion.png',
         activePlantingCount: 34,
     },
     {
@@ -155,7 +335,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 80, phosphorus: 90, potassium: 140 },
         companionCropsGood: ['Corn', 'Beans', 'Radish'],
         companionCropsBad: ['Potato'],
-        imageUrl: 'https://images.unsplash.com/photo-1570586437263-ab629fccc818?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/pumpkin.png',
         activePlantingCount: 27,
     },
     {
@@ -170,7 +350,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 140, phosphorus: 80, potassium: 100 },
         companionCropsGood: ['String Beans', 'Squash', 'Cucumber'],
         companionCropsBad: ['Tomato'],
-        imageUrl: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/corn.png',
         activePlantingCount: 45,
     },
     {
@@ -185,7 +365,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 150, phosphorus: 90, potassium: 120 },
         companionCropsGood: ['Onion', 'Potato', 'Celery'],
         companionCropsBad: ['Tomato', 'Strawberry'],
-        imageUrl: 'https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/cabbage.png',
         activePlantingCount: 29,
     },
     {
@@ -200,7 +380,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 110, phosphorus: 60, potassium: 80 },
         companionCropsGood: ['Onion', 'Carrot', 'Cucumber'],
         companionCropsBad: ['Strawberry'],
-        imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/pechay.png',
         activePlantingCount: 51,
     },
     {
@@ -215,7 +395,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 90, phosphorus: 70, potassium: 100 },
         companionCropsGood: ['String Beans', 'Corn'],
         companionCropsBad: ['Potato'],
-        imageUrl: 'https://images.unsplash.com/photo-1588615419955-5233519894e6?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/ampalaya.png',
         activePlantingCount: 31,
     },
     {
@@ -230,7 +410,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 80, phosphorus: 60, potassium: 90 },
         companionCropsGood: ['Eggplant', 'Pepper', 'Cucumber'],
         companionCropsBad: ['Squash'],
-        imageUrl: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/okra.png',
         activePlantingCount: 36,
     },
     {
@@ -245,7 +425,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 110, phosphorus: 85, potassium: 130 },
         companionCropsGood: ['Eggplant', 'Tomato', 'Basil'],
         companionCropsBad: ['Fennel'],
-        imageUrl: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/sili.png',
         activePlantingCount: 48,
     },
     {
@@ -260,7 +440,7 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 100, phosphorus: 70, potassium: 140 },
         companionCropsGood: ['Corn', 'String Beans', 'Okra'],
         companionCropsBad: ['Potato'],
-        imageUrl: 'https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/pipino.png',
         activePlantingCount: 22,
     },
     {
@@ -275,38 +455,23 @@ export const MOCK_CROPS: Crop[] = [
         npkRequirement: { nitrogen: 120, phosphorus: 50, potassium: 80 },
         companionCropsGood: ['Carrot', 'Tomato', 'Onion'],
         companionCropsBad: ['Celery'],
-        imageUrl: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/crops_images/lettuce.png',
         activePlantingCount: 19,
     },
     {
         id: 'crop-015',
-        name: 'Watermelon (Pakwan)',
-        botanicalName: 'Citrullus lanatus (Sweet Ruby F1)',
-        category: 'FRUIT',
-        idealSoil: 'SANDY',
-        season: 'DRY',
-        daysToHarvest: 85,
-        waterReqMmPerWeek: 40,
-        npkRequirement: { nitrogen: 90, phosphorus: 80, potassium: 150 },
-        companionCropsGood: ['Radish', 'Corn'],
-        companionCropsBad: ['Potato'],
-        imageUrl: 'https://images.unsplash.com/photo-1587049352847-4a222e784d38?auto=format&fit=crop&w=600&q=80',
-        activePlantingCount: 14,
-    },
-    {
-        id: 'crop-016',
-        name: 'Calamansi (Kalamansi)',
-        botanicalName: 'Citrofortunella microcarpa',
-        category: 'FRUIT',
+        name: 'Water Spinach (Kangkong)',
+        botanicalName: 'Ipomoea aquatica (Tsina)',
+        category: 'LEAFY',
         idealSoil: 'LOAM',
         season: 'YEAR_ROUND',
-        daysToHarvest: 180,
+        daysToHarvest: 30,
         waterReqMmPerWeek: 50,
-        npkRequirement: { nitrogen: 130, phosphorus: 70, potassium: 160 },
-        companionCropsGood: ['Legumes', 'Coffee'],
+        npkRequirement: { nitrogen: 110, phosphorus: 50, potassium: 70 },
+        companionCropsGood: ['Pechay', 'Cucumber', 'Eggplant'],
         companionCropsBad: [],
-        imageUrl: 'https://images.unsplash.com/photo-1534531141161-bc8144299a8b?auto=format&fit=crop&w=600&q=80',
-        activePlantingCount: 30,
+        imageUrl: '/metadata/crops_images/kangkong.png',
+        activePlantingCount: 35,
     },
 ];
 
@@ -316,48 +481,48 @@ export const MOCK_PESTS = [
         name: 'Fruit Borer / Corn Earworm',
         localName: 'Ubod ng Kamatis / Harabas',
         scientificName: 'Helicoverpa armigera',
-        affectedCrops: ['Tomato', 'Eggplant', 'Corn', 'Okra', 'Bell Pepper'],
+        affectedCrops: ['Tomato', 'Eggplant', 'Corn', 'Okra', 'Chili Pepper'],
         category: 'Insect Pest',
         organicControl: 'Spray Neem Oil extract (30ml/L water) or Bacillus thuringiensis (Bt). Handpick caterpillars early morning.',
         chemicalControl: 'Apply DA-approved Chlorantraniliprole or Emamectin benzoate at early instar stage.',
         preventionTips: 'Practice crop rotation with non-host crops. Install yellow sticky traps.',
-        imageUrl: 'https://images.unsplash.com/photo-1535083783855-76ae62b2914e?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Fruit_borer.png'
     },
     {
         id: 'pest-002',
         name: 'Tomato Leaf Curl Virus (TyLCV)',
         localName: 'Kulot sa Kamatis / Whitefly Disease',
         scientificName: 'Begomovirus (transmitted by Bemisia tabaci)',
-        affectedCrops: ['Tomato', 'Bell Pepper', 'Squash'],
+        affectedCrops: ['Tomato', 'Chili Pepper', 'Squash'],
         category: 'Viral Disease',
         organicControl: 'Spray soapy water or Neem oil to target whitefly vector. Remove infected plants immediately.',
         chemicalControl: 'Control vector whiteflies with Imidacloprid or Thiamethoxam during seedling stage.',
         preventionTips: 'Use TyLCV-resistant varieties (e.g. Diamante Max F1). Install insect netting.',
-        imageUrl: 'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Tomato_leaf_curlvirus.png'
     },
     {
         id: 'pest-003',
         name: 'Diamondback Moth',
         localName: 'Ulod sa Repolyo',
         scientificName: 'Plutella xylostella',
-        affectedCrops: ['Cabbage', 'Pechay', 'Mustard'],
+        affectedCrops: ['Cabbage', 'Pechay', 'Lettuce'],
         category: 'Insect Pest',
         organicControl: 'Apply Bt (Bacillus thuringiensis) kurstaki strain every 5-7 days.',
         chemicalControl: 'Rotate Spinetoram foliar sprays to prevent pesticide resistance.',
         preventionTips: 'Use overhead sprinkler irrigation to disturb egg-laying adult moths.',
-        imageUrl: 'https://images.unsplash.com/photo-1543946207-39bd91e70ca7?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Diamondback_moth.png'
     },
     {
         id: 'pest-004',
         name: 'Onion Thrips',
         localName: 'Peste sa Sibuyas / Thrips',
         scientificName: 'Thrips tabaci',
-        affectedCrops: ['Onion', 'Garlic', 'Cabbage'],
+        affectedCrops: ['Onion', 'Carrot', 'Cabbage'],
         category: 'Insect Pest',
         organicControl: 'Blue sticky card traps (20 traps/ha). Spray bio-pesticide Beauveria bassiana.',
         chemicalControl: 'Apply Abamectin or Fipronil in severe infestations during bulb establishment.',
         preventionTips: 'Maintain proper soil moisture. Avoid planting near older onion fields.',
-        imageUrl: 'https://images.unsplash.com/photo-1584286595398-a59f21d313f5?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Onion_thrips.png'
     },
     {
         id: 'pest-005',
@@ -369,7 +534,7 @@ export const MOCK_PESTS = [
         organicControl: 'Drop sand/ash mixed with Neem powder into corn whorls.',
         chemicalControl: 'Target whorls with Spinetoram or Methomyl sprays during early egg hatch.',
         preventionTips: 'Deep plowing after harvest to destroy pupae in soil.',
-        imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Fall_armyworm.png'
     },
     {
         id: 'pest-006',
@@ -381,7 +546,7 @@ export const MOCK_PESTS = [
         organicControl: 'Foliar spray of 10% baking soda solution or diluted milk spray.',
         chemicalControl: 'Apply Potassium bicarbonate or Sulfur-based fungicide.',
         preventionTips: 'Ensure wider plant spacing for air circulation. Avoid overhead watering.',
-        imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=600&q=80'
+        imageUrl: '/metadata/pest/Powdery_mildew.png'
     }
 ];
 
@@ -395,8 +560,8 @@ export const MOCK_SOILS = [
         drainageSpeed: 'Moderate / Ideal (15–25 mm/hr)',
         phRange: '6.0 – 7.0',
         texture: 'Crumbly and soft when dry, forms a loose ball when moist.',
-        bestCrops: ['Tomato', 'Eggplant', 'Bell Pepper', 'Carrot', 'Onion', 'Lettuce', 'Corn', 'Squash'],
-        imageUrl: 'https://images.unsplash.com/photo-1585336261026-875a60a1c92f?auto=format&fit=crop&w=600&q=80',
+        bestCrops: ['Tomato', 'Eggplant', 'Chili Pepper', 'Carrot', 'Onion', 'Lettuce', 'Corn', 'Squash'],
+        imageUrl: '/metadata/soil_images/Loam_soil.png',
         colorHex: '#3E2723'
     },
     {
@@ -409,7 +574,7 @@ export const MOCK_SOILS = [
         phRange: '5.5 – 7.0',
         texture: 'Sticky and smooth when wet, forms hard clods when dry.',
         bestCrops: ['Eggplant', 'Okra', 'Kangkong', 'Squash', 'Corn'],
-        imageUrl: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/soil_images/Clay_soil.png',
         colorHex: '#5D4037'
     },
     {
@@ -421,8 +586,8 @@ export const MOCK_SOILS = [
         drainageSpeed: 'Fast (> 50 mm/hr)',
         phRange: '5.5 – 6.8',
         texture: 'Gritty and loose, cannot hold form when squeezed.',
-        bestCrops: ['Carrot', 'Watermelon', 'Onion', 'Tomato', 'Radish'],
-        imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+        bestCrops: ['Carrot', 'Chili Pepper', 'Onion', 'Tomato', 'Eggplant'],
+        imageUrl: '/metadata/soil_images/Sandy_soil.png',
         colorHex: '#C6A700'
     },
     {
@@ -435,7 +600,7 @@ export const MOCK_SOILS = [
         phRange: '6.0 – 7.0',
         texture: 'Floury and smooth when dry, silky when moist.',
         bestCrops: ['Cabbage', 'Kangkong', 'Lettuce', 'String Beans', 'Pechay'],
-        imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/soil_images/Silty_soil.png',
         colorHex: '#795548'
     },
     {
@@ -447,8 +612,8 @@ export const MOCK_SOILS = [
         drainageSpeed: 'Moderate to Slow',
         phRange: '4.5 – 6.0',
         texture: 'Spongy, dark brown or black, lightweight.',
-        bestCrops: ['Lettuce', 'Cabbage', 'Kangkong', 'Radish'],
-        imageUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=600&q=80',
+        bestCrops: ['Lettuce', 'Cabbage', 'Kangkong', 'Pechay'],
+        imageUrl: '/metadata/soil_images/Peaty_soil.png',
         colorHex: '#212121'
     },
     {
@@ -461,7 +626,7 @@ export const MOCK_SOILS = [
         phRange: '7.0 – 8.0',
         texture: 'Stony or chalky white flecks throughout dry soil.',
         bestCrops: ['Okra', 'Corn', 'String Beans'],
-        imageUrl: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=600&q=80',
+        imageUrl: '/metadata/soil_images/Chalky_soil.png',
         colorHex: '#9E9E9E'
     }
 ];
@@ -473,7 +638,7 @@ export const MOCK_DSS_RULES: DSSRule[] = [
         cropB: 'Tomato (Kamatis)',
         relationship: 'BENEFICIAL',
         reason: 'Tomatoes produce solanine which deters carrot rust flies; carrots loosen soil for deep tomato root growth.',
-        daReferenceDoc: 'DA-BPI Companion Bulletin Vol 4',
+        daReferenceDoc: 'MapTanim Companion Field Survey Vol 1',
     },
     {
         id: 'dss-002',
@@ -481,7 +646,7 @@ export const MOCK_DSS_RULES: DSSRule[] = [
         cropB: 'Cabbage (Repolyo)',
         relationship: 'ANTAGONIST',
         reason: 'Both heavy nitrogen feeders competing for soil nutrients; high vulnerability to flea beetles.',
-        daReferenceDoc: 'DA Agroforestry Manual Sec 3.2',
+        daReferenceDoc: 'Agronomic Companion Field Study Sec 3.2',
     },
     {
         id: 'dss-003',
@@ -489,7 +654,7 @@ export const MOCK_DSS_RULES: DSSRule[] = [
         cropB: 'Eggplant (Talong)',
         relationship: 'BENEFICIAL',
         reason: 'Legumes fix atmospheric nitrogen directly benefiting nitrogen-hungry eggplants.',
-        daReferenceDoc: 'BPI Crop Rotation Protocol 2025',
+        daReferenceDoc: 'Field Crop Rotation Survey 2025',
     },
 ];
 
@@ -630,6 +795,55 @@ export const MOCK_STATS: DashboardStats = {
         { date: 'Sat', count: 8 },
         { date: 'Sun', count: 6 },
     ],
+    totalCrops: 15,
+    totalFeedback: 0,
+    totalPostReports: 0,
+    pendingReports: 0,
+    topPlantedCrops: [
+        { cropName: 'Tomato', varietyName: 'Diamante Max', plantCount: 42, color: '#ef4444' },
+        { cropName: 'Eggplant', varietyName: 'Dumaguete Long', plantCount: 38, color: '#8b5cf6' },
+        { cropName: 'Cabbage', varietyName: 'Scorpio', plantCount: 29, color: '#22c55e' },
+        { cropName: 'Pechay', varietyName: 'Black Behi', plantCount: 24, color: '#84cc16' },
+        { cropName: 'Okra', varietyName: 'Smooth Green', plantCount: 19, color: '#f59e0b' },
+        { cropName: 'String Beans', varietyName: 'Sandigan', plantCount: 16, color: '#06b6d4' },
+        { cropName: 'Bitter Gourd', varietyName: 'Galaxy F1', plantCount: 13, color: '#10b981' },
+    ],
+    topPlantedVarieties: [
+        { varietyName: 'Diamante Max', cropName: 'Tomato (Kamatis)', plantCount: 42, color: '#ef4444' },
+        { varietyName: 'Dumaguete Long', cropName: 'Eggplant (Talong)', plantCount: 38, color: '#8b5cf6' },
+        { varietyName: 'Scorpio', cropName: 'Cabbage (Repolyo)', plantCount: 29, color: '#22c55e' },
+        { varietyName: 'Black Behi', cropName: 'Pechay', plantCount: 24, color: '#84cc16' },
+        { varietyName: 'Smooth Green', cropName: 'Okra', plantCount: 19, color: '#f59e0b' },
+        { varietyName: 'Sandigan', cropName: 'String Beans (Sitaw)', plantCount: 16, color: '#06b6d4' },
+        { varietyName: 'Galaxy F1', cropName: 'Bitter Gourd (Ampalaya)', plantCount: 13, color: '#10b981' },
+    ],
+    harvestDateAnalytics: {
+        peakHarvestDate: '2026-09-15',
+        peakHarvestYieldKg: 480,
+        peakHarvestPlotCount: 16,
+        peakHarvestCrop: 'Bitter Gourd (Galaxy F1)',
+        dateRecords: [
+            { date: '2026-08-20', displayDate: 'Aug 20', fullDate: 'Aug 20, 2026', harvestCount: 8, yieldKg: 280, topCrop: 'String Beans' },
+            { date: '2026-08-25', displayDate: 'Aug 25', fullDate: 'Aug 25, 2026', harvestCount: 11, yieldKg: 340, topCrop: 'Cabbage' },
+            { date: '2026-09-01', displayDate: 'Sep 01', fullDate: 'Sep 01, 2026', harvestCount: 12, yieldKg: 390, topCrop: 'Sweet Corn' },
+            { date: '2026-09-05', displayDate: 'Sep 05', fullDate: 'Sep 05, 2026', harvestCount: 9, yieldKg: 310, topCrop: 'Eggplant' },
+            { date: '2026-09-10', displayDate: 'Sep 10', fullDate: 'Sep 10, 2026', harvestCount: 14, yieldKg: 420, topCrop: 'Tomato' },
+            { date: '2026-09-15', displayDate: 'Sep 15', fullDate: 'Sep 15, 2026', harvestCount: 16, yieldKg: 480, topCrop: 'Bitter Gourd' },
+            { date: '2026-09-20', displayDate: 'Sep 20', fullDate: 'Sep 20, 2026', harvestCount: 10, yieldKg: 360, topCrop: 'Pechay' },
+        ],
+    },
+    weeklyRegistrations: [
+        { day: 'Mon', newUsers: 4, returningUsers: 12 },
+        { day: 'Tue', newUsers: 7, returningUsers: 18 },
+        { day: 'Wed', newUsers: 5, returningUsers: 14 },
+        { day: 'Thu', newUsers: 9, returningUsers: 21 },
+        { day: 'Fri', newUsers: 12, returningUsers: 25 },
+        { day: 'Sat', newUsers: 8, returningUsers: 16 },
+        { day: 'Sun', newUsers: 6, returningUsers: 11 },
+    ],
+    activeUsersToday: 0,
+    totalCommunityPosts: 0,
+    systemNotificationsCount: 0,
 };
 
 

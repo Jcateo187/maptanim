@@ -1,12 +1,15 @@
 package com.maptanim.app.data.repository
 
+import com.maptanim.app.core.preferences.CommunityPreferencesManager
 import com.maptanim.app.data.remote.CommunityRemoteDataSource
+import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.remote.dto.CommunityCommentDto
 import com.maptanim.app.data.remote.dto.CommunityPostDto
 import com.maptanim.app.data.remote.dto.toDomain
 import com.maptanim.app.domain.model.CommunityComment
 import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.domain.repository.CommunityRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,8 +23,8 @@ class CommunityRepositoryImpl(
 ) : CommunityRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val postsState = MutableStateFlow(defaultCommunityPosts)
-    private val commentsState = MutableStateFlow(defaultCommunityComments)
+    private val postsState = MutableStateFlow<List<CommunityPost>>(emptyList())
+    private val commentsState = MutableStateFlow<List<CommunityComment>>(emptyList())
 
     init {
         // Asynchronously fetch latest remote community posts from Supabase
@@ -47,28 +50,45 @@ class CommunityRepositoryImpl(
     }
 
     override suspend fun refreshPosts() {
+        val currentUserId = try {
+            SupabaseClient.client.auth.currentUserOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
+        val persistedLikedIds = CommunityPreferencesManager.getInstance().getLikedPostIds(currentUserId)
+
         remoteDataSource.getAllPosts().onSuccess { remoteList ->
-            if (remoteList.isNotEmpty()) {
-                val currentLikedIds = postsState.value.filter { it.isLikedByMe }.map { it.id }.toSet()
-                val domainPosts = remoteList.map { dto ->
-                    dto.toDomain(isLikedByMe = dto.id in currentLikedIds)
-                }
-                postsState.value = domainPosts
+            val inMemoryLikedIds = postsState.value.filter { it.isLikedByMe }.map { it.id }.toSet()
+            val allLikedIds = persistedLikedIds + inMemoryLikedIds
+            val domainPosts = remoteList.map { dto ->
+                dto.toDomain(isLikedByMe = dto.id in allLikedIds)
             }
+            postsState.value = domainPosts
         }
     }
 
     override suspend fun toggleLikePost(postId: String) {
+        val currentUserId = try {
+            SupabaseClient.client.auth.currentUserOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
         var nextLikesCount = 0
+        var isNowLiked = false
+
         postsState.value = postsState.value.map { post ->
             if (post.id == postId) {
                 val newLiked = !post.isLikedByMe
+                isNowLiked = newLiked
                 val newCount = if (newLiked) post.likesCount + 1 else post.likesCount - 1
                 val sanitized = newCount.coerceAtLeast(0)
                 nextLikesCount = sanitized
                 post.copy(isLikedByMe = newLiked, likesCount = sanitized)
             } else post
         }
+
+        // Persist locally for immediate offline & profile sync
+        CommunityPreferencesManager.getInstance().setPostLiked(currentUserId, postId, isNowLiked)
 
         // Sync like count to Supabase
         scope.launch {
@@ -81,44 +101,57 @@ class CommunityRepositoryImpl(
         category: String,
         content: String,
         authorName: String
-    ) {
+    ): Result<Unit> {
+        val currentUserId = try {
+            SupabaseClient.client.auth.currentUserOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
         val newId = "post_${System.currentTimeMillis()}"
-        val sanitizedAuthor = authorName.ifBlank { "Local Farmer" }
+        val sanitizedAuthor = authorName.trim()
 
-        val newPost = CommunityPost(
+        val dto = CommunityPostDto(
             id = newId,
-            authorName = sanitizedAuthor,
+            author_id = currentUserId,
+            author_name = sanitizedAuthor,
             category = category,
             title = title,
             content = content,
-            likesCount = 1,
-            commentsCount = 0,
-            timestamp = "Just now",
-            isLikedByMe = true,
-            tags = listOf(category, "Murcia", "NegrosOccidental")
+            likes_count = 1,
+            comments_count = 0,
+            is_pinned = false,
+            tags = listOf(category, "CropCare", "Vegetables")
         )
-        postsState.value = listOf(newPost) + postsState.value
 
-        // Sync to Supabase PostgREST table
-        scope.launch {
-            val dto = CommunityPostDto(
+        val result = remoteDataSource.createPost(dto)
+
+        if (result.isSuccess) {
+            val newPost = CommunityPost(
                 id = newId,
-                author_name = sanitizedAuthor,
+                authorId = currentUserId,
+                authorName = sanitizedAuthor,
                 category = category,
                 title = title,
                 content = content,
-                likes_count = 1,
-                comments_count = 0,
-                is_pinned = false,
-                tags = listOf(category, "Murcia", "NegrosOccidental")
+                likesCount = 1,
+                commentsCount = 0,
+                timestamp = "Just now",
+                isLikedByMe = true,
+                tags = listOf(category, "CropCare", "Vegetables")
             )
-            remoteDataSource.createPost(dto)
+            postsState.value = listOf(newPost) + postsState.value
+
+            // Record authored post & initial reaction locally
+            CommunityPreferencesManager.getInstance().addMyPostId(currentUserId, newId)
+            CommunityPreferencesManager.getInstance().setPostLiked(currentUserId, newId, true)
         }
+
+        return result
     }
 
     override suspend fun addComment(postId: String, content: String, authorName: String) {
         val newId = "comm_${System.currentTimeMillis()}"
-        val sanitizedAuthor = authorName.ifBlank { "Farmer Partner" }
+        val sanitizedAuthor = authorName.trim()
 
         val newComment = CommunityComment(
             id = newId,
@@ -160,7 +193,7 @@ class CommunityRepositoryImpl(
         val newId = "rep_${System.currentTimeMillis()}"
         val dto = com.maptanim.app.data.remote.dto.CommunityReportDto(
             id = newId,
-            reporter_name = reporterName.ifBlank { "Farmer Member" },
+            reporter_name = reporterName.trim(),
             target_type = targetType,
             target_id = targetId,
             target_name = targetName,
@@ -172,87 +205,4 @@ class CommunityRepositoryImpl(
         return remoteDataSource.submitReport(dto)
     }
 }
-
-
-internal val defaultCommunityPosts = listOf(
-    CommunityPost(
-        id = "post_1",
-        authorName = "Mang Jose Parreño",
-        category = "PEST_ALERT",
-        title = "🚨 Fall Armyworm Outbreak in Murcia & Talisay Bed Plots",
-        content = "Attention fellow vegetable growers! We spotted Fall Armyworm caterpillars on early sweet corn and bean plots around Barangay Canlandog, Murcia. Spraying Neem oil extract mixed with soapy water early morning has proven effective. Check your leaves for tiny hole punctures!",
-        likesCount = 18,
-        commentsCount = 2,
-        timestamp = "2 hours ago",
-        isLikedByMe = false,
-        tags = listOf("PestAlert", "Armyworm", "Corn", "Murcia")
-    ),
-    CommunityPost(
-        id = "post_2",
-        authorName = "Ka Ryan Vasquez",
-        category = "FARMING_TIP",
-        title = "💡 High-Yield Tomato Diamante Max F1 Double A-Frame Trellising",
-        content = "For those planting Diamante Max F1 tomato this dry season, using a 2-meter bamboo A-frame trellis with nylon twine stringing doubled our yield harvest compared to single stake poles. It provides superior airflow and keeps lower branches off damp ground.",
-        likesCount = 24,
-        commentsCount = 1,
-        timestamp = "5 hours ago",
-        isLikedByMe = true,
-        tags = listOf("FarmingTip", "Tomato", "Trellis", "HighYield")
-    ),
-    CommunityPost(
-        id = "post_3",
-        authorName = "Aling Maria Juanillo",
-        category = "EQUIPMENT",
-        title = "🚜 Bamboo Stakes & Insect Netting Seed Swap — Extra Sitaw Seeds",
-        content = "I have 50 extra bundles of treated 6ft bamboo stakes and 3 packets of certified Sitaw (String Beans) seeds available for trade in Silay. Looking to trade for surplus Pechay or Lettuce seeds. Send me a message!",
-        likesCount = 12,
-        commentsCount = 0,
-        timestamp = "Yesterday",
-        isLikedByMe = false,
-        tags = listOf("SeedSwap", "BambooStakes", "Sitaw", "Silay")
-    ),
-    CommunityPost(
-        id = "post_4",
-        authorName = "Tatay Juan Cateo",
-        category = "GENERAL",
-        title = "❓ Best Organic Solution for Flea Beetles on Talong Leaves?",
-        content = "Magandang araw mga kasama. My 40-day old Eggplant (Talong) plot is starting to show small pinhole damage from flea beetles. Is baking soda spray or wood ash dusting better for organic pest control without burning young leaves?",
-        likesCount = 9,
-        commentsCount = 1,
-        timestamp = "2 days ago",
-        isLikedByMe = false,
-        tags = listOf("Question", "Eggplant", "OrganicPestControl", "Talong")
-    )
-)
-
-internal val defaultCommunityComments = listOf(
-    CommunityComment(
-        id = "comm_1",
-        postId = "post_1",
-        authorName = "Aling Danica",
-        content = "Salamat sa babala Mang Jose! Applied wood ash around our corn whorls this morning, so far it contained the spread.",
-        timestamp = "1 hour ago"
-    ),
-    CommunityComment(
-        id = "comm_2",
-        postId = "post_1",
-        authorName = "Jason B.",
-        content = "You can also release Trichogramma parasitic wasps from the BPI office to control egg clusters naturally.",
-        timestamp = "45 mins ago"
-    ),
-    CommunityComment(
-        id = "comm_3",
-        postId = "post_2",
-        authorName = "James C.",
-        content = "Tested this A-frame method on plot 3 last week! Stems are upright even after heavy afternoon wind.",
-        timestamp = "3 hours ago"
-    ),
-    CommunityComment(
-        id = "comm_4",
-        postId = "post_4",
-        authorName = "Ka Ryan Vasquez",
-        content = "Wood ash mixed with dry sand (1:1 ratio) dusted lightly early morning while dew is present works best against flea beetles!",
-        timestamp = "1 day ago"
-    )
-)
 

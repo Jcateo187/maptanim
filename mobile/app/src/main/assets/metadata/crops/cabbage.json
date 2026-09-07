@@ -37,11 +37,10 @@
     }
   ],
   "media": {
-    "primary_photo_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
-    "thumbnail_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=800&q=80",
-    "source_url": "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f",
-    "author": "Unsplash Agricultural Collection",
-    "license": "Unsplash Free License",
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/cabbage.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/cabbage.png",
+    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "license": "MapTanim Original Asset",
     "hash_sha256": "337a4b091bf2d8858dd7c9c3d1ae1a53efb320e9d4bcfb388203f472d69a129f"
   }
 }

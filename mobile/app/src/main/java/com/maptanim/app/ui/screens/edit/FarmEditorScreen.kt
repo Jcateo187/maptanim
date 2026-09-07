@@ -85,6 +85,7 @@ fun FarmEditorScreen(
     var isDraggingCrop by remember { mutableStateOf(false) }
     var dragCropName by remember { mutableStateOf("Carrot") }
     var dragCropId by remember { mutableStateOf("carrot") }
+    var dragCropImageUrl by remember { mutableStateOf<String?>(null) }
     var dragTouchPos by remember { mutableStateOf(Offset.Zero) }
     var canvasTouchPos by remember { mutableStateOf<Offset?>(null) }
 
@@ -251,6 +252,9 @@ fun FarmEditorScreen(
             CropTray(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 selectedCropName = activeCropName,
+                availableCrops = uiState.availableCrops,
+                isSyncing = uiState.isSyncingCrops,
+                onSyncRequested = { editViewModel.refreshCropsFromRemote() },
                 onCropSelected = { newCropName, newCropId ->
                     if (activeCropName.equals(newCropName, ignoreCase = true)) {
                         activeCropName = ""
@@ -264,10 +268,11 @@ fun FarmEditorScreen(
                         tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP)
                     }
                 },
-                onCropDragStart = { cropName, cropId, startOffset ->
+                onCropDragStart = { cropName, cropId, imageUrl, startOffset ->
                     isDraggingCrop = true
                     dragCropName = cropName
                     dragCropId = cropId
+                    dragCropImageUrl = imageUrl
                     dragTouchPos = startOffset
                     if (tutorialUiState.currentStep == com.maptanim.app.viewmodel.TutorialStep.EDIT_SELECT_CROP) {
                         tutorialViewModel.setStep(com.maptanim.app.viewmodel.TutorialStep.EDIT_DRAGGING_CROP)
@@ -351,9 +356,13 @@ fun FarmEditorScreen(
                     .border(2.5.dp, Color(0xFF1B5E20), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                val assetUri = "file:///android_asset/metadata/crops_images/$cropImageFile"
+                val imageModel: Any = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(
+                    cropId = dragCropName,
+                    cropName = dragCropName,
+                    imageUrl = dragCropImageUrl
+                )
                 AsyncImage(
-                    model = assetUri,
+                    model = imageModel,
                     contentDescription = "Floating Crop",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.size(56.dp)

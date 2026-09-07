@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -156,6 +158,48 @@ fun HomeScreen(
                 navController.navigate(Routes.profileRoute(2))
             }
         )
+
+        // System Update Available Pill / Banner (if unread admin update or crop changes)
+        if (uiState.systemUpdateAvailable) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF1B5E20).copy(alpha = 0.95f),
+                border = BorderStroke(1.5.dp, Color(0xFF81C784)),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 76.dp)
+                    .clickable {
+                        soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                        navController.navigate(Routes.profileRoute(1))
+                    }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Campaign,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD54F),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "📢 May Bagong Update sa Pananim! Tap to Sync",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
 
         // Left Side HUD Buttons (Monitoring, Today's Tasks)
         LeftToolbar(

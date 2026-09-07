@@ -1,8 +1,9 @@
 name: Android CI/CD Pipeline
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, Refinement ]
     paths:
       - 'mobile/**'
       - 'backend/**'
@@ -11,7 +12,7 @@ on:
       - 'settings.gradle.kts'
       - '.github/workflows/android-ci.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, Refinement ]
     paths:
       - 'mobile/**'
       - 'backend/**'
@@ -29,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -53,6 +54,17 @@ jobs:
           name: maptanim-debug-apk
           path: mobile/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
+
+      - name: Upload to Firebase App Distribution
+        if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/Refinement' }}
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: testers
+          file: mobile/app/build/outputs/apk/debug/app-debug.apk
+          releaseNotes: "Automated build: ${{ github.event.head_commit.message || 'Manual CI Build' }}"
 
       - name: Upload Lint Report Artifact
         uses: actions/upload-artifact@v4

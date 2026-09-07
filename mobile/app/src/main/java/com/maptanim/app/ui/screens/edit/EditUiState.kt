@@ -6,6 +6,8 @@ import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.renderer.model.CropZoneRenderData
 import com.maptanim.app.renderer.model.FarmObjectRenderData
 import com.maptanim.app.renderer.model.PlotRenderData
+import com.maptanim.app.ui.components.editcomponents.croptray.AVAILABLE_CROP_CATALOG
+import com.maptanim.app.ui.components.editcomponents.croptray.CropOption
 
 /**
  * EditUiState — Immutable state holder for FarmEditorScreen.
@@ -15,6 +17,8 @@ data class EditUiState(
     val plots: List<PlotRenderData> = emptyList(),
     val cropZones: List<CropZoneRenderData> = emptyList(),
     val farmObjects: List<FarmObjectRenderData> = emptyList(),
+    val availableCrops: List<CropOption> = AVAILABLE_CROP_CATALOG,
+    val isSyncingCrops: Boolean = false,
     val selectedPlotId: String? = null,
     val selectedZoneId: String? = null,
     val isResizeMode: Boolean = false,

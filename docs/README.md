@@ -87,6 +87,7 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 - 📄 [**35. Asset Pipeline & Graphic Specifications**](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md) — Sprite sheet resolutions, PNG asset organization, Python PIL asset generation scripts, and memory caching.
 - 📄 [**38. Audio & Sound Design Specifications**](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md) — Sound effects (SFX) triggers, ambient background music, and audio manager implementation.
 - 📄 [**39. Crop View Interaction & Variety Simulation**](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md) — Interactive crop inspection modals, variety simulation controls, and real-time yield estimates.
+- 📄 [**43. 2D Isometric Projection Reference & Developer Cookbook**](file:///d:/Development/MapTanim/docs/43_ISOMETRIC_PROJECTION_GUIDE.md) — Tailwind-style cheat-sheet, coordinate transforms, 2:1 projection math, depth sorting, touch picking, hit-testing, and copy-paste recipes for Jetpack Compose & Web Canvas.
 
 ---
 

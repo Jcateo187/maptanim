@@ -152,7 +152,7 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
 ## 💻 Admin Dashboard (React + TypeScript)
 
 - **Location**: `admin/` project module.
-- **Role**: Web-based management console for agricultural extension officers and system administrators.
+- **Role**: Web-based management console for system administrators.
 - **Features**:
   - User and Farm Management (view registered farmers, active plots, regional analytics).
   - Crop Knowledge Base Editor (manage high-value crops, plant-part categories, growth stages, NPK requirements).

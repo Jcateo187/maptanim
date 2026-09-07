@@ -1,14 +1,15 @@
 /**
- * MapTanim -> Miro Board Architecture Generator
+ * MapTanim -> Miro Board Architecture & Flowchart Generator
  * 
- * Automatically connects to Miro REST API v2, lists or creates a board,
- * and generates the complete MapTanim architecture diagram.
+ * Automatically connects to Miro REST API v2, organizes the board
+ * with structural FRAMES, visual process flowchart DIAGRAMS, database
+ * cylinders, decision diamonds, and labeled dataflow connectors.
  */
 
 const https = require('https');
 
 const API_TOKEN = process.env.MIRO_API_TOKEN || process.argv[2] || "eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_RTwu2aHccMO7R_V5yvhcHL-FjiM";
-let BOARD_ID = process.env.MIRO_BOARD_ID || process.argv[3];
+let BOARD_ID = process.env.MIRO_BOARD_ID || process.argv[3] || "uXjVHxtgZgg=";
 
 function miroRequest(endpoint, method = 'GET', payload = null) {
     return new Promise((resolve, reject) => {
@@ -32,7 +33,7 @@ function miroRequest(endpoint, method = 'GET', payload = null) {
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     try {
-                        resolve(JSON.parse(body));
+                        resolve(body ? JSON.parse(body) : {});
                     } catch (e) {
                         resolve(body);
                     }
@@ -50,31 +51,61 @@ function miroRequest(endpoint, method = 'GET', payload = null) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function getOrCreateBoard() {
-    if (BOARD_ID) return BOARD_ID;
-
-    console.log('🔍 Checking existing Miro boards...');
+async function clearBoard(boardId) {
+    console.log('🧹 Clearing legacy items to ensure a clean, organized board...');
     try {
-        const boardsList = await miroRequest('boards?limit=10', 'GET');
-        if (boardsList && boardsList.data && boardsList.data.length > 0) {
-            const existing = boardsList.data.find(b => b.name && b.name.includes('MapTanim')) || boardsList.data[0];
-            console.log(`📌 Using existing Miro Board: "${existing.name}" (ID: ${existing.id})`);
-            return existing.id;
+        let hasMore = true;
+        while (hasMore) {
+            const list = await miroRequest(`boards/${boardId}/items?limit=50`, 'GET');
+            const items = list.data || [];
+            if (items.length === 0) break;
+            console.log(`Deleting batch of ${items.length} items...`);
+            for (const item of items) {
+                try {
+                    await miroRequest(`boards/${boardId}/items/${item.id}`, 'DELETE');
+                    await sleep(60);
+                } catch (e) {}
+            }
+            if (items.length < 50) hasMore = false;
         }
-    } catch (e) {
-        console.warn('Listing boards notice:', e.message);
+        // Also clear frames
+        try {
+            const framesList = await miroRequest(`boards/${boardId}/frames?limit=20`, 'GET');
+            const frames = framesList.data || [];
+            for (const f of frames) {
+                await miroRequest(`boards/${boardId}/frames/${f.id}`, 'DELETE');
+                await sleep(60);
+            }
+        } catch (e) {}
+        console.log('✨ Board cleared successfully!');
+    } catch (err) {
+        console.warn('Cleanup notice:', err.message);
     }
-
-    console.log('✨ Creating a new Miro Board: "MapTanim System Architecture"...');
-    const newBoard = await miroRequest('boards', 'POST', {
-        name: 'MapTanim System Architecture',
-        description: 'Complete architecture diagram for MapTanim agroecological mobile app & backend'
-    });
-    console.log(`🎉 Created Board: "${newBoard.name}" (ID: ${newBoard.id})`);
-    return newBoard.id;
 }
 
-async function createShape({ boardId, x, y, width = 280, height = 120, content, shape = 'round_rectangle', fillColor = '#2E7D32', textColor = '#FFFFFF' }) {
+async function createFrame({ boardId, x, y, width, height, title }) {
+    const payload = {
+        data: {
+            title: title,
+            format: 'custom',
+            type: 'freeform'
+        },
+        position: {
+            origin: 'center',
+            x: x,
+            y: y
+        },
+        geometry: {
+            width: width,
+            height: height
+        }
+    };
+    const res = await miroRequest(`boards/${boardId}/frames`, 'POST', payload);
+    await sleep(150);
+    return res;
+}
+
+async function createShape({ boardId, x, y, width = 280, height = 120, content, shape = 'round_rectangle', fillColor = '#2E7D32', textColor = '#FFFFFF', borderColor = '#1B5E20' }) {
     const payload = {
         data: {
             shape: shape,
@@ -84,7 +115,7 @@ async function createShape({ boardId, x, y, width = 280, height = 120, content, 
             fillColor: fillColor,
             textAlign: 'center',
             textAlignVertical: 'middle',
-            borderColor: '#1B5E20',
+            borderColor: borderColor,
             borderWidth: '2',
             color: textColor
         },
@@ -99,27 +130,27 @@ async function createShape({ boardId, x, y, width = 280, height = 120, content, 
         }
     };
     const res = await miroRequest(`boards/${boardId}/shapes`, 'POST', payload);
-    await sleep(150);
+    await sleep(120);
     return res;
 }
 
-async function createConnector(boardId, startItem, endItem, caption = '') {
+async function createConnector(boardId, startItem, endItem, caption = '', color = '#4CAF50') {
     try {
         const payload = {
             startItem: { id: startItem.id, snapTo: 'auto' },
             endItem: { id: endItem.id, snapTo: 'auto' },
             style: {
-                strokeColor: '#4CAF50',
+                strokeColor: color,
                 strokeWidth: '3',
                 strokeStyle: 'normal'
             },
             ...(caption ? { captions: [{ content: caption, position: '50%' }] } : {})
         };
         const res = await miroRequest(`boards/${boardId}/connectors`, 'POST', payload);
-        await sleep(150);
+        await sleep(120);
         return res;
     } catch (e) {
-        console.warn(`Connector info: ${e.message}`);
+        console.warn(`Connector note: ${e.message}`);
     }
 }
 
@@ -141,141 +172,474 @@ async function createStickyNote({ boardId, x, y, content, color = 'light_green' 
             }
         };
         const res = await miroRequest(`boards/${boardId}/sticky_notes`, 'POST', payload);
-        await sleep(150);
+        await sleep(120);
         return res;
     } catch (e) {
-        console.warn(`Sticky Note info: ${e.message}`);
+        console.warn(`Sticky note note: ${e.message}`);
     }
 }
 
 async function main() {
-    console.log('🚀 Connecting to Miro API with your access token...');
+    console.log(`🚀 Connecting to Miro Board: ${BOARD_ID}...`);
     try {
-        const targetBoardId = await getOrCreateBoard();
-        BOARD_ID = targetBoardId;
+        await clearBoard(BOARD_ID);
 
-        console.log(`\n📐 Constructing MapTanim Architecture on Board ${BOARD_ID}...\n`);
+        console.log('\n📐 Constructing Organized Architecture & Flowchart Frames...\n');
 
-        // ── 1. Layer 1: Client App (Jetpack Compose UI & Engine) ──────────
-        console.log('👉 Creating UI & ViewModel Shapes...');
+        // ── TOP BANNER ──────────────────────────────────────────────────
+        console.log('👉 Creating Header Banner...');
         await createShape({
             boardId: BOARD_ID,
-            x: 0, y: -500, width: 550, height: 80,
-            content: '🌱 MAPTANIM AGROECOLOGICAL SYSTEM ARCHITECTURE',
-            fillColor: '#1B5E20'
+            x: 0, y: -850, width: 1400, height: 100,
+            content: '🌱 MAPTANIM AGROECOLOGICAL PLATFORM — SYSTEM ARCHITECTURE & WORKFLOW FLOWCHART<br/><span style="font-size: 14px; font-weight: normal;">Structured Multi-Tier Architecture • Live Preview Synchronization • Zero Cloudflare • Pure Supabase Storage</span>',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
         });
 
-        const uiShape = await createShape({
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 1: TIER 1 - CLIENT APPLICATIONS
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 1: Client Applications Tier...');
+        await createFrame({
             boardId: BOARD_ID,
-            x: -400, y: -300, width: 300, height: 130,
-            content: '📱 UI Layer (Jetpack Compose)<br/>• HomeScreen (HUD & Realtime Plots)<br/>• FarmEditorScreen (Isometric Grid)<br/>• ProfileScreen & Farm Modals',
-            fillColor: '#2E7D32'
+            x: -850, y: -380, width: 1600, height: 680,
+            title: '📱 FRAME 1: CLIENT APPLICATIONS (MOBILE & ADMIN STUDIO)'
         });
 
-        const vmShape = await createShape({
+        const mobileClient = await createShape({
             boardId: BOARD_ID,
-            x: 0, y: -300, width: 300, height: 130,
-            content: '⚙️ ViewModel Layer<br/>• HomeViewModel (Lifecycle Sync)<br/>• EditViewModel (Plot Placement & Discard)<br/>• ProfileViewModel (Multi-Farm Management)',
-            fillColor: '#388E3C'
+            x: -1350, y: -380, width: 380, height: 260,
+            content: '📱 Android Mobile Client (Jetpack Compose)<br/>• <strong>HomeScreen</strong>: Real-time Farm HUD & Active Plots<br/>• <strong>FarmEditorScreen</strong>: 2D Isometric Grid & Drag-Drop Tray<br/>• <strong>CropDetailDialog</strong>: 5-Stage Schedule • Why? Science<br/>• <strong>CommunityForum & Profile</strong>: User-Based Forum & Reaction Stream<br/>• <strong>Zero Location Tracking</strong>: Decoupled from GPS',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
         });
 
-        const engineShape = await createShape({
+        const viewModelLayer = await createShape({
             boardId: BOARD_ID,
-            x: 400, y: -300, width: 300, height: 130,
-            content: '🗺️ 2D Isometric Rendering Engine<br/>• FarmCanvasRenderer (Grid math)<br/>• IsometricProjection (Screen to World)<br/>• Crop AssetLoader (Single Sprite Stages)',
-            fillColor: '#43A047'
+            x: -850, y: -380, width: 380, height: 260,
+            content: '⚙️ ViewModel & Reactive StateFlow<br/>• <strong>HomeViewModel</strong>: Reactive Farm HUD & Task Dashboard<br/>• <strong>ProfileViewModel</strong>: User-Based Combined Filter (Authored/Reacted)<br/>• <strong>CommunityPreferencesManager</strong>: Liked & Authored Local Cache<br/>• <strong>FarmPreferencesManager</strong>: Multi-Farm State Isolation<br/>• <strong>StateFlow / SharedFlow</strong>: Immutable Unidirectional Data',
+            fillColor: '#388E3C',
+            borderColor: '#81C784'
         });
 
-        const dssShape = await createShape({
+        const adminStudio = await createShape({
             boardId: BOARD_ID,
-            x: 400, y: -100, width: 300, height: 120,
-            content: '🧠 Agroecological DSS Engine<br/>• Companion Matrix & Scoring<br/>• Philippine Crop Knowledgebase<br/>• Organic Pest Management Tips',
-            fillColor: '#689F38'
+            x: -350, y: -380, width: 380, height: 260,
+            content: '🖥️ Admin Web Studio (React + TypeScript + Vite)<br/>• <strong>Crop Library</strong>: Catalog Management & Category Filters<br/>• <strong>CropBreakdownModal</strong>: 1:1 Mobile UI Parity with Science Pills<br/>• <strong>MobileCropBreakdownPreview</strong>: Real-time Phone Mockup<br/>• <strong>SupabaseStorageManager</strong>: 1-Click Metadata Image Sync<br/>• <strong>DSSRuleEditor</strong>: Bi-directional Companion Matrix Engine',
+            fillColor: '#1E88E5',
+            borderColor: '#64B5F6'
         });
 
-        // ── 2. Layer 2: State, Preferences & Repositories ─────────────────
-        console.log('👉 Creating State & Repository Layer...');
-        const prefsShape = await createShape({
+        await createConnector(BOARD_ID, mobileClient, viewModelLayer, 'UI Events / StateFlow', '#81C784');
+        await createConnector(BOARD_ID, adminStudio, viewModelLayer, '1:1 Parity Standard', '#64B5F6');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 2: TIER 2 - CORE INTELLIGENT ENGINES
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 2: Core Intelligent Engines...');
+        await createFrame({
             boardId: BOARD_ID,
-            x: -400, y: -100, width: 300, height: 120,
-            content: '🔄 FarmPreferencesManager<br/>• activeFarmChanges (SharedFlow)<br/>• User & Guest Active Farm Persistence',
-            fillColor: '#00796B'
+            x: 850, y: -380, width: 1600, height: 680,
+            title: '🧠 FRAME 2: CORE INTELLIGENT ENGINES & SPATIAL RENDERING'
         });
 
-        const repoShape = await createShape({
+        const isoEngine = await createShape({
             boardId: BOARD_ID,
-            x: 0, y: -100, width: 300, height: 120,
-            content: '📦 Repository Layer<br/>• FarmRepository & CropPlotRepository<br/>• UserRepository & TaskRepository<br/>• Notification & HarvestRepository',
-            fillColor: '#00897B'
+            x: 350, y: -380, width: 380, height: 260,
+            content: '🗺️ 2D Isometric Rendering Engine<br/>• <strong>FarmCanvasRenderer</strong>: Diamond Tile Math Projection<br/>• <strong>IsometricProjection</strong>: Screen-to-World Coordinate Mapping<br/>• <strong>Multi-Layer Z-Order</strong>: Depth Sorting for Overlapping Sprites<br/>• <strong>Grid Snapping</strong>: Real-time Tile Collision & Boundaries<br/>• <strong>Touch Gestures</strong>: Smooth Pan & Pinch-to-Zoom Controls',
+            fillColor: '#43A047',
+            borderColor: '#A5D6A7'
         });
 
-        // ── 3. Layer 3: Persistence & Database ────────────────────────────
-        console.log('👉 Creating Database & Backend Cloud Layer...');
-        const roomShape = await createShape({
+        const dssEngine = await createShape({
             boardId: BOARD_ID,
-            x: -300, y: 150, width: 340, height: 140,
-            content: '💾 Local Room Database (SQLite)<br/>• Offline Cache & Instant Startup<br/>• crop_plots & crop_zones<br/>• farms, tasks & harvest_records',
-            fillColor: '#0288D1'
+            x: 850, y: -380, width: 380, height: 260,
+            content: '🧠 Agroecological DSS Engine<br/>• <strong>Companion Matrix</strong>: Synergistic & Antagonistic Plant Rules<br/>• <strong>Bioavailability Gauges</strong>: Soil Texture (Loam/Clay/Sandy), pH, NPK<br/>• <strong>Growth Schedules</strong>: Sprout, Seedling, Veg, Bloom, Harvest<br/>• <strong>Organic Pest Management</strong>: Biological Deterrence Tips<br/>• <strong>Location-Free</strong>: Pure Agroecological Science (No GPS)',
+            fillColor: '#689F38',
+            borderColor: '#C5E1A5'
         });
 
-        const supaShape = await createShape({
+        const assetPipeline = await createShape({
             boardId: BOARD_ID,
-            x: 300, y: 150, width: 340, height: 140,
-            content: '☁️ Supabase Cloud (PostgreSQL)<br/>• Auth / JWT User Sessions<br/>• Row-Level Security (RLS)<br/>• Realtime Cloud Sync & Profiles',
-            fillColor: '#0097A7'
+            x: 1350, y: -380, width: 380, height: 260,
+            content: '🎨 Asset & Storage Pipeline<br/>• <strong>AI-Generated Crop Sprites</strong>: Authentic Visual Assets<br/>• <strong>Bundled Local APK Assets</strong>: High-Res 30-50KB WebP Sprites<br/>• <strong>Supabase Storage Bucket</strong>: `crop-images` for OTA Updates<br/>• <strong>Zero Unsplash Dependency</strong>: No Broken External URLs<br/>• <strong>Zero Cloudflare R2</strong>: $0 Egress & No Worker Maintenance',
+            fillColor: '#00897B',
+            borderColor: '#80CBC4'
         });
 
-        const adminShape = await createShape({
+        await createConnector(BOARD_ID, isoEngine, dssEngine, 'Plot Context / Spatial Check', '#C5E1A5');
+        await createConnector(BOARD_ID, dssEngine, assetPipeline, 'Crop Asset Mapping', '#80CBC4');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 3: TIER 3 - PERSISTENCE & CLOUD INFRASTRUCTURE
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 3: Persistence & Cloud Tier...');
+        await createFrame({
             boardId: BOARD_ID,
-            x: 300, y: 380, width: 340, height: 120,
-            content: '🖥️ Admin Web Portal (Next.js)<br/>• Support Feedback & Support Tickets<br/>• Crop Library Manager<br/>• System Maintenance & Monitoring',
-            fillColor: '#5C6BC0'
+            x: -850, y: 380, width: 1600, height: 680,
+            title: '💾 FRAME 3: PERSISTENCE & CLOUD INFRASTRUCTURE'
         });
 
-        // ── 4. Connectors / Data Flow Arrows ──────────────────────────────
-        console.log('👉 Drawing Connectors & Flow Arrows...');
-        await createConnector(BOARD_ID, uiShape, vmShape, 'StateFlow / UI Events');
-        await createConnector(BOARD_ID, uiShape, engineShape, 'Direct 2D Render');
-        await createConnector(BOARD_ID, vmShape, repoShape, 'UseCases / Data Access');
-        await createConnector(BOARD_ID, vmShape, prefsShape, 'Active Farm ID');
-        await createConnector(BOARD_ID, vmShape, dssShape, 'Agro Advice');
-        await createConnector(BOARD_ID, repoShape, roomShape, 'Room DAO (Offline First)');
-        await createConnector(BOARD_ID, repoShape, supaShape, 'HTTPS PostgREST API');
-        await createConnector(BOARD_ID, adminShape, supaShape, 'Direct SQL / Supabase Client');
+        const roomDb = await createShape({
+            boardId: BOARD_ID,
+            x: -1350, y: 380, width: 380, height: 260,
+            content: '💾 Local Room Database (SQLite)<br/>• <strong>Offline-First DAO</strong>: Zero Network Latency Startup<br/>• <strong>Tables</strong>: `crop_plots`, `crop_zones`, `farms`<br/>• <strong>Tasks & Records</strong>: `tasks`, `harvest_records`<br/>• <strong>Transactional Rollback</strong>: Discard Unsaved Farm Edits<br/>• <strong>Room InvalidationTracker</strong>: Instant State Updates',
+            shape: 'can',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
 
-        // ── 5. Sticky Notes for Key Highlights ───────────────────────────
-        console.log('👉 Adding Feature Badges & Notes...');
+        const supaDb = await createShape({
+            boardId: BOARD_ID,
+            x: -850, y: 380, width: 380, height: 260,
+            content: '☁️ Supabase Cloud (PostgreSQL)<br/>• <strong>Auth / JWT</strong>: Secure User Identity & Sessions<br/>• <strong>Row-Level Security (RLS)</strong>: Tenant Isolation<br/>• <strong>Relational Core</strong>: `crops`, `dss_rules`, `forum_posts`<br/>• <strong>Realtime PostgREST API</strong>: Push-to-Mobile Notifications<br/>• <strong>Feedback & Tickets</strong>: Farmer Inquiries & Reports',
+            shape: 'can',
+            fillColor: '#0097A7',
+            borderColor: '#80DEEA'
+        });
+
+        const supaStorage = await createShape({
+            boardId: BOARD_ID,
+            x: -350, y: 380, width: 380, height: 260,
+            content: '☁️ Supabase Object Storage<br/>• <strong>Bucket</strong>: `crop-images` (Public CDN Hosting)<br/>• <strong>Capacity</strong>: 1 GB Free Tier ($0 Cost)<br/>• <strong>Egress Fees</strong>: $0 Unlimited Read Bandwidth<br/>• <strong>Direct Uploads</strong>: Admin Studio Direct REST POST<br/>• <strong>Auto-Bucket Provisioning</strong>: SQL Migration 017',
+            shape: 'cloud',
+            fillColor: '#00796B',
+            borderColor: '#4DB6AC'
+        });
+
+        await createConnector(BOARD_ID, roomDb, supaDb, 'Background Bidirectional Sync', '#4FC3F7');
+        await createConnector(BOARD_ID, supaDb, supaStorage, 'Foreign Key Image References', '#4DB6AC');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 4: TIER 4 - END-TO-END WORKFLOW & DIAGRAM FLOWCHART
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 4: Workflow Flowchart Diagram...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 850, y: 380, width: 1600, height: 680,
+            title: '🔄 FRAME 4: DYNAMIC CROP SYNC & LIVE PREVIEW FLOWCHART'
+        });
+
+        // Flowchart Diagram Nodes
+        const flowStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: 200, y: 220, width: 260, height: 100,
+            content: '1. 👨‍🌾 Admin Edits Crop Profile<br/>(Name, Category, Days, NPK, Stages)',
+            shape: 'round_rectangle',
+            fillColor: '#1976D2',
+            borderColor: '#90CAF9'
+        });
+
+        const flowStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: 550, y: 220, width: 260, height: 100,
+            content: '2. ⚡ Real-Time React Dispatch<br/>(Instant 0ms State Synchronization)',
+            shape: 'round_rectangle',
+            fillColor: '#388E3C',
+            borderColor: '#A5D6A7'
+        });
+
+        const flowStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 900, y: 220, width: 280, height: 100,
+            content: '3. 📱 Live Mobile Phone Mockup<br/>(Inspect 5 Stages & Science Pills)',
+            shape: 'round_rectangle',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        const flowDecision = await createShape({
+            boardId: BOARD_ID,
+            x: 1300, y: 220, width: 220, height: 120,
+            content: 'Upload<br/>New Image?',
+            shape: 'rhombus',
+            fillColor: '#FFA000',
+            borderColor: '#FFE082'
+        });
+
+        const flowUpload = await createShape({
+            boardId: BOARD_ID,
+            x: 1300, y: 450, width: 260, height: 110,
+            content: '4. ☁️ Supabase Storage Upload<br/>(Saved to `crop-images` Bucket)',
+            shape: 'cloud',
+            fillColor: '#00897B',
+            borderColor: '#80CBC4'
+        });
+
+        const flowSave = await createShape({
+            boardId: BOARD_ID,
+            x: 900, y: 450, width: 280, height: 100,
+            content: '5. 💾 Publish Crop Record<br/>(Supabase PostgreSQL & DSS Rules)',
+            shape: 'round_rectangle',
+            fillColor: '#0097A7',
+            borderColor: '#80DEEA'
+        });
+
+        const flowBroadcast = await createShape({
+            boardId: BOARD_ID,
+            x: 550, y: 450, width: 260, height: 100,
+            content: '6. 📢 Over-The-Air Broadcast<br/>(Cache Invalidation to Farmers)',
+            shape: 'round_rectangle',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const flowMobileOpen = await createShape({
+            boardId: BOARD_ID,
+            x: 200, y: 450, width: 260, height: 100,
+            content: '7. 🌾 Android Compose Dialog<br/>(Farmer Views 1:1 Matched Advice)',
+            shape: 'round_rectangle',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        // Connect the flowchart diagram steps
+        await createConnector(BOARD_ID, flowStep1, flowStep2, 'Input Event', '#90CAF9');
+        await createConnector(BOARD_ID, flowStep2, flowStep3, 'Live Mockup', '#A5D6A7');
+        await createConnector(BOARD_ID, flowStep3, flowDecision, 'Image Check', '#FFE082');
+        await createConnector(BOARD_ID, flowDecision, flowUpload, 'YES (Upload)', '#FFA000');
+        await createConnector(BOARD_ID, flowDecision, flowSave, 'NO (Default URL)', '#A5D6A7');
+        await createConnector(BOARD_ID, flowUpload, flowSave, 'Attach Public URL', '#80CBC4');
+        await createConnector(BOARD_ID, flowSave, flowBroadcast, 'Commit Transaction', '#80DEEA');
+        await createConnector(BOARD_ID, flowBroadcast, flowMobileOpen, 'Mobile Sync', '#CE93D8');
+
+        // Cross-frame architectural connectors
+        await createConnector(BOARD_ID, mobileClient, isoEngine, 'Render Canvas Grid', '#66BB6A');
+        await createConnector(BOARD_ID, viewModelLayer, dssEngine, 'Companion Scoring', '#C5E1A5');
+        await createConnector(BOARD_ID, viewModelLayer, roomDb, 'Offline DAO Reads', '#4FC3F7');
+        await createConnector(BOARD_ID, adminStudio, supaStorage, 'Storage Upload / Sync', '#4DB6AC');
+        await createConnector(BOARD_ID, adminStudio, supaDb, 'Admin SQL / RLS', '#80DEEA');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 5: KEY ARCHITECTURAL INNOVATIONS & MILESTONES
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 5: Architecture Highlights...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 920, width: 3300, height: 280,
+            title: '🌟 FRAME 5: KEY ARCHITECTURAL HIGHLIGHTS & INNOVATIONS'
+        });
+
         await createStickyNote({
             boardId: BOARD_ID,
-            x: -680, y: -300,
-            content: '🎨 Pixel-art Crop Sprites:\n• 1 Integrated Asset per Crop\n• Stage 1 (Sprout)\n• Stage 2 (Growing)\n• Stage 3 (Mature / Harvest)',
+            x: -1250, y: 920,
+            content: '🌿 5-Stage Phenological Schedule:\n• Sprout, Seedling, Veg, Bloom, Harvest\n• Day durations dynamically configured per cultivar\n• Interactive "Why? 💡" botanical science accordions\n• Real-time Bioavailability Gauges (NPK & pH)',
             color: 'yellow'
         });
 
         await createStickyNote({
             boardId: BOARD_ID,
-            x: -680, y: -100,
-            content: '⚡ Reactive Multi-Farm:\n• Instant farm switching\n• Automatic resume refresh\n• Unsaved edits discarded on exit\n• Isolated plots per farm_id',
+            x: -625, y: 920,
+            content: '📱 1:1 Live Mobile Preview Mockup:\n• Admin Web Studio embeds real-time phone canvas\n• Zero data discrepancy between Admin and Mobile\n• Instant visual validation before publishing\n• Supports CropBreakdownModal & CropTray views',
+            color: 'pink'
+        });
+
+        await createStickyNote({
+            boardId: BOARD_ID,
+            x: 0, y: 920,
+            content: '👥 User-Based Forum & Reaction Stream:\n• User Authored Posts Only (No strangers\' unreacted clutter)\n• Dynamic Reaction Sync (Like/Unlike instantly updates Profile Activity)\n• Visual Badges (✍️ Your Post / ❤️ Reacted • by Author)\n• Multi-Mode Filter (All / My Posts / Reacted)\n• Offline Persistence via CommunityPreferencesManager',
+            color: 'light_green'
+        });
+
+        await createStickyNote({
+            boardId: BOARD_ID,
+            x: 625, y: 920,
+            content: '🛡️ Privacy-First Zero Location:\n• Completely decoupled from GPS / location permissions\n• Agronomic recommendations driven by soil texture & season\n• Zero geospatial tracking, harvesting, or surveillance\n• 100% offline-ready Philippine farming support',
             color: 'cyan'
         });
 
         await createStickyNote({
             boardId: BOARD_ID,
-            x: -680, y: 150,
-            content: '🚀 Fast App Loading:\n• Room offline preloading\n• Instant session cache\n• Seamless splash to workspace',
-            color: 'light_green'
+            x: 1250, y: 920,
+            content: '☁️ Zero Cloudflare Overhead:\n• Completely removed Cloudflare workers & endpoints\n• Pure Supabase Storage (`crop-images` bucket)\n• 1GB free storage with $0 egress fees\n• Local 30-50KB WebP assets bundled in APK',
+            color: 'orange'
         });
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 6: TODAY'S SYSTEM UPDATE — USER-BASED COMMUNITY FORUM ACTIVITY
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 6: Today\'s System Update (User-Based Community Activity)...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 1450, width: 3300, height: 480,
+            title: '🔥 FRAME 6: TODAY\'S SYSTEM UPDATE — USER-BASED COMMUNITY FORUM ACTIVITY & REACTION PIPELINE'
+        });
+
+        const updateStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 1450, width: 360, height: 240,
+            content: '1. ✍️ / ❤️ Farmer Action Trigger<br/>• Farmer authors a discussion OR reacts (likes ❤️) to a post<br/>• <strong>User Isolation</strong>: Unreacted posts by others NEVER pollute profile<br/>• Real-time local state update in Jetpack Compose UI',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        const updateStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 1450, width: 360, height: 240,
+            content: '2. 📦 Data Caching & Supabase Sync<br/>• <strong>CommunityPreferencesManager</strong>: Local SharedPreferences<br/>• Persists <code>liked_post_ids</code> & <code>authored_post_ids</code><br/>• <strong>Supabase</strong>: Syncs <code>author_id</code> & <code>likes_count</code><br/>• Survives offline cold reboots',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
+
+        const updateStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 1450, width: 360, height: 240,
+            content: '3. ⚡ Reactive ViewModel Combine<br/>• <strong>ProfileViewModel</strong>: <code>combine(userProfile, observePosts())</code><br/>• Pure predicate: <code>isAuthoredByMe || isReactedByMe</code><br/>• Reactive 0ms UI StateFlow emission to Profile HUD',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const updateStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 1450, width: 360, height: 240,
+            content: '4. 🏷️ Smart Badges & Filter Tabs<br/>• Visual Badges: <code>✍️ Your Post</code> & <code>❤️ Reacted</code><br/>• Author Attribution: <code>• by [Original Farmer]</code><br/>• Interactive Filter: <strong>All</strong> • <strong>✍️ My Posts</strong> • <strong>❤️ Reacted</strong>',
+            fillColor: '#E65100',
+            borderColor: '#FFB74D'
+        });
+
+        const updateStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 1450, width: 360, height: 240,
+            content: '5. ✅ Automated Unit Test Suite<br/>• <strong>CommunityActivityFilterTest</strong>: 4 targeted test suites<br/>• Authored inclusion, unreacted exclusion, reaction toggle<br/>• Gradle Result: <code>BUILD SUCCESSFUL (100% Pass)</code>',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        await createConnector(BOARD_ID, updateStep1, updateStep2, 'Action Dispatch', '#4FC3F7');
+        await createConnector(BOARD_ID, updateStep2, updateStep3, 'Persisted Stream', '#CE93D8');
+        await createConnector(BOARD_ID, updateStep3, updateStep4, 'Filtered UI State', '#FFB74D');
+        await createConnector(BOARD_ID, updateStep4, updateStep5, 'Regression Tested', '#4CAF50');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 7: Today's System Update - Post Loading & Friend Chat
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 7: Today\'s System Update (Post Loading & Friend Chat Overhaul)...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 2000, width: 3300, height: 480,
+            title: '💬 FRAME 7: COMMUNITY POST PUBLISHING FEEDBACK & FRIEND-BASED CHAT PIPELINE'
+        });
+
+        const chatStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 2000, width: 360, height: 240,
+            content: '1. ⏳ Post Publishing State & Feedback (Mobile & Admin)<br/>• Jetpack Compose & React spinners (CircularProgressIndicator & RefreshCw)<br/>• Non-blocking asynchronous submission<br/>• Draft preservation on failure<br/>• Dynamic green/red status notice banner',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        const chatStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 2000, width: 360, height: 240,
+            content: '2. 🚫 Zero-Mock Architecture (Mobile & Admin)<br/>• Deleted mock "General Farmers Chat" from Android & Web<br/>• Purged uninvited members dump<br/>• Conversations strictly isolated to <strong>Added Friends / Farmers</strong><br/>• Safe empty state when no conversations added yet',
+            fillColor: '#C62828',
+            borderColor: '#EF5350'
+        });
+
+        const chatStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 2000, width: 360, height: 240,
+            content: '3. 👥 Add Friend / Farmer Modal (Mobile & Admin)<br/>• Add Friend icon button beside "CONVERSATIONS"<br/>• Interactive modal searching registered farmers<br/>• SharedPreferences & LocalStorage persistence<br/>• Instant channel switch to start chatting',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
+
+        const chatStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 2000, width: 360, height: 240,
+            content: '4. 🔍 Unified Search (Mobile & Admin)<br/>• Real-time search bar in conversations sidebar<br/>• Dual predicate: matches friend name OR chat message content<br/>• Active message highlighted filtering in conversation view',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const chatStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 2000, width: 360, height: 240,
+            content: '5. 🧪 Dual Verification & Production Builds<br/>• <strong>CommunityChatAndPublishTest</strong> (100% Pass)<br/>• <strong>Vite Production Build</strong>: <code>vite build</code> (0 errors)<br/>• Mobile and Admin dashboard in complete sync',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        await createConnector(BOARD_ID, chatStep1, chatStep2, 'Clean Separation', '#66BB6A');
+        await createConnector(BOARD_ID, chatStep2, chatStep3, 'Friend Connection', '#4FC3F7');
+        await createConnector(BOARD_ID, chatStep3, chatStep4, 'Dynamic Search', '#CE93D8');
+        await createConnector(BOARD_ID, chatStep4, chatStep5, 'Regression Tested', '#4CAF50');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 8: Vercel Cloud Deployment, Branding & DSS Engine Fix
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 8: Vercel Cloud Deployment, Branding & DSS Engine Resilience...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 2550, width: 3300, height: 480,
+            title: '🚀 FRAME 8: VERCEL CLOUD DEPLOYMENT, BRANDING ALIGNMENT & DSS ENGINE RESILIENCE'
+        });
+
+        const deployStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 2550, width: 360, height: 240,
+            content: '1. ☁️ Vercel Cloud CD Pipeline<br/>• <strong>Production URL</strong>: <code>maptanim-admin.vercel.app</code><br/>• Root <code>.vercelignore</code> excludes 808MB Android/Gradle builds<br/>• Lightning-fast 6.3s automated build & deployment<br/>• Zero 100MB payload limit errors',
+            fillColor: '#0070F3',
+            borderColor: '#50E3C2'
+        });
+
+        const deployStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 2550, width: 360, height: 240,
+            content: '2. 🎨 App Logo Favicon & Identity<br/>• Official MapTanim app logo favicon (<code>/app_logo.png</code>)<br/>• Browser title aligned to <code>maptanim admin</code><br/>• Sidebar brand shield updated with official logo image<br/>• Touch icons & shortcuts generated',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        const deployStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 2550, width: 360, height: 240,
+            content: '3. ⚙️ DSS Rule Engine Resilience<br/>• Fixed <code>loadRules is not defined</code> runtime exception<br/>• Added robust <code>try...catch...finally</code> safety boundary<br/>• Dynamic animated spinner (<code>RefreshCw</code>)<br/>• Clean empty state for unmatched filters',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const deployStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 2550, width: 360, height: 240,
+            content: '4. 🔒 Zero-Location Tracking Architecture<br/>• Purged all <code>barangay</code> & <code>municipality</code> filters<br/>• Farmer search matches strictly by Name and Farm Name<br/>• Activity status: <code>{farmName} • {Online | Active}</code><br/>• 100% compliant with privacy-first agronomic model',
+            fillColor: '#E65100',
+            borderColor: '#FFB74D'
+        });
+
+        const deployStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 2550, width: 360, height: 240,
+            content: '5. 🌐 Production Verified & Live Aliased<br/>• Git branch <code>Refinement</code> fully synced with GitHub<br/>• Multi-stage build passed (0 errors, 2263 modules)<br/>• Vercel production alias active & operational<br/>• Live updates tested across desktop & mobile viewport',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        await createConnector(BOARD_ID, deployStep1, deployStep2, 'Brand Alignment', '#50E3C2');
+        await createConnector(BOARD_ID, deployStep2, deployStep3, 'Engine Fixes', '#CE93D8');
+        await createConnector(BOARD_ID, deployStep3, deployStep4, 'Privacy Standard', '#FFB74D');
+        await createConnector(BOARD_ID, deployStep4, deployStep5, 'Production Aliased', '#4CAF50');
 
         console.log(`
 =============================================================================
-🎉 SUCCESS: MapTanim Architecture generated successfully on Miro!
-🔗 Open your Miro board:
+🎉 SUCCESS: Organized MapTanim Architecture & Flowchart created on Miro!
+🖼️ 8 Professional Frames Generated:
+   1. 📱 Client Applications Tier (Mobile & Admin)
+   2. 🧠 Core Intelligent Engines & Rendering
+   3. 💾 Persistence & Cloud Infrastructure (Database Can Shapes)
+   4. 🔄 Dynamic Crop Sync & Live Preview Flowchart (Decision Diamonds)
+   5. 🌟 Key Architectural Highlights & Innovations
+   6. 🔥 Today's System Update: User-Based Community Forum Activity & Reaction Pipeline
+   7. 💬 Today's System Update: Community Post Publishing Feedback & Friend-Based Chat
+   8. 🚀 Today's System Update: Vercel Cloud Deployment, Branding & DSS Resilience
+
+🔗 Open your updated Miro board:
    https://miro.com/app/board/${BOARD_ID}/
 =============================================================================
 `);
 
     } catch (err) {
-        console.error('❌ Error executing Miro script:', err.message);
+        console.error('❌ Error generating Miro architecture:', err.message);
     }
 }
 
