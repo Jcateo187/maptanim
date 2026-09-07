@@ -565,10 +565,65 @@ async function main() {
         await createConnector(BOARD_ID, chatStep3, chatStep4, 'Dynamic Search', '#CE93D8');
         await createConnector(BOARD_ID, chatStep4, chatStep5, 'Regression Tested', '#4CAF50');
 
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 8: Vercel Cloud Deployment, Branding & DSS Engine Fix
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 8: Vercel Cloud Deployment, Branding & DSS Engine Resilience...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 2550, width: 3300, height: 480,
+            title: '🚀 FRAME 8: VERCEL CLOUD DEPLOYMENT, BRANDING ALIGNMENT & DSS ENGINE RESILIENCE'
+        });
+
+        const deployStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 2550, width: 360, height: 240,
+            content: '1. ☁️ Vercel Cloud CD Pipeline<br/>• <strong>Production URL</strong>: <code>maptanim-admin.vercel.app</code><br/>• Root <code>.vercelignore</code> excludes 808MB Android/Gradle builds<br/>• Lightning-fast 6.3s automated build & deployment<br/>• Zero 100MB payload limit errors',
+            fillColor: '#0070F3',
+            borderColor: '#50E3C2'
+        });
+
+        const deployStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 2550, width: 360, height: 240,
+            content: '2. 🎨 App Logo Favicon & Identity<br/>• Official MapTanim app logo favicon (<code>/app_logo.png</code>)<br/>• Browser title aligned to <code>maptanim admin</code><br/>• Sidebar brand shield updated with official logo image<br/>• Touch icons & shortcuts generated',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        const deployStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 2550, width: 360, height: 240,
+            content: '3. ⚙️ DSS Rule Engine Resilience<br/>• Fixed <code>loadRules is not defined</code> runtime exception<br/>• Added robust <code>try...catch...finally</code> safety boundary<br/>• Dynamic animated spinner (<code>RefreshCw</code>)<br/>• Clean empty state for unmatched filters',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const deployStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 2550, width: 360, height: 240,
+            content: '4. 🔒 Zero-Location Tracking Architecture<br/>• Purged all <code>barangay</code> & <code>municipality</code> filters<br/>• Farmer search matches strictly by Name and Farm Name<br/>• Activity status: <code>{farmName} • {Online | Active}</code><br/>• 100% compliant with privacy-first agronomic model',
+            fillColor: '#E65100',
+            borderColor: '#FFB74D'
+        });
+
+        const deployStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 2550, width: 360, height: 240,
+            content: '5. 🌐 Production Verified & Live Aliased<br/>• Git branch <code>Refinement</code> fully synced with GitHub<br/>• Multi-stage build passed (0 errors, 2263 modules)<br/>• Vercel production alias active & operational<br/>• Live updates tested across desktop & mobile viewport',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        await createConnector(BOARD_ID, deployStep1, deployStep2, 'Brand Alignment', '#50E3C2');
+        await createConnector(BOARD_ID, deployStep2, deployStep3, 'Engine Fixes', '#CE93D8');
+        await createConnector(BOARD_ID, deployStep3, deployStep4, 'Privacy Standard', '#FFB74D');
+        await createConnector(BOARD_ID, deployStep4, deployStep5, 'Production Aliased', '#4CAF50');
+
         console.log(`
 =============================================================================
 🎉 SUCCESS: Organized MapTanim Architecture & Flowchart created on Miro!
-🖼️ 7 Professional Frames Generated:
+🖼️ 8 Professional Frames Generated:
    1. 📱 Client Applications Tier (Mobile & Admin)
    2. 🧠 Core Intelligent Engines & Rendering
    3. 💾 Persistence & Cloud Infrastructure (Database Can Shapes)
@@ -576,6 +631,7 @@ async function main() {
    5. 🌟 Key Architectural Highlights & Innovations
    6. 🔥 Today's System Update: User-Based Community Forum Activity & Reaction Pipeline
    7. 💬 Today's System Update: Community Post Publishing Feedback & Friend-Based Chat
+   8. 🚀 Today's System Update: Vercel Cloud Deployment, Branding & DSS Resilience
 
 🔗 Open your updated Miro board:
    https://miro.com/app/board/${BOARD_ID}/
