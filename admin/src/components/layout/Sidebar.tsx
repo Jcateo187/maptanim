@@ -97,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {/* Tooltip */}
               <span className="absolute left-16 px-2.5 py-1 rounded-lg bg-[#182933] border border-[#223B49] text-xs font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                MapTanim Dashboard
+                maptanim admin
               </span>
             </div>
 

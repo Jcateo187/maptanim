@@ -112,7 +112,7 @@ export const Login: React.FC = () => {
             }}
           >
             <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: '#4CAF50' }} />
-            <span>MapTanim Dashboard</span>
+            <span>MapTanim Administrator Portal</span>
           </div>
         </div>
 
