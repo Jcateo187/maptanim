@@ -34,7 +34,7 @@ GET /rest/v1/farms?select=*&order=created_at.desc
 
 **GET single farm**
 ```http
-GET /rest/v1/farms?id=eq.{farm_id}&select=*,beds(*)
+GET /rest/v1/farms?id=eq.{farm_id}&select=*,crop_plots(*)
 ```
 
 **POST create farm**
@@ -221,17 +221,47 @@ Body: { "is_read": true }
   ],
   "companion_alerts": [
     {
-      "bed_a_label": "BED 1",
-      "bed_b_label": "BED 3",
+      "plot_a_label": "PLOT 1",
+      "plot_b_label": "PLOT 3",
       "relationship": "ANTAGONIST",
       "message": "Tomato and Eggplant share the same pests (fruit borer). Consider separating."
     }
   ],
   "farm_summary": {
-    "total_beds": 12,
-    "total_plants": 186,
+    "total_plots": 12,
+    "total_planted_plots": 8,
     "ready_to_harvest": 4,
-    "active_alerts": 2
+    "active_companion_alerts": 1
+  }
+}
+```
+
+---
+
+### `broadcast-dispatcher`
+
+**Endpoint**: `POST /functions/v1/broadcast-dispatcher`
+
+**Request**:
+```json
+{
+  "title": "Severe Pest Advisory",
+  "body": "Fall armyworm reported in region. Inspect pechay and corn plots immediately.",
+  "notification_type": "PEST_ADVISORY",
+  "user_id": null
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Broadcast notification dispatched to all farmers",
+  "notification": {
+    "id": "uuid",
+    "title": "Severe Pest Advisory",
+    "notification_type": "PEST_ADVISORY",
+    "created_at": "2026-07-24T10:00:00Z"
   }
 }
 ```

@@ -204,40 +204,25 @@ flowchart LR
 
 ## Monitoring & Today's Tasks Navigation Design
 
-### 1. Monitoring Screen Side Navigation (Soil Types & Seasons)
-* **6 Soil Types Side Nav** (`LOAM`, `CLAY`, `SANDY`, `SILTY`, `PEATY`, `CHALKY`):
-  * Clicking a soil type filters and displays only crops suitable for that soil type, grouped by their vegetable category (`BULB`, `STEM`, `SHOOT`, `LEAFY`, `FLOWER`, `FRUIT`, `ROOT`, `TUBER`).
-* **3 Seasonal Windows Side Nav** (`DRY`, `WET`, `YEAR_ROUND`):
-  * Clicking a season filters and displays crops matching that planting window, grouped by category.
-* **Crop & Variety Monitoring Isolation**:
-  * Each crop (and its planted variety) has its own dedicated monitoring records via `planting_monitors.crop_id` and `planting_monitors.crop_variety`.
+### 1. Monitoring Dashboard (Plot-First Design)
+* **Full Landscape Width Grid**: Displays active planted crops directly from the isometric farm plots (`crop_plots`). No arbitrary catalog filtering sidebar or unplanted crops.
+* **Plot Context on Every Card**:
+  * **Plot Label**: Identified by assigned plot (e.g. `Plot 1`, `Plot 2`).
+  * **Plot Soil Type Badge**: Static soil assigned to that plot (e.g., `Loam Soil`, `Clay Soil`) from agricultural classification.
+  * **Seasonal Window Badge**: Growing window for the crop (e.g., `☀️ Tag-araw (Dry)`, `🌧️ Tag-ulan (Wet)`, `🔄 Buong Taon (Year-Round)`).
+  * **Growth Progress**: Days planted vs. days to harvest with active 5-stage progress indicator.
+* **Screen 2 DSS Panels**: Tapping any plot card opens the 6 operational DSS panels for that specific planted crop (`Overview`, `Timeline`, `Calendar`, `Companions`, `Growing Tips`, `Pest & Disease`).
 
 ### 2. Today's Tasks Screen
-* **Aggregate Today's Tasks**:
-  * Collects all tasks scheduled for the current date across all crops (`due_date <= CURRENT_DATE` and `is_completed = FALSE`).
-* **Direct Crop Task List View**:
-  * When a farmer clicks a crop card on the Today's Tasks screen, the app immediately lists all tasks specific to that crop (and variety), rather than forcing the user to navigate manually to each crop in the Monitoring screen.
+* **Aggregate Today's Tasks**: Collects all tasks scheduled for the current date across all active farm plots (`due_date <= CURRENT_DATE` and `is_completed = FALSE`).
+* **Direct Plot Task List View**: When a farmer taps a task card, the app allows direct completion (watering, fertilizer, weeding) which updates the plot's health and stage tracking.
 
-
-## Growth Stages (6-Stage Lifecycle)
+## Growth Stages (Canonical 5-Stage Timeline)
 
 | # | Stage | Description | Typical Progress |
 |---|-------|-------------|-----------------|
-| 1 | `GERMINATION` | Seed emergence | 0–15% |
-| 2 | `SEEDLING` | Early leaf development | 15–30% |
-| 3 | `VEGETATIVE` | Rapid stem & leaf expansion | 30–55% |
-| 4 | `FLOWERING` | Budding / podding / fruiting | 55–75% |
-| 5 | `RIPENING` | Fruit/tuber maturation | 75–95% |
-| 6 | `HARVEST` | Full maturity, ready to pick | 95%+ |
-
-Each crop has **configurable durations** per stage stored in `crop_profiles.growth_stage_durations` (JSONB).
-
-## RLS Policy Summary
-
-| Table | Farmer (auth.uid()) | Admin (service_role) |
-|-------|---------------------|---------------------|
-| `crop_profiles` | SELECT (read published) | Full CRUD |
-| `farm_tiles` | Full CRUD (own farm) | SELECT (monitoring) |
-| `tile_plantings` | Full CRUD (own farm→tile) | SELECT (monitoring) |
-| `planting_monitors` | Full CRUD (own farm→tile→planting) | SELECT (monitoring) |
-| `planting_harvests` | Full CRUD (own farm→tile→planting) | SELECT (monitoring) |
+| 1 | `SPROUT` | Seed emergence / initial sprouting | 0–15% |
+| 2 | `SEEDLING` | Early root establishment and true leaves | 15–35% |
+| 3 | `VEGETATIVE` | Rapid stem & foliage development | 35–65% |
+| 4 | `FLOWERING` | Budding, pollination & fruit/pod formation | 65–90% |
+| 5 | `HARVEST` | Full maturity, ready for harvesting & logging | 90%+ |

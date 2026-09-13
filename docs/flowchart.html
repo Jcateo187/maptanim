@@ -122,14 +122,19 @@
 
   <header>
     <div>
-      <h1>🌱 MapTanim Agroecological Architecture <span class="badge">v2.0 • Live</span></h1>
+      <h1>🌱 MapTanim Agroecological Architecture <span class="badge">v2.0 • Live</span> <span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #64B5F6; border-color: rgba(33, 150, 243, 0.4);">Updated: September 13, 2026</span></h1>
       <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-        Crop Breakdown UI • Live Preview • Community Forum • Pure Supabase Storage • Zero Cloudflare
+        Crop Breakdown UI • Live Preview • Community Forum • Serverless Microservices • Pure Supabase Storage • <strong>Updated: September 13, 2026</strong>
       </p>
     </div>
-    <a href="https://miro.com/app/board/uXjVHxtgZgg=/" target="_blank" rel="noreferrer" class="btn">
-      🔗 Open on Miro Board
-    </a>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <a href="#microservices-flowchart" class="btn" style="background: rgba(76, 175, 80, 0.2); color: #81C784; border: 1px solid rgba(76, 175, 80, 0.4);">
+        ⚡ Jump to Microservices
+      </a>
+      <a href="https://miro.com/app/board/uXjVHxtgZgg=/" target="_blank" rel="noreferrer" class="btn">
+        🔗 Open on Miro Board
+      </a>
+    </div>
   </header>
 
   <div class="container">
@@ -171,9 +176,14 @@ flowchart TB
         ASSETS["Asset & Storage Pipeline<br/>• Local 30-50KB WebP Sprites<br/>• Supabase 'crop-images' Bucket<br/>• Zero External Unsplash Links"]
     end
 
+    subgraph Microservices["⚡ Serverless Microservices Tier (Supabase Edge Functions)"]
+        EDSS["evaluate-dss<br/>• Proximity Companion Matrix (d ≤ 3.0m)<br/>• 5-Stage Timeline Calculator<br/>• Daily Task Generator (Water, Fertilize, Harvest)"]
+        BDIS["broadcast-dispatcher<br/>• Admin Broadcast Center<br/>• Urgent Pest Advisories Dispatch"]
+    end
+
     subgraph Persistence["💾 Persistence & Cloud Synchrony"]
         ROOM[("Local Room Database<br/>SQLite Offline-First<br/>• Instant Startup<br/>• Rollback Protection")]
-        SUPA[("Supabase Cloud<br/>PostgreSQL Core<br/>• RLS Security<br/>• Forum Posts & Crops")]
+        SUPA[("Supabase Cloud<br/>PostgreSQL Core<br/>• RLS Security<br/>• Forum Posts, Crops & Tasks")]
         STORAGE[("Supabase Storage<br/>crop-images Bucket<br/>• 1GB Free • $0 Egress")]
     end
 
@@ -181,8 +191,13 @@ flowchart TB
     VM -->|Agro Advice| DSS
     VM -->|Offline DAO| ROOM
     VM -->|PostgREST API| SUPA
+    VM -->|POST /functions/v1/evaluate-dss| EDSS
     AdminPortal -->|Direct SQL / Client| SUPA
+    AdminPortal -->|POST /functions/v1/broadcast-dispatcher| BDIS
     AdminPortal -->|Image Uploads| STORAGE
+    EDSS -->|Read Plots, Crops, Rules| SUPA
+    EDSS -->|Upsert Daily Tasks| SUPA
+    BDIS -->|Insert Broadcasts| SUPA
     STORAGE -.->|Catalog OTA Sync| ASSETS
     ASSETS -->|Bundled Assets| MobileApp
       </div>
@@ -207,7 +222,7 @@ sequenceDiagram
     Preview-->>Admin: Renders identical mobile phone UI with "Why? 💡" pills
 
     Admin->>Form: Upload Crop Illustration
-    Form->>Storage: Direct bucket upload (crop_<timestamp>.png)
+    Form->>Storage: Direct bucket upload (crop_timestamp.png)
     Storage-->>Form: Returns public URL (ojilvcglpzbtpjxguhzj.supabase.co/...)
     Form->>Preview: Live update hero image banner
 
@@ -253,6 +268,170 @@ flowchart LR
         <div class="info-box">
           <strong>⚡ Offline-First Native Resilience</strong>
           Official 15 Philippine crops are pre-bundled in the Android APK as 30-50 KB WebP assets, ensuring zero latency on Philippine 4G/5G networks.
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Seasonal Schedules & Mobile DSS Engine Hub Flowchart -->
+    <div class="card">
+      <h2>📅 4. Seasonal Schedules & Mobile DSS Engine Hub (Sandbox Simulation & Verification)</h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph Presets["🎛️ 4 Dynamic DSS Operational Modes"]
+        P1["MapTanim Empirical Baseline<br/>(100+ Smallholder Interviews)"]
+        P2["Climate-Adaptive Engine<br/>(Wet/Dry Monsoon Shifts)"]
+        P3["High-Yield Intensive Care<br/>(Accelerated Scouting & NPK)"]
+        P4["Agroecological Polyculture<br/>(Companion Synergies & Natural Deterrence)"]
+    end
+
+    subgraph Sandbox["🧪 Interactive Mobile DSS Sandbox Simulator"]
+        IN_CROP["Target Cultivated Crop<br/>(15 Canonical Philippine Crops)"]
+        IN_DAY["Simulation Day Slider<br/>(Day 0 → Harvest)"]
+        IN_SOIL["Plot Soil Texture<br/>(Loam, Clay, Sandy, Silty)"]
+        IN_COMP["Companion Plot Neighbor<br/>(58 Pairings Matrix)"]
+        IN_HIST["Farmer Field History<br/>(Days Since Water, Feed, Scout)"]
+    end
+
+    subgraph DSS_Engine["🧠 Deterministic Rules Evaluation (1:1 with DssEngine.kt)"]
+        STAGE["5-Stage Growth Calculator<br/>Sprout → Seedling → Veg → Bloom → Harvest"]
+        SEASON["Seasonality Scorer<br/>Calendar Month vs. Crop Window"]
+        SOIL_SC["Soil Bioavailability Scorer<br/>(e.g., 98% Loam Match)"]
+        COMP_SYN["Biological Synergy Scorer<br/>(+Beneficial / -Antagonistic)"]
+    end
+
+    subgraph Outputs["📱 Real-Time Today's Tasks Dispatch (TodaysTasksOverlay.kt)"]
+        TASK_WATER["💧 Irrigation Task<br/>(Interval Threshold Reached)"]
+        TASK_FEED["🌱 Fertilizer Task<br/>(Vegetative / Bloom Cadence)"]
+        TASK_SCOUT["🔍 Pest Scouting Alert<br/>(High-Risk Stage / Antagonist)"]
+        TASK_HARVEST["🧺 Harvest Readiness Task<br/>(Peak Yield Maturity Window)"]
+    end
+
+    subgraph Validation["✅ Empirical Field Research Validation"]
+        SUITE["15-Crop Automated Test Suite<br/>100% Deterministic Pass (15/15)"]
+        RESEARCH["100% MapTanim Proprietary Research<br/>Zero External Website Copyright Liability"]
+    end
+
+    Presets --> Sandbox
+    Sandbox --> DSS_Engine
+    DSS_Engine --> Outputs
+    Outputs --> Validation
+      </div>
+
+      <div class="grid-2">
+        <div class="info-box">
+          <strong>🎛️ Real-Time Accuracy Validation</strong>
+          Administrators can test and verify mobile recommendations instantly before broadcasting updates to Android farmers.
+        </div>
+        <div class="info-box">
+          <strong>🛡️ Proprietary Empirical Dataset</strong>
+          Derived directly from 2025–2026 local Philippine grower interviews and field trials without external dependency or liability.
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Canonical 15-Crop Library & Viewport-Centered Overlay -->
+    <div class="card">
+      <h2>🌾 5. Canonical 15-Crop Library & Viewport-Centered Breakdown Overlay</h2>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Admin as 👨‍🌾 Admin / Agronomist
+    participant Catalog as 🌿 Crop Catalog Grid (15 Canonical Crops)
+    participant Card as 🖼️ Minimal Base Card (Image + Name Only)
+    participant Portal as ⚛️ React Portal (createPortal)
+    participant Overlay as 📱 Crop Breakdown Modal (z-[9999])
+    participant Body as 🖥️ Document Body (Active Viewport Screen)
+
+    Admin->>Catalog: Browse Crop Library (Strict 15 Canonical Crops)
+    Note over Catalog: Bell Pepper & redundant duplicates pruned
+    Catalog->>Card: Renders clean Hero Image + Name + Category
+    Note over Card: Fixed harvest days & NPK suppressed (cultivars vary!)
+    Admin->>Card: Clicks "Inspect Varietal Breakdown" on scrolled card
+    Card->>Portal: Invokes createPortal(modalContent, document.body)
+    Portal->>Body: Mounts directly to document.body outside &lt;main&gt;
+    Body->>Overlay: Detects user active screen position (no scroll needed!)
+    Overlay->>Body: Locks body scroll (overflow = 'hidden')
+    Overlay-->>Admin: Displays centered dialog with Cultivar Variety Selector
+    Admin->>Overlay: Taps cultivar (e.g. Diamante Max vs Apollo)
+    Overlay-->>Admin: Updates tailored harvest days, water, soil & Why? science
+      </div>
+
+      <div class="grid-2">
+        <div class="info-box">
+          <strong>🌾 Strict Canonical 15 Philippine Crops</strong>
+          Bitter Gourd, Cabbage, Carrot, Corn/Maize, Eggplant, Water Spinach, Lettuce, Okra, Sibuyas, Pechay, Cucumber, Squash, Chili Pepper, Sitaw, and Tomato.
+        </div>
+        <div class="info-box">
+          <strong>👁️ Instant Viewport Screen Detection</strong>
+          React Portals mount modals directly onto <code>document.body</code>, preventing positioning traps caused by CSS transforms and scrolling containers.
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Serverless Microservices Pipeline & System Connections -->
+    <div class="card" id="microservices-flowchart">
+      <h2>⚡ 6. Serverless Microservices Pipeline & System Dataflow Connections <span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #64B5F6; border-color: rgba(33, 150, 243, 0.4);">Updated: September 13, 2026</span></h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph Clients["📱 Client Application Trigger"]
+        M_APP["Mobile Client (Jetpack Compose)<br/>• Today's Tasks Overlay<br/>• Monitoring Dashboard"]
+        A_ADM["Admin Studio (React + Vite)<br/>• Broadcast Center<br/>• DSS Companion Rule Editor"]
+    end
+
+    subgraph EdgeFunctions["⚡ Supabase Serverless Microservices (Deno / TypeScript)"]
+        subgraph DSS_Service["evaluate-dss Microservice"]
+            DSS_IN["Input Handler<br/>farm_id & evaluation_date"]
+            DSS_PROX["Spatial Proximity Analyzer<br/>Euclidean Distance d = √((x1-x2)² + (y1-y2)²)<br/>Threshold: d ≤ 3.0 meters"]
+            DSS_COMP["Companion Matrix Evaluator<br/>Query dss_rules (crop_a, crop_b)<br/>Flag ANTAGONIST / BENEFICIAL"]
+            DSS_STAGE["5-Stage Timeline Engine<br/>Sprout (0-15%) → Seedling (15-35%) →<br/>Veg (35-65%) → Bloom (65-90%) → Harvest (90%+)"]
+            DSS_GEN["Dynamic Task Dispatcher<br/>Generate WATER, FERTILIZE, HARVEST, PEST_ALERT"]
+
+            DSS_IN --> DSS_PROX
+            DSS_PROX --> DSS_COMP
+            DSS_COMP --> DSS_STAGE
+            DSS_STAGE --> DSS_GEN
+        end
+
+        subgraph Broadcast_Service["broadcast-dispatcher Microservice"]
+            BC_IN["Input Handler<br/>title, body, notification_type, user_id?"]
+            BC_VAL["Security & Auth Validator<br/>service_role / JWT Validation"]
+            BC_DISP["Notification Dispatcher<br/>Insert into public.notifications"]
+
+            BC_IN --> BC_VAL
+            BC_VAL --> BC_DISP
+        end
+    end
+
+    subgraph SupabaseDB["🗄️ Supabase PostgreSQL Core Tables"]
+        T_PLOTS[("crop_plots<br/>pos_x, pos_y, crop_name, planted_date")]
+        T_CROPS[("crops<br/>watering & fertilizing intervals, harvest days")]
+        T_RULES[("dss_rules<br/>companion matrix & agronomic reasons")]
+        T_TASKS[("tasks<br/>daily scheduled care tasks")]
+        T_NOTIFS[("notifications<br/>broadcast alerts & system updates")]
+    end
+
+    M_APP -->|POST /functions/v1/evaluate-dss| DSS_IN
+    A_ADM -->|POST /functions/v1/broadcast-dispatcher| BC_IN
+
+    DSS_PROX -.->|Fetch Active Planted Plots| T_PLOTS
+    DSS_STAGE -.->|Fetch Growth Intervals| T_CROPS
+    DSS_COMP -.->|Evaluate Dynamic Pairings| T_RULES
+    DSS_GEN -->|Upsert Generated Tasks| T_TASKS
+
+    BC_DISP -->|Insert Broadcasts| T_NOTIFS
+
+    T_TASKS -.->|Instant Sync to TodaysTasksOverlay.kt| M_APP
+    T_NOTIFS -.->|Push to Notification Center| M_APP
+      </div>
+
+      <div class="grid-2">
+        <div class="info-box">
+          <strong>⚡ Zero-Weather Deterministic Science</strong>
+          The <code>evaluate-dss</code> microservice generates daily tasks solely from crop physiological intervals, soil suitability, and 5-stage timeline durations without external weather API latency or cost.
+        </div>
+        <div class="info-box">
+          <strong>📐 Spatial Proximity Analysis</strong>
+          Evaluates true Euclidean distance between planted crop coordinates on the 45×45 isometric grid, automatically dispatching <code>PEST_ALERT</code> tasks when antagonistic crops are planted within 3.0 meters of each other.
         </div>
       </div>
     </div>

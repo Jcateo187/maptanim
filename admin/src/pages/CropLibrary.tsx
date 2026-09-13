@@ -428,7 +428,7 @@ export const CropLibrary: React.FC = () => {
               className="glass-card overflow-hidden group hover:border-emerald-500/50 transition-all duration-200 flex flex-col justify-between cursor-pointer"
             >
               <div>
-                <div className="h-44 relative overflow-hidden bg-slate-900">
+                <div className="h-48 relative overflow-hidden bg-slate-900">
                   <img
                     src={crop.imageUrl}
                     alt={crop.name}
@@ -440,17 +440,12 @@ export const CropLibrary: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
                   <div className="absolute top-3 right-3 flex items-center gap-1.5">
                     <Badge variant="purple">{crop.category}</Badge>
-                    {crop.season && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">
-                        {crop.season}
-                      </span>
-                    )}
                   </div>
                   <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-base font-extrabold text-white leading-tight flex items-baseline gap-1.5">
+                    <h3 className="text-lg font-extrabold text-white leading-tight flex items-baseline gap-1.5">
                       <span>{crop.name}</span>
                       {crop.localName && (
-                        <span className="text-xs text-emerald-300 font-medium">({crop.localName})</span>
+                        <span className="text-sm text-emerald-300 font-medium">({crop.localName})</span>
                       )}
                     </h3>
                     <p className="text-xs text-emerald-400 italic font-mono mt-0.5">
@@ -459,82 +454,56 @@ export const CropLibrary: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Base Card Info: Informational notice that specific agronomic parameters vary by variety */}
                 <div className="p-4 space-y-3 text-xs">
-                  <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-200 dark:border-slate-800">
-                    <div className="text-center">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                        <Calendar className="w-3 h-3 text-emerald-500" /> Harvest
-                      </p>
-                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.daysToHarvest} days</p>
+                  <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-[11px] text-slate-300 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-400">
+                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Varietal Agronomics</span>
                     </div>
-                    <div className="text-center border-x border-slate-200 dark:border-slate-800">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                        <Droplets className="w-3 h-3 text-blue-500" /> Water
-                      </p>
-                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">
-                        Every {crop.wateringIntervalDays || 2}d
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold flex items-center justify-center gap-1">
-                        <Sprout className="w-3 h-3 text-amber-500" /> Soil
-                      </p>
-                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">{crop.idealSoil}</p>
-                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Harvest timelines, soil tolerance, and watering cycles vary per cultivar variety. Click below to inspect specific varietal breakdowns.
+                    </p>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between border border-slate-200/60 dark:border-slate-800">
-                    <span className="font-bold text-slate-500 text-[11px]">NPK Ratio:</span>
-                    <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
-                      N:{crop.npkRequirement.nitrogen} • P:{crop.npkRequirement.phosphorus} • K:{crop.npkRequirement.potassium}
-                    </span>
-                  </div>
-
-                  <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between text-[11px]">
-                    <span className="text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1">
-                      <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
-                      Inspect Mobile UI Breakdown
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                      View &rarr;
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openBreakdownModal(crop);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-bold text-xs border border-emerald-500/40 transition flex items-center justify-center gap-2 shadow-sm group-hover:bg-emerald-500 group-hover:text-white"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span>Inspect Varietal Breakdown</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/60">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openBreakdownModal(crop);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition shadow-sm"
-                  title="Inspect Full Mobile UI Breakdown"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Breakdown</span>
-                </button>
+              <div className="px-4 pb-3 pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/60 text-xs">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Base Crop Species
+                </span>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       openEditModal(crop);
                     }}
-                    className="p-2 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition"
                     title="Edit Crop Profile"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteCrop(crop.id);
                     }}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition"
                     title="Delete Crop"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

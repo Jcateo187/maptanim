@@ -37,6 +37,7 @@ data class NotificationItem(
     val title: String,
     val message: String,
     val timestamp: String,
+    val rawTimestamp: String? = null,
     val isRead: Boolean = false,
     val type: String = "SYSTEM" // SYSTEM, TASK, ALERT
 )

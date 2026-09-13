@@ -135,40 +135,45 @@ Instead of relying on notebooks, memory, or complex form-based data entry, MapTa
 
 ---
 
-## 🗄️ Backend & Database Architecture
+## 🗄️ Backend, Database & Serverless Microservices Architecture
 
-- **Supabase Cloud Infrastructure**:
-  - URL: `https://ojilvcglpzbtpjxguhzj.supabase.co`
-  - PostgreSQL Relational Database storing `users` (email + password authentication), `profiles` (`nickname`, `avatar`), `farms`, `crop_plots`, `crops`, `dss_rules`, and `tasks`.
-  - Row Level Security (RLS) policies enforcing multi-tenant farmer data isolation.
-  - Automatic `handle_new_user()` trigger for profile creation upon registration.
-  - Edge Functions (`evaluate-dss`, `sync-offline-queue`) handling automated DSS calculations.
+- **Supabase Cloud & Microservices Tier**:
+  - **Live URL**: `https://ojilvcglpzbtpjxguhzj.supabase.co`
+  - **Live Architecture Board**: [Miro Architecture Board (11 System Frames)](https://miro.com/app/board/uXjVHxtgZgg=/) | [Interactive HTML Flowchart](docs/flowchart.html)
+  - **Cleaned Database Core (10 Relational Tables)**: `users`, `profiles`, `farms`, `crop_plots`, `crop_zones`, `crops` (Canonical 15), `dss_rules` (58 rules), `tasks`, `harvest_records`, `feedback`, `community_posts` (with comments/reports), and `notifications`. Obsolete tables (`farm_tiles`, `farm_objects`, `tile_plantings`, `planting_monitors`, `crop_profiles`) dropped via Migration 020 (`020_cleanup_redundant_schema.sql`).
+  - **Frontend-Only Optimization**: 45×45 isometric grid (`farm_tiles`) and environmental scenery (`farm_objects`) are rendered purely in Compose canvas and background layers, saving thousands of empty database rows.
+  - **Serverless Edge Microservices**:
+    - **`evaluate-dss`**: Evaluates Euclidean proximity ($d \le 3.0\text{m}$) between planted plots, 58 companion rules (`BENEFICIAL` vs `ANTAGONIST`), 5-stage phenological growth progression, and dynamic care tasks (`WATER`, `FERTILIZE`, `HARVEST`, `PEST_ALERT`) upserting into `public.tasks`.
+    - **`broadcast-dispatcher`**: Admin emergency center pushing urgent pest advisories to `public.notifications`.
+  - **Zero Weather / Zero GPS Tracking**: Operates 100% deterministically from verified local Philippine agronomic intervals without external weather APIs (no Open-Meteo, no PAGASA).
+  - **100% Pure Supabase Storage**: Egress-free CDN hosting on `crop-images` bucket. All legacy Cloudflare Worker and R2 dependencies completely eliminated.
 - **Room SQLite Local Persistence**:
   - Offline-first architecture allowing full farm layout editing and task completion without active internet connection.
-  - `SyncWorker` automatically pushes local offline mutations to Supabase when network connectivity resumes.
+  - Two-way synchronization with Supabase when network connectivity is available.
 
 ---
 
 ## 💻 Admin Dashboard (React + TypeScript)
 
 - **Location**: `admin/` project module.
-- **Role**: Web-based management console for system administrators.
+- **Role**: Web-based management console for agronomists and system administrators.
 - **Features**:
-  - User and Farm Management (view registered farmers, active plots, regional analytics).
-  - Crop Knowledge Base Editor (manage high-value crops, plant-part categories, growth stages, NPK requirements).
-  - DSS Rule Configurator (update soil suitability, companion planting rules, seasonal planting windows).
-  - System Telemetry & Logs.
+  - **Canonical 15-Crop Catalog**: Minimal base crop cards with viewport-centered varietal breakdown modals mounted via React Portals (`createPortal`).
+  - **Mobile DSS Engine Hub & Sandbox**: Interactive simulation slider testing 5-stage growth progression, companion synergies, and daily task dispatch.
+  - **Broadcast Center**: Emergency pest alert and seasonal advisory dispatcher.
+  - **DSS Rule Matrix Editor**: Multi-preset companion planting configurator.
+  - **Farmer Directory & Harvest KPIs**: Real-time yield tracking and farm telemetry.
 
 ---
 
 ## 🧠 Decision Support System (DSS)
 
-Deterministically evaluates agroecological rules against 5 core farm parameters:
+Deterministically evaluates agroecological science against 5 core farm parameters:
 1. **Soil Classification**: Loam, Clay, Sandy, Silty, Peaty, Chalky.
 2. **Plant-Part Category (8 Types)**: Bulb, Stem, Shoot, Leafy, Flower, Fruit, Root, Tuber.
-3. **Seasonal Planting Window**: Dry Season, Wet Season, Year-Round.
-4. **Companion Planting Rules**: Intercropping compatibility, pest suppression pairings.
-5. **Growth Stage & NPK Requirements**: Nitrogen, Phosphorus, Potassium balance per growth stage.
+3. **5-Stage Phenological Progression**: Sprout (0–15%) → Seedling (15–35%) → Vegetative (35–65%) → Flowering (65–90%) → Harvest (90%+).
+4. **Spatial Proximity & Companion Matrix**: Euclidean distance ($d \le 3.0\text{m}$) evaluating 58 bi-directional companion rules and shared pest risks.
+5. **Zero Weather Dependency**: 100% deterministic rules based on physiological watering intervals, soil moisture retention, and field-tested Philippine research.
 
 ---
 

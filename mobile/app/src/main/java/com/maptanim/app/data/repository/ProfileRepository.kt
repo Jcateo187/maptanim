@@ -2,6 +2,7 @@ package com.maptanim.app.data.repository
 
 import com.maptanim.app.data.remote.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -23,8 +24,8 @@ data class FeedbackDto(
     @SerialName("farmer_name") val farmerName: String = "Mobile Farmer",
     @SerialName("farm_name") val farmName: String? = null,
     val category: String = "GENERAL",
-    val subject: String,
-    val message: String,
+    val subject: String = "",
+    val message: String = "",
     val status: String = "PENDING",
     @SerialName("admin_reply") val adminReply: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
@@ -48,7 +49,9 @@ class ProfileRepository {
         return try {
             val all = SupabaseClient.client
                 .from("feedback")
-                .select()
+                .select {
+                    order(column = "created_at", order = Order.DESCENDING)
+                }
                 .decodeList<FeedbackDto>()
 
             if (!userId.isNullOrBlank()) {
@@ -66,7 +69,9 @@ class ProfileRepository {
         return try {
             val all = SupabaseClient.client
                 .from("notifications")
-                .select()
+                .select {
+                    order(column = "created_at", order = Order.DESCENDING)
+                }
                 .decodeList<NotificationDto>()
 
             if (!userId.isNullOrBlank()) {
@@ -162,6 +167,24 @@ class ProfileRepository {
             if (success) Result.success(Unit) else Result.failure(Exception("Failed to update profile"))
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun touchActivity(userId: String): Boolean {
+        return try {
+            SupabaseClient.client
+                .from("profiles")
+                .update({
+                    set("updated_at", java.time.Instant.now().toString())
+                }) {
+                    filter {
+                        eq("id", userId)
+                    }
+                }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 

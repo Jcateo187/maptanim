@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'dss',
-      label: 'Seasonal Schedules',
+      label: 'Seasonal Schedules (DSS)',
       icon: Calendar,
       tab: 'dss',
     },

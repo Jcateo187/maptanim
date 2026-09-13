@@ -230,7 +230,7 @@ fun CropDetailDialog(
                                     onClick = { activeWhyTopic = WhyTopic.CATEGORY }
                                 )
 
-                                val activeHarvestDays = activeVariety?.growthDurationDays ?: crop.daysToHarvest
+                                val activeHarvestDays = crop.daysToHarvest.takeIf { it > 0 } ?: activeVariety?.growthDurationDays ?: 60
                                 InteractiveBadgePill(
                                     label = "Harvest: $activeHarvestDays days",
                                     tag = "Why? 💡",
@@ -238,7 +238,7 @@ fun CropDetailDialog(
                                     onClick = { activeWhyTopic = WhyTopic.HARVEST }
                                 )
 
-                                val activeWaterDays = activeVariety?.wateringIntervalDays ?: crop.wateringIntervalDays
+                                val activeWaterDays = crop.wateringIntervalDays.takeIf { it > 0 } ?: activeVariety?.wateringIntervalDays ?: 2
                                 InteractiveBadgePill(
                                     label = "Water: Every ${activeWaterDays}d",
                                     tag = "Why? 💡",
@@ -255,8 +255,8 @@ fun CropDetailDialog(
                             }
                         }
 
-                        // ─── CROP OVERVIEW DESCRIPTION ──────────────────────────────────
-                        val overviewText = metadataInfo?.description?.ifBlank { null } ?: crop.description
+                        // ─── CROP OVERVIEW DESCRIPTION (Prioritizes Admin/DB Description) ──
+                        val overviewText = crop.description?.ifBlank { null } ?: metadataInfo?.description
                         overviewText?.let { desc ->
                             SectionCard(title = "📝 Crop Profile & Purpose") {
                                 Text(

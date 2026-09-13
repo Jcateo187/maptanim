@@ -204,7 +204,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
     return matchesSearch && matchesStatus && matchesRole;
   });
 
-  const inactiveFarmers = farmers.filter((f) => f.status === 'INACTIVE' || (f.daysInactive && f.daysInactive >= 14));
+  const inactiveFarmers = farmers.filter((f) => f.status === 'INACTIVE');
   const activeFarmersCount = farmers.filter((f) => f.status === 'ACTIVE').length;
   const inactiveFarmersCount = farmers.filter((f) => f.status === 'INACTIVE').length;
   const suspendedCount = farmers.filter((f) => f.status === 'SUSPENDED').length;

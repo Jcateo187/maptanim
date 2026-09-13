@@ -36,7 +36,7 @@ fun NotificationsTabContent(
     var selectedFilter by remember { mutableStateOf("ALL") }
 
     val filteredNotifications = remember(uiState.notifications, selectedFilter) {
-        when (selectedFilter) {
+        val base = when (selectedFilter) {
             "UNREAD" -> uiState.notifications.filter { !it.isRead }
             "GUIDE" -> uiState.notifications.filter { it.type.uppercase().contains("AGRONOMIC") || it.type.uppercase().contains("GUIDE") }
             "CROP" -> uiState.notifications.filter { it.type.uppercase().contains("CROP") }
@@ -45,6 +45,10 @@ fun NotificationsTabContent(
             "BUG" -> uiState.notifications.filter { it.type.uppercase().contains("BUG") }
             else -> uiState.notifications
         }
+        base.sortedWith(
+            compareByDescending<NotificationItem> { it.rawTimestamp ?: "" }
+                .thenByDescending { it.id }
+        )
     }
 
     Column(

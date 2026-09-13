@@ -277,19 +277,16 @@ object CropMetadataAssetDataSource {
 
     fun getWhyReasoningForCrop(context: Context?, crop: Crop): CropWhyReasoning {
         val meta = getCropMetadataByName(context, crop.name)
-        if (meta?.whyReasoning != null) {
-            return meta.whyReasoning
-        }
 
-        // Generate intelligent contextual agronomic reasoning if not explicitly present in JSON
+        // Generate intelligent contextual agronomic reasoning dynamically using live database parameters
         val catName = crop.category
-        val days = crop.daysToHarvest
-        val waterDays = crop.wateringIntervalDays
+        val days = crop.daysToHarvest.takeIf { it > 0 } ?: 60
+        val waterDays = crop.wateringIntervalDays.takeIf { it > 0 } ?: 2
         val phMin = crop.optimalPhMin
         val phMax = crop.optimalPhMax
 
         return CropWhyReasoning(
-            categoryWhy = WhyDetailInfo(
+            categoryWhy = meta?.whyReasoning?.categoryWhy ?: WhyDetailInfo(
                 title = "Why is ${crop.name} classified as $catName?",
                 summary = "${crop.name} (${crop.localName ?: ""}) belongs to the $catName horticultural category based on botanical structure, edible plant parts, and commercial cultivation methods.",
                 points = listOf(
@@ -300,7 +297,7 @@ object CropMetadataAssetDataSource {
             harvestWhy = WhyDetailInfo(
                 title = "Why is the harvest timeline set to $days days?",
                 summary = "The $days-day growth cycle represents the optimal physiological maturity window for maximum yield, tenderness, and nutrient density.",
-                points = listOf(
+                points = meta?.whyReasoning?.harvestWhy?.points ?: listOf(
                     "Vegetative & Reproductive Stages: Adequate days allow root establishment, photosynthesis accumulation, and fruit/head swelling.",
                     "Post-Harvest Quality: Harvesting within this window prevents fibrous over-maturation, bitterness, and market rejection."
                 )
@@ -308,7 +305,7 @@ object CropMetadataAssetDataSource {
             wateringWhy = WhyDetailInfo(
                 title = "Why water every $waterDays day(s)?",
                 summary = "A $waterDays-day irrigation interval balances root aeration with consistent soil moisture content for tropical Philippine soils.",
-                points = listOf(
+                points = meta?.whyReasoning?.wateringWhy?.points ?: listOf(
                     "Root Zone Hydration: Maintains soil moisture within the 60–70% field capacity range to sustain cell turgidity and transpiration.",
                     "Disease Prevention: Prevents waterlogged root rot while guarding against heat-induced blossom drop and wilting."
                 )
@@ -316,7 +313,7 @@ object CropMetadataAssetDataSource {
             soilWhy = WhyDetailInfo(
                 title = "Why is pH $phMin – $phMax required?",
                 summary = "A root zone pH between $phMin and $phMax ensures peak bioavailability of nitrogen, phosphorus, potassium, and micronutrients.",
-                points = listOf(
+                points = meta?.whyReasoning?.soilWhy?.points ?: listOf(
                     "Nutrient Solubility: Essential nutrients become chemically locked and inaccessible to root hairs if soil becomes too acidic (<5.5) or overly alkaline (>7.5).",
                     "Beneficial Microorganisms: Healthy soil microbes thrive in this range, decomposing organic compost into active plant nutrients."
                 )

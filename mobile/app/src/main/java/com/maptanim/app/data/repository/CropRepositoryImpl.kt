@@ -87,8 +87,8 @@ private fun CropDto.toDomain(): Crop {
         idealSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
         suitableSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
         toleratedSoils = listOf(SoilType.SANDY, SoilType.PEATY),
-        pestRiskSeason = listOf("WET"),
-        seasonality = listOf("YEAR_ROUND"),
+        pestRiskSeason = if (season?.uppercase() == "DRY") listOf("DRY") else listOf("WET"),
+        seasonality = listOf(season?.uppercase() ?: "YEAR_ROUND"),
         imageUrl = image_url,
         description = description
     )

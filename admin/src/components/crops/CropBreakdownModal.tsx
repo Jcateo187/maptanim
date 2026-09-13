@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Edit2, Sparkles, Sprout, Droplets, Calendar, ShieldCheck, Check,
   Info, ExternalLink, HelpCircle, Layers, AlertTriangle, Bug, Award
@@ -30,6 +31,16 @@ export const CropBreakdownModal: React.FC<CropBreakdownModalProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedVarietyId, setSelectedVarietyId] = useState<string | null>(null);
   const [activeWhyTopic, setActiveWhyTopic] = useState<WhyTopic | null>(null);
+
+  // Lock body scroll while overlay is open so viewport position stays locked
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!crop || !isOpen) {
@@ -89,8 +100,23 @@ export const CropBreakdownModal: React.FC<CropBreakdownModalProps> = ({
     metadata?.primaryPhotoUrl ||
     '/metadata/crops_images/tomato.png';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn">
+  // Render via React Portal into document.body to escape transformed/scrolling containers
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       {/* Container recreating the Mobile CropDetailDialog Surface */}
       <div
         className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-[28px] overflow-hidden border-[1.5px] border-[#4CAF50]/60 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(76,175,80,0.25)] text-white"
@@ -224,14 +250,14 @@ export const CropBreakdownModal: React.FC<CropBreakdownModalProps> = ({
                   </span>
                 </button>
 
-                {/* Soil pH Pill */}
+                {/* Soil Pill */}
                 <button
                   type="button"
                   onClick={() => setActiveWhyTopic('SOIL')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6A1B9A] hover:bg-[#7B1FA2] border border-purple-400/40 text-white text-xs font-semibold transition group shadow"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#5D4037] hover:bg-[#6D4C41] border border-amber-500/40 text-white text-xs font-semibold transition group shadow"
                 >
-                  <span>Soil pH: {crop.optimalPhMin || 6.0}–{crop.optimalPhMax || 6.8}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950/60 text-purple-200 font-bold group-hover:text-white">
+                  <span>Soil: {crop.idealSoil}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-200 font-bold group-hover:text-white">
                     Why? 💡
                   </span>
                 </button>
@@ -600,6 +626,7 @@ export const CropBreakdownModal: React.FC<CropBreakdownModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
