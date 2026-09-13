@@ -53,21 +53,25 @@ val supabaseClient = createSupabaseClient(
 
 ---
 
-## 🔹 PostgreSQL Tables
+## 🔹 PostgreSQL Tables (10 Core Relational Tables)
 
-All tables use UUID primary keys and include RLS. See `07_DATABASE_DESIGN.md` for full SQL schema.
+All tables use UUID primary keys and enforce Row Level Security (RLS). Obsolete tables (`farm_tiles`, `farm_objects`, `tile_plantings`, `planting_monitors`, `planting_harvests`, `crop_profiles`) have been purged via Migration 020 (`020_cleanup_redundant_schema.sql`). 
+
+> 💡 **Frontend-Only Note**: The 45×45 isometric grid (`farm_tiles`) is computed entirely in Jetpack Compose canvas memory, and environmental scenery (`farm_objects` like trees and fences) is rendered purely via background image layers without wasting database storage.
 
 | Table | Records | Purpose |
 |-------|---------|---------|
-| `users` | Per user | Farmer profiles and roles |
-| `farms` | Per farmer | Farm registry |
-| `beds` | Per farm | Planting bed layout (positions, soil, crops) |
-| `crops` | Static | 13+ high-value vegetable reference data |
-| `tasks` | Per farm | DSS-generated daily task list |
-| `activities` | Per bed | Manual activity log |
-| `harvest_records` | Per bed | Yield tracking |
-| `dss_rules` | Static | Companion planting matrix |
-| `notifications` | Per user | Notification center content |
+| `users` & `profiles` | Per user | Farmer accounts, avatars, nicknames, and role definitions |
+| `farms` | Per farmer | Farm registry and metadata (zero GPS / zero location coordinates) |
+| `crop_plots` | Per farm | Direct-soil planting plots (`pos_x`, `pos_y`, `width_m`, `height_m`, `crop_name`, `soil_type`, `planted_date`) |
+| `crop_zones` | Per plot | Sub-regions within plots for fine-grained multi-plant organization |
+| `crops` | Static (Admin) | Canonical 15 Philippine vegetable crops reference data |
+| `dss_rules` | Static (Admin) | 58 bi-directional companion planting rules & agronomic science reasoning |
+| `tasks` | Per farm / plot | Daily actionable tasks (`WATER`, `FERTILIZE`, `HARVEST`, `PEST_ALERT`) |
+| `harvest_records` | Per plot | Yield tracking (weight in kg, quality rating, harvest date) synced to Admin KPIs |
+| `feedback` | Per user | Farmer feedback tickets and bug reports |
+| `community_posts` | Per user | Authentic farmer forum discussions, reactions, comments, and moderation |
+| `notifications` | Per user | Broadcast announcements, pest alerts, and system notifications |
 
 ---
 
@@ -91,52 +95,57 @@ CREATE POLICY "public_read_crops" ON public.crops
 
 ---
 
-## 🔹 Supabase Storage Buckets
+## 🔹 Supabase Storage Buckets (Zero Cloudflare Architecture)
+
+MapTanim operates with **100% Pure Supabase Storage** with $0 egress fees on the free tier. Legacy Cloudflare Workers and R2 dependencies have been completely removed.
 
 | Bucket Name | Access | Purpose |
 |-------------|--------|---------|
-| `crop-images` | Public read | Crop illustration images per crop type |
-| `user-avatars` | Authenticated read | Farmer profile photo |
-| `pest-guides` | Authenticated read | Pest identification guides (PDF/images) |
-
-### Storage Upload (Example — avatar)
-```kotlin
-supabaseClient.storage["user-avatars"].upload(
-    path = "${userId}/avatar.jpg",
-    data = imageByteArray,
-    upsert = true
-)
-```
+| `crop-images` | Public read | High-resolution 30–50KB WebP crop illustrations and sprites for OTA catalog sync |
+| `user-avatars` | Authenticated read | Farmer profile avatar images |
+| `feedback-attachments`| Authenticated read | Screenshot attachments for farmer support tickets |
 
 ---
 
-## 🔹 Edge Functions
+## 🔹 Serverless Microservices Tier (Supabase Edge Functions)
 
-Serverless functions hosted on Supabase (Deno + TypeScript runtime):
+Serverless microservices hosted on Supabase Edge Functions (Deno + TypeScript runtime) provide deterministic, zero-weather agroecological intelligence:
 
-### `verify-otp`
-- **Endpoint**: `POST /functions/v1/verify-otp`
-- **Input**: `{ email: string, otp: string }`
-- **Output**: `{ access_token: string, refresh_token: string, user: User }`
-- **Logic**: Verifies OTP via Supabase Admin SDK, enforces attempt counting
-
-### `evaluate-dss`
+### 1. `evaluate-dss`
 - **Endpoint**: `POST /functions/v1/evaluate-dss`
-- **Input**: `{ farm_id: string, evaluation_date: string }`
-- **Output**: `{ tasks: Task[], companion_alerts: Alert[], soil_scores: SoilScore[] }`
-- **Logic**: Reads beds + crops, evaluates DSS rules, returns task recommendations
+- **Payload**: `{ farm_id: string, evaluation_date: string }`
+- **Architecture**:
+  - **Spatial Proximity Engine**: Computes Euclidean distance $d = \sqrt{(x_1-x_2)^2 + (y_1-y_2)^2}$ between active planted plots on the 45×45 isometric canvas. Flagged as neighbors when $d \le 3.0\text{ meters}$.
+  - **Companion Matrix Evaluator**: Queries `dss_rules` for pairwise crop pairings. Flags `BENEFICIAL` companion synergies and `ANTAGONIST` risks.
+  - **5-Stage Phenological Timeline Engine**:
+    1. `SPROUT` (0% – 15% of maturity duration)
+    2. `SEEDLING` (15% – 35% of maturity duration)
+    3. `VEGETATIVE` (35% – 65% of maturity duration)
+    4. `FLOWERING` (65% – 90% of maturity duration)
+    5. `HARVEST` (90%+ of maturity duration)
+  - **Dynamic Task Generator**: Evaluates watering cadences (`crop.watering_interval_days`), fertilizing cadences (`crop.fertilize_interval_days`), harvest readiness, and schedules `PEST_ALERT` inspection tasks for antagonistic neighbors.
+  - **Database Upsert**: Deduplicates and batch-upserts tasks directly into `public.tasks` for the mobile `TodaysTasksOverlay.kt`.
+  - **Zero-Weather Guarantee**: Operates with 100% deterministic local agroecological science without external weather APIs or GPS latency.
 
-### `generate-report`
-- **Endpoint**: `POST /functions/v1/generate-report`
-- **Input**: `{ farm_id: string, from_date: string, to_date: string }`
-- **Output**: Farm summary report data (JSON or PDF stream)
+### 2. `broadcast-dispatcher`
+- **Endpoint**: `POST /functions/v1/broadcast-dispatcher`
+- **Payload**: `{ title: string, body: string, notification_type: string, user_id?: string }`
+- **Architecture**:
+  - Validated by `service_role` JWT secret key.
+  - Inserts urgent agricultural bulletins, pest alerts, and seasonal notices directly into `public.notifications`.
+  - Instantly accessible across all registered mobile farmers via the in-app notification center.
+
+### 3. `verify-otp`
+- **Endpoint**: `POST /functions/v1/verify-otp`
+- **Payload**: `{ email: string, otp: string }`
+- **Logic**: Verifies passwordless OTP via Supabase Admin SDK, enforcing brute-force lockouts.
 
 ---
 
 ## 🔹 Realtime Subscriptions
 
 ```kotlin
-// Subscribe to plot layout changes for real-time collaboration
+// Subscribe to crop plot layout changes for real-time state synchrony
 supabaseClient.realtime.createChannel("farm-$farmId")
     .on<CropPlotEntity>(PostgresAction.Update, schema = "public", table = "crop_plots") { change ->
         cropPlotRepository.applyServerChange(change.record)

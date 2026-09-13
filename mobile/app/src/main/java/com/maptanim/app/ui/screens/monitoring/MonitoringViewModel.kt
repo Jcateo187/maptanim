@@ -28,19 +28,11 @@ import java.util.UUID
 
 enum class MonitoringNavSection(val title: String) {
     OVERVIEW("Overview"),
-    SOIL_TYPES("6 Soil Types"),
-    SEASONAL("Seasonal"),
     TIMELINE("Timeline"),
     CALENDAR("Calendar"),
     COMPANIONS("Companions"),
     GROWING_TIPS("Growing Tips"),
     PEST_DISEASE("Pest & Disease")
-}
-
-enum class MonitoringFilterMode {
-    ALL_FARM_CROPS,
-    BY_SOIL_TYPE,
-    BY_SEASON
 }
 
 enum class SeasonalityFilter(val label: String) {
@@ -107,16 +99,12 @@ data class MonitoredPlant(
 
 data class MonitoringUiState(
     val selectedNavSection: MonitoringNavSection = MonitoringNavSection.OVERVIEW,
-    val filterMode: MonitoringFilterMode = MonitoringFilterMode.ALL_FARM_CROPS,
-    val selectedSoilType: SoilType = SoilType.LOAM,
-    val selectedSeason: Season = Season.YEAR_ROUND,
     val selectedSeasonality: SeasonalityFilter = SeasonalityFilter.ALL,
     val selectedCategory: CropCategoryFilter = CropCategoryFilter.ALL,
     val selectedCropId: String? = null,
     val searchQuery: String = "",
     val isCategoryDropdownExpanded: Boolean = false,
     val plantedCrops: List<MonitoredPlant> = emptyList(),
-    val catalogCrops: List<MonitoredPlant> = emptyList(),
     val completedTaskMessage: String? = null
 )
 
@@ -209,7 +197,7 @@ class MonitoringViewModel(
                             ChronoUnit.DAYS.between(plantedLocalDate, LocalDate.now()).toInt().coerceAtLeast(0)
                         } else 0
 
-                        daysToHarvest = getVarietyDurationDays(plot.cropName ?: "", varietyName) ?: crop?.daysToHarvest ?: 60
+                        daysToHarvest = getVarietyDurationDays(crop, varietyName) ?: 60
                         stageProgress = if (daysToHarvest > 0 && isStarted && !isFuture) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
                         stageIndex = when {
                             isFuture -> 0
@@ -366,74 +354,12 @@ class MonitoringViewModel(
                     )
                 }
 
-                // Build catalog of all crops for Soil Type & Season navigation
-                val catalogList = crops.map { crop ->
-                    val cleanName = crop.name.lowercase().replace(" ", "")
-                    val matchingPests = allPests.filter { pest ->
-                        pest.affectedCrops.any { it.contains(crop.name, ignoreCase = true) || crop.name.contains(it, ignoreCase = true) }
-                    }
-                    val defaultSoil = crop.suitableSoils.firstOrNull() ?: SoilType.LOAM
-                    val beneficial = CompanionDataProvider.getBeneficialCompanions(crop.name)
-                    val antagonist = CompanionDataProvider.getAntagonistCrops(crop.name)
-                    val metaVarieties = CropMetadataAssetDataSource.getVarietiesForCrop(RepositoryProvider.appContext, crop.name)
-
-                    MonitoredPlant(
-                        id = "catalog_${crop.id}",
-                        farmId = "catalog",
-                        cropId = crop.id,
-                        cropName = crop.name,
-                        localName = crop.localName ?: crop.name,
-                        cropVariety = metaVarieties.firstOrNull()?.varietyName,
-                        plotLabel = "Reference Catalog",
-                        seasonality = SeasonalityFilter.ALL,
-                        category = mapCategory(crop.category),
-                        currentStageIndex = 0,
-                        stageName = "Stage 1: Sprout",
-                        daysPlanted = 0,
-                        daysToHarvest = crop.daysToHarvest,
-                        healthStatus = "Optimal Profile",
-                        companionCrop = crop.companionPlants.joinToString(", ").ifBlank { "None listed" },
-                        companionStatus = "Library Reference Guide",
-                        growingTip = crop.description ?: "Ensure well-draining soil and adequate sunlight.",
-                        pestInfo = matchingPests.firstOrNull()?.name ?: "No major pest alerts.",
-                        assetPath = "crops/crop_${cleanName}_1.png",
-                        imageUrl = crop.imageUrl,
-                        rawPlantedDate = null,
-                        isMonitoringStarted = false,
-                        soilType = defaultSoil,
-                        suitableSoils = crop.suitableSoils.ifEmpty { listOf(SoilType.LOAM) },
-                        season = when (crop.seasonality.firstOrNull()?.uppercase()) {
-                            "WET" -> Season.WET
-                            "DRY" -> Season.DRY
-                            else -> Season.YEAR_ROUND
-                        },
-                        soilScore = 1.0f,
-                        nRatio = crop.nRatio,
-                        pRatio = crop.pRatio,
-                        kRatio = crop.kRatio,
-                        optimalPhMin = crop.optimalPhMin,
-                        optimalPhMax = crop.optimalPhMax,
-                        dssTasks = emptyList(),
-                        companionAlerts = emptyList(),
-                        activeCompanionEvaluations = emptyList(),
-                        beneficialCompanions = beneficial,
-                        antagonistCompanions = antagonist,
-                        growingTipsList = GrowingTipsProvider.getTips(crop.name, 0),
-                        generalCareTips = GrowingTipsProvider.getGeneralInfo(crop.name, 1.0f, crop.nRatio, crop.pRatio, crop.kRatio, crop.optimalPhMin, crop.optimalPhMax),
-                        affectedPests = matchingPests,
-                        stageDays = metaVarieties.firstOrNull()?.stageDays
-                    )
-                }
-
-                Pair(monitoredList, catalogList)
+                monitoredList
             }
             .flowOn(kotlinx.coroutines.Dispatchers.Default)
-            .collect { (monitoredList, catalogList) ->
+            .collect { monitoredList ->
                 _uiState.update {
-                    it.copy(
-                        plantedCrops = monitoredList,
-                        catalogCrops = catalogList
-                    )
+                    it.copy(plantedCrops = monitoredList)
                 }
             }
         }
@@ -460,32 +386,14 @@ class MonitoringViewModel(
         }
     }
 
-    private fun getVarietyDurationDays(cropName: String, varietyName: String?): Int? {
-        if (varietyName == null) return null
-        return when (varietyName.lowercase()) {
-            "10s fast simulation test ⚡", "ampalaya 10s simulation test ⚡" -> 10
-            "diamante max f1" -> 55
-            "apollo" -> 60
-            "morena f1" -> 60
-            "dumaguete long purple" -> 70
-            "sandigan f1" -> 45
-            "galante f1" -> 48
-            "terracotta f1" -> 75
-            "kuroda improved" -> 85
-            "red pinoy f1" -> 90
-            "yellow granex" -> 100
-            "suprema f1" -> 85
-            "horizon f1" -> 80
-            "machismo f1 (sweet)" -> 70
-            "ipb var 6 (white)" -> 75
-            "k-s cross f1" -> 55
-            "kyross f1" -> 60
-            "pavon" -> 28
-            "jade star xl f1" -> 55
-            "smooth green" -> 45
-            "django f1" -> 65
-            else -> null
+    private fun getVarietyDurationDays(crop: Crop?, varietyName: String?): Int? {
+        if (varietyName != null) {
+            val lower = varietyName.lowercase()
+            if (lower.contains("10s") || lower.contains("fast simulation")) {
+                return 10
+            }
         }
+        return crop?.daysToHarvest?.takeIf { it > 0 } ?: 60
     }
 
     fun completeDssTask(plotId: String, farmId: String, taskType: TaskType, notes: String? = null) {
@@ -554,36 +462,7 @@ class MonitoringViewModel(
     }
 
     fun selectNavSection(section: MonitoringNavSection) {
-        _uiState.update {
-            it.copy(
-                selectedNavSection = section,
-                filterMode = when (section) {
-                    MonitoringNavSection.SOIL_TYPES -> MonitoringFilterMode.BY_SOIL_TYPE
-                    MonitoringNavSection.SEASONAL -> MonitoringFilterMode.BY_SEASON
-                    else -> MonitoringFilterMode.ALL_FARM_CROPS
-                }
-            )
-        }
-    }
-
-    fun selectSoilType(soilType: SoilType) {
-        _uiState.update {
-            it.copy(
-                selectedSoilType = soilType,
-                selectedNavSection = MonitoringNavSection.SOIL_TYPES,
-                filterMode = MonitoringFilterMode.BY_SOIL_TYPE
-            )
-        }
-    }
-
-    fun selectSeason(season: Season) {
-        _uiState.update {
-            it.copy(
-                selectedSeason = season,
-                selectedNavSection = MonitoringNavSection.SEASONAL,
-                filterMode = MonitoringFilterMode.BY_SEASON
-            )
-        }
+        _uiState.update { it.copy(selectedNavSection = section) }
     }
 
     fun selectCrop(cropId: String?) {
@@ -607,29 +486,11 @@ class MonitoringViewModel(
     }
 
     /**
-     * Filters crops according to the active side nav selection:
-     * 1. 6 Soil Types Mode: Shows crops suitable for the selected soil type, filtered by category.
-     * 2. Seasonal Mode: Shows crops suitable for the selected season, filtered by category.
-     * 3. All Farm Crops Mode: Shows currently planted crops in the farm.
+     * Filters active farm crops according to search query, category, and seasonality.
      */
     fun getFilteredCrops(): List<MonitoredPlant> {
         val state = _uiState.value
-
-        val sourceList = when (state.filterMode) {
-            MonitoringFilterMode.BY_SOIL_TYPE -> {
-                val matchingPlanted = state.plantedCrops.filter { it.suitableSoils.contains(state.selectedSoilType) || it.soilType == state.selectedSoilType }
-                val matchingCatalog = state.catalogCrops.filter { it.suitableSoils.contains(state.selectedSoilType) }
-                (matchingPlanted + matchingCatalog).distinctBy { it.cropName }
-            }
-            MonitoringFilterMode.BY_SEASON -> {
-                val matchingPlanted = state.plantedCrops.filter { it.season == state.selectedSeason || it.season == Season.YEAR_ROUND }
-                val matchingCatalog = state.catalogCrops.filter { it.season == state.selectedSeason || it.season == Season.YEAR_ROUND }
-                (matchingPlanted + matchingCatalog).distinctBy { it.cropName }
-            }
-            MonitoringFilterMode.ALL_FARM_CROPS -> state.plantedCrops
-        }
-
-        return sourceList.filter { plant ->
+        return state.plantedCrops.filter { plant ->
             val matchSeason = state.selectedSeasonality == SeasonalityFilter.ALL || plant.seasonality == state.selectedSeasonality
             val matchCategory = state.selectedCategory == CropCategoryFilter.ALL || plant.category == state.selectedCategory
             val matchSearch = state.searchQuery.isBlank() ||

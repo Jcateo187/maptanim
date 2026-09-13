@@ -10,6 +10,7 @@ data class CropDto(
     @SerialName("local_name") val local_name: String? = null,
     @SerialName("botanical_name") val botanical_name: String? = null,
     val category: String = "LEAFY",
+    val season: String? = "YEAR_ROUND",
     @SerialName("days_to_harvest") val days_to_harvest: Int? = 60,
     @SerialName("watering_interval_days") val watering_interval_days: Int? = 2,
     @SerialName("fertilize_interval_days") val fertilize_interval_days: Int? = 14,

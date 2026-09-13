@@ -28,28 +28,33 @@ MapTanim uses a **Client-BaaS (Backend-as-a-Service)** architecture. The Android
 └───────────────────────────────────────────────────────────────────┬─┘
                                                                     │ HTTPS / TLS 1.3
 ┌───────────────────────────────────────────────────────────────────▼─┐
-│                         TIER 2: BAAS                                │
+│               TIER 2: SERVERLESS BAAS & MICROSERVICES               │
 │                Supabase (ojilvcglpzbtpjxguhzj.supabase.co)          │
 │                                                                     │
-│  ┌──────────┐ ┌──────────────┐ ┌─────────┐ ┌───────────────────┐  │
-│  │ Supabase │ │  PostgreSQL  │ │ Storage │ │  Edge Functions   │  │
-│  │  Auth    │ │   + RLS      │ │ Buckets │ │  (Deno/TypeScript)│  │
-│  │ (OTP)    │ │  (PostgREST) │ │ crop-   │ │  verify-otp       │  │
-│  └──────────┘ └──────────────┘ │ images  │ │  evaluate-dss     │  │
-│                                │ avatars │ │  generate-report  │  │
-│  ┌──────────────────────────┐  │ guides  │ └───────────────────┘  │
-│  │       Realtime           │  └─────────┘                        │
-│  │ (bed updates, tasks)     │                                     │
-│  └──────────────────────────┘                                     │
+│  ┌──────────┐ ┌──────────────┐ ┌─────────┐ ┌─────────────────────┐ │
+│  │ Supabase │ │  PostgreSQL  │ │ Storage │ │ Serverless Edge     │ │
+│  │  Auth    │ │   + RLS      │ │ Bucket  │ │ Microservices       │ │
+│  │ (OTP)    │ │  (PostgREST) │ │ crop-   │ │ • evaluate-dss      │ │
+│  │          │ │ 10 Tables    │ │ images  │ │ • broadcast-        │ │
+│  └──────────┘ └──────────────┘ └─────────┘ │   dispatcher        │ │
+│                                            │ • verify-otp        │ │
+│  ┌──────────────────────────┐              └─────────────────────┘ │
+│  │       Realtime           │                                      │
+│  │ (plot updates, tasks)    │                                      │
+│  └──────────────────────────┘                                      │
 └─────────────────────────────────────────────────────────────────────┘
                                                                     │
 ┌───────────────────────────────────────────────────────────────────▼─┐
 │                         TIER 3: ADMIN                               │
-│                    Web Admin Dashboard                              │
+│                    Web Admin Studio (Vite + React)                  │
 │              (React + TypeScript + Supabase JS SDK)                 │
-│        User Management | Crop Library | DSS Rule Editor            │
+│   Farmer Directory | 15 Crop Catalog | Companion DSS Matrix Editor  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+> 🔗 **Interactive Architecture & Live Diagrams**:
+> - [View Live System Architecture on Miro Board](https://miro.com/app/board/uXjVHxtgZgg=/)
+> - [Interactive HTML Flowchart](file:///d:/Development/MapTanim/docs/flowchart.html)
 
 ---
 
@@ -60,12 +65,12 @@ MapTanim uses a **Client-BaaS (Backend-as-a-Service)** architecture. The Android
 ViewMode Canvas opens
   → HomeViewModel.loadFarm()
     → GetFarmUseCase → FarmRepository
-      → Room DB (local) → emits beds, tasks, summary
+      → Room DB (local) → emits plots, tasks, summary
       → WorkManager checks pending sync
         → Supabase PostgREST (if online) → updates Room
   → HomeUiState updated via StateFlow
-  → FarmCanvasView recomposed with bed list
-  → StatusBadgePin overlays drawn per task type
+  → FarmCanvasView recomposed with crop_plots
+  → StatusBadgePin overlays drawn per task type (Water 💧, Fertilize 🌿, Harvest 🌾, Pest 🐛)
 ```
 
 ### Edit Mode Save Flow
@@ -88,12 +93,12 @@ User taps [SAVE CHANGES]
 | Service | Purpose |
 |---------|---------|
 | **Supabase Auth** | OTP email authentication, JWT management |
-| **PostgreSQL** | Primary cloud database (all entities) |
+| **PostgreSQL** | Primary cloud database (10 core relational tables) |
 | **PostgREST** | Auto-generated REST API for all tables |
 | **Row Level Security (RLS)** | Enforces farmer data isolation |
-| **Storage** | `crop-images/`, `user-avatars/`, `pest-guides/` buckets |
-| **Edge Functions** | `verify-otp`, `evaluate-dss`, `generate-report` |
-| **Realtime** | Subscribes to bed layout changes + task updates |
+| **Storage** | `crop-images` bucket (100% Pure Supabase Storage, $0 egress, zero Cloudflare) |
+| **Edge Functions** | `evaluate-dss` (proximity $d \le 3.0\text{m}$, 5-stage phenology), `broadcast-dispatcher`, `verify-otp` |
+| **Realtime** | Subscribes to plot layout changes + task updates |
 
 ---
 

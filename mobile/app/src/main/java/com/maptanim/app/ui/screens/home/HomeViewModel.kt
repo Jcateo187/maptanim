@@ -108,8 +108,24 @@ class HomeViewModel(
         initialize(farmerId)
     }
 
+    private var presenceJob: kotlinx.coroutines.Job? = null
+
+    private fun startPresenceHeartbeat(farmerId: String) {
+        presenceJob?.cancel()
+        if (farmerId == "guest") return
+        presenceJob = viewModelScope.launch {
+            while (true) {
+                try {
+                    com.maptanim.app.data.repository.ProfileRepository().touchActivity(farmerId)
+                } catch (_: Exception) {}
+                kotlinx.coroutines.delay(60_000L) // Refresh presence every 60s while app is open
+            }
+        }
+    }
+
     fun initialize(farmerId: String) {
         currentFarmerId = farmerId
+        startPresenceHeartbeat(farmerId)
         farmsObserveJob?.cancel()
         farmsObserveJob = viewModelScope.launch {
             getFarmsUseCase(farmerId)

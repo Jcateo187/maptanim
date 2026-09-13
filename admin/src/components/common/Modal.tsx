@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -22,6 +23,16 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Lock body scroll while modal is open so overlay stays locked to active screen
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,19 +60,28 @@ export const Modal: React.FC<ModalProps> = ({
 
   const resolvedWidthClass = widthClasses[resolvedWidth] || (resolvedWidth.startsWith('max-w-') ? resolvedWidth : 'max-w-2xl');
 
-  return (
+  return createPortal(
     <div
       ref={backdropRef}
-      className={`fixed inset-0 z-50 overflow-y-auto p-3 sm:p-4 bg-[#112230]/80 backdrop-blur-sm animate-fadeIn flex justify-center ${
+      className={`fixed inset-0 z-[9999] overflow-y-auto p-3 sm:p-4 bg-[#112230]/85 backdrop-blur-md animate-fadeIn flex justify-center ${
         position === 'center'
           ? 'items-center min-h-screen'
           : 'items-start pt-3 sm:pt-6 md:pt-8 pb-10'
       }`}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+      }}
       onClick={(e) => {
         if (e.target === backdropRef.current) onClose();
       }}
     >
-      <div className={`w-[95vw] sm:w-full ${resolvedWidthClass} overflow-hidden shadow-2xl border border-[#38434D] bg-[#2B3136] rounded-2xl text-[#F4F4F4]`}>
+      <div className={`w-[95vw] sm:w-full ${resolvedWidthClass} overflow-hidden shadow-2xl border border-[#38434D] bg-[#2B3136] rounded-2xl text-[#F4F4F4] my-auto`}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#38434D] bg-[#183145]">
           <h3 className="text-base sm:text-lg font-bold text-[#F4F4F4] truncate pr-2">
@@ -79,6 +99,7 @@ export const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

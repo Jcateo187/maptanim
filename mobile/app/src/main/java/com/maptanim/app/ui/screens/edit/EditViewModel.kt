@@ -17,6 +17,8 @@ import com.maptanim.app.renderer.canvas.FarmCanvasRenderer
 import com.maptanim.app.renderer.model.CropZoneRenderData
 import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.renderer.model.toRenderData
+import com.maptanim.app.ui.components.editcomponents.croptray.AVAILABLE_CROP_CATALOG
+import com.maptanim.app.ui.components.editcomponents.croptray.CropOption
 import com.maptanim.app.ui.components.editcomponents.croptray.toCropOption
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,8 +77,20 @@ class EditViewModel(
         viewModelScope.launch {
             cropRepository.observeAllCrops().collect { crops ->
                 if (crops.isNotEmpty()) {
-                    val cropOptions = crops.map { it.toCropOption() }
-                    _uiState.update { it.copy(availableCrops = cropOptions) }
+                    // Strictly adhere to the 15 canonical crops to prevent tray bloat or duplicates
+                    val canonicalList = AVAILABLE_CROP_CATALOG.map { catalogCrop: CropOption ->
+                        val dbCrop = crops.firstOrNull { c ->
+                            c.name.equals(catalogCrop.name, ignoreCase = true) ||
+                            (catalogCrop.localName != null && c.localName?.equals(catalogCrop.localName, ignoreCase = true) == true) ||
+                            c.id.equals(catalogCrop.id, ignoreCase = true)
+                        }
+                        if (dbCrop != null && !dbCrop.imageUrl.isNullOrBlank()) {
+                            catalogCrop.copy(imageUrl = dbCrop.imageUrl)
+                        } else {
+                            catalogCrop
+                        }
+                    }
+                    _uiState.update { it.copy(availableCrops = canonicalList) }
                 }
             }
         }

@@ -27,6 +27,13 @@ class UserRepositoryImpl(
             val user = SupabaseClient.client.auth.currentUserOrNull()
             val userId = user?.id ?: userProfileState.value.id.ifBlank { null }
 
+            // Touch active presence in Supabase profiles so Admin accurately detects user as active
+            if (userId != null) {
+                try {
+                    profileRepository.touchActivity(userId)
+                } catch (_: Exception) {}
+            }
+
             // 1. Direct notifications from notifications table
             val notifDtos = profileRepository.getNotifications(userId)
             val notifItems = notifDtos.map { dto ->
@@ -35,6 +42,7 @@ class UserRepositoryImpl(
                     title = dto.title.ifBlank { "Notification" },
                     message = dto.body ?: "",
                     timestamp = formatTimestamp(dto.createdAt),
+                    rawTimestamp = dto.createdAt,
                     isRead = dto.isRead,
                     type = dto.notificationType
                 )
@@ -48,12 +56,20 @@ class UserRepositoryImpl(
                     title = "Support Advisory: ${dto.subject}",
                     message = dto.adminReply ?: "",
                     timestamp = formatTimestamp(dto.resolvedAt ?: dto.createdAt),
+                    rawTimestamp = dto.resolvedAt ?: dto.createdAt,
                     isRead = false,
                     type = "SUPPORT_REPLY"
                 )
             }
 
-            val allItems = (feedbackItems + notifItems).distinctBy { it.id }
+            // Sort newest first by exact timestamp
+            val allItems = (feedbackItems + notifItems)
+                .distinctBy { it.id }
+                .sortedWith(
+                    compareByDescending<NotificationItem> { it.rawTimestamp ?: "" }
+                        .thenByDescending { it.id }
+                )
+
             if (allItems.isNotEmpty()) {
                 notificationsState.value = allItems
                 try {

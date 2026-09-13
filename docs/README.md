@@ -81,7 +81,7 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 - 📄 [**14. Jetpack Compose Component Library**](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md) — Reusable HUD cards, pill chips, dialog modals, custom buttons, and sliders.
 - 📄 [**15. 2D Isometric Render Engine**](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md) — Canvas projection algorithms (Cartesian grid to Isometric screen coordinates), tile rendering, and z-ordering.
 - 📄 [**16. Interactive Plot Mapping Specifications**](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md) — 45m x 45m loam soil grid specs, boundary bounds, background scenery objects, and touch interaction handling.
-- 📄 [**18. View Mode & Dashboard Specifications**](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md) — Non-destructive inspection mode, crop info tooltips, growth stage previews, and weather overlays.
+- 📄 [**18. View Mode & Dashboard Specifications**](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md) — Non-destructive inspection mode, crop info tooltips, 5-stage growth previews, and companion proximity overlays.
 - 📄 [**19. Edit Mode & Farm Layout Tooling**](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md) — Crop placement tray, active edit controls, save/exit handlers, and placement validation overlays.
 - 📄 [**34. Direct Soil Crop Planting & 8-Handle Resize System**](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md) — Direct soil tile drop mechanics (1x1m base zones), multi-cell 8-handle bounding box expansion, companion planting matrix calculations, and collision checks.
 - 📄 [**35. Asset Pipeline & Graphic Specifications**](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md) — Sprite sheet resolutions, PNG asset organization, Python PIL asset generation scripts, and memory caching.
@@ -93,10 +93,10 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 
 ### 🌱 Group 5: Digital Farm Management & Decision Support System (DSS)
 - 📄 [**17. Digital Farm Management Engine**](file:///d:/Development/MapTanim/docs/17_FARM_MANAGEMENT.md) — Farm record-keeping, activity logs, plot lifecycle management, and harvest tracking.
-- 📄 [**20. Agroecological Decision Support System (DSS)**](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md) — Deterministic recommendation engine algorithms, DA/BPI Philippine agricultural guidelines, and growth stage formulas.
-- 📄 [**21. Philippine Vegetable Knowledge Base**](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md) — Comprehensive agronomic dataset covering 13 Philippine vegetable crops, pest identification, and soil requirements.
+- 📄 [**20. Agroecological Decision Support System (DSS)**](file:///d:/Development/MapTanim/docs/20_DECISION_SUPPORT_SYSTEM.md) — Deterministic recommendation engine algorithms, DA/BPI Philippine agricultural guidelines, 5-stage timeline progression, and spatial proximity companion matrix.
+- 📄 [**21. Philippine Vegetable Knowledge Base**](file:///d:/Development/MapTanim/docs/21_KNOWLEDGE_BASE.md) — Comprehensive agronomic dataset covering the strict 15 canonical Philippine vegetable crops, pest identification, and soil bioavailability.
 - 📄 [**22. Planting Calendar Engine**](file:///d:/Development/MapTanim/docs/22_CALENDAR.md) — Task scheduling, planting timelines, harvest date calculations, and seasonal advisories.
-- 📄 [**23. Push & Local Notification System**](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md) — AlarmManager local notification scheduling, task reminder alerts, and weather notification triggers.
+- 📄 [**23. Push & Local Notification System**](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md) — AlarmManager local notification scheduling, task reminder alerts, and broadcast advisory triggers.
 - 📄 [**36. Crop Variety Timeline & Seasonality Specs**](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md) — Detailed timeline curves, maturity days, wet/dry season suitability, and crop variety parameters.
 - 📄 [**37. Specifications & Scope Refinements**](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md) — Clarified functional boundaries, hardware requirements, and localized crop scope definitions.
 

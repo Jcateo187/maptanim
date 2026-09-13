@@ -191,7 +191,7 @@ async function main() {
         await createShape({
             boardId: BOARD_ID,
             x: 0, y: -850, width: 1400, height: 100,
-            content: '🌱 MAPTANIM AGROECOLOGICAL PLATFORM — SYSTEM ARCHITECTURE & WORKFLOW FLOWCHART<br/><span style="font-size: 14px; font-weight: normal;">Structured Multi-Tier Architecture • Live Preview Synchronization • Zero Cloudflare • Pure Supabase Storage</span>',
+            content: '🌱 MAPTANIM AGROECOLOGICAL PLATFORM — SYSTEM ARCHITECTURE & WORKFLOW FLOWCHART<br/><span style="font-size: 14px; font-weight: normal;">Structured Multi-Tier Architecture • Seasonal Schedules DSS Hub • Canonical 15 Crops • Viewport-Centered Modals • Pure Supabase</span>',
             fillColor: '#1B5E20',
             borderColor: '#4CAF50'
         });
@@ -225,7 +225,7 @@ async function main() {
         const adminStudio = await createShape({
             boardId: BOARD_ID,
             x: -350, y: -380, width: 380, height: 260,
-            content: '🖥️ Admin Web Studio (React + TypeScript + Vite)<br/>• <strong>Crop Library</strong>: Catalog Management & Category Filters<br/>• <strong>CropBreakdownModal</strong>: 1:1 Mobile UI Parity with Science Pills<br/>• <strong>MobileCropBreakdownPreview</strong>: Real-time Phone Mockup<br/>• <strong>SupabaseStorageManager</strong>: 1-Click Metadata Image Sync<br/>• <strong>DSSRuleEditor</strong>: Bi-directional Companion Matrix Engine',
+            content: '🖥️ Admin Web Studio (React + TypeScript + Vite)<br/>• <strong>Crop Library</strong>: Canonical 15 Crops Only • Minimal Base Cards (Image + Name)<br/>• <strong>CropBreakdownModal</strong>: Viewport-Centered via React Portal (No Scroll Search)<br/>• <strong>Seasonal Schedules Hub</strong>: Mobile DSS Engine Hub & Accuracy Sandbox<br/>• <strong>Empirical Field Research</strong>: 100% MapTanim Data (Zero External Copyright)<br/>• <strong>DSSRuleEditor</strong>: Multi-Preset Switcher & Companion Rules',
             fillColor: '#1E88E5',
             borderColor: '#64B5F6'
         });
@@ -620,18 +620,236 @@ async function main() {
         await createConnector(BOARD_ID, deployStep3, deployStep4, 'Privacy Standard', '#FFB74D');
         await createConnector(BOARD_ID, deployStep4, deployStep5, 'Production Aliased', '#4CAF50');
 
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 9: SEASONAL SCHEDULES & MOBILE DSS ENGINE HUB
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 9: Seasonal Schedules & Mobile DSS Engine Hub...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 3100, width: 3300, height: 480,
+            title: '📅 FRAME 9: SEASONAL SCHEDULES & MOBILE DSS ENGINE HUB (MONITORING & SANDBOX SIMULATION)'
+        });
+
+        const dssStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 3100, width: 360, height: 240,
+            content: '1. 🎛️ Dynamic Operational Mode Presets<br/>• <strong>Baseline</strong>: Standard conservative intervals from 100+ grower interviews<br/>• <strong>Climate-Adaptive</strong>: Philippine Wet/Dry season shifts<br/>• <strong>High-Yield Intensive</strong>: Accelerated scouting & nutrition<br/>• <strong>Agroecological</strong>: Companion synergy & natural pest deter',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        const dssStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 3100, width: 360, height: 240,
+            content: '2. 🧪 Interactive Mobile DSS Sandbox<br/>• Target Crop Selector (Strict 15 Canonical Crops)<br/>• Simulation Day Slider (Day 0 to Harvest)<br/>• Soil Classification & Companion Plot Neighbor<br/>• Farmer Last Activity Input (Irrigation, Feed, Scout)',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
+
+        const dssStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 3100, width: 360, height: 240,
+            content: '3. ⚡ Deterministic Multi-Layer Evaluation<br/>• <strong>Stage Tracking</strong>: Sprout → Seedling → Veg → Bloom → Harvest<br/>• <strong>Seasonality Check</strong>: Calendar month vs. Crop calendar<br/>• <strong>Soil Scorer</strong>: Bioavailability (e.g. 98% LOAM Optimal)<br/>• <strong>Companion Synergies</strong>: 58 Bi-directional rules evaluated',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const dssStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 3100, width: 360, height: 240,
+            content: '4. 📱 Simulated Today\'s Tasks Dispatch<br/>• 1:1 Parity with Android <code>TodaysTasksOverlay.kt</code><br/>• Generates Actionable Tasks: Water, Fertilize, Scout, Harvest<br/>• Deterministic rule explanation & telemetry badges<br/>• Immediate broadcast advisory toggle to mobile farmers',
+            fillColor: '#E65100',
+            borderColor: '#FFB74D'
+        });
+
+        const dssStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 3100, width: 360, height: 240,
+            content: '5. ✅ 15-Crop Empirical Test Suite<br/>• <strong>Automated Verification</strong>: 100% Pass (15/15 Crops)<br/>• Boundary conditions, stage progression & determinism verified<br/>• <strong>Zero External Liability</strong>: Attributed 100% to MapTanim Field Research & Local Grower Interviews (2025–2026)',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        await createConnector(BOARD_ID, dssStep1, dssStep2, 'Preset Selection', '#4CAF50');
+        await createConnector(BOARD_ID, dssStep2, dssStep3, 'Sandbox Input', '#4FC3F7');
+        await createConnector(BOARD_ID, dssStep3, dssStep4, 'Rule Evaluation', '#CE93D8');
+        await createConnector(BOARD_ID, dssStep4, dssStep5, 'Accuracy Verified', '#66BB6A');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 10: CANONICAL 15-CROP LIBRARY & VIEWPORT-CENTERED OVERLAY
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 10: Canonical 15 Crops & Viewport-Centered Overlay...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 3650, width: 3300, height: 480,
+            title: '🌾 FRAME 10: CANONICAL 15-CROP LIBRARY & VIEWPORT-CENTERED BREAKDOWN OVERLAY FLOWCHART'
+        });
+
+        const cropStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 3650, width: 360, height: 240,
+            content: '1. 🌿 Strict 15 Canonical Crops Scope<br/>• <strong>Approved 15</strong>: Bitter Gourd, Cabbage, Carrot, Corn, Eggplant, Water Spinach, Lettuce, Okra, Sibuyas, Pechay, Cucumber, Squash, Chili Pepper, Sitaw, Tomato<br/>• Excluded non-approved Bell Pepper<br/>• Deduplicated Kangkong & String Beans in Supabase<br/>• Tab Header: <code>Crop Catalog (15)</code>',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        const cropStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 3650, width: 360, height: 240,
+            content: '2. 🖼️ Minimal Base Crop Card Architecture<br/>• <strong>Image + Name Only</strong> (Clean & Modern Representation)<br/>• Suppressed fixed days to harvest, watering, and NPK from base card<br/>• <strong>Rationale</strong>: Base crop does not have fixed metrics; specific cultivars/varieties possess differing timelines & soils',
+            fillColor: '#00897B',
+            borderColor: '#80CBC4'
+        });
+
+        const cropStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 3650, width: 360, height: 240,
+            content: '3. 🖱️ User Clicks "Inspect Varietal Breakdown"<br/>• Admin clicks Inspect button on any card down the scrolled page<br/>• Triggers <code>openBreakdownModal(crop)</code><br/>• Prepares varietal profiles, why science reasoning, and phenological growth cycle data',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
+
+        const cropStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 3650, width: 360, height: 240,
+            content: '4. ⚛️ React Portal (`createPortal`) Mount<br/>• <strong>Escape Scrolling Context</strong>: Mounts to <code>document.body</code><br/>• Decouples from <code>overflow-y-auto</code> and <code>animate-fadeIn</code> transform<br/>• <strong>Lock Screen</strong>: <code>document.body.style.overflow = \'hidden\'</code><br/>• <code>position: fixed; inset: 0; z-[9999];</code>',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const cropStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 3650, width: 360, height: 240,
+            content: '5. 👁️ Instant Viewport Screen Detection<br/>• <strong>Zero Scroll Searching</strong>: Overlay centers directly on visible screen<br/>• Cultivar Variety Switcher (e.g. Diamante Max F1 vs Apollo)<br/>• Dynamic Growth Duration & 5-Stage Phenological Cycle<br/>• "Why? 💡" Science Pills & MapTanim Field Research Attribution',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        await createConnector(BOARD_ID, cropStep1, cropStep2, 'Catalog Filter', '#4CAF50');
+        await createConnector(BOARD_ID, cropStep2, cropStep3, 'User Inspect', '#80CBC4');
+        await createConnector(BOARD_ID, cropStep3, cropStep4, 'createPortal', '#4FC3F7');
+        await createConnector(BOARD_ID, cropStep4, cropStep5, 'Viewport Centered', '#CE93D8');
+
+        // ══════════════════════════════════════════════════════════════════
+        // FRAME 11: SERVERLESS MICROSERVICES PIPELINE & SYSTEM CONNECTIONS
+        // ══════════════════════════════════════════════════════════════════
+        console.log('👉 Building Frame 11: Serverless Microservices Pipeline & System Connections...');
+        await createFrame({
+            boardId: BOARD_ID,
+            x: 0, y: 4420, width: 3300, height: 960,
+            title: '⚡ FRAME 11: SERVERLESS MICROSERVICES PIPELINE & SYSTEM DATAFLOW CONNECTIONS'
+        });
+
+        // ROW 1: 5-Step Process Pipeline (y = 4160)
+        const msStep1 = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 4160, width: 360, height: 210,
+            content: '1. 📱 Client Invocation & Triggers<br/>• <strong>Mobile App</strong>: Daily trigger on opening Today\'s Tasks overlay<br/>• <strong>Admin Studio</strong>: Emergency broadcast dispatcher & advisory tool<br/>• <strong>Payload</strong>: <code>{ farm_id, evaluation_date }</code><br/>• Zero external latency / Zero location dependencies',
+            fillColor: '#1B5E20',
+            borderColor: '#4CAF50'
+        });
+
+        const msStep2 = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 4160, width: 360, height: 210,
+            content: '2. ⚡ evaluate-dss Microservice (Deno/TS)<br/>• <strong>Spatial Proximity Engine</strong>: Euclidean distance on 45×45 grid: <code>d = √((x1-x2)² + (y1-y2)²)</code><br/>• Adjacent plots threshold: <code>d ≤ 3.0 meters</code><br/>• Companion Matrix: Queries <code>dss_rules</code> for ANTAGONIST / BENEFICIAL pairings<br/>• Flags shared pest risks between neighboring crops',
+            fillColor: '#689F38',
+            borderColor: '#C5E1A5'
+        });
+
+        const msStep3 = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 4160, width: 360, height: 210,
+            content: '3. 📊 5-Stage Timeline & Dynamic Tasks<br/>• <strong>5 Stages</strong>: Sprout (0-15%) → Seedling (15-35%) → Veg (35-65%) → Bloom (65-90%) → Harvest (90%+)<br/>• <strong>Watering Cadence</strong>: <code>crop.watering_interval_days</code><br/>• <strong>Fertilizing Cadence</strong>: <code>crop.fertilize_interval_days</code><br/>• <strong>Pest Alerts</strong>: Triggered on antagonistic proximity',
+            fillColor: '#0288D1',
+            borderColor: '#4FC3F7'
+        });
+
+        const msStep4 = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 4160, width: 360, height: 210,
+            content: '4. 📢 broadcast-dispatcher Microservice<br/>• <strong>Admin Emergency Center</strong>: Pest advisories & seasonal alerts<br/>• <strong>Payload</strong>: <code>{ title, body, notification_type, user_id? }</code><br/>• Dispatches to <code>public.notifications</code> table<br/>• Targets all mobile farmers or specific users',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const msStep5 = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 4160, width: 360, height: 210,
+            content: '5. 🗄️ Relational Upsert & Today\'s Tasks Sync<br/>• Deduplicated batch upsert into <code>public.tasks</code><br/>• <strong>Mobile HUD Instant Sync</strong>: Updates <code>TodaysTasksOverlay.kt</code> (Water 💧, Fertilize 🌿, Harvest 🌾, Pest 🐛)<br/>• <strong>100% Deterministic Science</strong>: Zero weather API costs or downtime',
+            fillColor: '#2E7D32',
+            borderColor: '#66BB6A'
+        });
+
+        await createConnector(BOARD_ID, msStep1, msStep2, 'POST /evaluate-dss', '#4CAF50');
+        await createConnector(BOARD_ID, msStep2, msStep3, 'Proximity & Schedule', '#C5E1A5');
+        await createConnector(BOARD_ID, msStep3, msStep4, 'Pipeline Dispatch', '#4FC3F7');
+        await createConnector(BOARD_ID, msStep4, msStep5, 'Database Upsert & Sync', '#CE93D8');
+
+        // ROW 2: Architecture Connections Flow Inside Frame (y = 4550)
+        const clientNode = await createShape({
+            boardId: BOARD_ID,
+            x: -1200, y: 4550, width: 360, height: 230,
+            content: '📱 Android Mobile Client<br/>• <strong>TodaysTasksOverlay.kt</strong> (Realtime HUD)<br/>• <strong>HomeViewModel.kt</strong><br/>• Invokes DSS upon farm load<br/>• Receives task updates & emergency bulletins<br/>• Displays 💧 Water, 🌿 Fertilize, 🌾 Harvest',
+            fillColor: '#1B5E20',
+            borderColor: '#81C784'
+        });
+
+        const dssMicroserviceNode = await createShape({
+            boardId: BOARD_ID,
+            x: -600, y: 4550, width: 360, height: 230,
+            content: '⚡ Microservice: evaluate-dss<br/>• Supabase Edge Function (Deno/TS)<br/>• Computes Plot Proximity: <code>d ≤ 3.0m</code><br/>• Evaluates Companion Matrix (Beneficial / Antagonist)<br/>• Tracks 5-Stage Phenological Durations<br/>• Upserts daily tasks into <code>tasks</code>',
+            fillColor: '#00796B',
+            borderColor: '#4DB6AC'
+        });
+
+        const dbNode = await createShape({
+            boardId: BOARD_ID,
+            x: 0, y: 4550, width: 360, height: 230,
+            content: '🗄️ Supabase PostgreSQL Core Tables<br/>• <code>crop_plots</code> (Plot Coordinates X/Y, Planted Date)<br/>• <code>crops</code> (Watering, Fertilizing Intervals)<br/>• <code>dss_rules</code> (Companion Matrix & Synergies)<br/>• <code>tasks</code> (Daily Ops Upsert Target)<br/>• <code>notifications</code> (Broadcast Alerts)',
+            shape: 'can',
+            fillColor: '#0288D1',
+            borderColor: '#80DEEA'
+        });
+
+        const broadcastMicroserviceNode = await createShape({
+            boardId: BOARD_ID,
+            x: 600, y: 4550, width: 360, height: 230,
+            content: '⚡ Microservice: broadcast-dispatcher<br/>• Supabase Edge Function (Deno/TS)<br/>• Dispatches urgent pest warnings & advisories<br/>• Inserts record to <code>public.notifications</code><br/>• Validated by <code>service_role</code> JWT key<br/>• Zero-GPS Broadcaster',
+            fillColor: '#7B1FA2',
+            borderColor: '#CE93D8'
+        });
+
+        const adminNode = await createShape({
+            boardId: BOARD_ID,
+            x: 1200, y: 4550, width: 360, height: 230,
+            content: '🖥️ Admin Web Studio (React + Vite)<br/>• <strong>Broadcast Center UI</strong><br/>• <strong>DSS Companion Rule Matrix Editor</strong><br/>• <strong>15 Canonical Crop Catalog Manager</strong><br/>• Direct Edge Function REST Dispatch',
+            fillColor: '#E65100',
+            borderColor: '#FFB74D'
+        });
+
+        await createConnector(BOARD_ID, clientNode, dssMicroserviceNode, '1. Trigger DSS Evaluation', '#4CAF50');
+        await createConnector(BOARD_ID, dssMicroserviceNode, dbNode, '2. Fetch Plots & Upsert Tasks', '#4DB6AC');
+        await createConnector(BOARD_ID, dbNode, clientNode, '3. Real-time Tasks Sync', '#0288D1');
+        await createConnector(BOARD_ID, adminNode, broadcastMicroserviceNode, '4. Dispatch Advisory', '#FFB74D');
+        await createConnector(BOARD_ID, broadcastMicroserviceNode, dbNode, '5. Insert into notifications', '#CE93D8');
+        await createConnector(BOARD_ID, dbNode, clientNode, '6. Push Alerts to Mobile', '#81C784');
+
         console.log(`
 =============================================================================
 🎉 SUCCESS: Organized MapTanim Architecture & Flowchart created on Miro!
-🖼️ 8 Professional Frames Generated:
+🖼️ 11 Professional Frames Generated:
    1. 📱 Client Applications Tier (Mobile & Admin)
    2. 🧠 Core Intelligent Engines & Rendering
    3. 💾 Persistence & Cloud Infrastructure (Database Can Shapes)
    4. 🔄 Dynamic Crop Sync & Live Preview Flowchart (Decision Diamonds)
    5. 🌟 Key Architectural Highlights & Innovations
-   6. 🔥 Today's System Update: User-Based Community Forum Activity & Reaction Pipeline
-   7. 💬 Today's System Update: Community Post Publishing Feedback & Friend-Based Chat
-   8. 🚀 Today's System Update: Vercel Cloud Deployment, Branding & DSS Resilience
+   6. 🔥 User-Based Community Forum Activity & Reaction Pipeline
+   7. 💬 Community Post Publishing Feedback & Friend-Based Chat
+   8. 🚀 Vercel Cloud Deployment, Branding & DSS Resilience
+   9. 📅 Seasonal Schedules & Mobile DSS Engine Hub (Monitoring & Sandbox Simulation)
+   10. 🌾 Canonical 15-Crop Library & Viewport-Centered Breakdown Overlay Flowchart
+   11. ⚡ Serverless Microservices Pipeline & System Dataflow Connections
 
 🔗 Open your updated Miro board:
    https://miro.com/app/board/${BOARD_ID}/

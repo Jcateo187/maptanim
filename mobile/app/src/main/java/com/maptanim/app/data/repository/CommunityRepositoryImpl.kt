@@ -90,9 +90,14 @@ class CommunityRepositoryImpl(
         // Persist locally for immediate offline & profile sync
         CommunityPreferencesManager.getInstance().setPostLiked(currentUserId, postId, isNowLiked)
 
-        // Sync like count to Supabase
+        // Sync like count to Supabase and touch user activity
         scope.launch {
             remoteDataSource.updatePostLikes(postId, nextLikesCount)
+            if (currentUserId != null) {
+                try {
+                    ProfileRepository().touchActivity(currentUserId)
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -144,6 +149,15 @@ class CommunityRepositoryImpl(
             // Record authored post & initial reaction locally
             CommunityPreferencesManager.getInstance().addMyPostId(currentUserId, newId)
             CommunityPreferencesManager.getInstance().setPostLiked(currentUserId, newId, true)
+
+            // Touch active presence in Supabase profiles so Admin immediately detects user as online
+            if (currentUserId != null) {
+                scope.launch {
+                    try {
+                        ProfileRepository().touchActivity(currentUserId)
+                    } catch (_: Exception) {}
+                }
+            }
         }
 
         return result
@@ -152,6 +166,11 @@ class CommunityRepositoryImpl(
     override suspend fun addComment(postId: String, content: String, authorName: String) {
         val newId = "comm_${System.currentTimeMillis()}"
         val sanitizedAuthor = authorName.trim()
+        val currentUserId = try {
+            SupabaseClient.client.auth.currentUserOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
 
         val newComment = CommunityComment(
             id = newId,
@@ -169,15 +188,21 @@ class CommunityRepositoryImpl(
             } else post
         }
 
-        // Sync comment to Supabase
+        // Sync comment to Supabase and touch activity
         scope.launch {
             val dto = CommunityCommentDto(
                 id = newId,
                 post_id = postId,
+                author_id = currentUserId,
                 author_name = sanitizedAuthor,
                 content = content
             )
             remoteDataSource.addComment(dto)
+            if (currentUserId != null) {
+                try {
+                    ProfileRepository().touchActivity(currentUserId)
+                } catch (_: Exception) {}
+            }
         }
     }
 
