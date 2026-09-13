@@ -418,7 +418,7 @@ export const DSSRuleEditor: React.FC = () => {
       // Normalize crops strictly to the 15 canonical crops
       const normalizedCrops: Crop[] = APPROVED_15_CROPS.map((def) => {
         const existing = (cropsData || []).find((c) => {
-          const matched = matchCanonicalCrop(c.name) || (c.localName && matchCanonicalCrop(c.localName));
+          const matched = matchCanonicalCrop(c.name) || (c.localName ? matchCanonicalCrop(c.localName) : undefined);
           return matched?.canonicalName === def.canonicalName;
         });
 
