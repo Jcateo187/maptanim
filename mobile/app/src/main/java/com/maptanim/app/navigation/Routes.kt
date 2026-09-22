@@ -10,6 +10,7 @@ object Routes {
     // 5-Tab Navigation Routes
     const val HOME = "home"
     const val FARMS = "farms"
+    const val MONITORING = "farms"
     const val CALENDAR = "calendar"
     const val LIBRARY = "library"
     const val COMMUNITY = "community"

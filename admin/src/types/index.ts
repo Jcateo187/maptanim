@@ -119,6 +119,18 @@ export interface Crop {
   commonPests?: string[];
   imageUrl: string;
   activePlantingCount?: number;
+  needsTrellis?: boolean;
+  trellisType?: string;
+  preferredPlantingMethod?: string;
+  weedingIntervalDays?: number;
+  varieties?: {
+    varietyName: string;
+    localNamePh?: string;
+    growthDurationDays: number;
+    fruitLengthCm?: string;
+    bitternessLevel?: string;
+    diseaseResistance?: string;
+  }[];
 }
 
 export interface PestGuide {

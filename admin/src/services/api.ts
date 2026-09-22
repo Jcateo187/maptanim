@@ -785,6 +785,10 @@ class ApiService {
               commonPests: c.common_pests || [],
               imageUrl: c.image_url || spec.defaultImage,
               activePlantingCount: 12,
+              needsTrellis: c.needs_trellis ?? false,
+              trellisType: c.trellis_type ?? 'A_FRAME',
+              preferredPlantingMethod: c.preferred_planting_method ?? 'RAISED_BED',
+              weedingIntervalDays: c.weeding_interval_days ?? 7,
             };
 
             if (!canonicalMap.has(spec.key)) {
@@ -888,6 +892,10 @@ class ApiService {
               image_url: crop.imageUrl,
               companion_plants_good: crop.companionCropsGood || [],
               companion_plants_bad: crop.companionCropsBad || [],
+              needs_trellis: crop.needsTrellis ?? false,
+              trellis_type: crop.trellisType || null,
+              preferred_planting_method: crop.preferredPlantingMethod || null,
+              weeding_interval_days: crop.weedingIntervalDays ?? 7,
             },
           ])
           .select()
@@ -982,6 +990,10 @@ class ApiService {
             ...(updated.imageUrl && { image_url: updated.imageUrl }),
             ...(updated.companionCropsGood && { companion_plants_good: updated.companionCropsGood }),
             ...(updated.companionCropsBad && { companion_plants_bad: updated.companionCropsBad }),
+            ...(updated.needsTrellis !== undefined && { needs_trellis: updated.needsTrellis }),
+            ...(updated.trellisType !== undefined && { trellis_type: updated.trellisType }),
+            ...(updated.preferredPlantingMethod !== undefined && { preferred_planting_method: updated.preferredPlantingMethod }),
+            ...(updated.weedingIntervalDays !== undefined && { weeding_interval_days: updated.weedingIntervalDays }),
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);

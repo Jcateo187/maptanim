@@ -20,6 +20,7 @@ import com.maptanim.app.ui.screens.calendar.CalendarScreen
 import com.maptanim.app.ui.screens.community.CommunityScreen
 import com.maptanim.app.ui.screens.edit.FarmEditorScreen
 import com.maptanim.app.ui.screens.home.HomeScreen
+import com.maptanim.app.ui.screens.home.MainHomeScreen
 import com.maptanim.app.ui.screens.knowledgebase.LibraryScreen
 import com.maptanim.app.ui.screens.loading.LoadingScreen
 import com.maptanim.app.ui.screens.monitoring.MonitoringScreen
@@ -64,7 +65,7 @@ fun AppNavGraph() {
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }
         ) {
-            HomeScreen(navController)
+            MainHomeScreen(navController)
         }
 
         composable(
@@ -77,17 +78,15 @@ fun AppNavGraph() {
             FarmEditorScreen(navController)
         }
 
-        dialog(
-            route = Routes.PROFILE,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        composable(
+            route = Routes.PROFILE
         ) {
             ProfileScreen(navController = navController, initialTab = 0)
         }
 
-        dialog(
+        composable(
             route = Routes.PROFILE_WITH_TAB,
-            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 })
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             ProfileScreen(navController = navController, initialTab = tab)
@@ -100,25 +99,22 @@ fun AppNavGraph() {
             LibraryScreen(navController = navController)
         }
 
-        dialog(
-            route = Routes.COMMUNITY,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        composable(
+            route = Routes.COMMUNITY
         ) {
             CommunityScreen(navController = navController)
         }
 
-        dialog(
-            route = Routes.SETTINGS,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
-            ProfileScreen(navController = navController, initialTab = 2)
-        }
-
-        dialog(
-            route = Routes.NOTIFICATIONS,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        composable(
+            route = Routes.SETTINGS
         ) {
             ProfileScreen(navController = navController, initialTab = 1)
+        }
+
+        composable(
+            route = Routes.NOTIFICATIONS
+        ) {
+            com.maptanim.app.ui.screens.notifications.NotificationsScreen(navController = navController)
         }
 
         composable(

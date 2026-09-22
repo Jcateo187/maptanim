@@ -1,10 +1,13 @@
 package com.maptanim.app.renderer.canvas
 
 import android.content.res.Resources
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -354,13 +357,13 @@ object FarmCanvasRenderer {
     private fun DrawScope.renderStatusPins(plot: PlotRenderData, camera: CameraState) {
         val topPos = plot.topEdgeCenter(camera)
 
-        // ── 1. Unstarted Crop Calendar Pin Badge (📅) ────────────────────
+        // ── 1. Unstarted Crop Calendar Pin Badge ─────────────────────────
         if (!plot.cropName.isNullOrEmpty() && !plot.isMonitoringStarted) {
             val pinSizePx = 28f * camera.zoom
             val pinCenter = Offset(topPos.x, topPos.y - (44f * camera.zoom))
 
             drawCircle(
-                color = Color(android.graphics.Color.parseColor("#FFE65100")), // Amber Orange
+                color = Color(0xFFE65100), // Amber Orange
                 radius = pinSizePx / 2f,
                 center = pinCenter
             )
@@ -371,37 +374,40 @@ object FarmCanvasRenderer {
                 style = Stroke(width = 2.dp.toPx())
             )
 
-            val nativeCanvas = drawContext.canvas.nativeCanvas
-            val iconPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.WHITE
-                textSize = (14f * camera.zoom).coerceIn(10f, 22f)
-                isAntiAlias = true
-                textAlign = android.graphics.Paint.Align.CENTER
-            }
-            val fontMetrics = iconPaint.fontMetrics
-            val textY = pinCenter.y - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
-            nativeCanvas.drawText("📅", pinCenter.x, textY, iconPaint)
+            drawModernCalendarIcon(pinCenter, pinSizePx)
         }
 
-        // ── 2. Active Task Pin Badges (💧 🌿 🌾 🐛) ───────────────────────
+        // ── 2. Active Task Pin Badges (Modern Vector Icons) ──────────────
         if (plot.activeTasks.isNotEmpty()) {
             val pinSizePx = 28f * camera.zoom
             val anchorY = topPos.y - (70f * camera.zoom)
 
-            plot.activeTasks.forEachIndexed { index, task ->
-                val offsetX = (index - (plot.activeTasks.size - 1) / 2f) * (pinSizePx + 6f)
+            val displayTasks = if (plot.activeTasks.size > 3) {
+                plot.activeTasks.take(2)
+            } else {
+                plot.activeTasks
+            }
+            val hasOverflow = plot.activeTasks.size > 3
+            val totalBadgesCount = if (hasOverflow) displayTasks.size + 1 else displayTasks.size
+
+            displayTasks.forEachIndexed { index, task ->
+                val offsetX = (index - (totalBadgesCount - 1) / 2f) * (pinSizePx + 6f)
                 val pinCenter = Offset(topPos.x + offsetX, anchorY)
 
-                val (pinColorHex, iconSymbol) = when (task.taskType) {
-                    TaskType.WATER -> "#FF1E88E5" to "💧"
-                    TaskType.FERTILIZE -> "#FF43A047" to "🌿"
-                    TaskType.HARVEST -> "#FFFB8C00" to "🌾"
-                    TaskType.PEST_ALERT -> "#FFE53935" to "🐛"
-                    else -> "#FF8E24AA" to "📋"
+                val pinColorHex = when (task.taskType) {
+                    TaskType.WATER -> 0xFF1E88E5
+                    TaskType.FERTILIZE -> 0xFF43A047
+                    TaskType.HARVEST -> 0xFFFB8C00
+                    TaskType.PEST_ALERT -> 0xFFE53935
+                    TaskType.WEED -> 0xFF8BC34A
+                    TaskType.TRELLIS -> 0xFF795548
+                    TaskType.NUTRITION -> 0xFF2E7D32
+                    TaskType.ROTATION_ALERT -> 0xFF00897B
+                    else -> 0xFF8E24AA
                 }
 
                 drawCircle(
-                    color = Color(android.graphics.Color.parseColor(pinColorHex)),
+                    color = Color(pinColorHex),
                     radius = pinSizePx / 2f,
                     center = pinCenter
                 )
@@ -412,17 +418,269 @@ object FarmCanvasRenderer {
                     style = Stroke(width = 2.dp.toPx())
                 )
 
-                // Draw Icon/Emoji Symbol inside the pin circle
+                // Draw crisp modern vector icon inside the pin circle
+                drawModernBadgeIcon(task.taskType, pinCenter, pinSizePx)
+            }
+
+            if (hasOverflow) {
+                val overflowIndex = displayTasks.size
+                val offsetX = (overflowIndex - (totalBadgesCount - 1) / 2f) * (pinSizePx + 6f)
+                val pinCenter = Offset(topPos.x + offsetX, anchorY)
+
+                drawCircle(
+                    color = Color(0xFF455A64),
+                    radius = pinSizePx / 2f,
+                    center = pinCenter
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = pinSizePx / 2f,
+                    center = pinCenter,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+
                 val nativeCanvas = drawContext.canvas.nativeCanvas
-                val iconPaint = android.graphics.Paint().apply {
+                val textPaint = android.graphics.Paint().apply {
                     color = android.graphics.Color.WHITE
-                    textSize = (14f * camera.zoom).coerceIn(10f, 22f)
+                    textSize = (11f * camera.zoom).coerceIn(9f, 16f)
                     isAntiAlias = true
+                    isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-                val fontMetrics = iconPaint.fontMetrics
+                val fontMetrics = textPaint.fontMetrics
                 val textY = pinCenter.y - ((fontMetrics.descent + fontMetrics.ascent) / 2f)
-                nativeCanvas.drawText(iconSymbol, pinCenter.x, textY, iconPaint)
+                nativeCanvas.drawText("+${plot.activeTasks.size - 2}", pinCenter.x, textY, textPaint)
+            }
+        }
+    }
+
+    private fun DrawScope.drawModernCalendarIcon(center: Offset, pinSizePx: Float) {
+        val w = pinSizePx * 0.44f
+        val h = pinSizePx * 0.40f
+        val left = center.x - w / 2f
+        val top = center.y - h / 2f + (pinSizePx * 0.04f)
+
+        // Base card
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset(left, top),
+            size = Size(w, h),
+            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+        )
+        // Red header banner
+        val headerH = h * 0.32f
+        drawRoundRect(
+            color = Color(0xFFC62828),
+            topLeft = Offset(left, top),
+            size = Size(w, headerH),
+            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+        )
+        // 2 rings
+        val ringW = 1.4.dp.toPx()
+        val ringH = 2.5.dp.toPx()
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset(left + w * 0.25f - ringW / 2f, top - ringH * 0.4f),
+            size = Size(ringW, ringH)
+        )
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset(left + w * 0.75f - ringW / 2f, top - ringH * 0.4f),
+            size = Size(ringW, ringH)
+        )
+        // Calendar dots
+        val dotColor = Color(0xFF616161)
+        val dotR = 0.8.dp.toPx()
+        drawCircle(dotColor, dotR, Offset(left + w * 0.30f, top + headerH + (h - headerH) * 0.35f))
+        drawCircle(dotColor, dotR, Offset(left + w * 0.50f, top + headerH + (h - headerH) * 0.35f))
+        drawCircle(dotColor, dotR, Offset(left + w * 0.70f, top + headerH + (h - headerH) * 0.35f))
+        drawCircle(dotColor, dotR, Offset(left + w * 0.30f, top + headerH + (h - headerH) * 0.70f))
+        drawCircle(dotColor, dotR, Offset(left + w * 0.50f, top + headerH + (h - headerH) * 0.70f))
+    }
+
+    private fun DrawScope.drawModernBadgeIcon(taskType: TaskType?, center: Offset, pinSizePx: Float) {
+        val r = pinSizePx * 0.25f
+        val strokeW = 1.8.dp.toPx()
+
+        when (taskType) {
+            TaskType.WATER -> {
+                // Water droplet
+                val dropPath = Path().apply {
+                    moveTo(center.x, center.y - r * 1.15f)
+                    cubicTo(
+                        center.x + r * 0.85f, center.y - r * 0.05f,
+                        center.x + r * 0.85f, center.y + r * 0.75f,
+                        center.x, center.y + r * 0.95f
+                    )
+                    cubicTo(
+                        center.x - r * 0.85f, center.y + r * 0.75f,
+                        center.x - r * 0.85f, center.y - r * 0.05f,
+                        center.x, center.y - r * 1.15f
+                    )
+                    close()
+                }
+                drawPath(dropPath, Color.White)
+            }
+            TaskType.FERTILIZE -> {
+                // Organic sprout / leaf
+                drawLine(Color.White, Offset(center.x, center.y + r), Offset(center.x, center.y - r * 0.2f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                val rightLeaf = Path().apply {
+                    moveTo(center.x, center.y + r * 0.1f)
+                    quadraticBezierTo(center.x + r * 1.1f, center.y, center.x + r * 0.9f, center.y - r * 0.7f)
+                    quadraticBezierTo(center.x + r * 0.3f, center.y - r * 0.4f, center.x, center.y + r * 0.1f)
+                    close()
+                }
+                drawPath(rightLeaf, Color.White)
+                val leftLeaf = Path().apply {
+                    moveTo(center.x, center.y + r * 0.3f)
+                    quadraticBezierTo(center.x - r * 0.9f, center.y + r * 0.2f, center.x - r * 0.8f, center.y - r * 0.4f)
+                    quadraticBezierTo(center.x - r * 0.2f, center.y - r * 0.2f, center.x, center.y + r * 0.3f)
+                    close()
+                }
+                drawPath(leftLeaf, Color.White)
+            }
+            TaskType.HARVEST -> {
+                // Golden sickle
+                val sickleBlade = Path().apply {
+                    moveTo(center.x - r * 0.3f, center.y + r * 0.2f)
+                    cubicTo(
+                        center.x - r * 0.9f, center.y - r * 0.2f,
+                        center.x - r * 0.4f, center.y - r * 1.0f,
+                        center.x + r * 0.7f, center.y - r * 0.8f
+                    )
+                    cubicTo(
+                        center.x + r * 0.1f, center.y - r * 0.7f,
+                        center.x - r * 0.3f, center.y - r * 0.3f,
+                        center.x - r * 0.1f, center.y + r * 0.2f
+                    )
+                    close()
+                }
+                drawPath(sickleBlade, Color.White)
+                drawLine(
+                    color = Color(0xFFFFE082),
+                    start = Offset(center.x - r * 0.2f, center.y + r * 0.15f),
+                    end = Offset(center.x + r * 0.5f, center.y + r * 0.85f),
+                    strokeWidth = 2.2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+            TaskType.PEST_ALERT -> {
+                // Security / Alert Shield with exclamation mark
+                val shieldPath = Path().apply {
+                    moveTo(center.x - r * 0.75f, center.y - r * 0.75f)
+                    lineTo(center.x + r * 0.75f, center.y - r * 0.75f)
+                    quadraticBezierTo(center.x + r * 0.75f, center.y + r * 0.2f, center.x, center.y + r * 0.95f)
+                    quadraticBezierTo(center.x - r * 0.75f, center.y + r * 0.2f, center.x - r * 0.75f, center.y - r * 0.75f)
+                    close()
+                }
+                drawPath(shieldPath, Color.White)
+                val alertDark = Color(0xFFC62828)
+                drawLine(alertDark, Offset(center.x, center.y - r * 0.45f), Offset(center.x, center.y + r * 0.1f), strokeWidth = 1.8.dp.toPx(), cap = StrokeCap.Round)
+                drawCircle(alertDark, radius = 1.1.dp.toPx(), center = Offset(center.x, center.y + r * 0.45f))
+            }
+            TaskType.WEED -> {
+                // Three clean blades of weed / grass
+                drawLine(Color.White.copy(alpha = 0.6f), Offset(center.x - r * 0.85f, center.y + r * 0.8f), Offset(center.x + r * 0.85f, center.y + r * 0.8f), strokeWidth = 1.2.dp.toPx(), cap = StrokeCap.Round)
+                val centerBlade = Path().apply {
+                    moveTo(center.x, center.y + r * 0.8f)
+                    quadraticBezierTo(center.x - r * 0.2f, center.y, center.x, center.y - r * 0.85f)
+                    quadraticBezierTo(center.x + r * 0.2f, center.y, center.x, center.y + r * 0.8f)
+                    close()
+                }
+                drawPath(centerBlade, Color.White)
+                val leftBlade = Path().apply {
+                    moveTo(center.x - r * 0.2f, center.y + r * 0.8f)
+                    quadraticBezierTo(center.x - r * 0.8f, center.y + r * 0.3f, center.x - r * 0.75f, center.y - r * 0.35f)
+                    quadraticBezierTo(center.x - r * 0.4f, center.y + r * 0.2f, center.x - r * 0.2f, center.y + r * 0.8f)
+                    close()
+                }
+                drawPath(leftBlade, Color.White)
+                val rightBlade = Path().apply {
+                    moveTo(center.x + r * 0.2f, center.y + r * 0.8f)
+                    quadraticBezierTo(center.x + r * 0.8f, center.y + r * 0.3f, center.x + r * 0.75f, center.y - r * 0.35f)
+                    quadraticBezierTo(center.x + r * 0.4f, center.y + r * 0.2f, center.x + r * 0.2f, center.y + r * 0.8f)
+                    close()
+                }
+                drawPath(rightBlade, Color.White)
+            }
+            TaskType.TRELLIS -> {
+                // Structural A-Frame bamboo trellis
+                drawLine(Color.White, Offset(center.x, center.y - r * 0.85f), Offset(center.x - r * 0.75f, center.y + r * 0.85f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(Color.White, Offset(center.x, center.y - r * 0.85f), Offset(center.x + r * 0.75f, center.y + r * 0.85f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(Color.White, Offset(center.x - r * 0.45f, center.y + r * 0.15f), Offset(center.x + r * 0.45f, center.y + r * 0.15f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawCircle(Color(0xFFFFD54F), radius = 1.5.dp.toPx(), center = Offset(center.x, center.y - r * 0.7f))
+            }
+            TaskType.NUTRITION -> {
+                // Organic nutrient chemistry flask
+                val flaskPath = Path().apply {
+                    moveTo(center.x - r * 0.25f, center.y - r * 0.85f)
+                    lineTo(center.x + r * 0.25f, center.y - r * 0.85f)
+                    lineTo(center.x + r * 0.25f, center.y - r * 0.35f)
+                    lineTo(center.x + r * 0.8f, center.y + r * 0.75f)
+                    quadraticBezierTo(center.x + r * 0.8f, center.y + r * 0.9f, center.x + r * 0.6f, center.y + r * 0.9f)
+                    lineTo(center.x - r * 0.6f, center.y + r * 0.9f)
+                    quadraticBezierTo(center.x - r * 0.8f, center.y + r * 0.9f, center.x - r * 0.8f, center.y + r * 0.75f)
+                    lineTo(center.x - r * 0.25f, center.y - r * 0.35f)
+                    close()
+                }
+                drawPath(flaskPath, Color.White, style = Stroke(width = 1.6.dp.toPx()))
+                val liquidPath = Path().apply {
+                    moveTo(center.x - r * 0.5f, center.y + r * 0.3f)
+                    lineTo(center.x + r * 0.5f, center.y + r * 0.3f)
+                    lineTo(center.x + r * 0.7f, center.y + r * 0.75f)
+                    lineTo(center.x - r * 0.7f, center.y + r * 0.75f)
+                    close()
+                }
+                drawPath(liquidPath, Color.White)
+            }
+            TaskType.ROTATION_ALERT -> {
+                // Dual circular arrows in loop
+                drawArc(
+                    color = Color.White,
+                    startAngle = 200f,
+                    sweepAngle = 140f,
+                    useCenter = false,
+                    topLeft = Offset(center.x - r, center.y - r),
+                    size = Size(r * 2f, r * 2f),
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                )
+                val arrow1 = Path().apply {
+                    moveTo(center.x + r * 0.8f, center.y - r * 0.6f)
+                    lineTo(center.x + r * 1.05f, center.y - r * 0.2f)
+                    lineTo(center.x + r * 0.55f, center.y - r * 0.15f)
+                    close()
+                }
+                drawPath(arrow1, Color.White)
+
+                drawArc(
+                    color = Color.White,
+                    startAngle = 20f,
+                    sweepAngle = 140f,
+                    useCenter = false,
+                    topLeft = Offset(center.x - r, center.y - r),
+                    size = Size(r * 2f, r * 2f),
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                )
+                val arrow2 = Path().apply {
+                    moveTo(center.x - r * 0.8f, center.y + r * 0.6f)
+                    lineTo(center.x - r * 1.05f, center.y + r * 0.2f)
+                    lineTo(center.x - r * 0.55f, center.y + r * 0.15f)
+                    close()
+                }
+                drawPath(arrow2, Color.White)
+            }
+            else -> {
+                // Default task checklist icon
+                val cardW = r * 1.3f
+                val cardH = r * 1.5f
+                drawRoundRect(
+                    color = Color.White,
+                    topLeft = Offset(center.x - cardW / 2f, center.y - cardH / 2f),
+                    size = Size(cardW, cardH),
+                    cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
+                drawLine(Color.White, Offset(center.x - cardW * 0.25f, center.y - cardH * 0.15f), Offset(center.x + cardW * 0.25f, center.y - cardH * 0.15f), strokeWidth = 1.2.dp.toPx())
             }
         }
     }

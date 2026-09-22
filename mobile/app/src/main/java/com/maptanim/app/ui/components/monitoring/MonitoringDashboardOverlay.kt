@@ -62,7 +62,8 @@ import com.maptanim.app.ui.theme.White
 fun MonitoringDashboardOverlay(
     onDismiss: () -> Unit,
     onNavigateToLibrary: () -> Unit = {},
-    viewModel: MonitoringViewModel = viewModel()
+    viewModel: MonitoringViewModel = viewModel(),
+    isFullScreen: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filteredCrops = viewModel.getFilteredCrops()
@@ -76,61 +77,27 @@ fun MonitoringDashboardOverlay(
     val activeSelectedPlant = uiState.plantedCrops.firstOrNull { it.id == activeSelectedPlantId }
         ?: filteredCrops.firstOrNull { it.id == activeSelectedPlantId }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
-        val view = LocalView.current
-        DisposableEffect(view) {
-            val window = (view.parent as? DialogWindowProvider)?.window
-                ?: (view.context as? Activity)?.window
-            window?.let { win ->
-                WindowCompat.setDecorFitsSystemWindows(win, false)
-                win.setLayout(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                WindowInsetsControllerCompat(win, win.decorView).apply {
-                    hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
-                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            }
-            onDispose {}
-        }
-
-        // Fullscreen edge-to-edge transparent black scrim
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
+    @Composable
+    fun DashboardContent() {
+        Card(
+            modifier = if (isFullScreen) Modifier.fillMaxSize() else Modifier
+                .fillMaxWidth(0.85f)
+                .fillMaxHeight(0.90f)
+                .padding(vertical = 8.dp)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    onDismiss()
-                },
-            contentAlignment = Alignment.Center
+                ) {},
+            shape = if (isFullScreen) RoundedCornerShape(0.dp) else RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF131D15)),
+            border = if (isFullScreen) null else BorderStroke(1.5.dp, Color(0xFF2E4D3E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isFullScreen) 0.dp else 16.dp)
         ) {
-            // Main Landscape Overlay Frame
-            Card(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .fillMaxHeight(0.90f)
-                    .padding(vertical = 8.dp)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {},
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF131D15)),
-                border = BorderStroke(1.5.dp, Color(0xFF2E4D3E)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                    .fillMaxSize()
+                    .padding(if (isFullScreen) 8.dp else 12.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                ) {
                     // Task completion snackbar toast
                     uiState.completedTaskMessage?.let { msg ->
                         LaunchedEffect(msg) {
@@ -273,12 +240,17 @@ fun MonitoringDashboardOverlay(
                                         }
                                     }
 
-                                    // Close Button
+                                    // Close Button / Back Button
                                     IconButton(
                                         onClick = onDismiss,
                                         modifier = Modifier.size(32.dp)
                                     ) {
-                                        Icon(Icons.Default.Close, contentDescription = "Close Monitoring", tint = White, modifier = Modifier.size(20.dp))
+                                        Icon(
+                                            imageVector = if (isFullScreen) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close,
+                                            contentDescription = if (isFullScreen) "Back" else "Close Monitoring",
+                                            tint = White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
                                 }
                             }
@@ -462,6 +434,50 @@ fun MonitoringDashboardOverlay(
                         }
                     }
                 }
+            }
+        }
+
+    if (isFullScreen) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            DashboardContent()
+        }
+    } else {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            val view = LocalView.current
+            DisposableEffect(view) {
+                val window = (view.parent as? DialogWindowProvider)?.window
+                    ?: (view.context as? Activity)?.window
+                window?.let { win ->
+                    WindowCompat.setDecorFitsSystemWindows(win, false)
+                    win.setLayout(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    WindowInsetsControllerCompat(win, win.decorView).apply {
+                        hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+                        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                }
+                onDispose {}
+            }
+
+            // Fullscreen edge-to-edge transparent black scrim
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    onDismiss()
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                DashboardContent()
             }
         }
     }
@@ -841,6 +857,10 @@ private fun MyPlantsTabSection(
                                             TaskType.FERTILIZE -> "🌿"
                                             TaskType.HARVEST -> "🌾"
                                             TaskType.PEST_ALERT -> "🐛"
+                                            TaskType.WEED -> "🌱"
+                                            TaskType.TRELLIS -> "🪵"
+                                            TaskType.NUTRITION -> "🧪"
+                                            TaskType.ROTATION_ALERT -> "🔄"
                                             else -> "🔎"
                                         }
                                         Text(icon, fontSize = 16.sp)

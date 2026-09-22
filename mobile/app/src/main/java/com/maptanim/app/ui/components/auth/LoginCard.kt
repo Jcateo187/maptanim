@@ -22,6 +22,7 @@ import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.components.buttons.GuestButton
 import com.maptanim.app.ui.components.buttons.PrimaryButton
 import com.maptanim.app.ui.components.textfields.AppTextField
+import androidx.compose.ui.platform.LocalContext
 import com.maptanim.app.ui.components.textfields.PasswordTextField
 import com.maptanim.app.viewmodel.AuthViewModel
 
@@ -29,29 +30,39 @@ import com.maptanim.app.viewmodel.AuthViewModel
 fun LoginCard(
     navController: NavController
 ) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("maptanim_auth_prefs", android.content.Context.MODE_PRIVATE) }
+
+    val savedRemember = remember { prefs.getBoolean("remember_me", false) }
+    val savedEmail = remember { if (savedRemember) prefs.getString("saved_email", "") ?: "" else "" }
 
     val authViewModel: AuthViewModel = viewModel()
-
     val uiState by authViewModel.uiState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(savedEmail) }
     var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(savedRemember) }
 
     LaunchedEffect(uiState.isSuccess) {
-
         if (uiState.isSuccess) {
+            if (rememberMe) {
+                prefs.edit()
+                    .putBoolean("remember_me", true)
+                    .putString("saved_email", email.trim())
+                    .apply()
+            } else {
+                prefs.edit()
+                    .putBoolean("remember_me", false)
+                    .remove("saved_email")
+                    .apply()
+            }
 
             navController.navigate(Routes.LOADING) {
-
                 popUpTo(Routes.LOGIN) {
                     inclusive = true
                 }
-
             }
-
         }
-
     }
 
     Card(

@@ -1,13 +1,12 @@
 import React from 'react';
 import {
   LayoutGrid,
-  Wallet,
-  PieChart,
+  Users,
+  Sprout,
   Calendar,
   BarChart2,
   HelpCircle,
   Shield,
-  Sprout,
   X,
   Workflow,
 } from 'lucide-react';
@@ -41,14 +40,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'users',
-      label: 'Farmers & Finances',
-      icon: Wallet,
+      label: 'Farmer Management',
+      icon: Users,
       tab: 'users',
     },
     {
       id: 'crops',
-      label: 'Crop Breakdown',
-      icon: PieChart,
+      label: 'Crop & Pest Library',
+      icon: Sprout,
       tab: 'crops',
     },
     {
@@ -59,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'community',
-      label: 'Community Analytics',
+      label: 'Community Hub',
       icon: BarChart2,
       tab: 'community',
     },

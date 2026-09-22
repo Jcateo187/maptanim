@@ -91,6 +91,12 @@ export const CropLibrary: React.FC = () => {
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
+  // Practical Agronomy & Visual Guide States
+  const [needsTrellis, setNeedsTrellis] = useState<boolean>(false);
+  const [trellisType, setTrellisType] = useState<string>('A_FRAME');
+  const [preferredPlantingMethod, setPreferredPlantingMethod] = useState<string>('RAISED_BED');
+  const [weedingIntervalDays, setWeedingIntervalDays] = useState<number>(7);
+
   // Supabase Storage Manager State
   const [isStorageModalOpen, setIsStorageModalOpen] = useState<boolean>(false);
   const [isUploadingTestImage, setIsUploadingTestImage] = useState<boolean>(false);
@@ -197,6 +203,10 @@ export const CropLibrary: React.FC = () => {
       harvestIndicators: harvestIndicators || `Harvest at peak maturity around ${daysToHarvest} days`,
       description: description || `${name} (${localName || ''}) - Field research verified crop variety.`,
       imageUrl: imageUrl || '/metadata/crops_images/tomato.png',
+      needsTrellis,
+      trellisType,
+      preferredPlantingMethod,
+      weedingIntervalDays,
     };
 
     if (editingCrop) {
@@ -247,6 +257,10 @@ export const CropLibrary: React.FC = () => {
     setImageUrl('');
     setCompanionGoodStr('Tomato, Lettuce');
     setCompanionBadStr('Fennel');
+    setNeedsTrellis(false);
+    setTrellisType('A_FRAME');
+    setPreferredPlantingMethod('RAISED_BED');
+    setWeedingIntervalDays(7);
     setBroadcastToMobile(true);
     setUploadStatus(null);
     setIsAddModalOpen(true);
@@ -281,6 +295,10 @@ export const CropLibrary: React.FC = () => {
     setImageUrl(crop.imageUrl);
     setCompanionGoodStr(crop.companionCropsGood ? crop.companionCropsGood.join(', ') : '');
     setCompanionBadStr(crop.companionCropsBad ? crop.companionCropsBad.join(', ') : '');
+    setNeedsTrellis(crop.needsTrellis ?? false);
+    setTrellisType(crop.trellisType || 'A_FRAME');
+    setPreferredPlantingMethod(crop.preferredPlantingMethod || 'RAISED_BED');
+    setWeedingIntervalDays(crop.weedingIntervalDays ?? 7);
     setBroadcastToMobile(true);
     setUploadStatus(null);
     setIsAddModalOpen(true);
@@ -1116,6 +1134,86 @@ export const CropLibrary: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 4.5. Trellis Support, Weeding & Land Preparation Guide */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-emerald-500" />
+                    <span>Structural Support (Balag) & Cultivation Method</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={needsTrellis}
+                          onChange={(e) => setNeedsTrellis(e.target.checked)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                        />
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 block text-xs">
+                            Requires Trellis (Kailangan ng Balag)
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">
+                            For climbing or heavy fruited vines (Ampalaya, Sitaw, Pipino)
+                          </span>
+                        </div>
+                      </label>
+
+                      {needsTrellis && (
+                        <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Trellis Structure Type
+                          </label>
+                          <select
+                            value={trellisType}
+                            onChange={(e) => setTrellisType(e.target.value)}
+                            className="input-field select-field text-xs"
+                          >
+                            <option value="A_FRAME">A-Frame Bamboo (1.8m Tatsulok - Sitaw/Pipino)</option>
+                            <option value="TULOS">Tulos / Stake (1.5m Kawayan - Kamatis/Talong)</option>
+                            <option value="OVERHEAD">Overhead Pergola (2.0m Tunel/Balag - Ampalaya/Upo)</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">
+                          Preferred Planting Method
+                        </label>
+                        <select
+                          value={preferredPlantingMethod}
+                          onChange={(e) => setPreferredPlantingMethod(e.target.value)}
+                          className="input-field select-field text-xs"
+                        >
+                          <option value="RAISED_BED">Raised Bed / Kama (15–20cm taas, 1.0m lapad)</option>
+                          <option value="DIRECT_SEEDING">Direct Seeding / Tudling (2–3cm lalim)</option>
+                          <option value="CONTAINER">Container Gardening / Paso (5–10L)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">
+                          Weeding Schedule (Tuwing Ilang Araw)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="3"
+                            max="30"
+                            value={weedingIntervalDays}
+                            onChange={(e) => setWeedingIntervalDays(Number(e.target.value))}
+                            className="input-field font-mono text-xs w-24"
+                          />
+                          <span className="text-[11px] text-slate-500">araw (Default: 7 days)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 5. Companion Planting & DSS Rules */}
                 <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
                   <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
@@ -1203,6 +1301,10 @@ export const CropLibrary: React.FC = () => {
                     imageUrl={imageUrl}
                     companionGoodStr={companionGoodStr}
                     companionBadStr={companionBadStr}
+                    needsTrellis={needsTrellis}
+                    trellisType={trellisType}
+                    preferredPlantingMethod={preferredPlantingMethod}
+                    weedingIntervalDays={weedingIntervalDays}
                   />
 
                   {/* Architecture & Quota Protection Info */}

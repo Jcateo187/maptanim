@@ -66,7 +66,11 @@ enum class TaskType {
     FERTILIZE,       // Green — fertilization due
     HARVEST,         // Amber — harvest window reached
     PEST_ALERT,      // Red — pest risk for crop/season
-    APPLY_PESTICIDE  // Orange — follow-up after pest alert
+    APPLY_PESTICIDE, // Orange — follow-up after pest alert
+    WEED,            // Light Green — clearing grass / weeding
+    TRELLIS,         // Brown — install trellis/balag
+    NUTRITION,       // Emerald — organic or synthetic nutrition
+    ROTATION_ALERT   // Teal — post-harvest crop rotation suggestion
 }
 
 /**

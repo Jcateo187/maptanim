@@ -245,6 +245,10 @@ fun TodaysTasksOverlay(
                                         TaskType.FERTILIZE -> Color(0xFF43A047)
                                         TaskType.HARVEST -> Color(0xFFFFA000)
                                         TaskType.PEST_ALERT -> Color(0xFFE53935)
+                                        TaskType.WEED -> Color(0xFF8BC34A)
+                                        TaskType.TRELLIS -> Color(0xFF795548)
+                                        TaskType.NUTRITION -> Color(0xFF43A047)
+                                        TaskType.ROTATION_ALERT -> Color(0xFF00897B)
                                         else -> Color(0xFF8E24AA)
                                     }
 

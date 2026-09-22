@@ -169,17 +169,7 @@ data class PlotRenderData(
     val plantedTimestampMs: Long = 0L,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
-    val currentStageProgressRatio: Float get() {
-        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
-        if (isAmpalayaOrSim) {
-            val nowMs = System.currentTimeMillis()
-            val startMs = if (plantedTimestampMs > 0L) plantedTimestampMs else 0L
-            val elapsedMs = (nowMs - startMs).coerceAtLeast(0L)
-            // 10-second simulation timeline: 10,000 ms = 100% progress. Continues beyond 1.0f for overdue state.
-            return (elapsedMs / 10000f)
-        }
-        return stageProgressRatio
-    }
+    val currentStageProgressRatio: Float get() = stageProgressRatio
 
     val growthStage: Int get() {
         val ratio = currentStageProgressRatio
@@ -192,21 +182,11 @@ data class PlotRenderData(
         }
     }
 
-    val isHarvestReady: Boolean get() {
-        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
-        if (isAmpalayaOrSim) {
-            return currentStageProgressRatio >= 0.80f
-        }
-        return isMonitoringStarted && (growthStage == 5 || currentStageProgressRatio >= 0.90f || (daysToHarvest > 0 && daysPlanted >= daysToHarvest))
-    }
+    val isHarvestReady: Boolean get() =
+        isMonitoringStarted && (growthStage == 5 || currentStageProgressRatio >= 0.90f || (daysToHarvest > 0 && daysPlanted >= daysToHarvest))
 
-    val isHarvestOverdue: Boolean get() {
-        val isAmpalayaOrSim = cropName?.lowercase()?.contains("ampalaya") == true || cropVariety?.contains("10s", ignoreCase = true) == true
-        if (isAmpalayaOrSim) {
-            return currentStageProgressRatio > 1.0f
-        }
-        return isMonitoringStarted && daysToHarvest > 0 && daysPlanted > daysToHarvest
-    }
+    val isHarvestOverdue: Boolean get() =
+        isMonitoringStarted && daysToHarvest > 0 && daysPlanted > daysToHarvest
 
     val worldCenter: Offset get() = Offset(posX + widthM / 2f, posY + heightM / 2f)
 

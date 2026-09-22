@@ -1,5 +1,6 @@
 package com.maptanim.app.ui.screens.loading
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -7,46 +8,41 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.R
+import com.maptanim.app.core.audio.BackgroundTrack
+import com.maptanim.app.core.audio.TrackBgmEffect
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.viewmodel.LoadingDestination
 import com.maptanim.app.viewmodel.LoadingViewModel
-import com.maptanim.app.core.audio.BackgroundTrack
-import com.maptanim.app.core.audio.TrackBgmEffect
-import kotlinx.coroutines.delay
 
 @Composable
 fun LoadingScreen(
@@ -56,6 +52,24 @@ fun LoadingScreen(
 
     val loadingViewModel: LoadingViewModel = viewModel()
     val uiState by loadingViewModel.uiState.collectAsState()
+
+    var isStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isStarted = true
+    }
+
+    // Subtle cinematic zoom-in effect on the artwork
+    val backgroundScale by animateFloatAsState(
+        targetValue = if (isStarted) 1.04f else 1.0f,
+        animationSpec = tween(durationMillis = 3500, easing = LinearOutSlowInEasing),
+        label = "bg_scale"
+    )
+
+    val uiAlpha by animateFloatAsState(
+        targetValue = if (isStarted) 1.0f else 0f,
+        animationSpec = tween(durationMillis = 600),
+        label = "ui_alpha"
+    )
 
     val animatedProgress by animateFloatAsState(
         targetValue = uiState.progress,
@@ -88,99 +102,59 @@ fun LoadingScreen(
             .background(Color(0xFF09140E)),
         contentAlignment = Alignment.Center
     ) {
+        // 1. Fullscreen Landscape Image with subtle entrance zoom
         Image(
             painter = painterResource(R.drawable.loading_background),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            contentDescription = "MapTanim Landscape Background",
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(backgroundScale),
             contentScale = ContentScale.Crop
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF09140E).copy(alpha = 0.85f),
-                            Color(0xFF132A1F).copy(alpha = 0.85f),
-                            Color(0xFF09140E).copy(alpha = 0.85f)
-                        )
-                    )
-                )
-        )
-
+        // 2. Bottom UI: Clean Progress bar & changing status text directly below it
         Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 26.dp)
+                .alpha(uiAlpha),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 48.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Card(
-                modifier = Modifier.size(150.dp),
-                shape = RoundedCornerShape(32.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 12.dp
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(32.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.app_logo),
-                        contentDescription = "MapTanim App Logo",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .scale(1.45f),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Text(
-                text = "MapTanim Workspace",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = 0.8.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = uiState.statusText,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFFA5D6A7),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
+            // Modern Slim Progress Bar
             LinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
-                    .width(260.dp)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .width(380.dp)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
                 color = Color(0xFF4CAF50),
-                trackColor = Color(0xFF1B382B)
+                trackColor = Color(0xFF1B382B).copy(alpha = 0.8f)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Bottom of progress bar: Text changes information & percentage
+            Row(
+                modifier = Modifier.width(380.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = uiState.statusText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFA5D6A7),
+                    maxLines = 1
+                )
 
-            Text(
-                text = "${(animatedProgress * 100).toInt()}%",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF81C784)
-            )
+                Text(
+                    text = "${(animatedProgress * 100).toInt()}%",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF81C784)
+                )
+            }
         }
     }
 }
+

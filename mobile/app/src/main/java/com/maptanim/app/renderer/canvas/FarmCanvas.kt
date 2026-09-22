@@ -41,7 +41,8 @@ fun FarmCanvas(
     onCameraStateChanged: (CameraState) -> Unit = {},
     onCanvasTouchPosChanged: ((Offset?) -> Unit)? = null,
     onOpenCropPicker: (() -> Unit)? = null,
-    onOpenMonitoring: (() -> Unit)? = null
+    onOpenMonitoring: (() -> Unit)? = null,
+    onOpenTasks: (() -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val resources = context.resources
@@ -87,7 +88,7 @@ fun FarmCanvas(
 
     var tickerTimeMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val hasSimulationCrop = uiState.plots.any {
-        it.cropName?.lowercase()?.contains("ampalaya") == true || it.cropVariety?.contains("10s", ignoreCase = true) == true
+        it.cropVariety?.contains("10s_sim", ignoreCase = true) == true
     }
 
     LaunchedEffect(hasSimulationCrop) {
@@ -149,7 +150,24 @@ fun FarmCanvas(
             },
             onLongPress = { plotId -> editViewModel.selectPlot(plotId) },
             onAddTrellisTapped = { plotId -> editViewModel.addTrellis(plotId) },
-            onCropZoneTapped = { zoneId -> editViewModel.selectCropZone(zoneId) }
+            onCropZoneTapped = { zoneId -> editViewModel.selectCropZone(zoneId) },
+            onBadgeTapped = { plotId, taskType ->
+                editViewModel.selectPlot(plotId)
+                when (taskType) {
+                    com.maptanim.app.domain.model.TaskType.WATER,
+                    com.maptanim.app.domain.model.TaskType.FERTILIZE,
+                    com.maptanim.app.domain.model.TaskType.WEED,
+                    com.maptanim.app.domain.model.TaskType.NUTRITION -> {
+                        onOpenTasks?.invoke()
+                    }
+                    com.maptanim.app.domain.model.TaskType.HARVEST,
+                    com.maptanim.app.domain.model.TaskType.PEST_ALERT,
+                    com.maptanim.app.domain.model.TaskType.ROTATION_ALERT -> {
+                        onOpenMonitoring?.invoke()
+                    }
+                    else -> onOpenTasks?.invoke()
+                }
+            }
         )
     }
 

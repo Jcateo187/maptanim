@@ -156,57 +156,25 @@ class MonitoringViewModel(
                 val monitoredList = plots.map { plot ->
                     val crop = crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
                     val varietyName = plot.cropVariety
-                    val isAmpalayaOrSim = plot.cropName?.lowercase()?.contains("ampalaya") == true || varietyName?.contains("10s", ignoreCase = true) == true
-
-                    var daysPlanted = 0
-                    var daysToHarvest = 60
-                    var stageIndex = 0
-                    var stageProgress = 0f
                     val isStarted = plot.plantedDate != null
 
-                    if (isAmpalayaOrSim) {
-                        val plantedMs = try {
-                            java.time.ZonedDateTime.parse(plot.plantedDate).toInstant().toEpochMilli()
-                        } catch (e: Exception) {
-                            try {
-                                val d = LocalDate.parse(plot.plantedDate!!.take(10))
-                                d.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-                            } catch (e2: Exception) {
-                                0L
-                            }
-                        }
-                        val startMs = if (plantedMs > 0L) plantedMs else 0L
-                        val elapsedMs = (currentMs - startMs).coerceAtLeast(0L)
-                        val simProgress = (elapsedMs / 10000f)
-                        stageProgress = simProgress.coerceIn(0f, 1f)
-                        daysToHarvest = 10
-                        daysPlanted = (elapsedMs / 1000L).toInt()
-                        stageIndex = when {
-                            simProgress < 0.20f -> 0
-                            simProgress < 0.40f -> 1
-                            simProgress < 0.60f -> 2
-                            simProgress < 0.80f -> 3
-                            else -> 4
-                        }
-                    } else {
-                        val plantedLocalDate = plot.plantedDate?.let {
-                            try { LocalDate.parse(it.take(10)) } catch (e: Exception) { null }
-                        }
-                        val isFuture = plantedLocalDate != null && plantedLocalDate.isAfter(LocalDate.now())
-                        daysPlanted = if (plantedLocalDate != null && !isFuture) {
-                            ChronoUnit.DAYS.between(plantedLocalDate, LocalDate.now()).toInt().coerceAtLeast(0)
-                        } else 0
+                    val plantedLocalDate = plot.plantedDate?.let {
+                        try { LocalDate.parse(it.take(10)) } catch (e: Exception) { null }
+                    }
+                    val isFuture = plantedLocalDate != null && plantedLocalDate.isAfter(LocalDate.now())
+                    val daysPlanted = if (plantedLocalDate != null && !isFuture) {
+                        ChronoUnit.DAYS.between(plantedLocalDate, LocalDate.now()).toInt().coerceAtLeast(0)
+                    } else 0
 
-                        daysToHarvest = getVarietyDurationDays(crop, varietyName) ?: 60
-                        stageProgress = if (daysToHarvest > 0 && isStarted && !isFuture) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
-                        stageIndex = when {
-                            isFuture -> 0
-                            stageProgress < 0.15f -> 0
-                            stageProgress < 0.35f -> 1
-                            stageProgress < 0.65f -> 2
-                            stageProgress < 0.90f -> 3
-                            else -> 4
-                        }
+                    val daysToHarvest = getVarietyDurationDays(crop, varietyName) ?: (crop?.daysToHarvest ?: 60)
+                    val stageProgress = if (daysToHarvest > 0 && isStarted && !isFuture) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
+                    val stageIndex = when {
+                        isFuture -> 0
+                        stageProgress < 0.15f -> 0
+                        stageProgress < 0.35f -> 1
+                        stageProgress < 0.65f -> 2
+                        stageProgress < 0.90f -> 3
+                        else -> 4
                     }
 
                     val isFutureScheduled = plot.plantedDate != null && try {
@@ -218,12 +186,12 @@ class MonitoringViewModel(
 
                     val stageName = when {
                         isFutureScheduled -> "Planned (Target: ${plot.plantedDate?.take(10)})"
-                        isOverdue -> if (isAmpalayaOrSim) "Stage 5: Harvest Overdue ⚠️ (10s Sim)" else "Stage 5: Harvest Overdue ⚠️"
-                        stageIndex == 4 -> if (isAmpalayaOrSim) "Stage 5: Harvest Ready 🌾 (10s Sim)" else "Stage 5: Harvest Ready 🌾"
-                        stageIndex == 3 -> if (isAmpalayaOrSim) "Stage 4: Flowering (10s Sim)" else "Stage 4: Flowering"
-                        stageIndex == 2 -> if (isAmpalayaOrSim) "Stage 3: Vegetative (10s Sim)" else "Stage 3: Vegetative"
-                        stageIndex == 1 -> if (isAmpalayaOrSim) "Stage 2: Seedling (10s Sim)" else "Stage 2: Seedling"
-                        else -> if (isAmpalayaOrSim) "Stage 1: Sprout (10s Sim)" else "Stage 1: Sprout"
+                        isOverdue -> "Stage 5: Harvest Overdue ⚠️"
+                        stageIndex == 4 -> "Stage 5: Harvest Ready 🌾"
+                        stageIndex == 3 -> "Stage 4: Flowering"
+                        stageIndex == 2 -> "Stage 3: Vegetative"
+                        stageIndex == 1 -> "Stage 2: Seedling"
+                        else -> "Stage 1: Sprout"
                     }
 
                     val cropCleanName = (crop?.name ?: plot.cropName ?: "carrot").lowercase().replace(" ", "")
@@ -290,7 +258,7 @@ class MonitoringViewModel(
                         cropId = plot.cropId ?: crop?.id,
                         cropName = cropName,
                         localName = localName,
-                        cropVariety = varietyName ?: if (isAmpalayaOrSim) "Ampalaya 10s Simulation Test ⚡" else null,
+                        cropVariety = varietyName,
                         plotLabel = plot.plotLabel,
                         seasonality = when {
                             crop?.seasonality?.contains("WET") == true && crop.seasonality.contains("DRY") -> SeasonalityFilter.ALL

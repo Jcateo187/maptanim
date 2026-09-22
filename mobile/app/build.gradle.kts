@@ -14,8 +14,8 @@ android {
         applicationId = "com.maptanim.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.2.5"
+        versionCode = 3
+        versionName = "1.2.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

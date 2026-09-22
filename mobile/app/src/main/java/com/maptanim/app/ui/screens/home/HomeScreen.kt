@@ -130,6 +130,10 @@ fun HomeScreen(
             onOpenMonitoring = {
                 soundManager.playSfx(SoundEffect.TAP_BUTTON)
                 showMonitoringOverlay = true
+            },
+            onOpenTasks = {
+                soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                showTasksOverlay = true
             }
         )
 

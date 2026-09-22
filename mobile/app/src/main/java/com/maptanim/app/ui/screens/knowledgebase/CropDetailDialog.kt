@@ -1,20 +1,28 @@
 package com.maptanim.app.ui.screens.knowledgebase
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +58,93 @@ import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.data.datasource.CropVarietyInfo
 import com.maptanim.app.data.datasource.WhyDetailInfo
 import com.maptanim.app.domain.model.Crop
+
+private enum class CropGuideTab(val title: String, val icon: String) {
+    LUPA("Lupa", "🌍"),
+    TANIM("Tanim", "🌱"),
+    BALAG("Balag", "🪵"),
+    ALAGA("Alaga", "💧"),
+    PESTE("Peste", "🐛"),
+    ANI("Ani", "🌾")
+}
+
+@Composable
+private fun ModernTabIcon(tab: CropGuideTab, isSelected: Boolean) {
+    val iconColor = if (isSelected) Color(0xFF0E2316) else Color(0xFFA5D6A7)
+    Canvas(modifier = Modifier.size(13.dp)) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+        val strokeW = 1.4.dp.toPx()
+
+        when (tab) {
+            CropGuideTab.LUPA -> {
+                // Soil / Furrow layered lines
+                drawLine(iconColor, Offset(1f, cy - 3.5f), Offset(w - 1f, cy - 3.5f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(iconColor, Offset(2.5f, cy + 1f), Offset(w - 2.5f, cy + 1f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(iconColor, Offset(4.5f, cy + 5f), Offset(w - 4.5f, cy + 5f), strokeWidth = strokeW, cap = StrokeCap.Round)
+            }
+            CropGuideTab.TANIM -> {
+                // Sprouting plant
+                drawLine(iconColor, Offset(cx, h - 1f), Offset(cx, cy - 2f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                val rightLeaf = Path().apply {
+                    moveTo(cx, cy)
+                    quadraticBezierTo(w - 1f, cy - 1f, w - 2f, cy - 5f)
+                    quadraticBezierTo(cx + 2f, cy - 4f, cx, cy)
+                    close()
+                }
+                drawPath(rightLeaf, iconColor)
+                val leftLeaf = Path().apply {
+                    moveTo(cx, cy + 2f)
+                    quadraticBezierTo(1f, cy + 1f, 2f, cy - 3f)
+                    quadraticBezierTo(cx - 2f, cy - 2f, cx, cy + 2f)
+                    close()
+                }
+                drawPath(leftLeaf, iconColor)
+            }
+            CropGuideTab.BALAG -> {
+                // A-Frame Trellis
+                drawLine(iconColor, Offset(cx, 1f), Offset(2f, h - 1f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(iconColor, Offset(cx, 1f), Offset(w - 2f, h - 1f), strokeWidth = strokeW, cap = StrokeCap.Round)
+                drawLine(iconColor, Offset(cx - 3.5f, cy + 1.5f), Offset(cx + 3.5f, cy + 1.5f), strokeWidth = strokeW, cap = StrokeCap.Round)
+            }
+            CropGuideTab.ALAGA -> {
+                // Water droplet
+                val drop = Path().apply {
+                    moveTo(cx, 1.5f)
+                    cubicTo(w - 1.5f, cy, w - 1.5f, h - 2f, cx, h - 0.5f)
+                    cubicTo(1.5f, h - 2f, 1.5f, cy, cx, 1.5f)
+                    close()
+                }
+                drawPath(drop, iconColor)
+            }
+            CropGuideTab.PESTE -> {
+                // Shield / Bug Alert
+                val shield = Path().apply {
+                    moveTo(2f, 2f)
+                    lineTo(w - 2f, 2f)
+                    quadraticBezierTo(w - 2f, cy + 2f, cx, h - 1f)
+                    quadraticBezierTo(2f, cy + 2f, 2f, 2f)
+                    close()
+                }
+                drawPath(shield, iconColor, style = Stroke(width = strokeW))
+                drawCircle(iconColor, radius = 1.dp.toPx(), center = Offset(cx, cy))
+            }
+            CropGuideTab.ANI -> {
+                // Sickle / Grain
+                val sickle = Path().apply {
+                    moveTo(3f, cy + 3f)
+                    cubicTo(1f, cy - 2f, cx, 1f, w - 2f, 3f)
+                    cubicTo(cx + 1f, 3f, 4f, cy - 1f, 4f, cy + 3f)
+                    close()
+                }
+                drawPath(sickle, iconColor)
+                drawLine(iconColor, Offset(3f, cy + 2f), Offset(cx + 2f, h - 1f), strokeWidth = strokeW + 0.3f, cap = StrokeCap.Round)
+            }
+        }
+    }
+}
 
 private enum class WhyTopic {
     CATEGORY,
@@ -74,16 +168,26 @@ fun CropDetailDialog(
     val whyReasoning = remember(crop.name) {
         CropMetadataAssetDataSource.getWhyReasoningForCrop(context, crop)
     }
-    val refSource = remember(crop.name) {
-        CropMetadataAssetDataSource.getReferenceSourceForCrop(context, crop.name)
-    }
 
     var selectedVarietyId by remember(crop.name) {
         mutableStateOf(varietiesList.firstOrNull()?.varietyId)
     }
     val activeVariety: CropVarietyInfo? = varietiesList.firstOrNull { it.varietyId == selectedVarietyId } ?: varietiesList.firstOrNull()
 
+    var selectedTab by remember { mutableStateOf(CropGuideTab.TANIM) }
     var activeWhyTopic by remember { mutableStateOf<WhyTopic?>(null) }
+
+    val cropNameLower = crop.name.lowercase()
+    val needsTrellis = cropNameLower.contains("ampalaya") ||
+            cropNameLower.contains("bitter gourd") ||
+            cropNameLower.contains("sitaw") ||
+            cropNameLower.contains("string bean") ||
+            cropNameLower.contains("pipino") ||
+            cropNameLower.contains("cucumber") ||
+            cropNameLower.contains("kamatis") ||
+            cropNameLower.contains("tomato") ||
+            cropNameLower.contains("upo") ||
+            cropNameLower.contains("patola")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -91,479 +195,451 @@ fun CropDetailDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .fillMaxHeight(0.92f)
-                .clip(RoundedCornerShape(30.dp))
-                .border(1.5.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(30.dp)),
-            color = Color(0xFF162A1E)
+                .widthIn(max = 620.dp)
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.94f)
+                .clip(RoundedCornerShape(22.dp))
+                .border(1.5.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(22.dp)),
+            color = Color(0xFF111E16)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Column(
+            Column(modifier = Modifier.fillMaxSize()) {
+                // ─── COMPACT LANDSCAPE HEADER (80dp) ─────────────────────────
+                // Avoids eating half the screen with tall banners on landscape
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .fillMaxWidth()
+                        .background(Color(0xFF16281E))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    // ─── HERO PHOTO BANNER ─────────────────────────────────────────────
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
-                            .background(Color(0xFF101E15)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // 72dp Rounded Crop Thumbnail
                         val heroImage = CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
-                        AsyncImage(
-                            model = heroImage,
-                            contentDescription = crop.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-
-                        // Gradient overlay for smooth transition to content
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.Black.copy(alpha = 0.4f),
-                                            Color.Transparent,
-                                            Color(0xFF162A1E)
-                                        ),
-                                        startY = 0f
-                                    )
-                                )
-                        )
-
-                        // Top Badges (Taxonomic Family & Photo License Tag)
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF0D1711))
+                                .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                         ) {
-                            metadataInfo?.taxonomicFamily?.let { family ->
-                                if (family.isNotBlank()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xFF2E7D32).copy(alpha = 0.9f))
-                                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                                    ) {
+                            AsyncImage(
+                                model = heroImage,
+                                contentDescription = crop.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Title, Local Name, and Scientific/Family
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = crop.name,
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                crop.localName?.let { local ->
+                                    if (local.isNotBlank() && !local.equals(crop.name, ignoreCase = true)) {
                                         Text(
-                                            text = "Family: $family",
-                                            color = Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold
+                                            text = "($local)",
+                                            color = Color(0xFFA5D6A7),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                metadataInfo?.scientificName?.let { sci ->
+                                    Text(
+                                        text = sci,
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 11.sp,
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                }
+                                metadataInfo?.taxonomicFamily?.let { fam ->
+                                    if (fam.isNotBlank()) {
+                                        Text(
+                                            text = "• Pamilya: $fam",
+                                            color = Color(0xFF81C784),
+                                            fontSize = 11.sp
                                         )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // ─── CONTENT BODY ──────────────────────────────────────────────────
-                    Column(
+                        // Close Button
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                // ─── VARIETY SELECTOR ROW ─────────────────────────────────────
+                if (varietiesList.isNotEmpty()) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .background(Color(0xFF14241B))
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // Title & Scientific Name
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
+                        Text(
+                            text = "🌾 BARIYEDAD:",
+                            color = Color(0xFFFFD54F),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        varietiesList.forEach { vInfo ->
+                            val isSelected = vInfo.varietyId == activeVariety?.varietyId
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Color(0xFF2E7D32) else Color(0xFF1E3526))
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) Color(0xFF81C784) else Color.White.copy(alpha = 0.15f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { selectedVarietyId = vInfo.varietyId }
+                                    .padding(horizontal = 9.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = crop.name,
-                                    color = Color.White,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                crop.localName?.let { local ->
-                                    Text(
-                                        text = " ($local)",
-                                        color = Color(0xFFA5D6A7),
-                                        fontSize = 19.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(start = 8.dp)
-                                    )
-                                }
-                            }
-                            crop.botanicalName?.let { botanical ->
-                                Text(
-                                    text = botanical,
-                                    color = Color.White.copy(alpha = 0.75f),
-                                    fontSize = 14.sp,
-                                    fontStyle = FontStyle.Italic
+                                    text = vInfo.varietyName,
+                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.75f),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         }
+                    }
+                }
 
-                        // ─── INTERACTIVE "WHY?" PARAMETER PILLS ROW ─────────────────────
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // ─── 6-STEP HAKBANG TAB ROW ───────────────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF182D20))
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    CropGuideTab.values().forEach { tab ->
+                        val isSelected = tab == selectedTab
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) Color(0xFF4CAF50) else Color(0xFF223E2D))
+                                .clickable { selectedTab = tab }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
+                                ModernTabIcon(tab, isSelected)
                                 Text(
-                                    text = "💡 Interactive Parameters (Tap to view science & why):",
-                                    color = Color(0xFFFFD54F),
+                                    text = tab.title,
+                                    color = if (isSelected) Color(0xFF0E2316) else Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ─── TAB CONTENT (VERTICAL SCROLL) ────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    when (selectedTab) {
+                        // ─────────────────────────────────────────────────────────
+                        // 🌍 TAB 1: LUPA (Soil & Land Preparation)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.LUPA -> {
+                            SectionCard(title = "🌍 Hakbang 1: Paghahanda ng Lupa") {
+                                Text(
+                                    text = "Tamang Uri ng Lupa:",
+                                    color = Color(0xFFA5D6A7),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                InteractiveBadgePill(
-                                    label = "Category: ${metadataInfo?.cropType ?: crop.category}",
-                                    tag = "Why? 💡",
-                                    containerColor = Color(0xFF1E5E38),
-                                    onClick = { activeWhyTopic = WhyTopic.CATEGORY }
-                                )
-
-                                val activeHarvestDays = crop.daysToHarvest.takeIf { it > 0 } ?: activeVariety?.growthDurationDays ?: 60
-                                InteractiveBadgePill(
-                                    label = "Harvest: $activeHarvestDays days",
-                                    tag = "Why? 💡",
-                                    containerColor = Color(0xFF8D6E63),
-                                    onClick = { activeWhyTopic = WhyTopic.HARVEST }
-                                )
-
-                                val activeWaterDays = crop.wateringIntervalDays.takeIf { it > 0 } ?: activeVariety?.wateringIntervalDays ?: 2
-                                InteractiveBadgePill(
-                                    label = "Water: Every ${activeWaterDays}d",
-                                    tag = "Why? 💡",
-                                    containerColor = Color(0xFF0277BD),
-                                    onClick = { activeWhyTopic = WhyTopic.WATERING }
-                                )
-
-                                InteractiveBadgePill(
-                                    label = "Soil pH: ${crop.optimalPhMin}–${crop.optimalPhMax}",
-                                    tag = "Why? 💡",
-                                    containerColor = Color(0xFF6A1B9A),
-                                    onClick = { activeWhyTopic = WhyTopic.SOIL }
-                                )
-                            }
-                        }
-
-                        // ─── CROP OVERVIEW DESCRIPTION (Prioritizes Admin/DB Description) ──
-                        val overviewText = crop.description?.ifBlank { null } ?: metadataInfo?.description
-                        overviewText?.let { desc ->
-                            SectionCard(title = "📝 Crop Profile & Purpose") {
                                 Text(
-                                    text = desc,
-                                    color = Color.White.copy(alpha = 0.92f),
-                                    fontSize = 14.sp,
-                                    lineHeight = 21.sp
+                                    text = "Buhaghag (Loam) o mabuhangin na may maayos na daluyan ng tubig. Hindi binabaha at hindi sobrang malagkit.",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
                                 )
-                            }
-                        }
 
-                        // ─── VARIETY SELECTOR & 5-STAGE TIMELINE ────────────────────────
-                        if (varietiesList.isNotEmpty()) {
-                            SectionCard(title = "🌾 Priority Cultivars & 5-Stage Growth Breakdown") {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(
-                                        text = "Select a variety to inspect tailored growth days, bitterness level, and plant traits:",
-                                        color = Color.White.copy(alpha = 0.75f),
-                                        fontSize = 12.sp
-                                    )
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-                                    // Variety Tabs Row
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        varietiesList.forEach { vInfo ->
-                                            val isSelected = vInfo.varietyId == activeVariety?.varietyId
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(
-                                                        if (isSelected) Color(0xFF4CAF50)
-                                                        else Color(0xFF1E3A2B)
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        if (isSelected) Color.White else Color(0xFF4CAF50).copy(alpha = 0.4f),
-                                                        RoundedCornerShape(12.dp)
-                                                    )
-                                                    .clickable { selectedVarietyId = vInfo.varietyId }
-                                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                                            ) {
-                                                Text(
-                                                    text = vInfo.varietyName,
-                                                    color = if (isSelected) Color(0xFF0E2316) else Color(0xFFA5D6A7),
-                                                    fontSize = 12.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Active Variety Detail Card
-                                    activeVariety?.let { vInfo ->
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(14.dp))
-                                                .background(Color(0xFF15261C))
-                                                .border(1.dp, Color(0xFF81C784).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                                                .padding(14.dp)
-                                        ) {
-                                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Column {
-                                                        Text(
-                                                            text = vInfo.varietyName,
-                                                            color = Color(0xFFA5D6A7),
-                                                            fontSize = 16.sp,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        if (vInfo.localNamePh.isNotBlank() && vInfo.localNamePh != vInfo.varietyName) {
-                                                            Text(
-                                                                text = vInfo.localNamePh,
-                                                                color = Color.White.copy(alpha = 0.7f),
-                                                                fontSize = 12.sp
-                                                            )
-                                                        }
-                                                    }
-                                                    BadgePill(
-                                                        text = "${vInfo.growthDurationDays} Days Total",
-                                                        color = Color(0xFF2E7D32)
-                                                    )
-                                                }
-
-                                                Text(
-                                                    text = vInfo.description,
-                                                    color = Color.White.copy(alpha = 0.88f),
-                                                    fontSize = 13.sp,
-                                                    lineHeight = 19.sp
-                                                )
-
-                                                // Variety specific traits row
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    vInfo.fruitLengthCm?.let { length ->
-                                                        TraitChip("Length", length, Color(0xFF26A69A))
-                                                    }
-                                                    vInfo.bitternessLevel?.let { bit ->
-                                                        TraitChip("Bitterness", bit, Color(0xFFFFA726))
-                                                    }
-                                                }
-
-                                                vInfo.diseaseResistance?.let { res ->
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                            .background(Color(0xFF2E7D32).copy(alpha = 0.2f))
-                                                            .border(1.dp, Color(0xFF81C784).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "🛡️ Resistance: $res",
-                                                            color = Color(0xFFA5D6A7),
-                                                            fontSize = 11.sp,
-                                                            fontWeight = FontWeight.Medium
-                                                        )
-                                                    }
-                                                }
-
-                                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                                                // 5-Stage Growth Breakdown
-                                                Text(
-                                                    text = "📊 5-Stage Agronomic Growth Schedule:",
-                                                    color = Color(0xFFFFD54F),
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    StageStep("1. Sprout", "${vInfo.stageDays.stage1Sprout}d", Color(0xFF81C784))
-                                                    StageStep("2. Seedling", "${vInfo.stageDays.stage2Seedling}d", Color(0xFF81C784))
-                                                    StageStep("3. Veg", "${vInfo.stageDays.stage3Vegetative}d", Color(0xFF81C784))
-                                                    StageStep("4. Bloom", "${vInfo.stageDays.stage4Flowering}d", Color(0xFFFFD54F))
-                                                    StageStep("5. Harvest", "${vInfo.stageDays.stage5Harvest}d+", Color(0xFF4CAF50), isHighlight = true)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // ─── SOIL & AGRONOMIC SPECIFICATIONS ───────────────────────────
-                        SectionCard(title = "🌱 Soil, pH & Nutritional Specifications") {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    SpecItem("Optimal pH Range", "${crop.optimalPhMin} – ${crop.optimalPhMax}")
-                                    SpecItem("NPK Fertilizer Target", "${crop.nRatio} : ${crop.pRatio} : ${crop.kRatio}")
-                                    SpecItem("Seasonality", crop.seasonality.joinToString(", "))
+                                    SpecItem("Lalim ng Hukay (Deep Dig)", "20–30 cm (1 dipa)")
+                                    SpecItem("Halong Compost", "2–3 kilo / m²")
                                 }
 
                                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-                                Text(
-                                    text = "Soil Texture Suitability:",
-                                    color = Color(0xFFA5D6A7),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                // Visual Bed & Furrow Diagram with CM/M ruler guidelines
+                                FurrowBedVisualGuide(
+                                    plantSpacingCm = "30–50 cm",
+                                    deepDigCm = "20–30 cm",
+                                    bedHeightCm = "15–20 cm",
+                                    bedWidthM = "1.0 Metro"
                                 )
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text(
-                                        text = "Ideal: ${crop.idealSoils.joinToString { it.name }}",
-                                        color = Color(0xFF81C784),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Suitable: ${crop.suitableSoils.joinToString { it.name }}",
-                                        color = Color(0xFFFFD54F),
-                                        fontSize = 13.sp
-                                    )
-                                }
-                            }
-                        }
 
-                        // ─── COMPANION PLANTS & ANTAGONISTS ────────────────────────────
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            SectionCard(
-                                title = "🤝 Companion Plants",
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                if (crop.companionPlants.isNotEmpty()) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        crop.companionPlants.forEach { plant ->
-                                            Text("• $plant", color = Color(0xFFA5D6A7), fontSize = 13.sp)
-                                        }
-                                    }
-                                } else {
-                                    Text("No specific companion restrictions", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
-                                }
-                            }
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-                            SectionCard(
-                                title = "⚠️ Avoid Planting With",
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                if (crop.avoidPlants.isNotEmpty()) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        crop.avoidPlants.forEach { plant ->
-                                            Text("• $plant", color = Color(0xFFFF8A80), fontSize = 13.sp)
-                                        }
-                                    }
-                                } else {
-                                    Text("No known antagonistic crops", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
-                                }
-                            }
-                        }
-
-                        // ─── COMMON PESTS & DISEASES ────────────────────────────────────
-                        if (crop.commonPests.isNotEmpty()) {
-                            SectionCard(title = "🐛 Common Pests & Diseases") {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    crop.commonPests.forEach { pest ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFFD32F2F).copy(alpha = 0.3f))
-                                                .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(pest, color = Color(0xFFFFCDD2), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // ─── HARVEST READINESS & POST-HARVEST ───────────────────────────
-                        crop.harvestIndicators?.let { indicators ->
-                            SectionCard(title = "🌾 Harvest Readiness & Field Handling") {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(
-                                        text = "• Maturity Indicators: $indicators",
-                                        color = Color(0xFFFFD54F),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        lineHeight = 19.sp
-                                    )
-                                    Text(
-                                        text = "• Field Timing: Harvest during cool early morning hours to minimize field heat respiration.",
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 13.sp
-                                    )
-                                    Text(
-                                        text = "• Storage Conditions: Store at 12°C–15°C with 90% relative humidity. Keeps crisp for 7–10 days.",
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 13.sp
-                                    )
-                                }
-                            }
-                        }
-
-                        // ─── OFFICIAL DATA SOURCE, OWNER & PURPOSE ───────────────────────
-                        // ─── FIELD RESEARCH & FARMER INTERVIEW DATA PROFILE ───────────────────────
-                        SectionCard(
-                            title = "📋 Field Research & Agronomic Profile",
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "Data Source & Provenance:",
-                                    color = Color(0xFFA5D6A7),
+                                    text = "🌾 Mga Paraan ng Pagtatanim:",
+                                    color = Color(0xFFFFD54F),
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = refSource.organization,
-                                    color = Color.White,
-                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
 
+                                MethodGuideCard(
+                                    name = "1. Diretsong Tanim (Direct Seeding)",
+                                    desc = "Ibaon ang 2-3 buto sa mababaw na tudling (2-3 cm lalim). Diligan bago tabunan nang banayad."
+                                )
+
+                                MethodGuideCard(
+                                    name = "2. Kama (Raised Bed - 15-20 cm taas)",
+                                    desc = "Inirerekomenda kung tag-ulan o malagkit ang lupa upang maiwasan ang pagkabulok ng ugat."
+                                )
+
+                                MethodGuideCard(
+                                    name = "3. Paso o Lalagyan (Container Gardening)",
+                                    desc = "Gamitin ang 5-10 litrong paso na may butas sa ilalim para sa bakuran o limitadong espasyo."
+                                )
+                            }
+                        }
+
+                        // ─────────────────────────────────────────────────────────
+                        // 🌱 TAB 2: TANIM (Variety Timeline, Spacing & Traits)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.TANIM -> {
+                            val activeHarvestDays = activeVariety?.growthDurationDays ?: crop.daysToHarvest.takeIf { it > 0 } ?: 60
+
+                            SectionCard(title = "🌱 Hakbang 2: Pagpupunla at Bariyedad") {
+                                // Variety header in card
+                                activeVariety?.let { vInfo ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = vInfo.varietyName,
+                                                color = Color(0xFFA5D6A7),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            if (vInfo.localNamePh.isNotBlank() && vInfo.localNamePh != vInfo.varietyName) {
+                                                Text(
+                                                    text = vInfo.localNamePh,
+                                                    color = Color.White.copy(alpha = 0.6f),
+                                                    fontSize = 11.sp
+                                                )
+                                            }
+                                        }
+                                        BadgePill(
+                                            text = "$activeHarvestDays Araw Hanggang Ani",
+                                            color = Color(0xFF2E7D32)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = vInfo.description,
+                                        color = Color.White.copy(alpha = 0.88f),
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp
+                                    )
+
+                                    // Trait chips
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        vInfo.fruitLengthCm?.let { length ->
+                                            TraitChip("Haba", length, Color(0xFF26A69A))
+                                        }
+                                        vInfo.bitternessLevel?.let { bit ->
+                                            TraitChip("Pait", bit, Color(0xFFFFA726))
+                                        }
+                                        vInfo.diseaseResistance?.let { res ->
+                                            TraitChip("Laban sa", res, Color(0xFF66BB6A))
+                                        }
+                                    }
+                                }
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                // 5-Stage Agronomic Growth Schedule
                                 Text(
-                                    text = "Survey Dataset:",
-                                    color = Color(0xFFA5D6A7),
+                                    text = "📊 5-Stage Agronomic Growth Schedule (Araw bawat Yugto):",
+                                    color = Color(0xFFFFD54F),
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                val s1 = activeVariety?.stageDays?.stage1Sprout ?: (activeHarvestDays * 0.10f).toInt().coerceAtLeast(3)
+                                val s2 = activeVariety?.stageDays?.stage2Seedling ?: (activeHarvestDays * 0.20f).toInt().coerceAtLeast(7)
+                                val s3 = activeVariety?.stageDays?.stage3Vegetative ?: (activeHarvestDays * 0.35f).toInt().coerceAtLeast(15)
+                                val s4 = activeVariety?.stageDays?.stage4Flowering ?: (activeHarvestDays * 0.20f).toInt().coerceAtLeast(10)
+                                val s5 = activeVariety?.stageDays?.stage5Harvest ?: (activeHarvestDays * 0.15f).toInt().coerceAtLeast(5)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    StageStep("1. Sprout", "${s1}d", Color(0xFF81C784))
+                                    StageStep("2. Seedling", "${s2}d", Color(0xFF81C784))
+                                    StageStep("3. Veg", "${s3}d", Color(0xFF81C784))
+                                    StageStep("4. Bloom", "${s4}d", Color(0xFFFFD54F))
+                                    StageStep("5. Harvest", "${s5}d+", Color(0xFF4CAF50), isHighlight = true)
+                                }
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    SpecItem("Distansya ng Puno", "30–50 cm")
+                                    SpecItem("Tamang Panahon", activeVariety?.optimalSeasons?.joinToString(", ") ?: crop.seasonality.joinToString(", "))
+                                }
+                            }
+                        }
+
+                        // ─────────────────────────────────────────────────────────
+                        // 🪵 TAB 3: BALAG (Trellis & Structural Support)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.BALAG -> {
+                            SectionCard(title = "🪵 Hakbang 3: Balag at Suporta (Trellis)") {
+                                if (needsTrellis) {
+                                    Text(
+                                        text = "⚠️ KAILANGAN NG BALAG:",
+                                        color = Color(0xFFFFD54F),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Ang ${crop.name} ay gumagapang o may mabigat na bunga. Ilagay ang balag bago matapos ang Seedling stage (Day 15-20) upang hindi masira ang mga ugat sa pagtulos.",
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp
+                                    )
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                    MethodGuideCard(
+                                        name = "Inirerekomendang Balag: Tulos o A-Frame (1.5 - 2m)",
+                                        desc = "Gamit ang kawayan at nylon trellis net para malayang makakapit ang baging."
+                                    )
+
+                                    MethodGuideCard(
+                                        name = "Bakit Kailangan?",
+                                        desc = "Iniiwasan ang pagkabulok ng bunga sa basang lupa at pinapataas ang ani."
+                                    )
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                    // Visual Trellis Diagrams with meter height guides
+                                    TrellisVisualGuide(
+                                        activeTrellisType = "A_FRAME",
+                                        cropName = crop.name
+                                    )
+                                } else {
+                                    Text(
+                                        text = "✅ HINDI KAILANGAN NG BALAG",
+                                        color = Color(0xFF81C784),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Ang ${crop.name} ay may sariling matatag na tangkay o mababang gulay. Hindi ito nangangailangan ng trellis o balag.",
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp
+                                    )
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                    // Educational reference showing what trellises look like if intercropping
+                                    TrellisVisualGuide(
+                                        activeTrellisType = "NONE",
+                                        cropName = crop.name
+                                    )
+                                }
+                            }
+                        }
+
+                        // ─────────────────────────────────────────────────────────
+                        // 💧 TAB 4: ALAGA (Water, Fertilizer & Weeding)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.ALAGA -> {
+                            val waterInterval = activeVariety?.wateringIntervalDays ?: crop.wateringIntervalDays.takeIf { it > 0 } ?: 2
+                            val fertInterval = activeVariety?.fertilizeIntervalDays ?: 14
+
+                            SectionCard(title = "💧 Hakbang 4: Pag-aalaga, Pataba at Damo") {
+                                Text(
+                                    text = "💧 Iskedyul ng Pagdidilig:",
+                                    color = Color(0xFF4FC3F7),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = refSource.publicationTitle,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    text = "Diligan tuwing $waterInterval araw sa malamig na oras ng umaga (6:00 AM - 8:00 AM). Iwasan ang pagdilig sa tanghali.",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp
+                                )
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Text(
+                                    text = "🧪 Pataba at Sustansya (Tuwing $fertInterval araw):",
+                                    color = Color(0xFF81C784),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "• Organiko: Vermicast o dumi ng baka sa lupa; FPJ (Fermented Plant Juice) tuwing 2 linggo.\n• Sintetiko: Complete 14-14-14 sa paglilipat; Urea (46-0-0) sa dahon; Potash (0-0-60) sa pamumunga.",
+                                    color = Color.White.copy(alpha = 0.88f),
                                     fontSize = 12.sp,
                                     lineHeight = 17.sp
                                 )
@@ -571,36 +647,203 @@ fun CropDetailDialog(
                                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
                                 Text(
-                                    text = "🎯 Purpose of Dataset:",
+                                    text = "🌿 Pag-aalis ng Damo (Weeding):",
                                     color = Color(0xFFFFD54F),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Linisin ang damo sa paligid tuwing 7 araw upang hindi maagawan ng sustansya at tubig ang pananim.",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        // ─────────────────────────────────────────────────────────
+                        // 🐛 TAB 5: PESTE (Pests & Companion Matrix)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.PESTE -> {
+                            SectionCard(title = "🐛 Hakbang 5: Peste at Kaibigang Pananim") {
+                                if (crop.commonPests.isNotEmpty()) {
+                                    Text(
+                                        text = "Mga Karaniwang Peste:",
+                                        color = Color(0xFFFF8A80),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        crop.commonPests.forEach { pest ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(Color(0xFFD32F2F).copy(alpha = 0.25f))
+                                                    .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                            ) {
+                                                Text(pest, color = Color(0xFFFFCDD2), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Text(
+                                    text = "🌿 Likas na Pangontra (Organic Remedy):",
+                                    color = Color(0xFFA5D6A7),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = refSource.purposeStatement,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    text = "1 litrong tubig + 1 kutsaritang sabong panlaba (walang bleach) + 1 kutsaritang mantika o sili. I-spray sa ilalim ng dahon sa hapon.",
+                                    color = Color.White.copy(alpha = 0.88f),
                                     fontSize = 12.sp,
-                                    lineHeight = 18.sp
+                                    lineHeight = 17.sp
+                                )
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF1E3A2B))
+                                            .padding(8.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text("🤝 Kasama (Good)", color = Color(0xFF81C784), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            if (crop.companionPlants.isNotEmpty()) {
+                                                crop.companionPlants.take(3).forEach {
+                                                    Text("• $it", color = Color.White, fontSize = 10.sp)
+                                                }
+                                            } else {
+                                                Text("Walang limitasyon", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
+                                            }
+                                        }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF3A1E1E))
+                                            .padding(8.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text("⚠️ Iwasan (Avoid)", color = Color(0xFFFF8A80), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            if (crop.avoidPlants.isNotEmpty()) {
+                                                crop.avoidPlants.take(3).forEach {
+                                                    Text("• $it", color = Color.White, fontSize = 10.sp)
+                                                }
+                                            } else {
+                                                Text("Walang kalaban", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ─────────────────────────────────────────────────────────
+                        // 🌾 TAB 6: ANI (Harvest & Rotation)
+                        // ─────────────────────────────────────────────────────────
+                        CropGuideTab.ANI -> {
+                            SectionCard(title = "🌾 Hakbang 6: Pag-aani at Crop Rotation") {
+                                Text(
+                                    text = "🔍 Palatandaan na Pwede nang Anihin:",
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val indicators = crop.harvestIndicators ?: "Pansinin ang kulay, sukat at katigasan ng bunga batay sa tamang gulang ng bariyedad."
+                                Text(
+                                    text = indicators,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
+                                )
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Text(
+                                    text = "⏰ Oras ng Pag-aani:",
+                                    color = Color(0xFFA5D6A7),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Mag-ani sa maagang umaga bago uminit ang araw upang mapanatili ang tamis at sariwang timbang ng ani.",
+                                    color = Color.White.copy(alpha = 0.88f),
+                                    fontSize = 12.sp
+                                )
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                                Text(
+                                    text = "🔄 Crop Rotation para sa Susunod na Siklo:",
+                                    color = Color(0xFF00E676),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Iwasan ang pagtatanim ng parehong pamilya sa parehong plot. Magtanim ng Sitaw o munggo pagkatapos nito upang maibalik ang Nitrogen sa lupa.",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
                                 )
                             }
                         }
                     }
-                }
 
-                // Floating Close Button Pinned at Top-Right
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(14.dp)
-                        .size(38.dp)
-                        .background(Color.Black.copy(alpha = 0.65f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.White
-                    )
+                    // ─── BOTTOM "BAKIT?" QUICK EXPLAINER PILLS ─────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "💡 Bakit?",
+                            color = Color(0xFFFFD54F),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        InteractiveBadgePill(
+                            label = "Kategorya",
+                            tag = "Bakit? 💡",
+                            containerColor = Color(0xFF1E5E38),
+                            onClick = { activeWhyTopic = WhyTopic.CATEGORY }
+                        )
+                        InteractiveBadgePill(
+                            label = "Araw ng Ani",
+                            tag = "Bakit? 💡",
+                            containerColor = Color(0xFF8D6E63),
+                            onClick = { activeWhyTopic = WhyTopic.HARVEST }
+                        )
+                        InteractiveBadgePill(
+                            label = "Dilig",
+                            tag = "Bakit? 💡",
+                            containerColor = Color(0xFF0277BD),
+                            onClick = { activeWhyTopic = WhyTopic.WATERING }
+                        )
+                        InteractiveBadgePill(
+                            label = "Tamang Lupa",
+                            tag = "Bakit? 💡",
+                            containerColor = Color(0xFF6A1B9A),
+                            onClick = { activeWhyTopic = WhyTopic.SOIL }
+                        )
+                    }
                 }
             }
         }
@@ -628,16 +871,17 @@ fun CropDetailDialog(
         ) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth(0.88f)
-                    .clip(RoundedCornerShape(30.dp))
-                    .border(1.5.dp, Color(0xFFFFD54F).copy(alpha = 0.6f), RoundedCornerShape(30.dp)),
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth(0.85f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.5.dp, Color(0xFFFFD54F).copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
                 color = Color(0xFF14241B)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -646,25 +890,26 @@ fun CropDetailDialog(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(topicIcon, fontSize = 22.sp)
+                            Text(topicIcon, fontSize = 18.sp)
                             Text(
-                                text = "Agronomic Science & Rationale",
+                                text = "Bakit Ito ang Gabay?",
                                 color = Color(0xFFFFD54F),
-                                fontSize = 16.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         IconButton(
                             onClick = { activeWhyTopic = null },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(26.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close overlay",
-                                tint = Color.White.copy(alpha = 0.8f)
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -672,45 +917,39 @@ fun CropDetailDialog(
                     Text(
                         text = whyInfo.title,
                         color = Color.White,
-                        fontSize = 17.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp
+                        lineHeight = 19.sp
                     )
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFF1D3526))
-                            .padding(12.dp)
+                            .padding(8.dp)
                     ) {
                         Text(
                             text = whyInfo.summary,
                             color = Color(0xFFA5D6A7),
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Key Botanical & Agricultural Insights:",
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         whyInfo.points.forEach { point ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("•", color = Color(0xFF81C784), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("•", color = Color(0xFF81C784), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text(
                                     text = point,
                                     color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
                                 )
                             }
                         }
@@ -720,12 +959,29 @@ fun CropDetailDialog(
                         onClick = { activeWhyTopic = null },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Understood", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Naintindihan Ko", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MethodGuideCard(name: String, desc: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1B3224))
+            .border(1.dp, Color(0xFF81C784).copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+            .padding(8.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(name, color = Color(0xFFA5D6A7), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(desc, color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, lineHeight = 15.sp)
         }
     }
 }
@@ -739,32 +995,32 @@ private fun InteractiveBadgePill(
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(containerColor)
-            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = label,
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(4.dp))
                     .background(Color.Black.copy(alpha = 0.35f))
-                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
             ) {
                 Text(
                     text = tag,
                     color = Color(0xFFFFD54F),
-                    fontSize = 10.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -776,14 +1032,14 @@ private fun InteractiveBadgePill(
 private fun TraitChip(label: String, value: String, accentColor: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(accentColor.copy(alpha = 0.15f))
-            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("$label:", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-            Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text("$label:", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
+            Text(value, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -802,18 +1058,18 @@ private fun StageStep(
         Text(
             text = title,
             color = Color.White.copy(alpha = 0.7f),
-            fontSize = 10.sp
+            fontSize = 9.sp
         )
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(5.dp))
                 .background(if (isHighlight) Color(0xFF2E7D32) else Color(0xFF1E3A2B))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .padding(horizontal = 5.dp, vertical = 2.dp)
         ) {
             Text(
                 text = days,
                 color = if (isHighlight) Color.White else textColor,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -829,16 +1085,16 @@ fun SectionCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF234431).copy(alpha = 0.75f))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-            .padding(14.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1F382A).copy(alpha = 0.75f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .padding(10.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = title,
                 color = Color(0xFF81C784),
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
             content()
@@ -850,14 +1106,14 @@ fun SectionCard(
 fun BadgePill(text: String, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(color)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -866,7 +1122,7 @@ fun BadgePill(text: String, color: Color) {
 @Composable
 fun SpecItem(label: String, value: String) {
     Column {
-        Text(text = label, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-        Text(text = value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(text = label, color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
+        Text(text = value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

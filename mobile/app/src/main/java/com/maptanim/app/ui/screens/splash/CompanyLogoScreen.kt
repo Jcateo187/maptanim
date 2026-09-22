@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -75,27 +74,6 @@ fun CompanyLogoScreen(
             .background(Color(0xFF09140E)),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.loading_background),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF09140E).copy(alpha = 0.85f),
-                            Color(0xFF132A1F).copy(alpha = 0.85f),
-                            Color(0xFF09140E).copy(alpha = 0.85f)
-                        )
-                    )
-                )
-        )
-
         Card(
             modifier = Modifier
                 .size(150.dp)

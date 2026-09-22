@@ -213,60 +213,20 @@ fun CommunityScreen(
         }
     }
 
-    val view = LocalView.current
-    DisposableEffect(view) {
-        val window = (view.parent as? DialogWindowProvider)?.window
-            ?: (view.context as? Activity)?.window
-        window?.let { win ->
-            WindowCompat.setDecorFitsSystemWindows(win, false)
-            win.setLayout(
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            WindowInsetsControllerCompat(win, win.decorView).apply {
-                hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        }
-        onDispose {}
-    }
-
-    // Fullscreen edge-to-edge transparent scrim (homescreen visible in background)
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
-                navController.popBackStack()
-            },
-        contentAlignment = Alignment.Center
+            .imePadding(),
+        color = Color(0xFF10160F)
     ) {
-        // Landscape Overlay Frame (With imePadding so keyboard never covers input)
-        Card(
+        Column(
             modifier = Modifier
-                .widthIn(min = 520.dp, max = 740.dp)
-                .fillMaxWidth(0.80f)
-                .fillMaxHeight(0.92f)
-                .imePadding()
-                .padding(vertical = 6.dp)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { /* block background dismiss */ },
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF102014).copy(alpha = 0.96f)),
-            border = BorderStroke(1.2.dp, ForestGreen.copy(alpha = 0.6f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
                 // ── Status Toast / Notice Banner ────────────────────────────
                 val activeNotice = uiState.reportNotice ?: uiState.postNotice
                 val isErrorNotice = uiState.reportNotice == null && uiState.postNoticeIsError
@@ -1287,7 +1247,6 @@ fun CommunityScreen(
             )
         }
     }
-}
 
 // ─── Inline Create Post View ─────────────────────────────────────────────────
 

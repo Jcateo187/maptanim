@@ -25,22 +25,12 @@ import com.maptanim.app.ui.theme.White
 
 @Composable
 fun AboutScreen(navController: NavController) {
-    var showTermsModal by remember { mutableStateOf(false) }
-    var showPrivacyModal by remember { mutableStateOf(false) }
+    var activeLegalDialog by remember { mutableStateOf<com.maptanim.app.ui.components.legal.LegalType?>(null) }
 
-    if (showTermsModal) {
+    activeLegalDialog?.let { type ->
         com.maptanim.app.ui.components.legal.LegalDialog(
-            title = "Terms & Conditions",
-            content = com.maptanim.app.data.local.LegalContent.TERMS_AND_CONDITIONS,
-            onDismiss = { showTermsModal = false }
-        )
-    }
-
-    if (showPrivacyModal) {
-        com.maptanim.app.ui.components.legal.LegalDialog(
-            title = "Privacy Policy",
-            content = com.maptanim.app.data.local.LegalContent.PRIVACY_POLICY,
-            onDismiss = { showPrivacyModal = false }
+            initialType = type,
+            onDismiss = { activeLegalDialog = null }
         )
     }
 
@@ -243,19 +233,19 @@ fun AboutScreen(navController: NavController) {
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
-                                    onClick = { showTermsModal = true },
+                                    onClick = { activeLegalDialog = com.maptanim.app.ui.components.legal.LegalType.TERMS_AND_CONDITIONS },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E4D3E))
                                 ) {
                                     Text("Terms & Conditions", fontSize = 12.sp, color = White)
-                                }
-                                Button(
-                                    onClick = { showPrivacyModal = true },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E4D3E))
-                                ) {
-                                    Text("Privacy Policy", fontSize = 12.sp, color = White)
-                                }
+                                 }
+                                 Button(
+                                     onClick = { activeLegalDialog = com.maptanim.app.ui.components.legal.LegalType.PRIVACY_POLICY },
+                                     modifier = Modifier.weight(1f),
+                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E4D3E))
+                                 ) {
+                                     Text("Privacy Policy", fontSize = 12.sp, color = White)
+                                 }
                             }
                         }
                     }

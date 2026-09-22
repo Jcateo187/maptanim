@@ -26,7 +26,8 @@ class CanvasGestureHandler(
     private val onCameraZoom: (scaleFactor: Float, centroid: Offset) -> Unit,
     private val onLongPress: (plotId: String) -> Unit,
     private val onCropZoneTapped: ((zoneId: String) -> Unit)? = null,
-    private val onAddTrellisTapped: ((plotId: String) -> Unit)? = null
+    private val onAddTrellisTapped: ((plotId: String) -> Unit)? = null,
+    private val onBadgeTapped: ((plotId: String, taskType: TaskType) -> Unit)? = null
 ) {
 
     private var activeHandleDrag: HandleType? = null
@@ -48,6 +49,15 @@ class CanvasGestureHandler(
         activeTool: EditTool,
         selectedPlotId: String?
     ) {
+        // 0. Check if a floating badge above a crop was tapped
+        val badgeHit = hitTestBadges(screenPos, plots, camera)
+        if (badgeHit != null) {
+            val (plot, task) = badgeHit
+            onBadgeTapped?.invoke(plot.id, task.taskType)
+            onPlotTapped(plot.id)
+            return
+        }
+
         val tappedPlot = hitTestPlots(screenPos, plots, camera)
         val worldPos = IsometricProjection.toWorld(screenPos.x, screenPos.y, camera)
 
@@ -194,6 +204,44 @@ class CanvasGestureHandler(
                 worldPos.x >= (plot.posX - pad) && worldPos.x <= (plot.posX + plot.widthM + pad) &&
                 worldPos.y >= (plot.posY - pad) && worldPos.y <= (plot.posY + plot.heightM + pad)
             }
+    }
+
+    private fun hitTestBadges(
+        screenPos: Offset,
+        plots: List<PlotRenderData>,
+        camera: CameraState
+    ): Pair<PlotRenderData, TaskPinData>? {
+        val pinSizePx = 28f * camera.zoom
+        val hitRadiusPx = (pinSizePx / 2f) + (14f * camera.zoom)
+
+        for (plot in plots) {
+            if (plot.activeTasks.isEmpty()) continue
+            val topPos = plot.topEdgeCenter(camera)
+            val anchorY = topPos.y - (70f * camera.zoom)
+
+            val displayTasks = if (plot.activeTasks.size > 3) plot.activeTasks.take(2) else plot.activeTasks
+            val hasOverflow = plot.activeTasks.size > 3
+            val totalBadgesCount = if (hasOverflow) displayTasks.size + 1 else displayTasks.size
+
+            displayTasks.forEachIndexed { index, task ->
+                val offsetX = (index - (totalBadgesCount - 1) / 2f) * (pinSizePx + 6f)
+                val pinCenter = Offset(topPos.x + offsetX, anchorY)
+                if ((screenPos - pinCenter).getDistance() <= hitRadiusPx) {
+                    return plot to task
+                }
+            }
+
+            if (hasOverflow) {
+                val overflowIndex = displayTasks.size
+                val offsetX = (overflowIndex - (totalBadgesCount - 1) / 2f) * (pinSizePx + 6f)
+                val pinCenter = Offset(topPos.x + offsetX, anchorY)
+                if ((screenPos - pinCenter).getDistance() <= hitRadiusPx) {
+                    val remainingTask = plot.activeTasks.getOrNull(2) ?: plot.activeTasks.first()
+                    return plot to remainingTask
+                }
+            }
+        }
+        return null
     }
 
     private fun screenDeltaToWorldDelta(screenDelta: Offset, camera: CameraState): Offset {

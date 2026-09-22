@@ -28,8 +28,9 @@ class MainActivity : ComponentActivity() {
         }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
         }
 
         RepositoryProvider.initialize(applicationContext)
@@ -58,13 +59,12 @@ class MainActivity : ComponentActivity() {
 
         if (hasFocus) {
             WindowInsetsControllerCompat(window, window.decorView).apply {
-                hide(
+                show(
                     WindowInsetsCompat.Type.statusBars() or
                             WindowInsetsCompat.Type.navigationBars()
                 )
-
-                systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
             }
         }
     }

@@ -3,6 +3,7 @@ package com.maptanim.app.ui.components.editcomponents.croptray
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -460,6 +461,33 @@ private fun CropChipCard(
     var cardRootOffset by remember { mutableStateOf(Offset.Zero) }
     var currentTouchOffset by remember { mutableStateOf(Offset.Zero) }
 
+    // CRITICAL: Only attach detectDragGestures when the card is already selected.
+    // When unselected (default), touch events are not consumed, allowing LazyVerticalGrid
+    // to scroll vertically without any accidental drag interceptions or stuttering.
+    val dragModifier = if (isSelected) {
+        Modifier.pointerInput(crop.id, isSelected) {
+            detectDragGestures(
+                onDragStart = { localOffset ->
+                    currentTouchOffset = cardRootOffset + localOffset
+                    onDragStart(currentTouchOffset)
+                },
+                onDrag = { change, _ ->
+                    change.consume()
+                    currentTouchOffset = cardRootOffset + change.position
+                    onDragging(currentTouchOffset)
+                },
+                onDragEnd = {
+                    onDragEnd(currentTouchOffset)
+                },
+                onDragCancel = {
+                    onDragEnd(currentTouchOffset)
+                }
+            )
+        }
+    } else {
+        Modifier
+    }
+
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = bgColor,
@@ -470,39 +498,25 @@ private fun CropChipCard(
             .onGloballyPositioned { coordinates ->
                 cardRootOffset = coordinates.positionInRoot()
             }
-            .pointerInput(crop.id) {
-                detectDragGestures(
-                    onDragStart = { localOffset ->
-                        onClick()
-                        currentTouchOffset = cardRootOffset + localOffset
-                        onDragStart(currentTouchOffset)
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        currentTouchOffset = cardRootOffset + change.position
-                        onDragging(currentTouchOffset)
-                    },
-                    onDragEnd = {
-                        onDragEnd(currentTouchOffset)
-                    },
-                    onDragCancel = {
-                        onDragEnd(currentTouchOffset)
-                    }
-                )
-            }
+            .then(dragModifier)
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Crop image from Supabase Storage / remote URL or fallback to assets/metadata/crops_images
+            // Prominent Crop Image Box — Vegetable fills the box visually
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(46.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) Color(0xFFC8E6C9) else Color(0xFFE8F5E9).copy(alpha = 0.7f)),
+                    .background(if (isSelected) Color(0xFFC8E6C9) else Color(0xFFE8F5E9).copy(alpha = 0.7f))
+                    .border(
+                        1.dp,
+                        if (isSelected) Color(0xFF388E3C) else Color(0xFF81C784).copy(alpha = 0.35f),
+                        RoundedCornerShape(8.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 val imageModel: Any = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
@@ -512,8 +526,8 @@ private fun CropChipCard(
                     contentDescription = crop.name,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .fillMaxSize()
+                        .padding(2.dp)
                 )
             }
 
@@ -532,7 +546,7 @@ private fun CropChipCard(
                 )
                 Text(
                     text = if (isSelected) "${crop.category} • Drag or Tap Map" else "${crop.category} • Tap to Select",
-                    fontSize = 8.sp,
+                    fontSize = 8.5.sp,
                     color = if (isSelected) Color(0xFF1B5E20) else Color.Gray,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1

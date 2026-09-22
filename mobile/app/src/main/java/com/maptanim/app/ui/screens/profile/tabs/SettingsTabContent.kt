@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
@@ -197,6 +198,44 @@ fun SettingsTabContent(
             }
         }
 
+        // About MapTanim Section
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xFF1E261A),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
+                    navController.navigate(Routes.ABOUT)
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = ForestGreen
+                    )
+                    Column {
+                        Text("About MapTanim", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Capstone project, development team, and legal documents",
+                            color = White.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+            }
+        }
+
         // Log out Section
         Surface(
             shape = RoundedCornerShape(14.dp),
@@ -205,6 +244,7 @@ fun SettingsTabContent(
                 .fillMaxWidth()
                 .clickable { viewModel.openLogoutConfirm() }
         ) {
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
