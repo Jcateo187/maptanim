@@ -19,14 +19,15 @@ import com.maptanim.app.ui.screens.about.AboutScreen
 import com.maptanim.app.ui.screens.calendar.CalendarScreen
 import com.maptanim.app.ui.screens.community.CommunityScreen
 import com.maptanim.app.ui.screens.edit.FarmEditorScreen
-import com.maptanim.app.ui.screens.home.HomeScreen
 import com.maptanim.app.ui.screens.home.MainHomeScreen
-import com.maptanim.app.ui.screens.knowledgebase.LibraryScreen
+import com.maptanim.app.ui.screens.vegetables.VegetablesScreen
 import com.maptanim.app.ui.screens.loading.LoadingScreen
+import com.maptanim.app.ui.screens.farm.FarmScreen
 import com.maptanim.app.ui.screens.monitoring.MonitoringScreen
 import com.maptanim.app.ui.screens.profile.ProfileScreen
 import com.maptanim.app.ui.screens.reports.ReportsScreen
 import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
+import com.maptanim.app.ui.screens.dss.DssScreen
 
 @Composable
 fun AppNavGraph() {
@@ -92,11 +93,14 @@ fun AppNavGraph() {
             ProfileScreen(navController = navController, initialTab = tab)
         }
 
-        dialog(
+        composable(
             route = Routes.LIBRARY,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
-            LibraryScreen(navController = navController)
+            VegetablesScreen(navController = navController)
         }
 
         composable(
@@ -150,7 +154,7 @@ fun AppNavGraph() {
                 )
             }
         ) {
-            MonitoringScreen(navController = navController)
+            FarmScreen(navController = navController)
         }
 
         composable(
@@ -187,6 +191,44 @@ fun AppNavGraph() {
             }
         ) {
             ReportsScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.DSS,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) {
+            DssScreen(navController = navController)
+        }
+
+        composable(
+            route = Routes.DSS_WITH_FARM,
+            arguments = listOf(navArgument("farmId") { type = NavType.StringType; defaultValue = "" }),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300)
+                )
+            }
+        ) { backStackEntry ->
+            val farmId = backStackEntry.arguments?.getString("farmId")
+            DssScreen(navController = navController, farmId = farmId)
         }
     }
 }

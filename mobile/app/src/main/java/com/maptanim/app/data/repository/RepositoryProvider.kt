@@ -73,6 +73,12 @@ object RepositoryProvider {
     val dssRuleRepository: DssRuleRepository by lazy {
         DssRuleRepositoryImpl(database?.dssRuleDao())
     }
+    val plantingMonitorDao: com.maptanim.app.data.local.dao.PlantingMonitorDao? by lazy {
+        database?.plantingMonitorDao()
+    }
+    val dssRepository: com.maptanim.app.domain.repository.DssRepository by lazy {
+        DssRepositoryImpl(database?.dssDecisionDao())
+    }
 
     suspend fun clearAllLocalCache() {
         try {

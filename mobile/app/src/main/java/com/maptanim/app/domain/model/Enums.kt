@@ -70,7 +70,10 @@ enum class TaskType {
     WEED,            // Light Green — clearing grass / weeding
     TRELLIS,         // Brown — install trellis/balag
     NUTRITION,       // Emerald — organic or synthetic nutrition
-    ROTATION_ALERT   // Teal — post-harvest crop rotation suggestion
+    ROTATION_ALERT,  // Teal — post-harvest crop rotation suggestion
+    SOIL_AMENDMENT,  // Soil amendment / conditioning
+    PRUNING,         // Pruning dead or diseased foliage
+    OBSERVATION      // Scouting and field observation
 }
 
 /**

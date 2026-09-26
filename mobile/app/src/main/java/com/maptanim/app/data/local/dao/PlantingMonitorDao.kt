@@ -16,6 +16,12 @@ interface PlantingMonitorDao {
     @Query("SELECT * FROM planting_monitors WHERE id = :monitorId")
     fun observeMonitorById(monitorId: String): Flow<PlantingMonitorEntity?>
 
+    @Query("SELECT * FROM planting_monitors ORDER BY recorded_at DESC")
+    fun observeAllMonitors(): Flow<List<PlantingMonitorEntity>>
+
+    @Query("SELECT * FROM planting_monitors ORDER BY recorded_at DESC")
+    fun getAllMonitors(): List<PlantingMonitorEntity>
+
     /**
      * Query monitoring records & tasks for a specific crop (used by Monitoring side nav when crop is clicked).
      */

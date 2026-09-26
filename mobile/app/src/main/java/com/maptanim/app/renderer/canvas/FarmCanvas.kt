@@ -59,8 +59,8 @@ fun FarmCanvas(
             val sh = canvasSize.height.toFloat()
             val fitW = sw / (45f * IsometricProjection.TILE_W)
             val fitH = sh / (45f * IsometricProjection.TILE_H)
-            val minZ = minOf(fitW, fitH).coerceIn(0.25f, 0.52f)
-            val targetZ = (0.52f * 1.50f).coerceIn(minZ, 1.20f)
+            val minZ = minOf(fitW, fitH).coerceIn(0.10f, 0.52f)
+            val targetZ = (minOf(fitW, fitH) * 1.10f).coerceIn(minZ, 1.20f)
 
             zoomAnim.snapTo(minZ)
             cameraState = cameraState.copy(zoom = minZ).centered(sw, sh)
@@ -120,8 +120,20 @@ fun FarmCanvas(
                 if (activeCropName.isNotEmpty() && 
                     (currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLANT ||
                      currentActiveTool == com.maptanim.app.domain.model.EditTool.ADD_PLOT)) {
-                    if (isValidPlacement) {
-                        editViewModel.addDirectPlantingPlot(targetX.coerceIn(0f, 44f), targetY.coerceIn(0f, 44f), activeCropName, activeCropId)
+                    val isBed = activeCropId.equals("bed", ignoreCase = true) || activeCropName.equals("Bed", ignoreCase = true)
+                    if (isBed) {
+                        if (isValidPlacement) {
+                            editViewModel.addDirectPlantingPlot(targetX.coerceIn(0f, 44f), targetY.coerceIn(0f, 44f), "Bed", "bed")
+                        }
+                    } else {
+                        val targetBed = uiState.plots.firstOrNull { plot ->
+                            targetX >= plot.posX && targetX < (plot.posX + plot.widthM) &&
+                            targetY >= plot.posY && targetY < (plot.posY + plot.heightM) &&
+                            (plot.cropName == "Bed" || plot.cropId == "bed")
+                        }
+                        if (targetBed != null) {
+                            editViewModel.plantCropInBed(targetBed.id, activeCropName, activeCropId)
+                        }
                     }
                 } else {
                     editViewModel.deselect()

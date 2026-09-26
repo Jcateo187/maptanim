@@ -9,6 +9,9 @@ interface ActivityDao {
     @Query("SELECT * FROM activities WHERE plot_id = :plotId ORDER BY performed_at DESC")
     fun observeActivities(plotId: String): Flow<List<ActivityEntity>>
 
+    @Query("SELECT * FROM activities ORDER BY performed_at DESC")
+    fun observeAllActivities(): Flow<List<ActivityEntity>>
+
     @Upsert
     fun upsertActivity(activity: ActivityEntity)
 

@@ -1,0 +1,595 @@
+package com.maptanim.app.dss.evaluator
+
+import com.maptanim.app.domain.model.Activity
+import com.maptanim.app.domain.model.CompanionRelation
+import com.maptanim.app.domain.model.Crop
+import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.domain.model.GrowthStage
+import com.maptanim.app.domain.model.HarvestRecord
+import com.maptanim.app.domain.model.Season
+import com.maptanim.app.domain.model.TaskType
+import com.maptanim.app.dss.engine.GrowthStageCalculator
+import com.maptanim.app.dss.engine.SoilSuitabilityScorer
+import com.maptanim.app.dss.knowledgebase.CompanionDataProvider
+import com.maptanim.app.dss.model.DssCategory
+import com.maptanim.app.dss.model.DssDecision
+import com.maptanim.app.dss.model.DssDecisionType
+import com.maptanim.app.dss.model.DssInput
+import com.maptanim.app.dss.model.DssPriority
+import com.maptanim.app.dss.rules.DssRuleCatalog
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+
+// ─── 1. Season & Planting Window Evaluator ───────────────────────────────────
+
+class DssSeasonEvaluator {
+
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val currentSeason = if (today.monthValue in 5..10) Season.WET else Season.DRY
+        val farmId = input.session.farmId
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+
+            // Check if crop seasonality matches
+            if (crop.seasonality.isNotEmpty() && !crop.seasonality.contains("YEAR_ROUND") && !crop.seasonality.contains(currentSeason.name)) {
+                decisions.add(
+                    DssDecision(
+                        id = "dss_season_${plot.id}_${currentSeason.name}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.SEASON_WINDOW,
+                        priority = DssPriority.HIGH,
+                        title = "${crop.name} Off-Season Warning on ${plot.plotLabel}",
+                        summary = "${crop.name} prefers ${crop.seasonality.joinToString("/")} season. Currently in ${currentSeason.name} season.",
+                        explanation = "Cultivating ${crop.name} outside its optimal climate window increases susceptibility to climatic stress, disease proliferation, and suboptimal yield.",
+                        source = "DA-BPI Philippine Crop Calendar & Agro-Climatic Zones",
+                        actionText = "Implement microclimate protection",
+                        actionTaskType = TaskType.OBSERVATION,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+
+            // Wet season fungal and drainage check for Solanaceae
+            if (currentSeason == Season.WET && crop.category.equals("FRUIT", ignoreCase = true) && crop.name in listOf("Tomato", "Eggplant", "Chili Pepper")) {
+                val rule = DssRuleCatalog.findRuleByCode("SEASON_TOMATO_WET")
+                decisions.add(
+                    DssDecision(
+                        id = "dss_wet_solanaceae_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.SEASON_WINDOW,
+                        priority = DssPriority.MEDIUM,
+                        title = "Monsoon Waterlogging & Bacterial Wilt Risk",
+                        summary = "Elevate drainage furrows around ${plot.plotLabel} to prevent root saturation.",
+                        explanation = rule?.explanation ?: "Excess soil moisture combined with tropical heat accelerates Ralstonia solanacearum (bacterial wilt) infection in Solanaceous vegetables.",
+                        source = rule?.source ?: "DA-BPI Technical Bulletin No. 14: Solanaceous Crops Management",
+                        actionText = "Inspect Drainage Furrows",
+                        actionTaskType = TaskType.OBSERVATION,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+}
+
+// ─── 2. Soil Compatibility Evaluator ────────────────────────────────────────
+
+class DssSoilEvaluator(
+    private val scorer: SoilSuitabilityScorer = SoilSuitabilityScorer()
+) {
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+
+            val score = scorer.score(plot.soilType, crop)
+            if (score <= 0.50f) {
+                val rule = if (plot.soilType == com.maptanim.app.domain.model.SoilType.CLAY) {
+                    DssRuleCatalog.findRuleByCode("SOIL_CLAY_AERATION")
+                } else {
+                    DssRuleCatalog.findRuleByCode("SOIL_SANDY_MULCH")
+                }
+
+                decisions.add(
+                    DssDecision(
+                        id = "dss_soil_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.RECOMMENDATION,
+                        category = DssCategory.SOIL_COMPATIBILITY,
+                        priority = if (score < 0.3f) DssPriority.HIGH else DssPriority.MEDIUM,
+                        title = "Soil Amendment Prescribed: ${plot.soilType.name} Match (${(score * 100).toInt()}%)",
+                        summary = rule?.recommendation ?: "Apply organic compost and mulch to adjust soil drainage and aeration.",
+                        explanation = rule?.explanation ?: "The plot's soil physical properties deviate from ${crop.name}'s optimal root aeration and moisture parameters.",
+                        source = rule?.source ?: "Bureau of Soils and Water Management (BSWM) Guidelines",
+                        actionText = "Apply Soil Amendment",
+                        actionTaskType = TaskType.SOIL_AMENDMENT,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+}
+
+// ─── 3. Growth Stage & Crop Care Scheduling Evaluator ───────────────────────
+
+class DssGrowthCareEvaluator(
+    private val calculator: GrowthStageCalculator = GrowthStageCalculator()
+) {
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+            val plantedDateStr = plot.plantedDate ?: return@forEach
+            val plantedDate = runCatching { LocalDate.parse(plantedDateStr.take(10)) }.getOrNull()
+                ?: return@forEach
+
+            val stage = calculator.calculate(plantedDate, crop.daysToHarvest, today)
+            val daysElapsed = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
+
+            // 1. Irrigation Evaluation
+            val lastWatered = input.farmerData.recentActivities
+                .filter { it.plotId == plot.id && it.type == TaskType.WATER }
+                .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
+                .maxOrNull()
+
+            val daysSinceWater = lastWatered?.let { ChronoUnit.DAYS.between(it, today).toInt() }
+                ?: crop.wateringIntervalDays
+
+            if (daysSinceWater >= crop.wateringIntervalDays) {
+                decisions.add(
+                    DssDecision(
+                        id = "dss_task_water_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.TASK,
+                        category = DssCategory.GROWTH_CARE,
+                        priority = if (daysSinceWater > crop.wateringIntervalDays + 1) DssPriority.CRITICAL else DssPriority.HIGH,
+                        title = "Water ${crop.name} on ${plot.plotLabel}",
+                        summary = "Last watered $daysSinceWater days ago. Target interval is every ${crop.wateringIntervalDays} days.",
+                        explanation = "Consistent root-zone moisture prevents blossom-end rot and vegetative wilting, especially critical during ${stage.name} stage.",
+                        source = "DA-BAR Lowland Vegetables Production Handbook (Irrigation Scheduling)",
+                        actionText = "Log Water Activity",
+                        actionTaskType = TaskType.WATER,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+
+            // 2. Fertilization Scheduling by Stage
+            val isFertilizeStage = stage in listOf(
+                GrowthStage.SEEDLING, GrowthStage.VEGETATIVE, GrowthStage.FLOWERING,
+                GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE
+            )
+            if (isFertilizeStage) {
+                val lastFertilized = input.farmerData.recentActivities
+                    .filter { it.plotId == plot.id && it.type == TaskType.FERTILIZE }
+                    .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
+                    .maxOrNull()
+
+                val daysSinceFert = lastFertilized?.let { ChronoUnit.DAYS.between(it, today).toInt() }
+                    ?: crop.fertilizeIntervalDays
+
+                if (daysSinceFert >= crop.fertilizeIntervalDays) {
+                    val isFlowering = stage == GrowthStage.FLOWERING || stage == GrowthStage.FRUITING
+                    val rule = if (isFlowering) {
+                        DssRuleCatalog.findRuleByCode("CARE_FLOWER_POTASSIUM")
+                    } else {
+                        DssRuleCatalog.findRuleByCode("CARE_VEG_NITROGEN")
+                    }
+
+                    decisions.add(
+                        DssDecision(
+                            id = "dss_task_fert_${plot.id}_${stage.name}",
+                            farmId = farmId,
+                            plotId = plot.id,
+                            plotLabel = plot.plotLabel,
+                            cropName = crop.name,
+                            decisionType = DssDecisionType.TASK,
+                            category = DssCategory.GROWTH_CARE,
+                            priority = DssPriority.MEDIUM,
+                            title = "Fertilize ${crop.name} (${stage.name})",
+                            summary = rule?.recommendation ?: "Apply stage-appropriate organic or balanced side-dressing.",
+                            explanation = rule?.explanation ?: "Nutrient demand peaks during active tissue expansion and fruit development.",
+                            source = rule?.source ?: "DA-BPI Philippine National Standards for Organic & Conventional Amendments",
+                            actionText = "Log Fertilize Activity",
+                            actionTaskType = TaskType.FERTILIZE,
+                            ruleId = rule?.id,
+                            evaluatedAt = today.toString()
+                        )
+                    )
+                }
+            }
+
+            // 3. Trellising Check
+            val needsTrellis = crop.name in listOf("Bitter Gourd", "Cucumber", "Yardlong String Bean", "Tomato")
+            if (needsTrellis && daysElapsed in 15..35) {
+                val hasTrellised = input.farmerData.recentActivities.any { it.plotId == plot.id && it.type == TaskType.TRELLIS }
+                if (!hasTrellised) {
+                    val rule = DssRuleCatalog.findRuleByCode("CARE_TRELLIS_INSTALL")
+                    decisions.add(
+                        DssDecision(
+                            id = "dss_task_trellis_${plot.id}",
+                            farmId = farmId,
+                            plotId = plot.id,
+                            plotLabel = plot.plotLabel,
+                            cropName = crop.name,
+                            decisionType = DssDecisionType.TASK,
+                            category = DssCategory.GROWTH_CARE,
+                            priority = DssPriority.HIGH,
+                            title = "Install Trellis / Balag for ${crop.name}",
+                            summary = "Crops have reached vining stage (~${daysElapsed} days). Erect vertical bamboo supports.",
+                            explanation = rule?.explanation ?: "Ground contact encourages soil-borne fungal pathogens on fruits and impedes vertical development.",
+                            source = rule?.source ?: "DA-BPI Guidelines on Indigenous Trellising Systems",
+                            actionText = "Log Trellis Completed",
+                            actionTaskType = TaskType.TRELLIS,
+                            ruleId = rule?.id,
+                            evaluatedAt = today.toString()
+                        )
+                    )
+                }
+            }
+
+            // 4. Critical Weeding Period (First 30 days)
+            if (daysElapsed in 7..30) {
+                val lastWeed = input.farmerData.recentActivities
+                    .filter { it.plotId == plot.id && it.type == TaskType.WEED }
+                    .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
+                    .maxOrNull()
+                val daysSinceWeed = lastWeed?.let { ChronoUnit.DAYS.between(it, today).toInt() } ?: 10
+
+                if (daysSinceWeed >= 8) {
+                    val rule = DssRuleCatalog.findRuleByCode("CARE_CRITICAL_WEED_PERIOD")
+                    decisions.add(
+                        DssDecision(
+                            id = "dss_task_weed_${plot.id}",
+                            farmId = farmId,
+                            plotId = plot.id,
+                            plotLabel = plot.plotLabel,
+                            cropName = crop.name,
+                            decisionType = DssDecisionType.TASK,
+                            category = DssCategory.GROWTH_CARE,
+                            priority = DssPriority.MEDIUM,
+                            title = "Weed Clearing due on ${plot.plotLabel}",
+                            summary = "Maintain 0.5m weed-free circle around crop base.",
+                            explanation = rule?.explanation ?: "The first 30 days are the Critical Period of Weed Competition (CPWC). Unchecked weeds absorb vital moisture and nutrients.",
+                            source = rule?.source ?: "IRRI / DA-BAR Crop Protection & Weed Science Compendium",
+                            actionText = "Log Weed Activity",
+                            actionTaskType = TaskType.WEED,
+                            ruleId = rule?.id,
+                            evaluatedAt = today.toString()
+                        )
+                    )
+                }
+            }
+        }
+
+        return decisions
+    }
+}
+
+// ─── 4. Pest & Disease Organic Interventions Evaluator ──────────────────────
+
+class DssPestDiseaseEvaluator {
+
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+        val currentSeason = if (today.monthValue in 5..10) "WET" else "DRY"
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+
+            // Check if active pest observations were logged by farmer in monitoring table
+            val plotMonitors = input.farmerData.monitors.filter { it.plantingId == plot.id || it.cropName.equals(plot.cropName, ignoreCase = true) }
+            val latestMonitor = plotMonitors.maxByOrNull { it.recordedAt }
+            val hasPestObservation = latestMonitor != null && !latestMonitor.notes.isNullOrBlank() &&
+                    (latestMonitor.notes.contains("pest", ignoreCase = true) ||
+                     latestMonitor.notes.contains("insekto", ignoreCase = true) ||
+                     latestMonitor.notes.contains("aphid", ignoreCase = true) ||
+                     latestMonitor.notes.contains("borer", ignoreCase = true) ||
+                     latestMonitor.notes.contains("uod", ignoreCase = true) ||
+                     latestMonitor.notes.contains("dilaw", ignoreCase = true))
+
+            if (hasPestObservation) {
+                val rule = DssRuleCatalog.findRuleByCode("PEST_APHID_CONTROL")
+                decisions.add(
+                    DssDecision(
+                        id = "dss_pest_active_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.PEST_DISEASE,
+                        priority = DssPriority.CRITICAL,
+                        title = "Active Pest Symptom Reported on ${plot.plotLabel}",
+                        summary = "Observation note: \"${latestMonitor?.notes}\". Prepare biological control immediately.",
+                        explanation = rule?.explanation ?: "Early physical or botanical control (Neem spray, botanical extract) stops the pest exponential reproductive cycle before severe defoliation.",
+                        source = rule?.source ?: "DA-BPI National Organic Agriculture Program Technical Guide",
+                        actionText = "Apply Organic Spray",
+                        actionTaskType = TaskType.APPLY_PESTICIDE,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            } else if (currentSeason in crop.pestRiskSeason) {
+                // Seasonal high-risk check
+                decisions.add(
+                    DssDecision(
+                        id = "dss_pest_risk_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.RECOMMENDATION,
+                        category = DssCategory.PEST_DISEASE,
+                        priority = DssPriority.MEDIUM,
+                        title = "${crop.name} Seasonal Pest Watch ($currentSeason)",
+                        summary = "Common pests during $currentSeason: ${crop.commonPests.take(3).joinToString(", ")}.",
+                        explanation = "Warmer or wetter microclimates create ideal incubation conditions for piercing-sucking insect populations.",
+                        source = "DA-BPI Pest & Disease Early Warning Bulletin 2026",
+                        actionText = "Perform Field Inspection",
+                        actionTaskType = TaskType.PEST_ALERT,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+}
+
+// ─── 5. Companion Planting & Spatial Intercropping Evaluator ────────────────
+
+class DssCompanionEvaluator {
+
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+        val plots = input.farmerData.plots
+
+        val adjacentPairs = findAdjacentPairs(plots)
+        val processedKeys = mutableSetOf<String>()
+
+        adjacentPairs.forEach { (plotA, plotB) ->
+            val cropA = plotA.cropName ?: return@forEach
+            val cropB = plotB.cropName ?: return@forEach
+            val pairKey = if (plotA.id < plotB.id) "${plotA.id}_${plotB.id}" else "${plotB.id}_${plotA.id}"
+            if (processedKeys.contains(pairKey)) return@forEach
+            processedKeys.add(pairKey)
+
+            val companionEntry = CompanionDataProvider.getRelationship(cropA, cropB) ?: return@forEach
+
+            if (companionEntry.relationship == CompanionRelation.ANTAGONIST) {
+                decisions.add(
+                    DssDecision(
+                        id = "dss_companion_antagonist_${plotA.id}_${plotB.id}",
+                        farmId = farmId,
+                        plotId = plotA.id,
+                        plotLabel = "${plotA.plotLabel} & ${plotB.plotLabel}",
+                        cropName = "$cropA + $cropB",
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.COMPANION_INTERCROPPING,
+                        priority = DssPriority.CRITICAL,
+                        title = "Antagonist Plant Warning: $cropA & $cropB Adjacent",
+                        summary = companionEntry.reason,
+                        explanation = "Scientific documentation confirms negative interactions through shared disease vectors or allelopathic root exudates that stunt adjacent growth.",
+                        source = "DA-BPI Companion Bulletin 2026 (58 Approved Companion Pairs)",
+                        actionText = "Re-space Beds",
+                        actionTaskType = TaskType.OBSERVATION,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            } else if (companionEntry.relationship == CompanionRelation.BENEFICIAL) {
+                decisions.add(
+                    DssDecision(
+                        id = "dss_companion_beneficial_${plotA.id}_${plotB.id}",
+                        farmId = farmId,
+                        plotId = plotA.id,
+                        plotLabel = "${plotA.plotLabel} & ${plotB.plotLabel}",
+                        cropName = "$cropA + $cropB",
+                        decisionType = DssDecisionType.RECOMMENDATION,
+                        category = DssCategory.COMPANION_INTERCROPPING,
+                        priority = DssPriority.LOW,
+                        title = "Beneficial Companion Synergy: $cropA + $cropB",
+                        summary = companionEntry.reason,
+                        explanation = "Natural companion pairing enhances pest repulsion, optimizes root depth distribution, or improves atmospheric nitrogen fixation.",
+                        source = "DA-BPI Companion Bulletin 2026 / DA-BAR Intercropping Manual",
+                        actionText = "Maintain Layout",
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+
+    private fun findAdjacentPairs(plots: List<CropPlot>): List<Pair<CropPlot, CropPlot>> {
+        val pairs = mutableListOf<Pair<CropPlot, CropPlot>>()
+        for (i in plots.indices) {
+            for (j in i + 1 until plots.size) {
+                val a = plots[i]
+                val b = plots[j]
+                val gapX = maxOf(0f, b.posX - (a.posX + a.widthM))
+                    .coerceAtLeast(maxOf(0f, a.posX - (b.posX + b.widthM)))
+                val gapY = maxOf(0f, b.posY - (a.posY + a.heightM))
+                    .coerceAtLeast(maxOf(0f, a.posY - (b.posY + b.heightM)))
+                if (gapX <= 1.5f && gapY <= 1.5f) {
+                    pairs.add(Pair(a, b))
+                }
+            }
+        }
+        return pairs
+    }
+}
+
+// ─── 6. Crop Rotation & Fallow Evaluator ─────────────────────────────────────
+
+class DssRotationEvaluator {
+
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+
+            // Check harvest history for this plot to see what was planted previously
+            val pastHarvests = input.farmerData.harvestHistory.filter { it.plotId == plot.id }
+            val lastHarvest = pastHarvests.maxByOrNull { it.harvestedAt } ?: return@forEach
+
+            val prevCropName = lastHarvest.cropName
+            val isSolanaceaeRepeat = isSameFamily(crop.name, prevCropName, "Solanaceae")
+            val isCucurbitRepeat = isSameFamily(crop.name, prevCropName, "Cucurbitaceae")
+
+            if (isSolanaceaeRepeat || isCucurbitRepeat) {
+                val familyName = if (isSolanaceaeRepeat) "Solanaceae (Nightshade)" else "Cucurbitaceae (Gourd)"
+                val rule = DssRuleCatalog.findRuleByCode("ROTATION_FAMILY_DISEASE_BREAK")
+                decisions.add(
+                    DssDecision(
+                        id = "dss_rotation_repeat_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.CROP_ROTATION_FALLOW,
+                        priority = DssPriority.HIGH,
+                        title = "Consecutive $familyName Planting Detected on ${plot.plotLabel}",
+                        summary = "Previous harvest was $prevCropName. Current planting is ${crop.name}. Rotate to Fabaceae (Beans) next cycle.",
+                        explanation = rule?.explanation ?: "Monoculture of the same family causes exponential multiplication of soil-borne pathogens and nutrient exhaustion.",
+                        source = rule?.source ?: "BPI Crop Rotation Protocol 2025: Disease Cycle Disruption",
+                        actionText = "Plan Legume Rotation",
+                        actionTaskType = TaskType.ROTATION_ALERT,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+
+    private fun isSameFamily(cropA: String, cropB: String, family: String): Boolean {
+        val solanaceae = listOf("Tomato", "Eggplant", "Chili Pepper")
+        val cucurbits = listOf("Cucumber", "Squash", "Bitter Gourd")
+        return when (family) {
+            "Solanaceae" -> cropA in solanaceae && cropB in solanaceae
+            "Cucurbitaceae" -> cropA in cucurbits && cropB in cucurbits
+            else -> false
+        }
+    }
+}
+
+// ─── 7. Harvest Readiness Evaluator ─────────────────────────────────────────
+
+class DssHarvestEvaluator(
+    private val calculator: GrowthStageCalculator = GrowthStageCalculator()
+) {
+    fun evaluate(input: DssInput): List<DssDecision> {
+        val decisions = mutableListOf<DssDecision>()
+        val today = input.farmerData.currentDate
+        val farmId = input.session.farmId
+
+        input.farmerData.plots.forEach { plot ->
+            val crop = input.referenceData.crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
+                ?: return@forEach
+            val plantedDateStr = plot.plantedDate ?: return@forEach
+            val plantedDate = runCatching { LocalDate.parse(plantedDateStr.take(10)) }.getOrNull()
+                ?: return@forEach
+
+            val stage = calculator.calculate(plantedDate, crop.daysToHarvest, today)
+            val daysElapsed = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
+
+            if (stage == GrowthStage.OVERDUE) {
+                val rule = DssRuleCatalog.findRuleByCode("HARVEST_OVERDUE_DEPRECIATION")
+                decisions.add(
+                    DssDecision(
+                        id = "dss_harvest_overdue_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.ALERT,
+                        category = DssCategory.HARVEST_READINESS,
+                        priority = DssPriority.CRITICAL,
+                        title = "URGENT: ${crop.name} Overdue for Harvest on ${plot.plotLabel}",
+                        summary = "${crop.name} is at day $daysElapsed (target maturity: ${crop.daysToHarvest} days). Harvest immediately.",
+                        explanation = rule?.explanation ?: "Over-mature crops undergo rapid lignification, bitterness development, and fruit cracking under field heat.",
+                        source = rule?.source ?: "DA-BPI Post-Harvest Handling & Quality Preservation Guidelines",
+                        actionText = "Harvest Now",
+                        actionTaskType = TaskType.HARVEST,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            } else if (stage == GrowthStage.HARVEST_READY) {
+                val rule = DssRuleCatalog.findRuleByCode("HARVEST_OPTIMAL_WINDOW")
+                val indicators = crop.harvestIndicators ?: "Fruit reaches standard size and firm coloration"
+                decisions.add(
+                    DssDecision(
+                        id = "dss_harvest_ready_${plot.id}",
+                        farmId = farmId,
+                        plotId = plot.id,
+                        plotLabel = plot.plotLabel,
+                        cropName = crop.name,
+                        decisionType = DssDecisionType.TASK,
+                        category = DssCategory.HARVEST_READINESS,
+                        priority = DssPriority.HIGH,
+                        title = "Harvest Ready: ${crop.name} on ${plot.plotLabel}",
+                        summary = "Days elapsed: $daysElapsed / ${crop.daysToHarvest} days. Check indicators: $indicators.",
+                        explanation = rule?.explanation ?: "Early morning harvest minimizes post-harvest respiration and retains peak sweetness and market quality.",
+                        source = rule?.source ?: "Philippine National Standards (PNS) for Fresh Produce",
+                        actionText = "Record Harvest",
+                        actionTaskType = TaskType.HARVEST,
+                        ruleId = rule?.id,
+                        evaluatedAt = today.toString()
+                    )
+                )
+            }
+        }
+
+        return decisions
+    }
+}

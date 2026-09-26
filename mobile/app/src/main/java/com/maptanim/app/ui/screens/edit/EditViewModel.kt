@@ -38,8 +38,13 @@ sealed interface EditAction {
     data class AddPlot(val plot: CropPlot) : EditAction
     data class MovePlot(val plotId: String, val oldPos: Offset, val newPos: Offset) : EditAction
     data class ResizePlot(val plotId: String, val oldW: Float, val oldH: Float, val newW: Float, val newH: Float) : EditAction
-    data class DeletePlot(val plot: CropPlot) : EditAction
+    data class DeletePlot(val plot: CropPlot, val childZones: List<CropZoneRenderData> = emptyList()) : EditAction
     data class ChangeSoil(val plotId: String, val oldSoil: SoilType, val newSoil: SoilType) : EditAction
+    data class ModifyPlot(val oldPlot: CropPlot, val newPlot: CropPlot) : EditAction
+    data class AddCropToBed(val zone: CropZoneRenderData) : EditAction
+    data class MoveCropToBed(val zoneId: String, val oldPlotId: String, val oldOffset: Offset, val newPlotId: String, val newOffset: Offset) : EditAction
+    data class RemoveCropFromBed(val zone: CropZoneRenderData) : EditAction
+    data class ResizeCropZone(val zoneId: String, val oldOffset: Offset, val oldW: Float, val oldH: Float, val newOffset: Offset, val newW: Float, val newH: Float) : EditAction
 }
 
 /**
@@ -57,6 +62,10 @@ class EditViewModel(
 
     private val undoStack = ArrayDeque<EditAction>()
     private val redoStack = ArrayDeque<EditAction>()
+
+    private var initialPlotsSnapshot: List<CropPlot> = emptyList()
+    private var initialZonesSnapshot: List<CropZoneRenderData> = emptyList()
+    private val runDssEvaluationUseCase: com.maptanim.app.domain.usecase.RunDssEvaluationUseCase = com.maptanim.app.domain.usecase.RunDssEvaluationUseCase()
 
     /** Resolved active farm ID — matches HomeViewModel's resolution logic */
     private var activeFarmId: String = "farm-1"
@@ -134,21 +143,53 @@ class EditViewModel(
         farmLayoutJob = viewModelScope.launch {
             cropPlotRepository.observePlots(farmId).collect { plots ->
                 val renderPlots = plots.map { it.toRenderData() }
-                val zones = plots.map { plot ->
-                    val zone = CropZoneRenderData(
-                        id = "zone-${plot.id}",
-                        plotId = plot.id,
-                        cropName = plot.cropName,
-                        offsetX = 0.0f,
-                        offsetY = 0.0f,
-                        widthM = plot.widthM,
-                        heightM = plot.heightM,
-                        spacingM = 1.0f
-                    )
-                    zone.copy(
-                        plantInstances = PlantInstanceGenerator.generate(zone, plot.posX, plot.posY)
-                    )
+                val plotIds = plots.map { it.id }
+
+                val existingDomainZones = try {
+                    cropZoneRepository.observeZonesByPlotIds(plotIds).firstOrNull() ?: emptyList()
+                } catch (_: Exception) {
+                    emptyList()
                 }
+
+                val zones = if (existingDomainZones.isNotEmpty()) {
+                    existingDomainZones.mapNotNull { domainZone ->
+                        val parentPlot = plots.firstOrNull { it.id == domainZone.plotId } ?: return@mapNotNull null
+                        val zone = CropZoneRenderData(
+                            id = domainZone.id,
+                            plotId = domainZone.plotId,
+                            cropName = domainZone.cropName ?: "Crop",
+                            offsetX = domainZone.offsetX,
+                            offsetY = domainZone.offsetY,
+                            widthM = domainZone.widthM,
+                            heightM = domainZone.heightM,
+                            spacingM = domainZone.spacingM
+                        )
+                        zone.copy(
+                            plantInstances = PlantInstanceGenerator.generate(
+                                zone,
+                                parentPlot.posX + zone.offsetX,
+                                parentPlot.posY + zone.offsetY
+                            )
+                        )
+                    }
+                } else {
+                    plots.filter { !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) && it.cropId != "bed" }.map { plot ->
+                        val zone = CropZoneRenderData(
+                            id = "zone-${plot.id}",
+                            plotId = plot.id,
+                            cropName = plot.cropName,
+                            offsetX = 0.0f,
+                            offsetY = 0.0f,
+                            widthM = plot.widthM,
+                            heightM = plot.heightM,
+                            spacingM = 1.0f
+                        )
+                        zone.copy(
+                            plantInstances = PlantInstanceGenerator.generate(zone, plot.posX, plot.posY)
+                        )
+                    }
+                }
+
                 _uiState.update { state ->
                     state.copy(
                         editedPlots = plots,
@@ -158,6 +199,8 @@ class EditViewModel(
                         hasUnsavedChanges = false
                     )
                 }
+                initialPlotsSnapshot = plots
+                initialZonesSnapshot = zones
             }
         }
     }
@@ -185,9 +228,10 @@ class EditViewModel(
         }
 
         _uiState.update { state ->
-            val isSamePlot = plotId != null && plotId == state.selectedPlotId
+            val isSamePlot = plotId != null && plotId == state.selectedPlotId && state.selectedZoneId == null
             state.copy(
                 selectedPlotId = plotId,
+                selectedZoneId = null,
                 isResizeMode = if (isSamePlot) state.isResizeMode else false
             )
         }
@@ -220,11 +264,11 @@ class EditViewModel(
         val zone = _uiState.value.cropZones.firstOrNull { it.id == zoneId }
         val newPlotId = zone?.plotId ?: _uiState.value.selectedPlotId
         _uiState.update { state ->
-            val isSamePlot = newPlotId != null && newPlotId == state.selectedPlotId
+            val isSameZone = zoneId != null && zoneId == state.selectedZoneId
             state.copy(
                 selectedZoneId = zoneId,
                 selectedPlotId = newPlotId,
-                isResizeMode = if (isSamePlot) state.isResizeMode else false
+                isResizeMode = if (isSameZone) state.isResizeMode else false
             )
         }
     }
@@ -355,53 +399,62 @@ class EditViewModel(
             else -> {}
         }
 
-        // Discrete 1m step snapping per MD 34 Section 10
-        val safeW = newW.coerceIn(1.0f, 45.0f - basePlot.posX)
-        val safeH = newH.coerceIn(1.0f, 45.0f - basePlot.posY)
+        // Bed cannot shrink smaller than the bounding box of its existing crops (User rules 4 & 5)
+        val bedCrops = _uiState.value.cropZones.filter { it.plotId == plotId && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }
+        val minCropW = (bedCrops.maxOfOrNull { it.offsetX + it.widthM } ?: 1.0f).coerceAtLeast(1.0f)
+        val minCropH = (bedCrops.maxOfOrNull { it.offsetY + it.heightM } ?: 1.0f).coerceAtLeast(1.0f)
+        val minCropOffsetX = bedCrops.minOfOrNull { it.offsetX } ?: 0f
+        val minCropOffsetY = bedCrops.minOfOrNull { it.offsetY } ?: 0f
 
-        var roundedW = Math.round(safeW).toFloat().coerceAtLeast(1.0f)
-        var roundedH = Math.round(safeH).toFloat().coerceAtLeast(1.0f)
+        val safeW = newW.coerceIn(Math.ceil(minCropW.toDouble()).toFloat(), 45.0f - basePlot.posX)
+        val safeH = newH.coerceIn(Math.ceil(minCropH.toDouble()).toFloat(), 45.0f - basePlot.posY)
 
-        val safeX = newX.coerceIn(0f, 45.0f - roundedW)
-        val safeY = newY.coerceIn(0f, 45.0f - roundedH)
+        var roundedW = Math.round(safeW).toFloat().coerceAtLeast(Math.ceil(minCropW.toDouble()).toFloat())
+        var roundedH = Math.round(safeH).toFloat().coerceAtLeast(Math.ceil(minCropH.toDouble()).toFloat())
 
-        var roundedX = Math.round(safeX).toFloat().coerceIn(0f, 45.0f - roundedW)
-        var roundedY = Math.round(safeY).toFloat().coerceIn(0f, 45.0f - roundedH)
+        val maxX = basePlot.posX + minCropOffsetX
+        val maxY = basePlot.posY + minCropOffsetY
+
+        val safeX = newX.coerceIn(0f, maxX.coerceAtMost(45.0f - roundedW))
+        val safeY = newY.coerceIn(0f, maxY.coerceAtMost(45.0f - roundedH))
+
+        var roundedX = Math.round(safeX).toFloat().coerceIn(0f, maxX.coerceAtMost(45.0f - roundedW))
+        var roundedY = Math.round(safeY).toFloat().coerceIn(0f, maxY.coerceAtMost(45.0f - roundedH))
 
         // Clamp expansion so crop zone cannot exceed/overlap into another crop zone
         while (hasOverlap(roundedX, roundedY, roundedW, roundedH, plotId, currentPlots)) {
             when (handle) {
                 com.maptanim.app.renderer.gesture.HandleType.MID_RIGHT -> {
-                    if (roundedW > 1.0f) roundedW -= 1.0f else break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) roundedW -= 1.0f else break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.MID_BOTTOM -> {
-                    if (roundedH > 1.0f) roundedH -= 1.0f else break
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) roundedH -= 1.0f else break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.MID_LEFT -> {
-                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f } else break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) { roundedW -= 1.0f; roundedX += 1.0f } else break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.MID_TOP -> {
-                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f } else break
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) { roundedH -= 1.0f; roundedY += 1.0f } else break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.CORNER_BR -> {
-                    if (roundedW > 1.0f) roundedW -= 1.0f
-                    if (roundedH > 1.0f) roundedH -= 1.0f
-                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) roundedW -= 1.0f
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) roundedH -= 1.0f
+                    if (roundedW <= Math.ceil(minCropW.toDouble()).toFloat() && roundedH <= Math.ceil(minCropH.toDouble()).toFloat()) break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.CORNER_TL -> {
-                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f }
-                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f }
-                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) { roundedW -= 1.0f; roundedX += 1.0f }
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) { roundedH -= 1.0f; roundedY += 1.0f }
+                    if (roundedW <= Math.ceil(minCropW.toDouble()).toFloat() && roundedH <= Math.ceil(minCropH.toDouble()).toFloat()) break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.CORNER_TR -> {
-                    if (roundedW > 1.0f) roundedW -= 1.0f
-                    if (roundedH > 1.0f) { roundedH -= 1.0f; roundedY += 1.0f }
-                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) roundedW -= 1.0f
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) { roundedH -= 1.0f; roundedY += 1.0f }
+                    if (roundedW <= Math.ceil(minCropW.toDouble()).toFloat() && roundedH <= Math.ceil(minCropH.toDouble()).toFloat()) break
                 }
                 com.maptanim.app.renderer.gesture.HandleType.CORNER_BL -> {
-                    if (roundedW > 1.0f) { roundedW -= 1.0f; roundedX += 1.0f }
-                    if (roundedH > 1.0f) roundedH -= 1.0f
-                    if (roundedW == 1.0f && roundedH == 1.0f) break
+                    if (roundedW > Math.ceil(minCropW.toDouble()).toFloat()) { roundedW -= 1.0f; roundedX += 1.0f }
+                    if (roundedH > Math.ceil(minCropH.toDouble()).toFloat()) roundedH -= 1.0f
+                    if (roundedW <= Math.ceil(minCropW.toDouble()).toFloat() && roundedH <= Math.ceil(minCropH.toDouble()).toFloat()) break
                 }
                 else -> break
             }
@@ -411,6 +464,231 @@ class EditViewModel(
             if (it.id == plotId) it.copy(posX = roundedX, posY = roundedY, widthM = roundedW, heightM = roundedH) else it
         }
         updatePlotsState(updatedPlots)
+    }
+
+    // ── Individual Crop Zone Drag & Resize (User rules 6, 7, 8, 9) ─────────
+
+    private var initialZoneForResize: CropZoneRenderData? = null
+
+    fun onZoneHandleDragStart(zoneId: String) {
+        initialZoneForResize = _uiState.value.cropZones.firstOrNull { it.id == zoneId }
+    }
+
+    fun onZoneHandleDragEnd() {
+        val initial = initialZoneForResize
+        if (initial != null) {
+            val current = _uiState.value.cropZones.firstOrNull { it.id == initial.id }
+            if (current != null && (current.offsetX != initial.offsetX || current.offsetY != initial.offsetY || current.widthM != initial.widthM || current.heightM != initial.heightM)) {
+                undoStack.addLast(
+                    EditAction.ResizeCropZone(
+                        zoneId = initial.id,
+                        oldOffset = Offset(initial.offsetX, initial.offsetY),
+                        oldW = initial.widthM,
+                        oldH = initial.heightM,
+                        newOffset = Offset(current.offsetX, current.offsetY),
+                        newW = current.widthM,
+                        newH = current.heightM
+                    )
+                )
+                redoStack.clear()
+                _uiState.update { it.copy(canUndo = undoStack.isNotEmpty(), canRedo = redoStack.isNotEmpty()) }
+            }
+        }
+        initialZoneForResize = null
+    }
+
+    fun resizeCropZoneByHandle(
+        zoneId: String,
+        handle: com.maptanim.app.renderer.gesture.HandleType,
+        totalWorldDelta: Offset
+    ) {
+        val currentZones = _uiState.value.cropZones
+        val baseZone = initialZoneForResize ?: currentZones.firstOrNull { it.id == zoneId } ?: return
+        val parentBed = _uiState.value.editedPlots.firstOrNull { it.id == baseZone.plotId } ?: return
+
+        var newOffsetX = baseZone.offsetX
+        var newOffsetY = baseZone.offsetY
+        var newW = baseZone.widthM
+        var newH = baseZone.heightM
+
+        when (handle) {
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_TL -> {
+                newOffsetX += totalWorldDelta.x
+                newOffsetY += totalWorldDelta.y
+                newW -= totalWorldDelta.x
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_TR -> {
+                newOffsetY += totalWorldDelta.y
+                newW += totalWorldDelta.x
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_BL -> {
+                newOffsetX += totalWorldDelta.x
+                newW -= totalWorldDelta.x
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.CORNER_BR -> {
+                newW += totalWorldDelta.x
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_TOP -> {
+                newOffsetY += totalWorldDelta.y
+                newH -= totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_BOTTOM -> {
+                newH += totalWorldDelta.y
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_LEFT -> {
+                newOffsetX += totalWorldDelta.x
+                newW -= totalWorldDelta.x
+            }
+            com.maptanim.app.renderer.gesture.HandleType.MID_RIGHT -> {
+                newW += totalWorldDelta.x
+            }
+            else -> {}
+        }
+
+        // Clamp crop zone strictly within parent Bed Zone bounds (User rules 6 & 7)
+        val minCropSize = 0.5f
+        val maxCropW = parentBed.widthM
+        val maxCropH = parentBed.heightM
+
+        var clampedW = newW.coerceIn(minCropSize, maxCropW)
+        var clampedH = newH.coerceIn(minCropSize, maxCropH)
+
+        var clampedX = newOffsetX.coerceIn(0f, (parentBed.widthM - clampedW).coerceAtLeast(0f))
+        var clampedY = newOffsetY.coerceIn(0f, (parentBed.heightM - clampedH).coerceAtLeast(0f))
+
+        if (_uiState.value.isSnapEnabled) {
+            clampedW = (Math.round(clampedW * 2f) / 2f).coerceIn(minCropSize, maxCropW)
+            clampedH = (Math.round(clampedH * 2f) / 2f).coerceIn(minCropSize, maxCropH)
+            clampedX = (Math.round(clampedX * 2f) / 2f).coerceIn(0f, (parentBed.widthM - clampedW).coerceAtLeast(0f))
+            clampedY = (Math.round(clampedY * 2f) / 2f).coerceIn(0f, (parentBed.heightM - clampedH).coerceAtLeast(0f))
+        }
+
+        val updatedZone = baseZone.copy(
+            offsetX = clampedX,
+            offsetY = clampedY,
+            widthM = clampedW,
+            heightM = clampedH
+        )
+        val zoneWithPlants = updatedZone.copy(
+            plantInstances = PlantInstanceGenerator.generate(
+                updatedZone,
+                parentBed.posX + clampedX,
+                parentBed.posY + clampedY
+            )
+        )
+
+        _uiState.update { state ->
+            state.copy(
+                cropZones = state.cropZones.map { if (it.id == zoneId) zoneWithPlants else it },
+                hasUnsavedChanges = true
+            )
+        }
+    }
+
+    private val zoneDragStartOffset = mutableMapOf<String, Offset>()
+
+    fun onCropZoneDragStart(zoneId: String) {
+        val zone = _uiState.value.cropZones.firstOrNull { it.id == zoneId } ?: return
+        if (!zoneDragStartOffset.containsKey(zoneId)) {
+            zoneDragStartOffset[zoneId] = Offset(zone.offsetX, zone.offsetY)
+        }
+        selectCropZone(zoneId)
+    }
+
+    fun onCropZoneDragEnd(zoneId: String) {
+        zoneDragStartOffset.remove(zoneId)
+    }
+
+    fun moveCropZone(zoneId: String, worldDelta: Offset) {
+        val currentZones = _uiState.value.cropZones
+        val targetZone = currentZones.firstOrNull { it.id == zoneId } ?: return
+        val currentPlots = _uiState.value.editedPlots
+        val parentBed = currentPlots.firstOrNull { it.id == targetZone.plotId } ?: return
+        val startOffset = zoneDragStartOffset[zoneId] ?: Offset(targetZone.offsetX, targetZone.offsetY)
+
+        var targetOffsetX = startOffset.x + worldDelta.x
+        var targetOffsetY = startOffset.y + worldDelta.y
+
+        if (_uiState.value.isSnapEnabled) {
+            targetOffsetX = Math.round(targetOffsetX * 2f) / 2f
+            targetOffsetY = Math.round(targetOffsetY * 2f) / 2f
+        }
+
+        // Check if dragged to another Bed (User rule 9)
+        val cropWorldX = parentBed.posX + targetOffsetX
+        val cropWorldY = parentBed.posY + targetOffsetY
+
+        val targetOtherBed = currentPlots.firstOrNull { bed ->
+            bed.id != parentBed.id &&
+            cropWorldX >= bed.posX && (cropWorldX + targetZone.widthM) <= (bed.posX + bed.widthM + 0.3f) &&
+            cropWorldY >= bed.posY && (cropWorldY + targetZone.heightM) <= (bed.posY + bed.heightM + 0.3f)
+        }
+
+        val effectiveBed = targetOtherBed ?: parentBed
+        val effectiveOffsetX = if (targetOtherBed != null) {
+            (cropWorldX - targetOtherBed.posX).coerceIn(0f, (targetOtherBed.widthM - targetZone.widthM).coerceAtLeast(0f))
+        } else {
+            targetOffsetX.coerceIn(0f, (parentBed.widthM - targetZone.widthM).coerceAtLeast(0f))
+        }
+        val effectiveOffsetY = if (targetOtherBed != null) {
+            (cropWorldY - targetOtherBed.posY).coerceIn(0f, (targetOtherBed.heightM - targetZone.heightM).coerceAtLeast(0f))
+        } else {
+            targetOffsetY.coerceIn(0f, (parentBed.heightM - targetZone.heightM).coerceAtLeast(0f))
+        }
+
+        val updatedZone = targetZone.copy(
+            plotId = effectiveBed.id,
+            offsetX = effectiveOffsetX,
+            offsetY = effectiveOffsetY,
+            plantInstances = PlantInstanceGenerator.generate(
+                targetZone.copy(plotId = effectiveBed.id, offsetX = effectiveOffsetX, offsetY = effectiveOffsetY),
+                effectiveBed.posX + effectiveOffsetX,
+                effectiveBed.posY + effectiveOffsetY
+            )
+        )
+
+        _uiState.update { state ->
+            state.copy(
+                cropZones = state.cropZones.map { if (it.id == zoneId) updatedZone else it },
+                selectedPlotId = effectiveBed.id,
+                selectedZoneId = zoneId,
+                hasUnsavedChanges = true
+            )
+        }
+    }
+
+    fun duplicateCropZone(zoneId: String): Boolean {
+        val targetZone = _uiState.value.cropZones.firstOrNull { it.id == zoneId } ?: return false
+        val parentBed = _uiState.value.editedPlots.firstOrNull { it.id == targetZone.plotId } ?: return false
+
+        val candX = (targetZone.offsetX + targetZone.widthM)
+        val candY = targetZone.offsetY
+        val fitsX = (candX + targetZone.widthM) <= parentBed.widthM
+        val newOffset = if (fitsX) {
+            Offset(candX, candY)
+        } else {
+            val candY2 = (targetZone.offsetY + targetZone.heightM)
+            if ((candY2 + targetZone.heightM) <= parentBed.heightM) {
+                Offset(0f, candY2)
+            } else {
+                Offset(
+                    (targetZone.offsetX + 0.5f).coerceIn(0f, (parentBed.widthM - targetZone.widthM).coerceAtLeast(0f)),
+                    (targetZone.offsetY + 0.5f).coerceIn(0f, (parentBed.heightM - targetZone.heightM).coerceAtLeast(0f))
+                )
+            }
+        }
+
+        return plantCropInBed(
+            bedPlotId = parentBed.id,
+            newCropName = targetZone.cropName ?: "Crop",
+            newCropId = targetZone.cropName?.lowercase() ?: "crop",
+            atWorldX = parentBed.posX + newOffset.x,
+            atWorldY = parentBed.posY + newOffset.y
+        )
     }
 
     fun addDirectPlantingPlot(
@@ -432,13 +710,19 @@ class EditViewModel(
             return false
         }
 
+        val isBed = cropId.equals("bed", ignoreCase = true) || cropName.equals("Bed", ignoreCase = true)
+        val bedCount = _uiState.value.editedPlots.count { it.cropName == "Bed" || it.cropId == "bed" } + 1
+        val finalPlotLabel = if (isBed) "Bed #$bedCount" else cropName
+        val finalCropName = if (isBed) "Bed" else cropName
+        val finalCropId = if (isBed) "bed" else cropId
+
         // Initial Drop creates 1x1 CropZone (or initialW x initialH when duplicating) per MD 34 Section 6 & 8
         val newPlot = CropPlot(
             id          = plotId,
             farmId      = activeFarmId,
-            plotLabel   = cropName,
-            cropName    = cropName,
-            cropId      = cropId,
+            plotLabel   = finalPlotLabel,
+            cropName    = finalCropName,
+            cropId      = finalCropId,
             soilType    = SoilType.LOAM,
             posX        = safeX,
             posY        = safeY,
@@ -454,16 +738,18 @@ class EditViewModel(
         val zone = CropZoneRenderData(
             id = "zone-$plotId",
             plotId = plotId,
-            cropName = cropName,
+            cropName = finalCropName,
             offsetX = 0.0f,
             offsetY = 0.0f,
             widthM = safeW,
             heightM = safeH,
             spacingM = 1.0f
         )
-        val zoneWithPlants = zone.copy(
-            plantInstances = PlantInstanceGenerator.generate(zone, safeX, safeY)
-        )
+        val zoneWithPlants = if (isBed) {
+            zone.copy(plantInstances = emptyList())
+        } else {
+            zone.copy(plantInstances = PlantInstanceGenerator.generate(zone, safeX, safeY))
+        }
 
         undoStack.addLast(EditAction.AddPlot(newPlot))
         redoStack.clear()
@@ -486,6 +772,159 @@ class EditViewModel(
         return true
     }
 
+    fun plantCropInBed(
+        bedPlotId: String,
+        newCropName: String,
+        newCropId: String,
+        atWorldX: Float? = null,
+        atWorldY: Float? = null
+    ): Boolean {
+        val targetPlot = _uiState.value.plots.firstOrNull { it.id == bedPlotId }
+        if (targetPlot == null) {
+            _uiState.update { it.copy(dropFeedbackMessage = "⚠️ Hindi wasto ang lokasyon: Paki-lagay ang pananim sa loob ng isang Garden Bed.") }
+            return false
+        }
+
+        // Bed capacity: proportional to its area (at least 1 crop space per 1x1m area)
+        val maxCapacity = ((targetPlot.widthM * targetPlot.heightM).toInt()).coerceAtLeast(1)
+        val existingZonesInBed = _uiState.value.cropZones.filter { it.plotId == bedPlotId && it.cropName != "Bed" }
+        if (existingZonesInBed.size >= maxCapacity) {
+            _uiState.update { it.copy(dropFeedbackMessage = "⚠️ Puno na ang kama (Maximum bed capacity reached: $maxCapacity pananim).") }
+            return false
+        }
+
+        // Determine relative position inside the bed
+        val relX: Float
+        val relY: Float
+        if (atWorldX != null && atWorldY != null) {
+            relX = (atWorldX - targetPlot.posX).coerceIn(0f, (targetPlot.widthM - 1f).coerceAtLeast(0f))
+            relY = (atWorldY - targetPlot.posY).coerceIn(0f, (targetPlot.heightM - 1f).coerceAtLeast(0f))
+        } else {
+            val cols = (targetPlot.widthM).toInt().coerceAtLeast(1)
+            val index = existingZonesInBed.size
+            val col = index % cols
+            val row = index / cols
+            relX = col.toFloat().coerceIn(0f, (targetPlot.widthM - 1f).coerceAtLeast(0f))
+            relY = row.toFloat().coerceIn(0f, (targetPlot.heightM - 1f).coerceAtLeast(0f))
+        }
+
+        val zoneId = "cp-${UUID.randomUUID().toString().take(8)}"
+        val zone = CropZoneRenderData(
+            id = zoneId,
+            plotId = bedPlotId,
+            cropName = newCropName,
+            offsetX = relX,
+            offsetY = relY,
+            widthM = 1.0f,
+            heightM = 1.0f,
+            spacingM = 0.5f
+        )
+        val zoneWithPlants = zone.copy(
+            plantInstances = PlantInstanceGenerator.generate(zone, targetPlot.posX + relX, targetPlot.posY + relY)
+        )
+
+        val updatedZones = _uiState.value.cropZones + zoneWithPlants
+
+        undoStack.addLast(EditAction.AddCropToBed(zoneWithPlants))
+        redoStack.clear()
+
+        _uiState.update { state ->
+            state.copy(
+                cropZones = updatedZones,
+                selectedPlotId = bedPlotId,
+                selectedZoneId = zoneId,
+                hasUnsavedChanges = true,
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty(),
+                dropFeedbackMessage = null
+            )
+        }
+        return true
+    }
+
+    fun reportInvalidDropLocation(message: String) {
+        _uiState.update { it.copy(dropFeedbackMessage = message) }
+    }
+
+    fun clearDropFeedbackMessage() {
+        _uiState.update { it.copy(dropFeedbackMessage = null) }
+    }
+
+    fun moveCropToBed(
+        zoneId: String,
+        newBedPlotId: String,
+        atWorldX: Float,
+        atWorldY: Float
+    ): Boolean {
+        val state = _uiState.value
+        val targetZone = state.cropZones.firstOrNull { it.id == zoneId } ?: return false
+        val targetBed = state.editedPlots.firstOrNull { it.id == newBedPlotId } ?: return false
+
+        // Check if new location is inside target bed bounds
+        val insideBed = atWorldX >= targetBed.posX && atWorldX < (targetBed.posX + targetBed.widthM) &&
+                atWorldY >= targetBed.posY && atWorldY < (targetBed.posY + targetBed.heightM)
+        if (!insideBed) {
+            return false // Reject move: drop location is outside the bed
+        }
+
+        // Check space capacity if moving to a different bed
+        if (targetZone.plotId != newBedPlotId) {
+            val maxCapacity = ((targetBed.widthM * targetBed.heightM).toInt()).coerceAtLeast(1)
+            val existingInTarget = state.cropZones.filter { it.plotId == newBedPlotId && it.cropName != "Bed" }
+            if (existingInTarget.size >= maxCapacity) {
+                return false // Reject move: target bed is full
+            }
+        }
+
+        val relX = (atWorldX - targetBed.posX).coerceIn(0f, (targetBed.widthM - 1f).coerceAtLeast(0f))
+        val relY = (atWorldY - targetBed.posY).coerceIn(0f, (targetBed.heightM - 1f).coerceAtLeast(0f))
+
+        val oldPlotId = targetZone.plotId
+        val oldOffset = Offset(targetZone.offsetX, targetZone.offsetY)
+        val newOffset = Offset(relX, relY)
+
+        val updatedZone = targetZone.copy(
+            plotId = newBedPlotId,
+            offsetX = relX,
+            offsetY = relY,
+            plantInstances = PlantInstanceGenerator.generate(
+                targetZone.copy(plotId = newBedPlotId, offsetX = relX, offsetY = relY),
+                targetBed.posX + relX,
+                targetBed.posY + relY
+            )
+        )
+
+        undoStack.addLast(EditAction.MoveCropToBed(zoneId, oldPlotId, oldOffset, newBedPlotId, newOffset))
+        redoStack.clear()
+
+        _uiState.update { current ->
+            current.copy(
+                cropZones = current.cropZones.map { if (it.id == zoneId) updatedZone else it },
+                selectedPlotId = newBedPlotId,
+                selectedZoneId = zoneId,
+                hasUnsavedChanges = true,
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty()
+            )
+        }
+        return true
+    }
+
+    fun removeCropFromBed(zoneId: String) {
+        val zone = _uiState.value.cropZones.firstOrNull { it.id == zoneId } ?: return
+        undoStack.addLast(EditAction.RemoveCropFromBed(zone))
+        redoStack.clear()
+        _uiState.update { state ->
+            state.copy(
+                cropZones = state.cropZones.filter { it.id != zoneId },
+                selectedZoneId = if (state.selectedZoneId == zoneId) null else state.selectedZoneId,
+                hasUnsavedChanges = true,
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty()
+            )
+        }
+    }
+
     fun addPlot(atWorldX: Float, atWorldY: Float, farmId: String = activeFarmId) {
         addDirectPlantingPlot(atWorldX, atWorldY, "Carrot", "carrot")
     }
@@ -493,8 +932,9 @@ class EditViewModel(
     fun deletePlot(plotId: String) {
         val currentPlots = _uiState.value.editedPlots
         val plotToDelete = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val childZones = _uiState.value.cropZones.filter { it.plotId == plotId }
 
-        undoStack.addLast(EditAction.DeletePlot(plotToDelete))
+        undoStack.addLast(EditAction.DeletePlot(plotToDelete, childZones))
         redoStack.clear()
 
         val updatedPlots = currentPlots.filter { it.id != plotId }
@@ -506,7 +946,7 @@ class EditViewModel(
                 plots = updatedPlots.map { it.toRenderData() },
                 cropZones = updatedZones,
                 selectedPlotId = if (state.selectedPlotId == plotId) null else state.selectedPlotId,
-                selectedZoneId = if (state.selectedPlotId == plotId) null else state.selectedZoneId,
+                selectedZoneId = if (childZones.any { it.id == state.selectedZoneId }) null else state.selectedZoneId,
                 isResizeMode = if (state.selectedPlotId == plotId) false else state.isResizeMode,
                 hasUnsavedChanges = true,
                 canUndo = undoStack.isNotEmpty(),
@@ -517,16 +957,69 @@ class EditViewModel(
 
     fun duplicatePlot(plotId: String) {
         val plot = _uiState.value.editedPlots.firstOrNull { it.id == plotId } ?: return
-        val newX = (plot.posX + plot.widthM).coerceIn(0f, 45.0f - plot.widthM)
-        val newY = plot.posY.coerceIn(0f, 45.0f - plot.heightM)
+        var newX = (plot.posX + 1.0f).coerceIn(0f, 45.0f - plot.widthM)
+        var newY = (plot.posY + 1.0f).coerceIn(0f, 45.0f - plot.heightM)
+
+        if (hasOverlap(newX, newY, plot.widthM, plot.heightM, "", _uiState.value.editedPlots)) {
+            newX = (plot.posX + plot.widthM).coerceIn(0f, 45.0f - plot.widthM)
+            newY = plot.posY.coerceIn(0f, 45.0f - plot.heightM)
+        }
+        if (hasOverlap(newX, newY, plot.widthM, plot.heightM, "", _uiState.value.editedPlots)) {
+            newX = plot.posX.coerceIn(0f, 45.0f - plot.widthM)
+            newY = (plot.posY + plot.heightM).coerceIn(0f, 45.0f - plot.heightM)
+        }
         addDirectPlantingPlot(
             atWorldX = newX,
             atWorldY = newY,
-            cropName = plot.cropName ?: "Carrot",
-            cropId = plot.cropId ?: "carrot",
+            cropName = plot.cropName ?: "Bed",
+            cropId = plot.cropId ?: "bed",
             initialW = plot.widthM,
             initialH = plot.heightM
         )
+    }
+
+    fun rotatePlot(plotId: String) {
+        val currentPlots = _uiState.value.editedPlots
+        val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val newW = plot.heightM
+        val newH = plot.widthM
+        val newX = plot.posX.coerceIn(0f, (45.0f - newW).coerceAtLeast(0f))
+        val newY = plot.posY.coerceIn(0f, (45.0f - newH).coerceAtLeast(0f))
+        val updatedPlot = plot.copy(
+            posX = newX,
+            posY = newY,
+            widthM = newW,
+            heightM = newH,
+            updatedAt = Instant.now().toString()
+        )
+        undoStack.addLast(EditAction.ModifyPlot(plot, updatedPlot))
+        redoStack.clear()
+        val updatedPlots = currentPlots.map { if (it.id == plotId) updatedPlot else it }
+        updatePlotsState(updatedPlots)
+    }
+
+    fun bringPlotToFront(plotId: String) {
+        val currentPlots = _uiState.value.editedPlots
+        val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val updatedPlots = currentPlots.filter { it.id != plotId } + plot
+        updatePlotsState(updatedPlots)
+    }
+
+    fun sendPlotToBack(plotId: String) {
+        val currentPlots = _uiState.value.editedPlots
+        val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val updatedPlots = listOf(plot) + currentPlots.filter { it.id != plotId }
+        updatePlotsState(updatedPlots)
+    }
+
+    fun updatePlotLabel(plotId: String, newLabel: String) {
+        val currentPlots = _uiState.value.editedPlots
+        val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val updatedPlot = plot.copy(plotLabel = newLabel.trim(), updatedAt = Instant.now().toString())
+        undoStack.addLast(EditAction.ModifyPlot(plot, updatedPlot))
+        redoStack.clear()
+        val updatedPlots = currentPlots.map { if (it.id == plotId) updatedPlot else it }
+        updatePlotsState(updatedPlots)
     }
 
     fun paintSoil(plotId: String) {
@@ -577,10 +1070,81 @@ class EditViewModel(
                 val idx = currentPlots.indexOfFirst { it.id == action.plotId }
                 if (idx != -1) currentPlots[idx] = currentPlots[idx].copy(widthM = action.oldW, heightM = action.oldH)
             }
-            is EditAction.DeletePlot -> currentPlots.add(action.plot)
+            is EditAction.DeletePlot -> {
+                currentPlots.add(action.plot)
+                _uiState.update { state ->
+                    state.copy(cropZones = state.cropZones + action.childZones)
+                }
+            }
             is EditAction.ChangeSoil -> {
                 val idx = currentPlots.indexOfFirst { it.id == action.plotId }
                 if (idx != -1) currentPlots[idx] = currentPlots[idx].copy(soilType = action.oldSoil)
+            }
+            is EditAction.ModifyPlot -> {
+                val idx = currentPlots.indexOfFirst { it.id == action.oldPlot.id }
+                if (idx != -1) currentPlots[idx] = action.oldPlot
+            }
+            is EditAction.AddCropToBed -> {
+                _uiState.update { state ->
+                    state.copy(
+                        cropZones = state.cropZones.filter { it.id != action.zone.id },
+                        selectedZoneId = if (state.selectedZoneId == action.zone.id) null else state.selectedZoneId
+                    )
+                }
+            }
+            is EditAction.MoveCropToBed -> {
+                _uiState.update { state ->
+                    val parentPlot = state.editedPlots.firstOrNull { it.id == action.oldPlotId }
+                    val updatedZones = state.cropZones.map { zone ->
+                        if (zone.id == action.zoneId) {
+                            val reverted = zone.copy(
+                                plotId = action.oldPlotId,
+                                offsetX = action.oldOffset.x,
+                                offsetY = action.oldOffset.y
+                            )
+                            if (parentPlot != null) {
+                                reverted.copy(
+                                    plantInstances = PlantInstanceGenerator.generate(
+                                        reverted,
+                                        parentPlot.posX + action.oldOffset.x,
+                                        parentPlot.posY + action.oldOffset.y
+                                    )
+                                )
+                            } else reverted
+                        } else zone
+                    }
+                    state.copy(cropZones = updatedZones)
+                }
+            }
+            is EditAction.RemoveCropFromBed -> {
+                _uiState.update { state ->
+                    state.copy(cropZones = state.cropZones + action.zone)
+                }
+            }
+            is EditAction.ResizeCropZone -> {
+                _uiState.update { state ->
+                    val updatedZones = state.cropZones.map { zone ->
+                        if (zone.id == action.zoneId) {
+                            val parent = state.editedPlots.firstOrNull { it.id == zone.plotId }
+                            val reverted = zone.copy(
+                                offsetX = action.oldOffset.x,
+                                offsetY = action.oldOffset.y,
+                                widthM = action.oldW,
+                                heightM = action.oldH
+                            )
+                            if (parent != null) {
+                                reverted.copy(
+                                    plantInstances = PlantInstanceGenerator.generate(
+                                        reverted,
+                                        parent.posX + action.oldOffset.x,
+                                        parent.posY + action.oldOffset.y
+                                    )
+                                )
+                            } else reverted
+                        } else zone
+                    }
+                    state.copy(cropZones = updatedZones)
+                }
             }
         }
         redoStack.addLast(action)
@@ -602,10 +1166,78 @@ class EditViewModel(
                 val idx = currentPlots.indexOfFirst { it.id == action.plotId }
                 if (idx != -1) currentPlots[idx] = currentPlots[idx].copy(widthM = action.newW, heightM = action.newH)
             }
-            is EditAction.DeletePlot -> currentPlots.removeAll { it.id == action.plot.id }
+            is EditAction.DeletePlot -> {
+                currentPlots.removeAll { it.id == action.plot.id }
+                _uiState.update { state ->
+                    state.copy(cropZones = state.cropZones.filter { it.plotId != action.plot.id })
+                }
+            }
             is EditAction.ChangeSoil -> {
                 val idx = currentPlots.indexOfFirst { it.id == action.plotId }
                 if (idx != -1) currentPlots[idx] = currentPlots[idx].copy(soilType = action.newSoil)
+            }
+            is EditAction.ModifyPlot -> {
+                val idx = currentPlots.indexOfFirst { it.id == action.newPlot.id }
+                if (idx != -1) currentPlots[idx] = action.newPlot
+            }
+            is EditAction.AddCropToBed -> {
+                _uiState.update { state ->
+                    state.copy(cropZones = state.cropZones + action.zone)
+                }
+            }
+            is EditAction.MoveCropToBed -> {
+                _uiState.update { state ->
+                    val parentPlot = state.editedPlots.firstOrNull { it.id == action.newPlotId }
+                    val updatedZones = state.cropZones.map { zone ->
+                        if (zone.id == action.zoneId) {
+                            val moved = zone.copy(
+                                plotId = action.newPlotId,
+                                offsetX = action.newOffset.x,
+                                offsetY = action.newOffset.y
+                            )
+                            if (parentPlot != null) {
+                                moved.copy(
+                                    plantInstances = PlantInstanceGenerator.generate(
+                                        moved,
+                                        parentPlot.posX + action.newOffset.x,
+                                        parentPlot.posY + action.newOffset.y
+                                    )
+                                )
+                            } else moved
+                        } else zone
+                    }
+                    state.copy(cropZones = updatedZones)
+                }
+            }
+            is EditAction.RemoveCropFromBed -> {
+                _uiState.update { state ->
+                    state.copy(cropZones = state.cropZones.filter { it.id != action.zone.id })
+                }
+            }
+            is EditAction.ResizeCropZone -> {
+                _uiState.update { state ->
+                    val updatedZones = state.cropZones.map { zone ->
+                        if (zone.id == action.zoneId) {
+                            val parent = state.editedPlots.firstOrNull { it.id == zone.plotId }
+                            val moved = zone.copy(
+                                offsetX = action.newOffset.x,
+                                offsetY = action.newOffset.y,
+                                widthM = action.newW,
+                                heightM = action.newH
+                            )
+                            if (parent != null) {
+                                moved.copy(
+                                    plantInstances = PlantInstanceGenerator.generate(
+                                        moved,
+                                        parent.posX + action.newOffset.x,
+                                        parent.posY + action.newOffset.y
+                                    )
+                                )
+                            } else moved
+                        } else zone
+                    }
+                    state.copy(cropZones = updatedZones)
+                }
             }
         }
         undoStack.addLast(action)
@@ -622,6 +1254,435 @@ class EditViewModel(
 
     fun updateZoom(zoom: Float) {
         _uiState.update { it.copy(zoom = zoom) }
+    }
+
+    fun detectNewOrChangedCrops(): List<CropPlantingDraft> {
+        val currentPlots = _uiState.value.editedPlots
+        val currentZones = _uiState.value.cropZones.filter { !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }
+        val drafts = mutableListOf<CropPlantingDraft>()
+
+        for (zone in currentZones) {
+            val initial = initialZonesSnapshot.firstOrNull { it.id == zone.id }
+            val isNew = initial == null
+            val isChanged = initial != null && (
+                initial.plotId != zone.plotId ||
+                initial.cropName != zone.cropName ||
+                initial.widthM != zone.widthM ||
+                initial.heightM != zone.heightM ||
+                initial.offsetX != zone.offsetX ||
+                initial.offsetY != zone.offsetY
+            )
+
+            if (isNew || isChanged || initialZonesSnapshot.isEmpty()) {
+                val parentBed = currentPlots.firstOrNull { it.id == zone.plotId }
+                val cropName = zone.cropName ?: "Vegetable"
+                val cropId = zone.cropName?.lowercase() ?: "crop"
+                val variety = parentBed?.cropVariety?.ifBlank { null } ?: getDefaultCropVariety(cropName)
+                val date = parentBed?.plantedDate?.take(10)?.ifBlank { null } ?: java.time.LocalDate.now().toString()
+                val plantCount = zone.plantInstances.size.takeIf { it > 0 } ?: ((zone.widthM / zone.spacingM) * (zone.heightM / zone.spacingM)).toInt().coerceAtLeast(1)
+
+                drafts.add(
+                    CropPlantingDraft(
+                        id = zone.id,
+                        cropName = cropName,
+                        cropId = cropId,
+                        bedId = parentBed?.id ?: zone.plotId,
+                        bedLabel = parentBed?.plotLabel ?: "Bed",
+                        variety = variety,
+                        varietyId = variety.lowercase().replace(" ", "_"),
+                        plantingDate = date,
+                        plantCount = plantCount,
+                        notes = parentBed?.notes ?: "",
+                        isNew = isNew,
+                        isChanged = isChanged
+                    )
+                )
+            }
+        }
+
+        for (plot in currentPlots.filter { !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) && it.cropId != "bed" }) {
+            if (drafts.any { it.bedId == plot.id }) continue
+            val initial = initialPlotsSnapshot.firstOrNull { it.id == plot.id }
+            val isNew = initial == null
+            val isChanged = initial != null && (
+                initial.cropName != plot.cropName ||
+                initial.widthM != plot.widthM ||
+                initial.heightM != plot.heightM ||
+                initial.posX != plot.posX ||
+                initial.posY != plot.posY
+            )
+            if (isNew || isChanged || initialPlotsSnapshot.isEmpty()) {
+                val cropName = plot.cropName ?: "Vegetable"
+                val cropId = plot.cropId ?: cropName.lowercase()
+                val variety = plot.cropVariety?.ifBlank { null } ?: getDefaultCropVariety(cropName)
+                val date = plot.plantedDate?.take(10)?.ifBlank { null } ?: java.time.LocalDate.now().toString()
+                drafts.add(
+                    CropPlantingDraft(
+                        id = plot.id,
+                        cropName = cropName,
+                        cropId = cropId,
+                        bedId = plot.id,
+                        bedLabel = plot.plotLabel,
+                        variety = variety,
+                        varietyId = variety.lowercase().replace(" ", "_"),
+                        plantingDate = date,
+                        plantCount = (plot.widthM * plot.heightM).toInt().coerceAtLeast(1),
+                        notes = plot.notes ?: "",
+                        isNew = isNew,
+                        isChanged = isChanged
+                    )
+                )
+            }
+        }
+
+        return drafts
+    }
+
+    fun onSavePressed(onReturnToFarm: () -> Unit) {
+        val drafts = detectNewOrChangedCrops()
+        if (drafts.isNotEmpty()) {
+            _uiState.update { it.copy(
+                showCropSummaryOverlay = true,
+                pendingCropPlantings = drafts,
+                saveErrorMessage = null
+            ) }
+        } else {
+            saveFarmLayoutDirectly(onReturnToFarm)
+        }
+    }
+
+    fun dismissCropSummary() {
+        _uiState.update { it.copy(showCropSummaryOverlay = false, saveErrorMessage = null) }
+    }
+
+    fun saveFarmLayoutDirectly(onReturnToFarm: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, saveErrorMessage = null) }
+            try {
+                cropPlotRepository.savePlots(_uiState.value.editedPlots)
+                val domainZones = _uiState.value.cropZones.map { zoneData ->
+                    com.maptanim.app.domain.model.CropZone(
+                        id = zoneData.id,
+                        plotId = zoneData.plotId,
+                        cropName = zoneData.cropName,
+                        cropId = zoneData.cropName?.lowercase(),
+                        offsetX = zoneData.offsetX,
+                        offsetY = zoneData.offsetY,
+                        widthM = zoneData.widthM,
+                        heightM = zoneData.heightM,
+                        spacingM = zoneData.spacingM,
+                        createdAt = Instant.now().toString(),
+                        updatedAt = Instant.now().toString()
+                    )
+                }
+                cropZoneRepository.saveZones(domainZones)
+
+                try {
+                    runDssEvaluationUseCase(activeFarmId)
+                } catch (_: Exception) {}
+
+                _uiState.update { it.copy(
+                    isSaving = false,
+                    hasUnsavedChanges = false,
+                    isSaveSuccessful = true
+                ) }
+                onReturnToFarm()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    isSaving = false,
+                    saveErrorMessage = "Hindi nai-save ang layout ng sakahan: ${e.localizedMessage ?: "Database error"}"
+                ) }
+            }
+        }
+    }
+
+    fun confirmSaveCropPlantings(
+        drafts: List<CropPlantingDraft>,
+        onReturnToFarm: () -> Unit
+    ) {
+        viewModelScope.launch {
+            for (draft in drafts) {
+                if (draft.cropName.isBlank() || draft.variety.isBlank() || draft.plantingDate.isBlank() || draft.plantCount <= 0 || draft.bedId.isBlank()) {
+                    _uiState.update { it.copy(
+                        saveErrorMessage = "Pakiusap punan ang lahat ng kinakailangang impormasyon (Crop, Variety, at Petsa ng Pagtanim para sa ${draft.cropName})."
+                    ) }
+                    return@launch
+                }
+                val validDate = try { java.time.LocalDate.parse(draft.plantingDate.take(10)) } catch (_: Exception) { null }
+                if (validDate == null) {
+                    _uiState.update { it.copy(
+                        saveErrorMessage = "Hindi wasto ang petsa ng pagtatanim para sa ${draft.cropName}. Pakiusap pumili ng wastong petsa."
+                    ) }
+                    return@launch
+                }
+            }
+
+            _uiState.update { it.copy(isSaving = true, saveErrorMessage = null) }
+            try {
+                val draftsByBedId = drafts.associateBy { it.bedId }
+                val updatedPlots = _uiState.value.editedPlots.map { plot ->
+                    val matchingDraft = draftsByBedId[plot.id]
+                    if (matchingDraft != null) {
+                        plot.copy(
+                            farmId = activeFarmId,
+                            plantedDate = matchingDraft.plantingDate,
+                            cropVariety = matchingDraft.variety,
+                            notes = matchingDraft.notes.ifBlank { "${matchingDraft.plantCount} plants" },
+                            cropName = if (plot.cropName == "Bed" || plot.cropName.isNullOrBlank()) matchingDraft.cropName else plot.cropName,
+                            cropId = if (plot.cropId == "bed" || plot.cropId.isNullOrBlank()) matchingDraft.cropId else plot.cropId,
+                            updatedAt = Instant.now().toString()
+                        )
+                    } else {
+                        plot
+                    }
+                }
+                cropPlotRepository.savePlots(updatedPlots)
+
+                val domainZones = _uiState.value.cropZones.map { zoneData ->
+                    com.maptanim.app.domain.model.CropZone(
+                        id = zoneData.id,
+                        plotId = zoneData.plotId,
+                        cropName = zoneData.cropName,
+                        cropId = zoneData.cropName?.lowercase(),
+                        offsetX = zoneData.offsetX,
+                        offsetY = zoneData.offsetY,
+                        widthM = zoneData.widthM,
+                        heightM = zoneData.heightM,
+                        spacingM = zoneData.spacingM,
+                        createdAt = Instant.now().toString(),
+                        updatedAt = Instant.now().toString()
+                    )
+                }
+                cropZoneRepository.saveZones(domainZones)
+
+                // ── Anchor Schedule Generation ─────────────────────────────
+                // Planting date becomes the anchor date for monitoring, crop care, tasks, and expected harvest
+                val scheduledTasks = mutableListOf<com.maptanim.app.domain.model.FarmTask>()
+                for (draft in drafts) {
+                    val anchorDate = try {
+                        java.time.LocalDate.parse(draft.plantingDate.take(10))
+                    } catch (_: Exception) {
+                        java.time.LocalDate.now()
+                    }
+                    val isSim = draft.variety.contains("10s", ignoreCase = true)
+                    val daysToHarvest = if (isSim) 1 else getDaysToHarvestEstimate(draft.cropName)
+                    val harvestDate = anchorDate.plusDays(daysToHarvest.toLong())
+                    val isClimbing = draft.cropName.lowercase().let { c ->
+                        c.contains("ampalaya") || c.contains("sitaw") || c.contains("tomato") ||
+                        c.contains("cucumber") || c.contains("squash") || c.contains("beans")
+                    }
+
+                    // 1. Monitoring Dates
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "mon_germ_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
+                            title = "Monitoring: Pagpapatubo (Germination Check)",
+                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
+                            dueDate = anchorDate.plusDays(4).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "mon_scout_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
+                            title = "Monitoring: Kalusugan ng Dahon at Peste",
+                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
+                            dueDate = anchorDate.plusDays((daysToHarvest * 0.40f).toLong().coerceAtLeast(10)).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "mon_preharvest_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
+                            title = "Monitoring: Kahandaan sa Pag-ani (Pre-Harvest Check)",
+                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
+                            dueDate = harvestDate.minusDays(3).coerceAtLeast(anchorDate.plusDays(1)).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+
+                    // 2. Crop Care Dates
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "care_water_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.WATER,
+                            title = "Crop Care: Dilig at Pag-aalaga ng Lupa",
+                            subLabel = "${draft.cropName} • Unang Pagdilig",
+                            dueDate = anchorDate.plusDays(1).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "care_fert_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.FERTILIZE,
+                            title = "Crop Care: Paglalagay ng Abono (Fertilizer)",
+                            subLabel = "${draft.cropName} • Side-dressing",
+                            dueDate = anchorDate.plusDays((daysToHarvest * 0.25f).toLong().coerceAtLeast(7)).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "care_weed_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.WEED,
+                            title = "Crop Care: Pag-aalis ng Damo (Weeding)",
+                            subLabel = "${draft.cropName} • Weed & Soil Check",
+                            dueDate = anchorDate.plusDays((daysToHarvest * 0.45f).toLong().coerceAtLeast(14)).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+
+                    // 3. Other Tasks
+                    if (isClimbing) {
+                        scheduledTasks.add(
+                            com.maptanim.app.domain.model.FarmTask(
+                                id = "task_trellis_${draft.id}",
+                                farmId = activeFarmId,
+                                plotId = draft.bedId,
+                                plotLabel = draft.bedLabel,
+                                cropName = draft.cropName,
+                                taskType = com.maptanim.app.domain.model.TaskType.TRELLIS,
+                                title = "Gawain: Paglalagay ng Balag / Trellis",
+                                subLabel = "${draft.cropName} (${draft.variety})",
+                                dueDate = anchorDate.plusDays(10).toString(),
+                                isCompleted = false,
+                                completedAt = null
+                            )
+                        )
+                    }
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "task_prune_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.PRUNING,
+                            title = "Gawain: Pagsasaayos at Pag-prune ng Sanga",
+                            subLabel = "${draft.cropName} • Thinning/Pruning",
+                            dueDate = anchorDate.plusDays((daysToHarvest * 0.50f).toLong().coerceAtLeast(15)).toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+
+                    // 4. Expected Harvest
+                    scheduledTasks.add(
+                        com.maptanim.app.domain.model.FarmTask(
+                            id = "task_harvest_${draft.id}",
+                            farmId = activeFarmId,
+                            plotId = draft.bedId,
+                            plotLabel = draft.bedLabel,
+                            cropName = draft.cropName,
+                            taskType = com.maptanim.app.domain.model.TaskType.HARVEST,
+                            title = "Inaasahang Pag-ani: ${draft.cropName}",
+                            subLabel = "${draft.cropName} (${draft.variety}) • $daysToHarvest araw",
+                            dueDate = harvestDate.toString(),
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    )
+                }
+
+                if (scheduledTasks.isNotEmpty()) {
+                    try {
+                        RepositoryProvider.taskRepository.upsertTasks(scheduledTasks)
+                    } catch (_: Exception) {}
+                }
+
+                try {
+                    runDssEvaluationUseCase(activeFarmId)
+                } catch (_: Exception) {}
+
+                _uiState.update { it.copy(
+                    isSaving = false,
+                    hasUnsavedChanges = false,
+                    showCropSummaryOverlay = false,
+                    isSaveSuccessful = true
+                ) }
+                onReturnToFarm()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    isSaving = false,
+                    saveErrorMessage = "Nabigong i-save ang mga pananim: ${e.localizedMessage ?: "Database error"}"
+                ) }
+            }
+        }
+    }
+
+    fun getDaysToHarvestEstimate(cropName: String): Int {
+        val clean = cropName.lowercase()
+        return when {
+            clean.contains("pechay") || clean.contains("kangkong") -> 30
+            clean.contains("lettuce") -> 45
+            clean.contains("okra") -> 50
+            clean.contains("sitaw") || clean.contains("stringbean") -> 55
+            clean.contains("ampalaya") || clean.contains("bitter") -> 60
+            clean.contains("tomato") || clean.contains("kamatis") -> 65
+            clean.contains("eggplant") || clean.contains("talong") -> 70
+            clean.contains("corn") || clean.contains("mais") -> 75
+            clean.contains("carrot") || clean.contains("karot") -> 85
+            clean.contains("cabbage") || clean.contains("repolyo") -> 85
+            clean.contains("pumpkin") || clean.contains("squash") -> 90
+            clean.contains("onion") || clean.contains("sibuyas") -> 100
+            clean.contains("sili") || clean.contains("chili") -> 75
+            else -> 60
+        }
+    }
+
+    private fun getDefaultCropVariety(cropName: String): String {
+        val clean = cropName.lowercase()
+        return when {
+            clean.contains("ampalaya") || clean.contains("bitter") -> "Galaxy Max F1"
+            clean.contains("tomato") || clean.contains("kamatis") -> "Diamante Max F1"
+            clean.contains("eggplant") || clean.contains("talong") -> "Fortuner F1"
+            clean.contains("carrot") || clean.contains("karot") -> "Terracotta F1"
+            clean.contains("cabbage") || clean.contains("repolyo") -> "Rare Ball F1"
+            clean.contains("pechay") || clean.contains("bokchoy") -> "Black Behi"
+            clean.contains("onion") || clean.contains("sibuyas") -> "Red Pinoy F1"
+            clean.contains("pumpkin") || clean.contains("squash") || clean.contains("kalabasa") -> "Suprema F1"
+            clean.contains("corn") || clean.contains("mais") -> "Macho Sweet F1"
+            clean.contains("okra") -> "Smooth Green F1"
+            clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") -> "Django F1"
+            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> "Sandigan F1"
+            clean.contains("lettuce") -> "General F1"
+            clean.contains("kangkong") -> "Upland Green"
+            else -> "East-West Standard F1"
+        }
     }
 
     fun saveChanges(
@@ -660,6 +1721,10 @@ class EditViewModel(
                 )
             }
             cropZoneRepository.saveZones(domainZones)
+
+            try {
+                runDssEvaluationUseCase(activeFarmId)
+            } catch (_: Exception) {}
 
             _uiState.update { state ->
                 state.copy(
@@ -716,28 +1781,24 @@ class EditViewModel(
 
     private fun updatePlotsState(updatedPlots: List<CropPlot>) {
         _uiState.update { state ->
-            val updatedZones = updatedPlots.map { plot ->
-                val existingZone = state.cropZones.firstOrNull { it.plotId == plot.id }
-                val baseZone = existingZone?.copy(
-                    cropName = plot.cropName,
-                    offsetX = 0.0f,
-                    offsetY = 0.0f,
-                    widthM = plot.widthM,
-                    heightM = plot.heightM,
-                    spacingM = 1.0f
-                ) ?: CropZoneRenderData(
-                    id = "zone-${plot.id}",
-                    plotId = plot.id,
-                    cropName = plot.cropName,
-                    offsetX = 0.0f,
-                    offsetY = 0.0f,
-                    widthM = plot.widthM,
-                    heightM = plot.heightM,
-                    spacingM = 1.0f
-                )
-                baseZone.copy(
-                    plantInstances = PlantInstanceGenerator.generate(baseZone, plot.posX, plot.posY)
-                )
+            val validPlotIds = updatedPlots.map { it.id }.toSet()
+            val retainedZones = state.cropZones.filter { it.plotId in validPlotIds }
+            val updatedZones = retainedZones.map { zone ->
+                val parentPlot = updatedPlots.firstOrNull { it.id == zone.plotId }
+                if (parentPlot != null) {
+                    val clampedOffsetX = zone.offsetX.coerceIn(0f, (parentPlot.widthM - 1f).coerceAtLeast(0f))
+                    val clampedOffsetY = zone.offsetY.coerceIn(0f, (parentPlot.heightM - 1f).coerceAtLeast(0f))
+                    val adjustedZone = zone.copy(offsetX = clampedOffsetX, offsetY = clampedOffsetY)
+                    adjustedZone.copy(
+                        plantInstances = PlantInstanceGenerator.generate(
+                            adjustedZone,
+                            parentPlot.posX + clampedOffsetX,
+                            parentPlot.posY + clampedOffsetY
+                        )
+                    )
+                } else {
+                    zone
+                }
             }
             state.copy(
                 editedPlots = updatedPlots,

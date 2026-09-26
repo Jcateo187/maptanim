@@ -23,9 +23,10 @@ import com.maptanim.app.data.local.entity.*
         TilePlantingEntity::class,
         PlantingMonitorEntity::class,
         PlantingHarvestEntity::class,
-        DssRuleEntity::class
+        DssRuleEntity::class,
+        DssDecisionEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -44,6 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun plantingMonitorDao(): PlantingMonitorDao
     abstract fun plantingHarvestDao(): PlantingHarvestDao
     abstract fun dssRuleDao(): DssRuleDao
+    abstract fun dssDecisionDao(): DssDecisionDao
 
     companion object {
         @Volatile

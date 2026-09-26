@@ -58,7 +58,7 @@ sealed class Screen(val route: String) {
 
 ## 🔹 Bottom Navigation Tabs
 
-The 5-tab bottom navigation corresponds to the exact tabs visible in both PNG screenshots:
+The 5-tab bottom navigation bar provides fast access to the primary areas of MapTanim:
 
 ```kotlin
 // BottomNavItem.kt
@@ -67,20 +67,16 @@ sealed class BottomNavItem(
     val icon: ImageVector,
     val label: String
 ) {
-    object Home     : BottomNavItem("home",     Icons.Filled.Home,          "Home")
-    object Farms    : BottomNavItem("farms",    Icons.Filled.Grass,         "Farms")
-    object Calendar : BottomNavItem("calendar", Icons.Filled.CalendarMonth,  "Calendar")
-    object Library  : BottomNavItem("library",  Icons.Filled.MenuBook,      "Library")
-    object Profile  : BottomNavItem("profile",  Icons.Filled.Person,        "Profile")
-}
+    object Home      : BottomNavItem("home",      Icons.Default.Home,                  "Home")
+    object Farm       : BottomNavItem("farms",     Icons.Default.Agriculture, "Farm")
+    object Community  : BottomNavItem("community", Icons.Default.Groups,      "Community")
+    object Vegetables : BottomNavItem("library",   Icons.Default.Eco,         "Vegetables")
+    object Profile    : BottomNavItem("profile",   Icons.Default.Person,      "Profile")
 
-val bottomNavItems = listOf(
-    BottomNavItem.Home,
-    BottomNavItem.Farms,
-    BottomNavItem.Calendar,
-    BottomNavItem.Library,
-    BottomNavItem.Profile
-)
+    companion object {
+        val items = listOf(Home, Farm, Community, Vegetables, Profile)
+    }
+}
 ```
 
 ---

@@ -168,3 +168,41 @@ class RecordHarvestUseCase(
     suspend operator fun invoke(record: HarvestRecord) =
         harvestRepository.recordHarvest(record)
 }
+
+// ─── Farm Operational Use Cases ────────────────────────────────────────────
+
+class ObserveFarmActivitiesUseCase(
+    private val activityRepository: ActivityRepository
+) {
+    operator fun invoke(): Flow<List<Activity>> =
+        activityRepository.observeAllActivities()
+}
+
+class LogFarmActivityUseCase(
+    private val activityRepository: ActivityRepository
+) {
+    suspend operator fun invoke(activity: Activity) =
+        activityRepository.logActivity(activity)
+}
+
+class ObservePlantingMonitorsUseCase(
+    private val plantingMonitorDao: com.maptanim.app.data.local.dao.PlantingMonitorDao?
+) {
+    operator fun invoke(): Flow<List<com.maptanim.app.data.local.entity.PlantingMonitorEntity>> =
+        plantingMonitorDao?.observeAllMonitors() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+}
+
+class RecordPlantingMonitorUseCase(
+    private val plantingMonitorDao: com.maptanim.app.data.local.dao.PlantingMonitorDao?
+) {
+    suspend operator fun invoke(monitor: com.maptanim.app.data.local.entity.PlantingMonitorEntity) =
+        plantingMonitorDao?.upsertMonitor(monitor)
+}
+
+class StartPlantingUseCase(
+    private val plotRepository: CropPlotRepository
+) {
+    suspend operator fun invoke(plot: CropPlot) =
+        plotRepository.upsertPlot(plot)
+}
+

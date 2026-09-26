@@ -29,6 +29,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.renderer.model.PlotRenderData
+import com.maptanim.app.ui.screens.edit.CropPlantingDraft
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -54,43 +55,21 @@ data class CategorizedVarietyGroup(
 @Composable
 fun CropsSummaryOverlay(
     farmName: String,
-    plots: List<PlotRenderData>,
+    cropPlantings: List<CropPlantingDraft>,
+    errorMessage: String? = null,
+    isSaving: Boolean = false,
     onCancel: () -> Unit,
-    onSave: (updatedPlantedDates: Map<String, String>, updatedVarieties: Map<String, String>) -> Unit
+    onSave: (List<CropPlantingDraft>) -> Unit
 ) {
-    val plantedPlots = remember(plots) {
-        plots.filter { !it.cropName.isNullOrBlank() }
+    var drafts by remember(cropPlantings) {
+        mutableStateOf(cropPlantings)
     }
 
-    // Map of plotId -> selected planting date (YYYY-MM-DD)
-    var selectedDates by remember {
-        mutableStateOf<Map<String, String>>(
-            plantedPlots.associate { plot ->
-                val existing = plot.plantedDate?.take(10)
-                plot.id to (if (!existing.isNullOrBlank()) existing else LocalDate.now().toString())
-            }
-        )
-    }
-
-    // Map of plotId -> selected crop variety
-    var selectedVarieties by remember {
-        mutableStateOf<Map<String, String>>(
-            plantedPlots.associate { plot ->
-                val existing = plot.cropVariety?.ifBlank { null }
-                plot.id to (existing ?: getDefaultVariety(plot.cropName ?: ""))
-            }
-        )
-    }
-
-    // Modal state for Interactive Monthly Calendar
-    var calendarTargetPlotId by remember { mutableStateOf<String?>(null) }
-
-    // Modal state for Categorized Variety Dropdown/Picker
-    var varietyTargetPlotId by remember { mutableStateOf<String?>(null) }
-
+    var localValidationError by remember { mutableStateOf<String?>(null) }
+    var calendarTargetDraftId by remember { mutableStateOf<String?>(null) }
+    var varietyTargetDraftId by remember { mutableStateOf<String?>(null) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d, yyyy") }
 
-    // Full screen edge-to-edge container (blocks touches to underlay, full background without cutoffs)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -99,13 +78,13 @@ fun CropsSummaryOverlay(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { /* block outside clicks */ }
-            .padding(horizontal = 40.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(min = 360.dp, max = 500.dp)
-                .fillMaxWidth(0.62f)
+                .widthIn(min = 360.dp, max = 540.dp)
+                .fillMaxWidth(0.70f)
                 .fillMaxHeight(0.96f)
                 .clip(RoundedCornerShape(20.dp)),
             shape = RoundedCornerShape(20.dp),
@@ -113,20 +92,14 @@ fun CropsSummaryOverlay(
             border = BorderStroke(1.2.dp, Color(0xFF2E7D32).copy(alpha = 0.75f)),
             shadowElevation = 18.dp
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // ── Header Banner (Compact Slim Bar) ─────────────────────
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header Banner
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
                             Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF1B5E20),
-                                    Color(0xFF2E7D32),
-                                    Color(0xFF1B5E20)
-                                )
+                                colors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF1B5E20))
                             )
                         )
                         .padding(horizontal = 14.dp, vertical = 9.dp)
@@ -153,7 +126,6 @@ fun CropsSummaryOverlay(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
-
                             Column {
                                 Text(
                                     text = "Crops Planting Summary",
@@ -162,7 +134,7 @@ fun CropsSummaryOverlay(
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "$farmName • ${plantedPlots.size} Plots Planted",
+                                    text = "$farmName • ${drafts.size} New / Changed Crops",
                                     fontSize = 11.sp,
                                     color = Color(0xFFC8E6C9)
                                 )
@@ -175,75 +147,60 @@ fun CropsSummaryOverlay(
                                 .size(26.dp)
                                 .background(Color.Black.copy(alpha = 0.25f), CircleShape)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
+                            Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(14.dp))
                         }
                     }
                 }
 
-                // ── Scrollable Crop List (Expanded Vertically) ───────────
-                if (plantedPlots.isEmpty()) {
-                    Box(
+                // Error or Validation Banner
+                val activeError = localValidationError ?: errorMessage
+                if (!activeError.isNullOrBlank()) {
+                    Surface(
+                        color = Color(0xFFB71C1C).copy(alpha = 0.85f),
+                        border = BorderStroke(1.dp, Color(0xFFFF5252)),
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
-                            .weight(1f)
                             .fillMaxWidth()
-                            .padding(24.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Text(activeError, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // List of Crop Plantings
+                if (drafts.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Yard,
-                                contentDescription = null,
-                                tint = Color(0xFF4CAF50).copy(alpha = 0.5f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Text(
-                                text = "No crops planted in this layout yet.",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Add crop plots from the crop tray to set planting schedules.",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Yard, null, tint = Color(0xFF4CAF50).copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                            Text("Walang bago o binagong pananim.", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
                         }
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(plantedPlots, key = { it.id }) { plot ->
-                            val cropName = plot.cropName ?: "Vegetable"
-                            val cropId = plot.cropId ?: cropName.lowercase()
+                        items(drafts, key = { it.id }) { draft ->
+                            val cropName = draft.cropName
+                            val cropId = draft.cropId
                             val imageUri = remember(cropId, cropName) {
                                 CropMetadataAssetDataSource.resolveCropImage(cropId, cropName)
                             }
-
-                            val currentVariety = selectedVarieties[plot.id] ?: getDefaultVariety(cropName)
-
-                            val currentDateStr = selectedDates[plot.id] ?: LocalDate.now().toString()
+                            val currentDateStr = draft.plantingDate
                             val currentLocalDate = remember(currentDateStr) {
-                                try {
-                                    LocalDate.parse(currentDateStr)
-                                } catch (e: Exception) {
-                                    LocalDate.now()
-                                }
+                                try { LocalDate.parse(currentDateStr) } catch (_: Exception) { LocalDate.now() }
                             }
-
-                            val isSim = currentVariety.contains("10s", ignoreCase = true)
+                            val isSim = draft.variety.contains("10s", ignoreCase = true)
                             val daysToHarvest = remember(cropName, isSim) {
                                 if (isSim) 1 else getDaysToHarvestEstimate(cropName)
                             }
@@ -252,92 +209,92 @@ fun CropsSummaryOverlay(
                             }
 
                             CropSummaryCard(
-                                plot = plot,
+                                draft = draft,
                                 cropName = cropName,
-                                variety = currentVariety,
+                                variety = draft.variety,
+                                bedLabel = draft.bedLabel,
+                                plantCount = draft.plantCount,
+                                notes = draft.notes,
                                 imageUri = imageUri,
                                 plantedDate = currentLocalDate,
                                 estimatedHarvestDate = estimatedHarvestDate,
                                 daysToHarvest = daysToHarvest,
                                 dateFormatter = dateFormatter,
-                                onOpenCalendar = {
-                                    calendarTargetPlotId = plot.id
+                                onOpenCalendar = { calendarTargetDraftId = draft.id },
+                                onOpenVarietyDropdown = { varietyTargetDraftId = draft.id },
+                                onPlantCountChanged = { newCount ->
+                                    drafts = drafts.map { if (it.id == draft.id) it.copy(plantCount = newCount) else it }
                                 },
-                                onOpenVarietyDropdown = {
-                                    varietyTargetPlotId = plot.id
+                                onNotesChanged = { newNotes ->
+                                    drafts = drafts.map { if (it.id == draft.id) it.copy(notes = newNotes) else it }
                                 }
                             )
                         }
                     }
                 }
 
-                // ── Fixed Bottom Actions (Compact Bar) ───────────────────
+                // Fixed Bottom Actions
                 Surface(
                     color = Color(0xFF07140B),
                     border = BorderStroke(1.dp, Color(0xFF1E3A24)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Cancel Button (Stays in Farm Editor)
                         OutlinedButton(
                             onClick = onCancel,
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.7f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFFFF8A80)
-                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(38.dp)
+                            modifier = Modifier.weight(1f).height(38.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Cancel",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+                            Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Cancel", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
 
-                        // Save Button (Saves layout & planting schedule to database)
                         Button(
                             onClick = {
-                                onSave(selectedDates, selectedVarieties)
+                                val missing = mutableListOf<String>()
+                                drafts.forEach { d ->
+                                    if (d.cropName.isBlank()) missing.add("Crop")
+                                    if (d.variety.isBlank()) missing.add("Variety (${d.cropName})")
+                                    if (d.plantingDate.isBlank()) {
+                                        missing.add("Petsa (${d.cropName})")
+                                    } else {
+                                        val valid = try { LocalDate.parse(d.plantingDate.take(10)) != null } catch (_: Exception) { false }
+                                        if (!valid) missing.add("Wastong Petsa (${d.cropName})")
+                                    }
+                                    if (d.plantCount <= 0) missing.add("Bilang (${d.cropName})")
+                                    if (d.bedId.isBlank()) missing.add("Bed ID (${d.cropName})")
+                                }
+                                if (missing.isNotEmpty()) {
+                                    localValidationError = "⚠️ Pakiusap punan ang lahat ng kinakailangang impormasyon: ${missing.distinct().joinToString(", ")}"
+                                } else {
+                                    localValidationError = null
+                                    onSave(drafts)
+                                }
                             },
+                            enabled = !isSaving,
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF2E7D32)
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier = Modifier
-                                .weight(1.3f)
-                                .height(38.dp)
+                            modifier = Modifier.weight(1.3f).height(38.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Save,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Save",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = Color.White
-                            )
+                            if (isSaving) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Saving...", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                            } else {
+                                Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Save Plantings", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                            }
                         }
                     }
                 }
@@ -345,52 +302,52 @@ fun CropsSummaryOverlay(
         }
     }
 
-    // ── Monthly Calendar Dialog Overlay ──────────────────────────────────────
-    calendarTargetPlotId?.let { plotId ->
-        val targetPlot = plantedPlots.firstOrNull { it.id == plotId }
-        if (targetPlot != null) {
-            val initialDateStr = selectedDates[plotId] ?: LocalDate.now().toString()
-            val cropName = targetPlot.cropName ?: "Vegetable"
-            val isSim = (selectedVarieties[plotId] ?: "").contains("10s", ignoreCase = true)
-            val daysToHarvest = if (isSim) 1 else getDaysToHarvestEstimate(cropName)
-
+    calendarTargetDraftId?.let { targetId ->
+        val target = drafts.firstOrNull { it.id == targetId }
+        if (target != null) {
+            val initialDateStr = target.plantingDate
+            val isSim = target.variety.contains("10s", ignoreCase = true)
+            val daysToHarvest = if (isSim) 1 else getDaysToHarvestEstimate(target.cropName)
             PlantingCalendarModal(
-                cropName = cropName,
-                plotLabel = targetPlot.plotLabel.ifBlank { "A" },
+                cropName = target.cropName,
+                plotLabel = target.bedLabel,
                 initialDateStr = initialDateStr,
                 daysToHarvest = daysToHarvest,
-                onDismiss = { calendarTargetPlotId = null },
+                onDismiss = { calendarTargetDraftId = null },
                 onDateSelected = { newDate ->
-                    val updated = HashMap<String, String>(selectedDates)
-                    updated[plotId] = newDate
-                    selectedDates = updated
-                    calendarTargetPlotId = null
+                    val isValid = try {
+                        val parsed = LocalDate.parse(newDate.take(10))
+                        !parsed.isBefore(LocalDate.now().minusYears(1)) && !parsed.isAfter(LocalDate.now().plusYears(1))
+                    } catch (_: Exception) {
+                        false
+                    }
+                    if (isValid) {
+                        drafts = drafts.map { if (it.id == targetId) it.copy(plantingDate = newDate) else it }
+                        localValidationError = null
+                        calendarTargetDraftId = null
+                    } else {
+                        localValidationError = "⚠️ Hindi wasto ang napiling petsa ng pagtatanim para sa ${target.cropName}. Pakiusap pumili ng wastong petsa."
+                    }
                 }
             )
         }
     }
 
-    // ── Categorized Crop Variety Modal Overlay ───────────────────────────────
-    varietyTargetPlotId?.let { plotId ->
-        val targetPlot = plantedPlots.firstOrNull { it.id == plotId }
-        if (targetPlot != null) {
-            val cropName = targetPlot.cropName ?: "Vegetable"
-            val currentSelected = selectedVarieties[plotId] ?: getDefaultVariety(cropName)
-            val categorizedGroups = remember(cropName) {
-                getCategorizedVarietiesForCrop(cropName)
+    varietyTargetDraftId?.let { targetId ->
+        val target = drafts.firstOrNull { it.id == targetId }
+        if (target != null) {
+            val categorizedGroups = remember(target.cropName) {
+                getCategorizedVarietiesForCrop(target.cropName)
             }
-
             CropVarietyPickerModal(
-                cropName = cropName,
-                plotLabel = targetPlot.plotLabel.ifBlank { "A" },
-                currentVariety = currentSelected,
+                cropName = target.cropName,
+                plotLabel = target.bedLabel,
+                currentVariety = target.variety,
                 categorizedGroups = categorizedGroups,
-                onDismiss = { varietyTargetPlotId = null },
+                onDismiss = { varietyTargetDraftId = null },
                 onVarietySelected = { newVariety ->
-                    val updated = HashMap<String, String>(selectedVarieties)
-                    updated[plotId] = newVariety
-                    selectedVarieties = updated
-                    varietyTargetPlotId = null
+                    drafts = drafts.map { if (it.id == targetId) it.copy(variety = newVariety, varietyId = newVariety.lowercase().replace(" ", "_")) else it }
+                    varietyTargetDraftId = null
                 }
             )
         }
@@ -398,20 +355,66 @@ fun CropsSummaryOverlay(
 }
 
 /**
+ * Legacy overload for CropsSummaryOverlay for backwards compatibility.
+ */
+@Composable
+fun CropsSummaryOverlay(
+    farmName: String,
+    plots: List<PlotRenderData>,
+    onCancel: () -> Unit,
+    onSave: (updatedPlantedDates: Map<String, String>, updatedVarieties: Map<String, String>) -> Unit
+) {
+    val drafts = remember(plots) {
+        plots.filter { !it.cropName.isNullOrBlank() }.map { plot ->
+            val cropName = plot.cropName ?: "Vegetable"
+            CropPlantingDraft(
+                id = plot.id,
+                cropName = cropName,
+                cropId = plot.cropId ?: cropName.lowercase(),
+                bedId = plot.id,
+                bedLabel = plot.plotLabel,
+                variety = plot.cropVariety?.ifBlank { null } ?: getDefaultVariety(cropName),
+                varietyId = (plot.cropVariety?.ifBlank { null } ?: getDefaultVariety(cropName)).lowercase().replace(" ", "_"),
+                plantingDate = plot.plantedDate?.take(10)?.ifBlank { null } ?: LocalDate.now().toString(),
+                plantCount = (plot.widthM * plot.heightM).toInt().coerceAtLeast(1),
+                notes = "",
+                isNew = false,
+                isChanged = true
+            )
+        }
+    }
+    CropsSummaryOverlay(
+        farmName = farmName,
+        cropPlantings = drafts,
+        onCancel = onCancel,
+        onSave = { updatedDrafts ->
+            val dates = updatedDrafts.associate { it.id to it.plantingDate }
+            val varieties = updatedDrafts.associate { it.id to it.variety }
+            onSave(dates, varieties)
+        }
+    )
+}
+
+/**
  * Compact Crop Plot Card inside CropsSummaryOverlay.
  */
 @Composable
 private fun CropSummaryCard(
-    plot: PlotRenderData,
+    draft: CropPlantingDraft,
     cropName: String,
     variety: String,
+    bedLabel: String,
+    plantCount: Int,
+    notes: String,
     imageUri: String,
     plantedDate: LocalDate,
     estimatedHarvestDate: LocalDate,
     daysToHarvest: Int,
     dateFormatter: DateTimeFormatter,
     onOpenCalendar: () -> Unit,
-    onOpenVarietyDropdown: () -> Unit
+    onOpenVarietyDropdown: () -> Unit,
+    onPlantCountChanged: (Int) -> Unit,
+    onNotesChanged: (String) -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -422,25 +425,64 @@ private fun CropSummaryCard(
         Column(
             modifier = Modifier.padding(10.dp)
         ) {
+            // ── Bed Number Header ──────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF1B3D23),
+                    border = BorderStroke(1.dp, Color(0xFF4CAF50).copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.Inbox, contentDescription = null, tint = Color(0xFFFFD54F), modifier = Modifier.size(13.dp))
+                        Text(
+                            text = "Bed Number: $bedLabel",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE8F5E9)
+                        )
+                    }
+                }
+
+                Surface(
+                    color = if (draft.isNew) Color(0xFF1B5E20) else Color(0xFF004D40),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = if (draft.isNew) "✨ BAGO" else if (draft.isChanged) "✏️ BINAGO" else "🌱 NAKATANIM",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA5D6A7),
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── Left Side: Crop Image & Plot Badge ───────────────────
+                // ── Left Side: Crop Image ──────────────────────────────────
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.width(64.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(54.dp)
                             .shadow(4.dp, RoundedCornerShape(12.dp))
                             .background(
                                 Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color(0xFFE8F5E9),
-                                        Color(0xFFC8E6C9)
-                                    )
+                                    colors = listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9))
                                 ),
                                 RoundedCornerShape(12.dp)
                             )
@@ -451,31 +493,14 @@ private fun CropSummaryCard(
                             model = imageUri,
                             contentDescription = cropName,
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .padding(2.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Surface(
-                        color = Color(0xFF1B5E20),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = "${plot.widthM.toInt()}m×${plot.heightM.toInt()}m",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFA5D6A7),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            modifier = Modifier.size(42.dp).padding(2.dp)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                // ── Right Side: Variety, Calendar & Date to Plant ────────
+                // ── Right Side: Crop Info & Form Fields ──────────────────
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -490,24 +515,11 @@ private fun CropSummaryCard(
                             fontSize = 14.sp,
                             color = Color.White
                         )
-
-                        Surface(
-                            shape = RoundedCornerShape(5.dp),
-                            color = Color(0xFF2E7D32).copy(alpha = 0.35f)
-                        ) {
-                            Text(
-                                text = "Plot: ${plot.plotLabel.ifBlank { "A" }}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF81C784),
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                            )
-                        }
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
-                    // Crop Variety Clickable Category Tag
+                    // Variety Picker
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -529,7 +541,7 @@ private fun CropSummaryCard(
                                 horizontalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
                                 Text(
-                                    text = variety,
+                                    text = variety.ifBlank { "Pumili ng Variety" },
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFFE082)
@@ -544,9 +556,9 @@ private fun CropSummaryCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    // ── Calendar & Scheduled Date Section (Click to Open Monthly Calendar) ─
+                    // Planting Date Picker
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFF09140E),
@@ -556,7 +568,7 @@ private fun CropSummaryCard(
                             .clickable { onOpenCalendar() }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -592,7 +604,7 @@ private fun CropSummaryCard(
                                 horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Change",
+                                    text = "Baguhin",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFF81C784)
@@ -607,6 +619,65 @@ private fun CropSummaryCard(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Plant Count Stepper
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Bilang ng Halaman (Count):",
+                            fontSize = 10.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconButton(
+                                onClick = { if (plantCount > 1) onPlantCountChanged(plantCount - 1) },
+                                modifier = Modifier.size(24.dp).background(Color(0xFF1E3A24), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Remove, "-", tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                            Text(
+                                text = "$plantCount",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.widthIn(min = 24.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            IconButton(
+                                onClick = { onPlantCountChanged(plantCount + 1) },
+                                modifier = Modifier.size(24.dp).background(Color(0xFF2E7D32), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Add, "+", tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Notes Field
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = onNotesChanged,
+                        placeholder = { Text("Tala / Notes ukol sa pananim...", fontSize = 10.sp, color = Color.Gray) },
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = Color.White),
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4CAF50),
+                            unfocusedBorderColor = Color(0xFF2E7D32).copy(alpha = 0.4f),
+                            focusedContainerColor = Color(0xFF09140E),
+                            unfocusedContainerColor = Color(0xFF09140E)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+
                     Spacer(modifier = Modifier.height(3.dp))
 
                     // Harvest Estimate Window
@@ -615,7 +686,7 @@ private fun CropSummaryCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "🌾 Expected Harvest:",
+                            text = "🌾 Inaasahang Ani:",
                             fontSize = 10.sp,
                             color = Color.White.copy(alpha = 0.55f)
                         )
@@ -1129,7 +1200,7 @@ private fun getDefaultVariety(cropName: String): String {
 /**
  * Returns estimated days to maturity / harvest for the crop.
  */
-private fun getDaysToHarvestEstimate(cropName: String): Int {
+internal fun getDaysToHarvestEstimate(cropName: String): Int {
     val clean = cropName.lowercase()
     return when {
         clean.contains("pechay") || clean.contains("kangkong") -> 30

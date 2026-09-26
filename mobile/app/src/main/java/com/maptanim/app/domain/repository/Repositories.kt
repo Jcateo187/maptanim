@@ -124,6 +124,7 @@ interface HarvestRepository {
 
 interface ActivityRepository {
     fun observeActivities(plotId: String): Flow<List<Activity>>
+    fun observeAllActivities(): Flow<List<Activity>>
     suspend fun logActivity(activity: Activity)
 }
 

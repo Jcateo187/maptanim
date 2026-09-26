@@ -95,7 +95,7 @@ data class CameraState(
         val effectiveMinZoom = if (screenWidth > 0f && screenHeight > 0f) {
             val fitW = screenWidth / (45f * IsometricProjection.TILE_W)
             val fitH = screenHeight / (45f * IsometricProjection.TILE_H)
-            minOf(fitW, fitH).coerceIn(0.25f, 0.52f)
+            minOf(fitW, fitH).coerceIn(0.10f, 0.52f)
         } else {
             minZoom
         }

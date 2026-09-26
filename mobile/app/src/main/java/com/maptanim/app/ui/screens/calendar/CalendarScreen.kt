@@ -255,6 +255,9 @@ fun CalendarScreen(
                                                                     TaskType.TRELLIS -> Color(0xFF795548)
                                                                     TaskType.NUTRITION -> Color(0xFF43A047)
                                                                     TaskType.ROTATION_ALERT -> Color(0xFF00897B)
+                                                                    TaskType.SOIL_AMENDMENT -> Color(0xFF8D6E63)
+                                                                    TaskType.PRUNING -> Color(0xFF66BB6A)
+                                                                    TaskType.OBSERVATION -> Color(0xFF29B6F6)
                                                                 }
                                                             )
                                                     )
@@ -415,6 +418,9 @@ fun CalendarTaskRow(
         TaskType.TRELLIS -> Color(0xFF795548)
         TaskType.NUTRITION -> Color(0xFF43A047)
         TaskType.ROTATION_ALERT -> Color(0xFF00897B)
+        TaskType.SOIL_AMENDMENT -> Color(0xFF8D6E63)
+        TaskType.PRUNING -> Color(0xFF66BB6A)
+        TaskType.OBSERVATION -> Color(0xFF29B6F6)
     }
 
     Card(

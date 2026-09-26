@@ -10,6 +10,25 @@ import com.maptanim.app.ui.components.editcomponents.croptray.AVAILABLE_CROP_CAT
 import com.maptanim.app.ui.components.editcomponents.croptray.CropOption
 
 /**
+ * Draft model for reviewing new or changed crop plantings before saving.
+ */
+data class CropPlantingDraft(
+    val id: String,                  // Unique ID (zoneId or plotId)
+    val cropName: String,            // e.g. "Carrot", "Tomato"
+    val cropId: String,              // e.g. "carrot", "tomato"
+    val bedId: String,               // Parent bed / plot ID
+    val bedLabel: String,            // e.g. "Bed #1"
+    val variety: String = "",        // e.g. "New Kuroda"
+    val varietyId: String = "",      // e.g. "new_kuroda"
+    val plantingDate: String = "",   // YYYY-MM-DD
+    val plantCount: Int = 1,         // Number of plants
+    val notes: String = "",          // Farmer notes
+    val isNew: Boolean = true,
+    val isChanged: Boolean = false,
+    val validationError: String? = null
+)
+
+/**
  * EditUiState — Immutable state holder for FarmEditorScreen.
  */
 data class EditUiState(
@@ -31,5 +50,10 @@ data class EditUiState(
     val isSaving: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
     val canUndo: Boolean = false,
-    val canRedo: Boolean = false
+    val canRedo: Boolean = false,
+    val showCropSummaryOverlay: Boolean = false,
+    val pendingCropPlantings: List<CropPlantingDraft> = emptyList(),
+    val saveErrorMessage: String? = null,
+    val dropFeedbackMessage: String? = null,
+    val isSaveSuccessful: Boolean = false
 )

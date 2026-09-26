@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.renderer.AssetLoader
 import com.maptanim.app.renderer.model.*
@@ -57,21 +58,27 @@ object FarmCanvasRenderer {
             renderTileHighlight(hoverWorldPos, camera, isValidPlacement, widthM = 1.0f, heightM = 1.0f)
         }
 
-        // ── Layer 2: Direct Planted Crops ─────────────────────────────────
         val sortedPlots = plots.sortedBy { it.posX + it.posY }
 
+        // ── Layer 1.8: Garden Bed Ground Surface & 3D Raised Edges ─────────
+        sortedPlots.forEach { plot ->
+            renderPlotBed(plot, camera)
+        }
+
+        // ── Layer 2: Direct Planted Crops ─────────────────────────────────
         sortedPlots.forEach { plot ->
             renderDirectCrop(plot, cropZones, camera, context)
         }
 
         // ── Layer 3.5: Floating Crop Zone Top Labels ─────────────────────
         sortedPlots.forEach { plot ->
-            renderCropZoneLabel(plot, camera, isSelected = (plot.id == selectedPlotId))
+            renderCropZoneLabel(plot, cropZones, camera, isSelected = (plot.id == selectedPlotId))
         }
 
         // ── Layer 4: Status Pins & Calendar Monitoring Badges ─────────────
         sortedPlots.forEach { plot ->
-            if (!plot.cropName.isNullOrEmpty() || plot.activeTasks.isNotEmpty()) {
+            val isBed = plot.cropName.equals("Bed", ignoreCase = true) || plot.cropId?.startsWith("bed") == true
+            if (!isBed && (!plot.cropName.isNullOrEmpty() || plot.activeTasks.isNotEmpty())) {
                 renderStatusPins(plot, camera)
             }
         }
@@ -95,48 +102,40 @@ object FarmCanvasRenderer {
     private const val FARM_MAX_X = 45f
     private const val FARM_MAX_Y = 45f
 
-    // ── Layer 0: Full Viewport Ground Terrain & Background Image ────────
+    // ── Layer 0: Full Viewport Ground Terrain (Clean Isometric Farm Ground) ────
     private fun DrawScope.renderGround(
         camera: CameraState,
         resources: Resources? = null,
         context: android.content.Context?
     ): Boolean {
-        drawRect(color = Color(0xFF38651B))
+        // Deep dark canvas viewport background matching MapTanim palette
+        drawRect(color = Color(0xFF131D15))
 
-        if (context != null) {
-            val bgBitmap = AssetLoader.getBackgroundTexture(context, "background_scenery/backgound_1.png")
-            if (bgBitmap != null) {
-                val centerPos = IsometricProjection.toScreen(22.5f, 22.5f + 1.0f, camera)
-                val gridWidthPx = 45f * IsometricProjection.TILE_W * camera.zoom
-                val gridHeightPx = 45f * IsometricProjection.TILE_H * camera.zoom
+        // 45m x 45m Farm Isometric Ground Diamond
+        val p0 = IsometricProjection.toScreen(FARM_MIN_X, FARM_MIN_Y, camera)
+        val p1 = IsometricProjection.toScreen(FARM_MAX_X, FARM_MIN_Y, camera)
+        val p2 = IsometricProjection.toScreen(FARM_MAX_X, FARM_MAX_Y, camera)
+        val p3 = IsometricProjection.toScreen(FARM_MIN_X, FARM_MAX_Y, camera)
 
-                val isBg1 = (bgBitmap.width in 1700..1850 && bgBitmap.height in 800..950) ||
-                        (Math.abs((bgBitmap.width.toFloat() / bgBitmap.height.toFloat()) - 2.0f) < 0.1f)
-
-                val diamondWidthRatio = if (isBg1) 0.7050f else 0.7578f
-                val diamondHeightRatio = if (isBg1) 0.6050f else 0.7578f
-                val centerXRatio = 0.4960f
-                val centerYRatio = if (isBg1) 0.5420f else 0.50f
-
-                val scaleX = gridWidthPx / (bgBitmap.width * diamondWidthRatio)
-                val scaleY = gridHeightPx / (bgBitmap.height * diamondHeightRatio)
-
-                val bgScaleBoost = 1.50f
-                val targetW = (bgBitmap.width * scaleX * bgScaleBoost).toInt().coerceAtLeast(1)
-                val targetH = (bgBitmap.height * scaleY * bgScaleBoost).toInt().coerceAtLeast(1)
-
-                val left = Math.round(centerPos.x - (targetW * centerXRatio))
-                val top = Math.round(centerPos.y - (targetH * centerYRatio))
-
-                drawImage(
-                    image = bgBitmap,
-                    dstOffset = IntOffset(left, top),
-                    dstSize = IntSize(targetW, targetH)
-                )
-                return true
-            }
+        val farmDiamond = Path().apply {
+            moveTo(p0.x, p0.y)
+            lineTo(p1.x, p1.y)
+            lineTo(p2.x, p2.y)
+            lineTo(p3.x, p3.y)
+            close()
         }
-        return false
+
+        // Draw farm ground turf base
+        drawPath(path = farmDiamond, color = Color(0xFF253D20))
+
+        // Clean farm boundary perimeter
+        val borderThickness = (2f * camera.zoom).coerceIn(1.5f, 4.5f)
+        drawPath(
+            path = farmDiamond,
+            color = Color(0xFF4C753B).copy(alpha = 0.85f),
+            style = Stroke(width = borderThickness)
+        )
+        return true
     }
 
 
@@ -181,16 +180,94 @@ object FarmCanvasRenderer {
         )
     }
 
-    // ── Layer 1.8: Floating Crop Zone Top Label Badge ────────────────────
+    // ── Layer 1.8: 3D Raised Isometric Bed with Soil Color ───────────────
+
+    private fun DrawScope.renderPlotBed(plot: PlotRenderData, camera: CameraState) {
+        val sc = plot.screenCorners(camera)
+
+        val bedSurfaceColor = Color(0xFF6D4C41)
+        val bedSideColor = Color(0xFF4E342E)
+        val bedBorderColor = Color(0xFF3E2723)
+
+        val bedDepth = (6f * camera.zoom).coerceIn(3f, 16f)
+
+        // 1. South-West skirt face (left-facing side)
+        val swFace = Path().apply {
+            moveTo(sc.bottomLeft.x, sc.bottomLeft.y)
+            lineTo(sc.bottomRight.x, sc.bottomRight.y)
+            lineTo(sc.bottomRight.x, sc.bottomRight.y + bedDepth)
+            lineTo(sc.bottomLeft.x, sc.bottomLeft.y + bedDepth)
+            close()
+        }
+        drawPath(swFace, color = bedSideColor)
+
+        // 2. South-East skirt face (right-facing side)
+        val seFace = Path().apply {
+            moveTo(sc.bottomRight.x, sc.bottomRight.y)
+            lineTo(sc.topRight.x, sc.topRight.y)
+            lineTo(sc.topRight.x, sc.topRight.y + bedDepth)
+            lineTo(sc.bottomRight.x, sc.bottomRight.y + bedDepth)
+            close()
+        }
+        drawPath(seFace, color = bedSideColor.copy(alpha = 0.85f))
+
+        // 3. Top surface isometric polygon
+        val topSurface = Path().apply {
+            moveTo(sc.topLeft.x, sc.topLeft.y)
+            lineTo(sc.topRight.x, sc.topRight.y)
+            lineTo(sc.bottomRight.x, sc.bottomRight.y)
+            lineTo(sc.bottomLeft.x, sc.bottomLeft.y)
+            close()
+        }
+        drawPath(topSurface, color = bedSurfaceColor)
+
+        // 4. Subtle furrow / row lines in tilled soil
+        val strokeWidth = (1.5f * camera.zoom).coerceIn(1f, 3f)
+        val row1Start = Offset(
+            sc.topLeft.x + (sc.bottomLeft.x - sc.topLeft.x) * 0.35f,
+            sc.topLeft.y + (sc.bottomLeft.y - sc.topLeft.y) * 0.35f
+        )
+        val row1End = Offset(
+            sc.topRight.x + (sc.bottomRight.x - sc.topRight.x) * 0.35f,
+            sc.topRight.y + (sc.bottomRight.y - sc.topRight.y) * 0.35f
+        )
+        val row2Start = Offset(
+            sc.topLeft.x + (sc.bottomLeft.x - sc.topLeft.x) * 0.65f,
+            sc.topLeft.y + (sc.bottomLeft.y - sc.topLeft.y) * 0.65f
+        )
+        val row2End = Offset(
+            sc.topRight.x + (sc.bottomRight.x - sc.topRight.x) * 0.65f,
+            sc.topRight.y + (sc.bottomRight.y - sc.topRight.y) * 0.65f
+        )
+        drawLine(bedBorderColor.copy(alpha = 0.35f), row1Start, row1End, strokeWidth = strokeWidth * 0.8f)
+        drawLine(bedBorderColor.copy(alpha = 0.35f), row2Start, row2End, strokeWidth = strokeWidth * 0.8f)
+
+        // 5. Clean surface boundary border
+        drawPath(
+            path = topSurface,
+            color = bedBorderColor,
+            style = Stroke(width = strokeWidth)
+        )
+    }
+
+    // ── Layer 3.5: Floating Crop Zone Top Label Badge ────────────────────
 
     private fun DrawScope.renderCropZoneLabel(
         plot: PlotRenderData,
+        cropZones: List<CropZoneRenderData> = emptyList(),
         camera: CameraState,
         isSelected: Boolean = false
     ) {
         val topPos = plot.topEdgeCenter(camera)
         val cropName = plot.cropName ?: "Crop Zone"
-        val emoji = when (cropName.lowercase().replace(" ", "")) {
+        val isBed = cropName.equals("Bed", ignoreCase = true) || plot.cropId?.startsWith("bed") == true
+
+        val bedCrops = cropZones.filter { it.plotId == plot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }
+        val bedCropsSummary = if (bedCrops.isNotEmpty()) {
+            bedCrops.mapNotNull { it.cropName }.distinct().joinToString(", ")
+        } else null
+
+        val emoji = if (isBed) "🟫" else when (cropName.lowercase().replace(" ", "")) {
             "stringbeans", "sitaw", "beans" -> "🫘"
             "eggplant", "talong" -> "🍆"
             "tomato", "kamatis" -> "🍅"
@@ -205,7 +282,9 @@ object FarmCanvasRenderer {
         }
         val varietyStr = if (!plot.cropVariety.isNullOrBlank()) " - ${plot.cropVariety}" else ""
         val isSim = plot.cropName?.lowercase()?.contains("ampalaya") == true || plot.cropVariety?.contains("10s", ignoreCase = true) == true
-        val progressStr = if (isSim) {
+        val progressStr = if (isBed) {
+            if (bedCropsSummary != null) " • $bedCropsSummary" else " • Ready to plant"
+        } else if (isSim) {
             val liveProgress = plot.currentStageProgressRatio
             val pct = (liveProgress * 100).toInt()
             val sec = (liveProgress * 10f).toInt().coerceIn(0, 10)
@@ -221,7 +300,7 @@ object FarmCanvasRenderer {
         } else {
             " • Pending Start"
         }
-        val labelText = "$emoji $cropName$varietyStr$progressStr"
+        val labelText = if (isBed) "$emoji ${plot.plotLabel}$progressStr" else "$emoji $cropName$varietyStr$progressStr"
 
         val nativeCanvas = drawContext.canvas.nativeCanvas
         val textPaint = android.graphics.Paint().apply {
@@ -279,11 +358,20 @@ object FarmCanvasRenderer {
     ) {
         if (context == null) return
 
-        val zone = cropZones.firstOrNull { it.plotId == plot.id }
-        val plantsToRender = if (zone != null && zone.plantInstances.isNotEmpty()) {
-            zone.plantInstances.map { it.copy(growthStage = plot.growthStage) }
+        val bedCrops = cropZones.filter { it.plotId == plot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }
+        val plantsToRender = if (bedCrops.isNotEmpty()) {
+            bedCrops.flatMap { zone ->
+                zone.plantInstances.map { it.copy(growthStage = if (it.growthStage > 1) it.growthStage else plot.growthStage) }
+            }
+        } else if (!plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true) && plot.cropId != "bed") {
+            val zone = cropZones.firstOrNull { it.plotId == plot.id }
+            if (zone != null && zone.plantInstances.isNotEmpty()) {
+                zone.plantInstances.map { it.copy(growthStage = plot.growthStage) }
+            } else {
+                return
+            }
         } else {
-            // No saved crop zone for this plot — skip rendering plants
+            // Empty bed with no crops planted yet
             return
         }
 

@@ -1,9 +1,12 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.appdistribution)
 }
 
 android {
@@ -24,6 +27,26 @@ android {
         release {
             optimization {
                 enable = false
+            }
+            firebaseAppDistribution {
+                appId = "1:605883983200:android:1e5411b580262a2b422a05"
+                groups = "testers"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim Release Test Build"
+                System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
+                    serviceCredentialsFile = it
+                }
+            }
+        }
+        debug {
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+            firebaseAppDistribution {
+                appId = "1:605883983200:android:6e05673853bff2ad422a05"
+                groups = "testers"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim Debug Test Build"
+                System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
+                    serviceCredentialsFile = it
+                }
             }
         }
     }

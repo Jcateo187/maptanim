@@ -273,4 +273,64 @@ class DssEngine(
             else     -> Season.DRY
         }
     }
+
+    // ─── 2.0 Full Agricultural Rule Evaluation Pipeline ───────────────────────
+
+    private val validator = com.maptanim.app.dss.evaluator.DssInputValidator()
+    private val seasonEvaluator = com.maptanim.app.dss.evaluator.DssSeasonEvaluator()
+    private val soilEvaluator = com.maptanim.app.dss.evaluator.DssSoilEvaluator(soilScorer)
+    private val growthCareEvaluator = com.maptanim.app.dss.evaluator.DssGrowthCareEvaluator(growthCalculator)
+    private val pestEvaluator = com.maptanim.app.dss.evaluator.DssPestDiseaseEvaluator()
+    private val companionEvaluator = com.maptanim.app.dss.evaluator.DssCompanionEvaluator()
+    private val rotationEvaluator = com.maptanim.app.dss.evaluator.DssRotationEvaluator()
+    private val harvestEvaluator = com.maptanim.app.dss.evaluator.DssHarvestEvaluator(growthCalculator)
+    private val resolver = com.maptanim.app.dss.evaluator.DssConflictAndPriorityResolver()
+
+    /**
+     * Executes the comprehensive end-to-end DSS evaluation according to the documented
+     * research rule pipeline:
+     * 1. Validate Input (no invented values)
+     * 2. Evaluate documented conditions (Season, Soil, Care, Pests, Companions, Rotation, Harvest)
+     * 3. Collect valid decisions
+     * 4. Check duplicates and resolve conflicts
+     * 5. Assign priorities
+     * 6. Generate final DSS Result with explanations and citations
+     */
+    fun evaluateSession(input: com.maptanim.app.dss.model.DssInput): com.maptanim.app.dss.model.DssResult {
+        // Step 1: Validate available input
+        val validationIssues = validator.validate(input.farmerData, input.referenceData)
+
+        // Step 2: Run modular evaluators
+        val rawDecisions = mutableListOf<com.maptanim.app.dss.model.DssDecision>()
+        rawDecisions.addAll(seasonEvaluator.evaluate(input))
+        rawDecisions.addAll(soilEvaluator.evaluate(input))
+        rawDecisions.addAll(growthCareEvaluator.evaluate(input))
+        rawDecisions.addAll(pestEvaluator.evaluate(input))
+        rawDecisions.addAll(companionEvaluator.evaluate(input))
+        rawDecisions.addAll(rotationEvaluator.evaluate(input))
+        rawDecisions.addAll(harvestEvaluator.evaluate(input))
+
+        // Step 3: Resolve conflicts, deduplicate, and assign priorities
+        val prioritizedDecisions = resolver.resolveAndPrioritize(rawDecisions)
+
+        // Step 4: Build summary metrics
+        val summary = com.maptanim.app.dss.model.DssResultSummary(
+            totalDecisions = prioritizedDecisions.size,
+            criticalAlerts = prioritizedDecisions.count { it.priority == com.maptanim.app.dss.model.DssPriority.CRITICAL },
+            highPriorityCount = prioritizedDecisions.count { it.priority == com.maptanim.app.dss.model.DssPriority.HIGH },
+            recommendationsCount = prioritizedDecisions.count { it.decisionType == com.maptanim.app.dss.model.DssDecisionType.RECOMMENDATION },
+            tasksCount = prioritizedDecisions.count { it.decisionType == com.maptanim.app.dss.model.DssDecisionType.TASK },
+            monitoredPlotsCount = input.farmerData.plots.size
+        )
+
+        return com.maptanim.app.dss.model.DssResult(
+            session = input.session,
+            farmId = input.session.farmId,
+            farmName = input.session.farmName,
+            decisions = prioritizedDecisions,
+            insufficientDataNotices = validationIssues,
+            summary = summary,
+            evaluatedAt = input.farmerData.currentDate.toString()
+        )
+    }
 }
