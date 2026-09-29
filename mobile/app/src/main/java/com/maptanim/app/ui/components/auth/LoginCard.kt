@@ -6,12 +6,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -19,10 +19,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.Routes
-import com.maptanim.app.ui.components.buttons.GuestButton
 import com.maptanim.app.ui.components.buttons.PrimaryButton
 import com.maptanim.app.ui.components.textfields.AppTextField
-import androidx.compose.ui.platform.LocalContext
 import com.maptanim.app.ui.components.textfields.PasswordTextField
 import com.maptanim.app.viewmodel.AuthViewModel
 
@@ -181,18 +179,6 @@ fun LoginCard(
 
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            HorizontalDivider()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            GuestButton(
-                onClick = {
-                    authViewModel.signInAnonymously()
-                }
-            )
-
             Spacer(modifier = Modifier.height(28.dp))
 
             Row {
@@ -216,5 +202,4 @@ fun LoginCard(
         }
 
     }
-
 }

@@ -12,7 +12,6 @@ export interface Farmer {
   id: string;
   email: string;
   fullName: string;
-  phoneNumber?: string;
   role: UserRole;
   status: AccountStatus;
   farmName: string;

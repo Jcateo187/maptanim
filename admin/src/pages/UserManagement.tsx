@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Eye,
   Mail,
-  Phone,
   Radio,
   Send,
   Download,
@@ -71,9 +70,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
   const [isSubmittingAdvisory, setIsSubmittingAdvisory] = useState<boolean>(false);
 
   // New User Form State
-  const [newFullName, setNewFullName] = useState<string>('');
   const [newEmail, setNewEmail] = useState<string>('');
-  const [newPhone, setNewPhone] = useState<string>('');
   const [newRole, setNewRole] = useState<UserRole>('FARMER');
   const [newFarmName, setNewFarmName] = useState<string>('');
 
@@ -144,34 +141,32 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFullName.trim() || !newEmail.trim()) return;
+    if (!newEmail.trim()) return;
+
+    const emailPrefix = newEmail.trim().split('@')[0];
 
     await apiService.addFarmer({
-      fullName: newFullName.trim(),
+      fullName: emailPrefix,
       email: newEmail.trim(),
-      phoneNumber: newPhone.trim() || '+63 900 000 0000',
       role: newRole,
       status: 'ACTIVE',
-      farmName: newFarmName.trim() || `${newFullName.trim()}'s Smallholder Farm`,
+      farmName: newFarmName.trim() || `${emailPrefix}'s Smallholder Farm`,
       activePlotsCount: 4,
       deviceInfo: 'Android Mobile (Pending Activation)',
     });
 
     setIsAddModalOpen(false);
-    setNewFullName('');
     setNewEmail('');
-    setNewPhone('');
     setNewFarmName('');
     loadData();
   };
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Status', 'Farm Name', 'Plots', 'Last Active', 'Days Inactive'];
+    const headers = ['ID', 'User', 'Email', 'Role', 'Status', 'Farm Name', 'Plots', 'Last Active', 'Days Inactive'];
     const rows = filteredFarmers.map((f) => [
       f.id,
       `"${f.fullName}"`,
       f.email,
-      f.phoneNumber || 'N/A',
       f.role,
       f.status,
       `"${f.farmName}"`,
@@ -195,8 +190,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
     const matchesSearch =
       f.fullName.toLowerCase().includes(search.toLowerCase()) ||
       f.email.toLowerCase().includes(search.toLowerCase()) ||
-      f.farmName.toLowerCase().includes(search.toLowerCase()) ||
-      (f.phoneNumber && f.phoneNumber.includes(search));
+      f.farmName.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus = statusFilter === 'ALL' || f.status === statusFilter;
     const matchesRole = roleFilter === 'ALL' || f.role === roleFilter;
@@ -1099,9 +1093,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
                 <p className="font-semibold text-xs flex items-center gap-2 mt-1">
                   <Mail className="w-3.5 h-3.5 text-[#4CAF50]" /> {selectedFarmer.email}
                 </p>
-                <p className="font-semibold text-xs flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-[#4CAF50]" /> {selectedFarmer.phoneNumber || 'Unspecified'}
-                </p>
               </div>
 
               <div className="p-3.5 rounded-xl border border-[#38434D] bg-[#1D2429] space-y-1">
@@ -1192,21 +1183,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
         title="Register New Smallholder or Field Officer"
         size="md"
       >
-        <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
-          <div>
-            <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
-              Full Name / Nickname *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g., Tatay Juan Dela Cruz"
-              value={newFullName}
-              onChange={(e) => setNewFullName(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
-            />
-          </div>
-
           <div>
             <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
               Registered Email *
@@ -1217,19 +1193,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
               placeholder="e.g., juan.delacruz@gmail.com"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
-              Mobile Contact Number
-            </label>
-            <input
-              type="text"
-              placeholder="+63 9XX XXX XXXX"
-              value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
             />
           </div>

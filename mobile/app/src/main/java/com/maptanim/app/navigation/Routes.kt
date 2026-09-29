@@ -18,7 +18,6 @@ object Routes {
     const val LIBRARY = "library"
     const val PROFILE = "profile"
     const val PROFILE_WITH_TAB = "profile?tab={tab}"
-    const val CALENDAR = "calendar"
 
     // Edit Mode, Settings & Notifications
     const val EDIT = "edit"
@@ -26,9 +25,6 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val ABOUT = "about"
     const val REPORTS = "reports"
-    const val DSS = "dss"
-    const val DSS_WITH_FARM = "dss?farmId={farmId}"
 
     fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
-    fun dssRoute(farmId: String? = null) = if (!farmId.isNullOrBlank()) "dss?farmId=$farmId" else "dss"
 }

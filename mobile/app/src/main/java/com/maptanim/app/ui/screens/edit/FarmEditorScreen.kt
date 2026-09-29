@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -38,6 +40,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.maptanim.app.MainActivity
+import com.maptanim.app.core.orientation.OrientationHelper
 import com.maptanim.app.renderer.canvas.TopDownCamera
 import com.maptanim.app.renderer.canvas.TopDownFarmCanvas
 import com.maptanim.app.renderer.canvas.TopDownProjection
@@ -120,33 +124,40 @@ fun FarmEditorScreen(
     var dragCropImageUrl by remember { mutableStateOf<String?>(null) }
     var dragTouchPos by remember { mutableStateOf(Offset.Zero) }
 
-    // Hover position: convert screen drag position → world using flat 2D projection
-    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, liveCamera) {
+    // Hover position: convert screen drag position → world using flat 2D projection, centered on finger
+    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, liveCamera, dragCropId, dragCropName) {
         if (isDraggingCrop) {
+            val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
+            val w = if (isBedDrag) 2.0f else 1.0f
+            val h = 1.0f
             val rawWorld = TopDownProjection.screenToWorld(dragTouchPos.x, dragTouchPos.y, liveCamera)
-            val snapped = TopDownProjection.snapToGrid(rawWorld)
-            Offset(snapped.x.coerceIn(0f, 44.0f), snapped.y.coerceIn(0f, 44.0f))
+            val centered = Offset(rawWorld.x - w / 2f, rawWorld.y - h / 2f)
+            val snapped = TopDownProjection.snapToGrid(centered)
+            Offset(snapped.x.coerceIn(0f, 45.0f - w), snapped.y.coerceIn(0f, 45.0f - h))
         } else null
     }
 
     val isValidPlacement = remember(isDraggingCrop, dragCropId, dragCropName, hoverWorldPos, uiState.plots) {
         if (isDraggingCrop && hoverWorldPos != null) {
             val hx = hoverWorldPos.x; val hy = hoverWorldPos.y
-            val inBounds = hx >= 0f && hy >= 0f && (hx + 1.0f) <= 45.0f && (hy + 1.0f) <= 45.0f
             val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
-
-            val existingBed = uiState.plots.firstOrNull { plot ->
-                hx >= plot.posX && hx < (plot.posX + plot.widthM) &&
-                hy >= plot.posY && hy < (plot.posY + plot.heightM) &&
-                (plot.cropName == "Bed" || plot.cropId?.startsWith("bed") == true)
-            }
+            val w = if (isBedDrag) 2.0f else 1.0f
+            val h = 1.0f
+            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 45.0f && (hy + h) <= 45.0f
 
             if (!isBedDrag) {
+                val cropCenterX = hx + w / 2f
+                val cropCenterY = hy + h / 2f
+                val existingBed = uiState.plots.firstOrNull { plot ->
+                    cropCenterX >= plot.posX && cropCenterX < (plot.posX + plot.widthM) &&
+                    cropCenterY >= plot.posY && cropCenterY < (plot.posY + plot.heightM) &&
+                    (plot.cropName?.startsWith("Bed", ignoreCase = true) == true || plot.cropId?.startsWith("bed", ignoreCase = true) == true || plot.plotLabel.startsWith("Bed", ignoreCase = true))
+                }
                 inBounds && existingBed != null
             } else {
                 val overlaps = uiState.plots.any { plot ->
-                    hx < (plot.posX + plot.widthM) && (hx + 1.0f) > plot.posX &&
-                    hy < (plot.posY + plot.heightM) && (hy + 1.0f) > plot.posY
+                    hx < (plot.posX + plot.widthM) && (hx + w) > plot.posX &&
+                    hy < (plot.posY + plot.heightM) && (hy + h) > plot.posY
                 }
                 inBounds && !overlaps
             }
@@ -164,9 +175,7 @@ fun FarmEditorScreen(
         // 1. 2D TOP-DOWN FARM CANVAS — occupies full screen
         // ═════════════════════════════════════════════════════════════════
         TopDownFarmCanvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
+            modifier = Modifier.fillMaxSize(),
             uiState = uiState,
             editViewModel = editViewModel,
             activeCropName = activeCropName,
@@ -243,7 +252,7 @@ fun FarmEditorScreen(
                         modifier = Modifier.size(19.dp))
                 }
 
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 // ✓ Save pill
                 Surface(
@@ -341,42 +350,48 @@ fun FarmEditorScreen(
             val density = androidx.compose.ui.platform.LocalDensity.current
             val topPad = with(density) { 56.dp.toPx() }
             val botPad = with(density) { if (isLandscape) 20.dp.toPx() else 60.dp.toPx() }
-            val leftPad = with(density) { if (isLandscape) 64.dp.toPx() else 48.dp.toPx() }
-            val rightPad = with(density) { if (isLandscape) 72.dp.toPx() else 16.dp.toPx() }
+            val leftPad = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
+            val rightPad = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
 
             ZoomButton(Icons.Default.Add, "Zoom In") {
                 val sw = configuration.screenWidthDp.toFloat() * context.resources.displayMetrics.density
                 val sh = configuration.screenHeightDp.toFloat() * context.resources.displayMetrics.density
-                val center = Offset(sw / 2f, sh / 2f)
-                val worldAtCenter = TopDownProjection.screenToWorld(center.x, center.y, liveCamera)
-                val newZoom = (liveCamera.zoom * 1.3f).coerceIn(0.15f, 3.5f)
-                val rawCam = liveCamera.copy(
-                    zoom = newZoom,
-                    panX = center.x - worldAtCenter.x * TopDownProjection.PPM * newZoom,
-                    panY = center.y - worldAtCenter.y * TopDownProjection.PPM * newZoom
-                )
-                liveCamera = TopDownProjection.clampCamera(
-                    rawCam, farmW = 45f, farmH = 45f, screenW = sw, screenH = sh,
-                    topPadding = topPad, bottomPadding = botPad,
-                    leftPadding = leftPad, rightPadding = rightPad
-                )
+                val availW = (sw - leftPad - rightPad).coerceAtLeast(100f)
+                val availH = (sh - topPad - botPad).coerceAtLeast(100f)
+                val fitZoom = minOf(availW / (45f * TopDownProjection.PPM), availH / (45f * TopDownProjection.PPM)).coerceIn(0.15f, 3.5f)
+                val targetZoom = (liveCamera.zoom * 1.3f).coerceIn(fitZoom, 3.5f)
+                if (targetZoom != liveCamera.zoom) {
+                    val actualScale = targetZoom / liveCamera.zoom
+                    val center = Offset(sw / 2f, sh / 2f)
+                    val newPanX = center.x - (center.x - liveCamera.panX) * actualScale
+                    val newPanY = center.y - (center.y - liveCamera.panY) * actualScale
+                    val rawCam = liveCamera.copy(zoom = targetZoom, panX = newPanX, panY = newPanY)
+                    liveCamera = TopDownProjection.clampCamera(
+                        rawCam, farmW = 45f, farmH = 45f, screenW = sw, screenH = sh,
+                        topPadding = topPad, bottomPadding = botPad,
+                        leftPadding = leftPad, rightPadding = rightPad
+                    )
+                }
             }
             ZoomButton(Icons.Default.Remove, "Zoom Out") {
                 val sw = configuration.screenWidthDp.toFloat() * context.resources.displayMetrics.density
                 val sh = configuration.screenHeightDp.toFloat() * context.resources.displayMetrics.density
-                val center = Offset(sw / 2f, sh / 2f)
-                val worldAtCenter = TopDownProjection.screenToWorld(center.x, center.y, liveCamera)
-                val newZoom = (liveCamera.zoom * 0.75f).coerceIn(0.15f, 3.5f)
-                val rawCam = liveCamera.copy(
-                    zoom = newZoom,
-                    panX = center.x - worldAtCenter.x * TopDownProjection.PPM * newZoom,
-                    panY = center.y - worldAtCenter.y * TopDownProjection.PPM * newZoom
-                )
-                liveCamera = TopDownProjection.clampCamera(
-                    rawCam, farmW = 45f, farmH = 45f, screenW = sw, screenH = sh,
-                    topPadding = topPad, bottomPadding = botPad,
-                    leftPadding = leftPad, rightPadding = rightPad
-                )
+                val availW = (sw - leftPad - rightPad).coerceAtLeast(100f)
+                val availH = (sh - topPad - botPad).coerceAtLeast(100f)
+                val fitZoom = minOf(availW / (45f * TopDownProjection.PPM), availH / (45f * TopDownProjection.PPM)).coerceIn(0.15f, 3.5f)
+                val targetZoom = (liveCamera.zoom * 0.75f).coerceIn(fitZoom, 3.5f)
+                if (targetZoom != liveCamera.zoom) {
+                    val actualScale = targetZoom / liveCamera.zoom
+                    val center = Offset(sw / 2f, sh / 2f)
+                    val newPanX = center.x - (center.x - liveCamera.panX) * actualScale
+                    val newPanY = center.y - (center.y - liveCamera.panY) * actualScale
+                    val rawCam = liveCamera.copy(zoom = targetZoom, panX = newPanX, panY = newPanY)
+                    liveCamera = TopDownProjection.clampCamera(
+                        rawCam, farmW = 45f, farmH = 45f, screenW = sw, screenH = sh,
+                        topPadding = topPad, bottomPadding = botPad,
+                        leftPadding = leftPad, rightPadding = rightPad
+                    )
+                }
             }
             ZoomButton(Icons.Default.FitScreen, "Fit Farm") {
                 val sw = configuration.screenWidthDp.toFloat() * context.resources.displayMetrics.density
@@ -554,35 +569,37 @@ fun FarmEditorScreen(
                 onCropDragging = { currentOffset -> dragTouchPos = currentOffset },
                 onCropDragEnd = { dropOffset ->
                     if (isDraggingCrop) {
-                        val dropWorld = TopDownProjection.screenToWorld(dropOffset.x, dropOffset.y, liveCamera)
-                        val snapped = TopDownProjection.snapToGrid(dropWorld)
-                        val safeX = snapped.x.coerceIn(0f, 44.0f)
-                        val safeY = snapped.y.coerceIn(0f, 44.0f)
                         val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
-
-                        val targetBed = uiState.plots.firstOrNull { plot ->
-                            safeX >= plot.posX && safeX < (plot.posX + plot.widthM) &&
-                            safeY >= plot.posY && safeY < (plot.posY + plot.heightM) &&
-                            (plot.cropName == "Bed" || plot.cropId?.startsWith("bed") == true)
-                        }
+                        val bedW = 2.0f
+                        val bedH = 1.0f
+                        val dropWorld = TopDownProjection.screenToWorld(dropOffset.x, dropOffset.y, liveCamera)
 
                         isDraggingCrop = false
 
                         if (isBedDrag) {
-                            val canDrop = safeX >= 0f && safeY >= 0f && (safeX + 1.0f) <= 45.0f && (safeY + 1.0f) <= 45.0f &&
+                            val centered = Offset(dropWorld.x - bedW / 2f, dropWorld.y - bedH / 2f)
+                            val snapped = TopDownProjection.snapToGrid(centered)
+                            val safeX = snapped.x.coerceIn(0f, 45.0f - bedW)
+                            val safeY = snapped.y.coerceIn(0f, 45.0f - bedH)
+                            val canDrop = safeX >= 0f && safeY >= 0f && (safeX + bedW) <= 45.0f && (safeY + bedH) <= 45.0f &&
                                     !uiState.plots.any { plot ->
-                                        safeX < (plot.posX + plot.widthM) && (safeX + 1.0f) > plot.posX &&
-                                        safeY < (plot.posY + plot.heightM) && (safeY + 1.0f) > plot.posY
+                                        safeX < (plot.posX + plot.widthM) && (safeX + bedW) > plot.posX &&
+                                        safeY < (plot.posY + plot.heightM) && (safeY + bedH) > plot.posY
                                     }
                             if (canDrop) {
-                                editViewModel.addDirectPlantingPlot(safeX, safeY, "Bed", "bed")
+                                editViewModel.addDirectPlantingPlot(safeX, safeY, "Bed", "bed", initialW = bedW, initialH = bedH)
                                 advanceTutorialAfterDrop(tutorialUiState, tutorialViewModel)
                             } else {
                                 editViewModel.reportInvalidDropLocation("⚠️ Hindi maaaring maglagay ng kama dito: May nakaharang o lagpas sa sakahan.")
                             }
                         } else {
+                            val targetBed = uiState.plots.firstOrNull { plot ->
+                                dropWorld.x >= plot.posX && dropWorld.x <= (plot.posX + plot.widthM) &&
+                                dropWorld.y >= plot.posY && dropWorld.y <= (plot.posY + plot.heightM) &&
+                                (plot.cropName?.startsWith("Bed", ignoreCase = true) == true || plot.cropId?.startsWith("bed", ignoreCase = true) == true || plot.plotLabel.startsWith("Bed", ignoreCase = true))
+                            }
                             if (targetBed != null) {
-                                val planted = editViewModel.plantCropInBed(targetBed.id, dragCropName, dragCropId, safeX, safeY)
+                                val planted = editViewModel.plantCropInBed(targetBed.id, dragCropName, dragCropId, dropWorld.x, dropWorld.y)
                                 if (planted) {
                                     advanceTutorialAfterDrop(tutorialUiState, tutorialViewModel)
                                 }

@@ -22,6 +22,8 @@ data class CropPlantingDraft(
     val varietyId: String = "",      // e.g. "new_kuroda"
     val plantingDate: String = "",   // YYYY-MM-DD
     val plantCount: Int = 1,         // Number of plants
+    val soilType: SoilType = SoilType.LOAM, // Bed soil classification
+    val bedDimensions: String = "1.5m × 2.0m", // Dimension string e.g. "1.5m × 2.0m"
     val notes: String = "",          // Farmer notes
     val isNew: Boolean = true,
     val isChanged: Boolean = false,

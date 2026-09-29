@@ -211,24 +211,73 @@ class HomeViewModel(
             }
 
             launch {
-                combine(
-                    getFarmPlotsUseCase(farmId),
-                    getTodayTasksUseCase(farmId, today)
-                ) { plots, tasks ->
-                    plots.map { plot ->
-                        val plotTasks = tasks.filter { it.plotId == plot.id }
-                        plot.toRenderData(
-                            activeTasks = plotTasks.map { task ->
-                                TaskPinData(
-                                    taskId   = task.id,
-                                    taskType = task.taskType,
-                                    plotId   = task.plotId
-                                )
+                getFarmPlotsUseCase(farmId).collect { plots ->
+                    val plotIds = plots.map { it.id }
+                    if (plotIds.isNotEmpty()) {
+                        launch {
+                            combine(
+                                RepositoryProvider.cropZoneRepository.observeZonesByPlotIds(plotIds),
+                                getTodayTasksUseCase(farmId, today)
+                            ) { zones, tasks ->
+                                val renderPlots = mutableListOf<PlotRenderData>()
+                                plots.forEach { plot ->
+                                    val matchingZones = zones.filter {
+                                        it.plotId == plot.id &&
+                                        !it.cropName.isNullOrBlank() &&
+                                        !it.cropName.equals("Bed", ignoreCase = true)
+                                    }
+                                    val plotTasks = tasks.filter { it.plotId == plot.id }
+                                    val taskPins = plotTasks.map { task ->
+                                        TaskPinData(
+                                            taskId   = task.id,
+                                            taskType = task.taskType,
+                                            plotId   = task.plotId
+                                        )
+                                    }
+
+                                    if (matchingZones.size > 1) {
+                                        matchingZones.forEachIndexed { zIdx, zone ->
+                                            val zCropName = zone.cropName ?: "Vegetable"
+                                            val zCropId = zone.cropId ?: zCropName.lowercase()
+                                            renderPlots.add(
+                                                plot.copy(
+                                                    id = "${plot.id}_zone_${zone.id}",
+                                                    plotLabel = "${plot.plotLabel} (Z${zIdx + 1})",
+                                                    cropName = zCropName,
+                                                    cropId = zCropId
+                                                ).toRenderData(activeTasks = taskPins)
+                                            )
+                                        }
+                                    } else {
+                                        val isBedLabel = plot.cropName?.startsWith("Bed", ignoreCase = true) == true
+                                        val effectiveCropName = if (plot.cropName.isNullOrBlank() || isBedLabel) {
+                                            matchingZones.firstOrNull()?.cropName ?: plot.cropName
+                                        } else {
+                                            plot.cropName
+                                        }
+                                        val effectiveCropId = if (plot.cropId.isNullOrBlank() || plot.cropId.equals("bed", ignoreCase = true)) {
+                                            matchingZones.firstOrNull()?.cropId ?: plot.cropId
+                                        } else {
+                                            plot.cropId
+                                        }
+                                        renderPlots.add(
+                                            plot.copy(
+                                                cropName = effectiveCropName,
+                                                cropId = effectiveCropId
+                                            ).toRenderData(activeTasks = taskPins)
+                                        )
+                                    }
+                                }
+                                renderPlots
+                            }.collect { renderPlots ->
+                                _uiState.update { it.copy(plots = renderPlots, isLoading = false) }
                             }
-                        )
+                        }
+                    } else {
+                        getTodayTasksUseCase(farmId, today).collect {
+                            _uiState.update { it.copy(plots = emptyList(), isLoading = false) }
+                        }
                     }
-                }.collect { renderPlots ->
-                    _uiState.update { it.copy(plots = renderPlots, isLoading = false) }
                 }
             }
         }

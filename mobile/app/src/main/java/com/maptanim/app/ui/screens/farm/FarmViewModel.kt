@@ -3,7 +3,6 @@ package com.maptanim.app.ui.screens.farm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maptanim.app.core.preferences.FarmPreferencesManager
-import com.maptanim.app.data.local.entity.PlantingMonitorEntity
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.domain.model.*
@@ -12,9 +11,6 @@ import com.maptanim.app.domain.usecase.*
 import com.maptanim.app.dss.engine.CompanionAlert
 import com.maptanim.app.dss.engine.DssEngine
 import com.maptanim.app.dss.engine.DssRule
-import com.maptanim.app.ui.screens.monitoring.CropCategoryFilter
-import com.maptanim.app.ui.screens.monitoring.MonitoredPlant
-import com.maptanim.app.ui.screens.monitoring.SeasonalityFilter
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -160,8 +156,6 @@ class FarmViewModel(
     private val getAllCropsUseCase: GetAllCropsUseCase = GetAllCropsUseCase(cropRepository),
     private val observeFarmActivitiesUseCase: ObserveFarmActivitiesUseCase = ObserveFarmActivitiesUseCase(activityRepository),
     private val logFarmActivityUseCase: LogFarmActivityUseCase = LogFarmActivityUseCase(activityRepository),
-    private val observePlantingMonitorsUseCase: ObservePlantingMonitorsUseCase = ObservePlantingMonitorsUseCase(RepositoryProvider.plantingMonitorDao),
-    private val recordPlantingMonitorUseCase: RecordPlantingMonitorUseCase = RecordPlantingMonitorUseCase(RepositoryProvider.plantingMonitorDao),
     private val startPlantingUseCase: StartPlantingUseCase = StartPlantingUseCase(plotRepository),
     private val recordHarvestUseCase: RecordHarvestUseCase = RecordHarvestUseCase(harvestRepository)
 ) : ViewModel() {
@@ -222,9 +216,7 @@ class FarmViewModel(
                 knowledgeBaseRepository.observePestGuides()
             ) { activities, dynamicRules, allPests -> Triple(activities, dynamicRules, allPests) }
 
-            val monitorsFlow = observePlantingMonitorsUseCase()
-
-            combine(flowGroup1, flowGroup2, monitorsFlow) { g1, g2, monitors ->
+            combine(flowGroup1, flowGroup2) { g1, g2 ->
                 buildFarmState(
                     farmId = resolvedFarmId,
                     plots = g1.first,
@@ -233,7 +225,6 @@ class FarmViewModel(
                     activities = g2.first.filter { it.farmId == resolvedFarmId },
                     dynamicRules = g2.second,
                     allPests = g2.third,
-                    monitors = monitors,
                     todayStr = todayStr
                 )
             }
@@ -255,7 +246,6 @@ class FarmViewModel(
         activities: List<Activity>,
         dynamicRules: List<DssRule>,
         allPests: List<PestGuide>,
-        monitors: List<PlantingMonitorEntity>,
         todayStr: String
     ): (FarmUiState) -> FarmUiState {
         val today = LocalDate.now()
@@ -770,11 +760,11 @@ class FarmViewModel(
             val plot = plots.firstOrNull { it.id == plant.id }
             val crop = crops.firstOrNull { it.name.equals(plot?.cropName, ignoreCase = true) }
 
-            val latestObs = monitors
-                .filter { it.plantingId == plant.id }
-                .maxByOrNull { it.recordedAt }
+            val latestObs = activities
+                .filter { it.plotId == plant.id }
+                .maxByOrNull { it.performedAt }
 
-            val condition = latestObs?.unit ?: when {
+            val condition = when {
                 plant.companionAlerts.isNotEmpty() -> "Under Mild Stress (Companion Conflict)"
                 plant.daysPlanted > plant.daysToHarvest -> "Mature / Ready to Harvest"
                 else -> "Healthy & Vigorously Growing"
@@ -803,7 +793,7 @@ class FarmViewModel(
                 growthObservation = obs,
                 plantCondition = condition,
                 pestObservation = plant.pestInfo,
-                lastRecordedAt = latestObs?.recordedAt?.take(10) ?: plant.rawPlantedDate?.take(10)
+                lastRecordedAt = latestObs?.performedAt?.take(10) ?: plant.rawPlantedDate?.take(10)
             )
         }
 
@@ -917,35 +907,19 @@ class FarmViewModel(
             val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
             val now = ZonedDateTime.now().toString()
 
-            val monitorEntity = PlantingMonitorEntity(
-                id = UUID.randomUUID().toString(),
-                plantingId = plotId,
-                cropId = plot.cropId ?: "",
-                cropName = plot.cropName ?: "Vegetable",
-                cropVariety = plot.cropVariety,
-                monitorType = "OBSERVATION",
-                value = null,
-                unit = condition,
-                notes = buildString {
-                    append("Stage: $stage • Condition: $condition")
-                    if (pestNotes.isNotBlank()) append(" • Pests: $pestNotes")
-                    if (notes.isNotBlank()) append(" • $notes")
-                },
-                dueDate = null,
-                isCompleted = true,
-                completedAt = now,
-                recordedAt = now,
-                createdAt = now
-            )
-            recordPlantingMonitorUseCase(monitorEntity)
+            val fullNotes = buildString {
+                append("Stage: $stage • Condition: $condition")
+                if (pestNotes.isNotBlank()) append(" • Pests: $pestNotes")
+                if (notes.isNotBlank()) append(" • $notes")
+            }
 
             logFarmActivityUseCase(
                 Activity(
                     id = UUID.randomUUID().toString(),
                     plotId = plotId,
                     farmId = plot.farmId,
-                    type = TaskType.NUTRITION,
-                    notes = "Observation logged for ${plot.plotLabel}: $condition, Stage: $stage",
+                    type = if (pestNotes.isNotBlank()) TaskType.PEST_ALERT else TaskType.OBSERVATION,
+                    notes = "Observation logged for ${plot.plotLabel}: $fullNotes",
                     performedAt = now
                 )
             )

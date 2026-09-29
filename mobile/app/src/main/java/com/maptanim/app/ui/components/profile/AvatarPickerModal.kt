@@ -1,5 +1,15 @@
 package com.maptanim.app.ui.components.profile
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,12 +38,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import com.maptanim.app.domain.model.AvatarItem
 import com.maptanim.app.renderer.AssetLoader
 import com.maptanim.app.ui.components.avatar.ProfileAvatar
 import com.maptanim.app.ui.screens.profile.AvatarSourceOption
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun ViewAvatarDialog(
@@ -109,6 +122,79 @@ fun ChangeAvatarModal(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+
+    // ── Photo Album Pickers & Storage Permission ──────────────────────────────
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val savedPath = saveImageUriToInternalStorage(context, uri)
+            if (savedPath != null) {
+                onSelectAvatar(savedPath)
+            } else {
+                Toast.makeText(context, "Could not process selected image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val getContentFallbackLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val savedPath = saveImageUriToInternalStorage(context, uri)
+            if (savedPath != null) {
+                onSelectAvatar(savedPath)
+            } else {
+                Toast.makeText(context, "Could not process selected image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            } catch (_: Exception) {
+                getContentFallbackLauncher.launch("image/*")
+            }
+        } else {
+            Toast.makeText(context, "Photos permission is required to select from album", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ── Camera Capture & Camera Permission ────────────────────────────────────
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
+            val savedPath = saveBitmapToInternalStorage(context, bitmap)
+            if (savedPath != null) {
+                onSelectAvatar(savedPath)
+            } else {
+                Toast.makeText(context, "Could not save captured photo", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch(null)
+        } else {
+            Toast.makeText(context, "Camera permission is required to capture a photo", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -228,18 +314,59 @@ fun ChangeAvatarModal(
                     AvatarSourceOption.TAKE_PHOTO -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 20.dp)
+                                .padding(vertical = 16.dp)
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(48.dp))
-                            Text("Take a Photo with Camera", color = White, fontSize = 14.sp)
-                            Button(
-                                onClick = { onSelectAvatar("Avatar/Male_Avatar.png") },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(ForestGreen.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("Capture & Save")
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = null,
+                                    tint = ForestGreen,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Take a Photo with Camera",
+                                    color = White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Take a live photo using your phone camera to set as your profile avatar.",
+                                    color = White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    val isCameraGranted = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.CAMERA
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (isCameraGranted) {
+                                        cameraLauncher.launch(null)
+                                    } else {
+                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Open Camera & Capture", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -247,24 +374,106 @@ fun ChangeAvatarModal(
                     AvatarSourceOption.PHOTO_ALBUM -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 20.dp)
+                                .padding(vertical = 16.dp)
                         ) {
-                            Icon(Icons.Default.PhotoAlbum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(48.dp))
-                            Text("Select Photo from Album", color = White, fontSize = 14.sp)
-                            Button(
-                                onClick = { onSelectAvatar("Avatar/Female_Avatar.png") },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(ForestGreen.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("Choose & Save")
+                                Icon(
+                                    Icons.Default.PhotoAlbum,
+                                    contentDescription = null,
+                                    tint = ForestGreen,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Select Photo from Album",
+                                    color = White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Choose a photo from your gallery or album to set as your profile picture.",
+                                    color = White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    val isStorageGranted = ContextCompat.checkSelfPermission(
+                                        context,
+                                        storagePermission
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (isStorageGranted || Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        try {
+                                            photoPickerLauncher.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        } catch (_: Exception) {
+                                            getContentFallbackLauncher.launch("image/*")
+                                        }
+                                    } else {
+                                        storagePermissionLauncher.launch(storagePermission)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                            ) {
+                                Icon(Icons.Default.PhotoAlbum, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Select from Album", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Saves a picked image Uri to app internal storage and returns the local file path.
+ */
+private fun saveImageUriToInternalStorage(context: Context, uri: Uri): String? {
+    return try {
+        val dir = File(context.filesDir, "avatars").apply { if (!exists()) mkdirs() }
+        val file = File(dir, "avatar_gallery_${System.currentTimeMillis()}.png")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
+        file.absolutePath
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/**
+ * Saves a camera bitmap to app internal storage and returns the local file path.
+ */
+private fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap): String? {
+    return try {
+        val dir = File(context.filesDir, "avatars").apply { if (!exists()) mkdirs() }
+        val file = File(dir, "avatar_camera_${System.currentTimeMillis()}.png")
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+        }
+        file.absolutePath
+    } catch (_: Exception) {
+        null
     }
 }
 

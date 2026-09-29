@@ -1,14 +1,23 @@
 package com.maptanim.app.ui.screens.settings
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
@@ -22,16 +31,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
+import com.maptanim.app.MainActivity
 import com.maptanim.app.core.audio.LocalSoundManager
 import com.maptanim.app.core.audio.SoundEffect
+import com.maptanim.app.core.notification.NotificationHelper
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
@@ -46,6 +59,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     navController: NavHostController
 ) {
+    val context = LocalContext.current
     val soundManager = LocalSoundManager.current
     var isMuted by remember { mutableStateOf(soundManager.isMuted) }
     var bgmVolume by remember { mutableFloatStateOf(soundManager.bgmVolume) }
@@ -53,6 +67,17 @@ fun SettingsScreen(
     var sfxVolume by remember { mutableFloatStateOf(soundManager.sfxVolume) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var enableNotifications by remember { mutableStateOf(true) }
+    var hasNotificationPermission by remember {
+        mutableStateOf(NotificationHelper.hasNotificationPermission(context))
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasNotificationPermission = isGranted
+        enableNotifications = isGranted
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -181,13 +206,41 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Task & Care Reminders", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
                         Text("Irrigation and harvest notifications", color = White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (enableNotifications && hasNotificationPermission) ForestGreen else Color.Gray)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (enableNotifications && hasNotificationPermission) "Connected & Active"
+                                else if (!hasNotificationPermission) "Permission Required"
+                                else "Notifications Disabled",
+                                color = if (enableNotifications && hasNotificationPermission) ForestGreen else White.copy(alpha = 0.5f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     Switch(
-                        checked = enableNotifications,
-                        onCheckedChange = { enableNotifications = it },
+                        checked = enableNotifications && hasNotificationPermission,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !NotificationHelper.hasNotificationPermission(context)) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    enableNotifications = true
+                                    hasNotificationPermission = true
+                                }
+                            } else {
+                                enableNotifications = false
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = White,
                             checkedTrackColor = ForestGreen
@@ -196,7 +249,8 @@ fun SettingsScreen(
                 }
             }
 
-            // ── 3. LOG OUT SECTION ──────────────────────────────────────────
+
+            // ── 4. LOG OUT SECTION ──────────────────────────────────────────
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
@@ -293,7 +347,7 @@ fun SettingsDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.VolumeUp,
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = "Audio Adjustment",
                             tint = Color(0xFF81C784),
                             modifier = Modifier.size(24.dp)

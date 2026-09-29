@@ -160,11 +160,3 @@ interface CropZoneRepository {
     suspend fun saveZones(zones: List<CropZone>)
     suspend fun deleteZone(zoneId: String)
 }
-
-// ─── FarmObjectRepository ─────────────────────────────────────────────────
-
-interface FarmObjectRepository {
-    fun observeObjectsByFarmId(farmId: String): Flow<List<FarmObject>>
-    suspend fun saveObjects(objects: List<FarmObject>)
-    suspend fun deleteObject(objectId: String)
-}

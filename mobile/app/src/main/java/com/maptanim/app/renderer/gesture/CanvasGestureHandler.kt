@@ -2,7 +2,6 @@ package com.maptanim.app.renderer.gesture
 
 import androidx.compose.ui.geometry.Offset
 import com.maptanim.app.domain.model.EditTool
-import com.maptanim.app.renderer.canvas.FarmCanvasRenderer
 import com.maptanim.app.renderer.model.*
 
 /**

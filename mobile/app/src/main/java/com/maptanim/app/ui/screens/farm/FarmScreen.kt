@@ -50,7 +50,6 @@ import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.FarmTask
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.navigation.Routes
-import com.maptanim.app.ui.screens.monitoring.MonitoredPlant
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 import android.content.res.Configuration
@@ -91,7 +90,6 @@ fun FarmScreen(
             FarmTopBar(
                 farmName = uiState.farmName,
                 onBack = { navController.popBackStack() },
-                onDssClick = { navController.navigate(Routes.dssRoute(uiState.farmId)) },
                 onMenuClick = { isMenuExpanded = true }
             )
 
@@ -101,13 +99,6 @@ fun FarmScreen(
                 onDismissRequest = { isMenuExpanded = false },
                 modifier = Modifier.background(Color(0xFF1F291A))
             ) {
-                DropdownMenuItem(
-                    text = { Text("⚡ Decision Support (DSS)", color = Color(0xFF81C784), fontWeight = FontWeight.Bold) },
-                    onClick = {
-                        isMenuExpanded = false
-                        navController.navigate(Routes.dssRoute(uiState.farmId))
-                    }
-                )
                 DropdownMenuItem(
                     text = { Text("✏️ Edit Farm Layout", color = White) },
                     onClick = {
@@ -284,7 +275,6 @@ fun FarmScreen(
 private fun FarmTopBar(
     farmName: String,
     onBack: () -> Unit,
-    onDssClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -315,16 +305,6 @@ private fun FarmTopBar(
                 letterSpacing = 1.sp,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
-                onClick = onDssClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "DSS Advisory",
-                    tint = Color(0xFF81C784)
-                )
-            }
             IconButton(
                 onClick = onMenuClick,
                 modifier = Modifier.size(36.dp)

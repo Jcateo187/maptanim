@@ -21,7 +21,7 @@ interface DssDecisionDao {
     fun insertDecisions(decisions: List<DssDecisionEntity>)
 
     @Query("DELETE FROM dss_cached_decisions WHERE farm_id = :farmId")
-    fun clearDecisionsForFarm(farmId: String)
+    fun clearDecisionsForFarm(farmId: String): Int
 
     @Transaction
     fun replaceDecisions(farmId: String, decisions: List<DssDecisionEntity>) {

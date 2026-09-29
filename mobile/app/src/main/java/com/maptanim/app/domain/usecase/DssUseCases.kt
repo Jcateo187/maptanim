@@ -1,7 +1,5 @@
 package com.maptanim.app.domain.usecase
 
-import com.maptanim.app.data.local.dao.PlantingMonitorDao
-import com.maptanim.app.data.local.entity.PlantingMonitorEntity
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.domain.model.Activity
 import com.maptanim.app.domain.model.Crop
@@ -64,7 +62,7 @@ class BuildDssInputUseCase(
     private val harvestRepository: HarvestRepository = RepositoryProvider.harvestRepository,
     private val activityRepository: ActivityRepository = RepositoryProvider.activityRepository,
     private val dssRuleRepository: DssRuleRepository = RepositoryProvider.dssRuleRepository,
-    private val plantingMonitorDao: PlantingMonitorDao? = RepositoryProvider.plantingMonitorDao,
+    private val cropKnowledgeRepository: com.maptanim.app.data.repository.CropKnowledgeRepository = RepositoryProvider.cropKnowledgeRepository,
     private val createSession: CreateDssSessionUseCase = CreateDssSessionUseCase()
 ) {
     suspend operator fun invoke(farmId: String): DssInput = withContext(Dispatchers.IO) {
@@ -78,14 +76,12 @@ class BuildDssInputUseCase(
 
         val harvests: List<HarvestRecord> = harvestRepository.observeHarvestRecords(farmId).firstOrNull() ?: emptyList()
         val activities: List<Activity> = activityRepository.observeAllActivities().firstOrNull() ?: emptyList()
-        val monitors: List<PlantingMonitorEntity> = plantingMonitorDao?.getAllMonitors() ?: emptyList()
         val currentDate = LocalDate.now()
 
         val farmerData = DssFarmerData(
             farm = farm,
             plots = plots,
             cropZones = cropZones,
-            monitors = monitors,
             harvestHistory = harvests,
             recentActivities = activities,
             currentDate = currentDate
@@ -94,10 +90,21 @@ class BuildDssInputUseCase(
         // 2. Gather Agricultural Reference Data through Repositories
         val crops: List<Crop> = cropRepository.observeAllCrops().firstOrNull() ?: emptyList()
         val dynamicRules = dssRuleRepository.getAllRules()
+        val yieldStudies = cropKnowledgeRepository.getAllYieldStudies()
+        val varieties = cropKnowledgeRepository.getAllVarieties()
+        val growthStages = cropKnowledgeRepository.getAllGrowthStages()
+        val soilCompatibilities = cropKnowledgeRepository.getAllSoilCompatibilities()
+        val pestGuides = cropKnowledgeRepository.getAllPestGuides()
+
         val referenceData = DssReferenceData(
             crops = crops,
             companionRules = dynamicRules,
-            documentedRules = DssRuleCatalog.documentedRules
+            documentedRules = DssRuleCatalog.documentedRules,
+            yieldStudies = yieldStudies,
+            varieties = varieties,
+            growthStages = growthStages,
+            soilCompatibilities = soilCompatibilities,
+            pestDiseaseGuides = pestGuides
         )
 
         // 3. Create Session Context

@@ -188,16 +188,15 @@ fun TopDownFarmCanvas(
     var activeHandle by remember { mutableStateOf<HandleType?>(null) }
     var activeDragPlotId by remember { mutableStateOf<String?>(null) }
     var lastPointerCount by remember { mutableIntStateOf(0) }
-    var pinchStartDist by remember { mutableFloatStateOf(0f) }
-    var pinchStartZoom by remember { mutableFloatStateOf(0f) }
+    var lastPinchDist by remember { mutableFloatStateOf(0f) }
 
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     val topPaddingPx = with(density) { 56.dp.toPx() }
     val bottomPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 60.dp.toPx() }
-    val leftPaddingPx = with(density) { if (isLandscape) 64.dp.toPx() else 48.dp.toPx() }
-    val rightPaddingPx = with(density) { if (isLandscape) 72.dp.toPx() else 16.dp.toPx() }
+    val leftPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
+    val rightPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
 
     // Entrance animation — fit farm on layout or orientation change
     LaunchedEffect(canvasSize, isLandscape) {
@@ -295,8 +294,7 @@ fun TopDownFarmCanvas(
                                     // Start pinch zoom
                                     val p1 = changes[0].position
                                     val p2 = changes[1].position
-                                    pinchStartDist = dist(p1, p2)
-                                    pinchStartZoom = camera.zoom
+                                    lastPinchDist = dist(p1, p2)
                                     dragMode = DragMode.PAN // Switch to pan mode during pinch
                                 }
                                 lastPointerCount = pointerCount
@@ -307,15 +305,18 @@ fun TopDownFarmCanvas(
                                     val p1 = changes[0].position
                                     val p2 = changes[1].position
                                     val curDist = dist(p1, p2)
-                                    if (pinchStartDist > 10f) {
-                                        val scale = curDist / pinchStartDist
-                                        val newZoom = (pinchStartZoom * scale).coerceIn(0.15f, 4f)
-                                        // Zoom towards center of pinch
+                                    if (lastPinchDist > 10f) {
+                                        val factor = curDist / lastPinchDist
+                                        val availW = (canvasSize.width.toFloat() - leftPaddingPx - rightPaddingPx).coerceAtLeast(100f)
+                                        val availH = (canvasSize.height.toFloat() - topPaddingPx - bottomPaddingPx).coerceAtLeast(100f)
+                                        val fitZoom = minOf(availW / (45f * TopDownProjection.PPM), availH / (45f * TopDownProjection.PPM)).coerceIn(0.15f, 3.5f)
+                                        val targetZoom = (camera.zoom * factor).coerceIn(fitZoom, 3.5f)
+                                        val actualScale = if (camera.zoom > 0f) targetZoom / camera.zoom else 1f
+
                                         val center = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
-                                        val worldAtCenter = TopDownProjection.screenToWorld(center.x, center.y, camera)
-                                        val newPanX = center.x - worldAtCenter.x * TopDownProjection.PPM * newZoom
-                                        val newPanY = center.y - worldAtCenter.y * TopDownProjection.PPM * newZoom
-                                        val rawCam = camera.copy(panX = newPanX, panY = newPanY, zoom = newZoom)
+                                        val newPanX = center.x - (center.x - camera.panX) * actualScale
+                                        val newPanY = center.y - (center.y - camera.panY) * actualScale
+                                        val rawCam = camera.copy(panX = newPanX, panY = newPanY, zoom = targetZoom)
                                         camera = TopDownProjection.clampCamera(
                                             rawCam, farmW = 45f, farmH = 45f,
                                             screenW = canvasSize.width.toFloat(), screenH = canvasSize.height.toFloat(),
@@ -323,6 +324,7 @@ fun TopDownFarmCanvas(
                                             leftPadding = leftPaddingPx, rightPadding = rightPaddingPx
                                         )
                                     }
+                                    lastPinchDist = curDist
                                     changes.forEach { it.consume() }
                                 } else if (pointerCount == 1) {
                                     val change = changes.firstOrNull { it.pressed } ?: continue
@@ -427,6 +429,7 @@ fun TopDownFarmCanvas(
                                     activeDragPlotId = null
                                     dragAccumWorld = Offset.Zero
                                     lastPointerCount = 0
+                                    lastPinchDist = 0f
                                 }
                                 lastPointerCount = pointerCount
                             }
@@ -446,11 +449,6 @@ fun TopDownFarmCanvas(
 
         // ── Farm Boundary (45m × 45m) ──────────────────────────────────
         drawFarmBoundary(camera)
-
-        // ── Hover Highlight (during crop/bed drag) ─────────────────────
-        if (isDraggingCrop && hoverWorldPos != null) {
-            drawHoverTile(hoverWorldPos, isValidPlacement, camera)
-        }
 
         // ── Plot Beds & Crops ──────────────────────────────────────────
         for (plot in currentPlots) {
@@ -478,6 +476,14 @@ fun TopDownFarmCanvas(
             if (currentIsResizeMode) {
                 drawResizeHandles(selectedPlot, camera)
             }
+        }
+
+        // ── Drag Hover Tile Preview ────────────────────────────────────
+        if (isDraggingCrop && hoverWorldPos != null) {
+            val isBedDrag = activeCropId.startsWith("bed", ignoreCase = true) || activeCropName.contains("Bed", ignoreCase = true)
+            val hoverW = if (isBedDrag) 2.0f else 1.0f
+            val hoverH = 1.0f
+            drawHoverTile(hoverWorldPos, isValidPlacement, camera, hoverW, hoverH)
         }
     }
 }
@@ -538,13 +544,20 @@ private fun DrawScope.drawFarmBoundary(camera: TopDownCamera) {
     )
 }
 
-private fun DrawScope.drawHoverTile(worldPos: Offset, isValid: Boolean, camera: TopDownCamera) {
+private fun DrawScope.drawHoverTile(
+    worldPos: Offset,
+    isValid: Boolean,
+    camera: TopDownCamera,
+    w: Float = 1f,
+    h: Float = 1f
+) {
     val tl = TopDownProjection.worldToScreen(worldPos.x, worldPos.y, camera)
-    val s = TopDownProjection.worldSizeToScreen(1f, camera)
+    val sw = TopDownProjection.worldSizeToScreen(w, camera)
+    val sh = TopDownProjection.worldSizeToScreen(h, camera)
     val color = if (isValid) ValidHover.copy(alpha = 0.35f) else InvalidHover.copy(alpha = 0.35f)
     val borderColor = if (isValid) ValidHover else InvalidHover
-    drawRoundRect(color, tl, Size(s, s), CornerRadius(3f))
-    drawRoundRect(borderColor, tl, Size(s, s), CornerRadius(3f), style = Stroke(2f))
+    drawRoundRect(color, tl, Size(sw, sh), CornerRadius(4f * camera.zoom.coerceIn(0.5f, 2f)))
+    drawRoundRect(borderColor, tl, Size(sw, sh), CornerRadius(4f * camera.zoom.coerceIn(0.5f, 2f)), style = Stroke(2f))
 }
 
 private fun DrawScope.drawPlotBed(
@@ -561,31 +574,37 @@ private fun DrawScope.drawPlotBed(
     val bedSize = Size(bedW, bedH)
     val cornerR = CornerRadius(4f * camera.zoom.coerceIn(0.5f, 2f))
 
-    val isBed = plot.cropName.equals("Bed", ignoreCase = true) || plot.cropId.equals("bed", ignoreCase = true)
+    val isBed = plot.cropName?.startsWith("Bed", ignoreCase = true) == true ||
+            plot.cropId?.startsWith("bed", ignoreCase = true) == true ||
+            plot.plotLabel.startsWith("Bed", ignoreCase = true) ||
+            plot.cropName.isNullOrBlank() ||
+            plot.cropId.isNullOrBlank() ||
+            plot.cropName.equals("Bed", ignoreCase = true) ||
+            plot.cropId.equals("bed", ignoreCase = true)
     val bedCrops = cropZones.filter { it.plotId == plot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }
 
-    if (isBed && bedCrops.isEmpty()) {
-        // Plain brown bed — no crops
-        drawRoundRect(BedFill, tl, bedSize, cornerR)
-        drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
-        // Subtle horizontal furrow lines
-        val lineCount = (plot.heightM * 2).toInt().coerceIn(1, 12)
-        val lineSpacing = bedH / (lineCount + 1)
-        for (i in 1..lineCount) {
-            val y = tl.y + i * lineSpacing
-            drawLine(
-                BedBorder.copy(alpha = 0.3f),
-                Offset(tl.x + 4f, y),
-                Offset(tl.x + bedW - 4f, y),
-                strokeWidth = 0.8f
-            )
-        }
-    } else {
-        // Planted bed — dark brown base with crop pattern
-        drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
-        drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
+    if (isBed) {
+        if (bedCrops.isEmpty()) {
+            // Plain brown bed — no crops
+            drawRoundRect(BedFill, tl, bedSize, cornerR)
+            drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
+            // Subtle horizontal furrow lines
+            val lineCount = (plot.heightM * 2).toInt().coerceIn(1, 12)
+            val lineSpacing = bedH / (lineCount + 1)
+            for (i in 1..lineCount) {
+                val y = tl.y + i * lineSpacing
+                drawLine(
+                    BedBorder.copy(alpha = 0.3f),
+                    Offset(tl.x + 4f, y),
+                    Offset(tl.x + bedW - 4f, y),
+                    strokeWidth = 0.8f
+                )
+            }
+        } else {
+            // Planted bed — dark brown base with crop zones
+            drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
+            drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
 
-        if (bedCrops.isNotEmpty()) {
             val iconRadius = (4f * camera.zoom).coerceIn(2.5f, 10f)
             bedCrops.forEach { zone ->
                 val cropCol = cropColor(zone.cropName ?: "")
@@ -645,27 +664,35 @@ private fun DrawScope.drawPlotBed(
                         }
                     }
                 } else {
-                    val spacing = 0.8f
-                    val dotRadius = TopDownProjection.worldSizeToScreen(spacing * 0.25f, camera).coerceIn(2.5f, 9f)
-                    var cx = zoneWorldX + minOf(spacing / 2f, zone.widthM / 2f)
-                    while (cx < zoneWorldX + zone.widthM) {
-                        var cy = zoneWorldY + minOf(spacing / 2f, zone.heightM / 2f)
-                        while (cy < zoneWorldY + zone.heightM) {
+                    val effectiveSpacingX = if (zone.spacingM in 0.2f..zone.widthM) zone.spacingM else zone.widthM
+                    val effectiveSpacingY = if (zone.spacingM in 0.2f..zone.heightM) zone.spacingM else zone.heightM
+                    val cols = (zone.widthM / effectiveSpacingX).toInt().coerceAtLeast(1)
+                    val rows = (zone.heightM / effectiveSpacingY).toInt().coerceAtLeast(1)
+                    val stepX = zone.widthM / cols
+                    val stepY = zone.heightM / rows
+                    val dotRadius = TopDownProjection.worldSizeToScreen(minOf(stepX, stepY) * 0.25f, camera).coerceIn(2.5f, 9f)
+
+                    for (r in 0 until rows) {
+                        val cy = zoneWorldY + (r + 0.5f) * stepY
+                        for (c in 0 until cols) {
+                            val cx = zoneWorldX + (c + 0.5f) * stepX
                             val screenPos = TopDownProjection.worldToScreen(cx, cy, camera)
                             if (screenPos.x > tl.x + 2 && screenPos.x < tl.x + bedW - 2 &&
                                 screenPos.y > tl.y + 2 && screenPos.y < tl.y + bedH - 2) {
                                 drawCircle(cropCol, dotRadius, screenPos)
                                 drawCircle(cropCol.copy(alpha = 0.5f), dotRadius + 1f, screenPos, style = Stroke(0.5f))
                             }
-                            cy += spacing
                         }
-                        cx += spacing
                     }
                 }
             }
-        } else {
-            // Draw crop icons as colored circles in a grid pattern
-            val spacing = 0.8f // meters between crop icons
+        }
+    } else {
+        // Non-bed plot (legacy fallback only if plot has a real crop assigned)
+        if (!plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true)) {
+            drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
+            drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
+            val spacing = 0.8f
             val iconRadius = TopDownProjection.worldSizeToScreen(spacing * 0.28f, camera).coerceIn(2f, 14f)
             val cropCol = cropColor(plot.cropName ?: "")
             val margin = 0.25f
@@ -675,17 +702,18 @@ private fun DrawScope.drawPlotBed(
                 var cy = plot.posY + margin + spacing / 2f
                 while (cy < plot.posY + plot.heightM - margin) {
                     val screenPos = TopDownProjection.worldToScreen(cx, cy, camera)
-                    // Check if inside bed bounds on screen
                     if (screenPos.x > tl.x + 2 && screenPos.x < tl.x + bedW - 2 &&
                         screenPos.y > tl.y + 2 && screenPos.y < tl.y + bedH - 2) {
                         drawCircle(cropCol, iconRadius, screenPos)
-                        drawCircle(cropCol.copy(alpha = 0.5f), iconRadius + 1f, screenPos,
-                            style = Stroke(0.5f))
+                        drawCircle(cropCol.copy(alpha = 0.5f), iconRadius + 1f, screenPos, style = Stroke(0.5f))
                     }
                     cy += spacing
                 }
                 cx += spacing
             }
+        } else {
+            drawRoundRect(BedFill, tl, bedSize, cornerR)
+            drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
         }
     }
 

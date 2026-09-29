@@ -67,5 +67,38 @@ object AssetLoader {
         assetCache.clear()
         drawableCache.clear()
     }
+
+    /**
+     * Loads an avatar ImageBitmap from an asset path, local file path, or content URI.
+     */
+    fun loadAvatarImage(context: Context, path: String?): ImageBitmap? {
+        if (path.isNullOrBlank()) return null
+        return try {
+            when {
+                path.startsWith("content://") -> {
+                    val uri = android.net.Uri.parse(path)
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                    }
+                }
+                path.startsWith("/") || path.startsWith("file://") -> {
+                    val filePath = if (path.startsWith("file://")) {
+                        android.net.Uri.parse(path).path ?: path.removePrefix("file://")
+                    } else {
+                        path
+                    }
+                    val file = java.io.File(filePath)
+                    if (file.exists()) {
+                        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+                    } else {
+                        loadFromAssets(context, path.removePrefix("file:///android_asset/"))
+                    }
+                }
+                else -> loadFromAssets(context, path)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 }
 

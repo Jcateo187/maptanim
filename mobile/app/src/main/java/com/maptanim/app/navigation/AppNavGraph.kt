@@ -8,26 +8,21 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.compose.ui.window.DialogProperties
+import com.maptanim.app.ui.screens.about.AboutScreen
 import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
 import com.maptanim.app.ui.screens.auth.LoginScreen
 import com.maptanim.app.ui.screens.auth.WelcomeScreen
-import com.maptanim.app.ui.screens.about.AboutScreen
-import com.maptanim.app.ui.screens.calendar.CalendarScreen
 import com.maptanim.app.ui.screens.community.CommunityScreen
 import com.maptanim.app.ui.screens.edit.FarmEditorScreen
-import com.maptanim.app.ui.screens.home.MainHomeScreen
-import com.maptanim.app.ui.screens.vegetables.VegetablesScreen
-import com.maptanim.app.ui.screens.loading.LoadingScreen
 import com.maptanim.app.ui.screens.farm.FarmScreen
-import com.maptanim.app.ui.screens.monitoring.MonitoringScreen
+import com.maptanim.app.ui.screens.home.MainHomeScreen
+import com.maptanim.app.ui.screens.loading.LoadingScreen
 import com.maptanim.app.ui.screens.profile.ProfileScreen
 import com.maptanim.app.ui.screens.reports.ReportsScreen
 import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
-import com.maptanim.app.ui.screens.dss.DssScreen
+import com.maptanim.app.ui.screens.vegetables.VegetablesScreen
 
 @Composable
 fun AppNavGraph() {
@@ -122,24 +117,6 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.CALENDAR,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
-        ) {
-            CalendarScreen(navController = navController)
-        }
-
-        composable(
             route = Routes.FARMS,
             enterTransition = {
                 slideIntoContainer(
@@ -191,44 +168,6 @@ fun AppNavGraph() {
             }
         ) {
             ReportsScreen(navController = navController)
-        }
-
-        composable(
-            route = Routes.DSS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
-        ) {
-            DssScreen(navController = navController)
-        }
-
-        composable(
-            route = Routes.DSS_WITH_FARM,
-            arguments = listOf(navArgument("farmId") { type = NavType.StringType; defaultValue = "" }),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
-        ) { backStackEntry ->
-            val farmId = backStackEntry.arguments?.getString("farmId")
-            DssScreen(navController = navController, farmId = farmId)
         }
     }
 }

@@ -9,6 +9,11 @@ import com.maptanim.app.domain.model.HarvestRecord
 import com.maptanim.app.domain.model.PestGuide
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.dss.engine.DssRule
+import com.maptanim.app.data.local.entity.CropGrowthStageEntity
+import com.maptanim.app.data.local.entity.CropPestDiseaseGuideEntity
+import com.maptanim.app.data.local.entity.CropSoilCompatibilityEntity
+import com.maptanim.app.data.local.entity.CropVarietyEntity
+import com.maptanim.app.data.local.entity.CropYieldStudyEntity
 import java.time.LocalDate
 
 // ─── 1. DSS Working Session ──────────────────────────────────────────────────
@@ -35,7 +40,6 @@ data class DssFarmerData(
     val farm: Farm?,
     val plots: List<CropPlot>,
     val cropZones: List<CropZone> = emptyList(),
-    val monitors: List<com.maptanim.app.data.local.entity.PlantingMonitorEntity> = emptyList(),
     val harvestHistory: List<HarvestRecord> = emptyList(),
     val recentActivities: List<Activity> = emptyList(),
     val currentDate: LocalDate = LocalDate.now()
@@ -51,7 +55,12 @@ data class DssReferenceData(
     val crops: List<Crop>,
     val companionRules: List<DssRule>,
     val pestGuides: List<PestGuide> = emptyList(),
-    val documentedRules: List<com.maptanim.app.dss.rules.DssDocumentedRule> = emptyList()
+    val documentedRules: List<com.maptanim.app.dss.rules.DssDocumentedRule> = emptyList(),
+    val yieldStudies: List<CropYieldStudyEntity> = emptyList(),
+    val varieties: List<CropVarietyEntity> = emptyList(),
+    val growthStages: List<CropGrowthStageEntity> = emptyList(),
+    val soilCompatibilities: List<CropSoilCompatibilityEntity> = emptyList(),
+    val pestDiseaseGuides: List<CropPestDiseaseGuideEntity> = emptyList()
 )
 
 // ─── 4. Validation Issues (Transparent Data Limitations) ─────────────────────

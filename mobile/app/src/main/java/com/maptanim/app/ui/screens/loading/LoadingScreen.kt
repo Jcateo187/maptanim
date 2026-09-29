@@ -1,5 +1,6 @@
 package com.maptanim.app.ui.screens.loading
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -10,10 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,14 @@ fun LoadingScreen(
 
     val loadingViewModel: LoadingViewModel = viewModel()
     val uiState by loadingViewModel.uiState.collectAsState()
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val bgDrawableRes = if (isLandscape) {
+        R.drawable.landscape_bg_loading
+    } else {
+        R.drawable.portrait_bg_loading
+    }
 
     var isStarted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -102,10 +113,10 @@ fun LoadingScreen(
             .background(Color(0xFF09140E)),
         contentAlignment = Alignment.Center
     ) {
-        // 1. Fullscreen Landscape Image with subtle entrance zoom
+        // 1. Fullscreen Image (Landscape or Portrait) with subtle entrance zoom
         Image(
-            painter = painterResource(R.drawable.loading_background),
-            contentDescription = "MapTanim Landscape Background",
+            painter = painterResource(bgDrawableRes),
+            contentDescription = if (isLandscape) "MapTanim Landscape Loading Background" else "MapTanim Portrait Loading Background",
             modifier = Modifier
                 .fillMaxSize()
                 .scale(backgroundScale),
@@ -117,7 +128,10 @@ fun LoadingScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 26.dp)
+                .padding(bottom = if (isLandscape) 20.dp else 32.dp)
+                .padding(horizontal = 24.dp)
+                .widthIn(max = if (isLandscape) 420.dp else 340.dp)
+                .fillMaxWidth()
                 .alpha(uiAlpha),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -126,7 +140,7 @@ fun LoadingScreen(
             LinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
-                    .width(380.dp)
+                    .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
                 color = Color(0xFF4CAF50),
@@ -135,7 +149,7 @@ fun LoadingScreen(
 
             // Bottom of progress bar: Text changes information & percentage
             Row(
-                modifier = Modifier.width(380.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

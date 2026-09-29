@@ -30,17 +30,24 @@ object PlantInstanceGenerator {
         val cropName = zone.cropName ?: return emptyList()
         val spacing = if (zone.spacingM > 0f) zone.spacingM else 1.0f
 
-        val columns = Math.floor((zone.widthM / spacing).toDouble()).toInt().coerceAtLeast(1)
-        val rows = Math.floor((zone.heightM / spacing).toDouble()).toInt().coerceAtLeast(1)
+        val effectiveSpacingX = if (spacing < zone.widthM) spacing else zone.widthM
+        val effectiveSpacingY = if (spacing < zone.heightM) spacing else zone.heightM
+
+        val columns = Math.floor((zone.widthM / effectiveSpacingX).toDouble()).toInt().coerceAtLeast(1)
+        val rows = Math.floor((zone.heightM / effectiveSpacingY).toDouble()).toInt().coerceAtLeast(1)
+
+        val stepX = zone.widthM / columns
+        val stepY = zone.heightM / rows
 
         val plants = mutableListOf<PlantInstanceRender>()
-        val worldOriginX = plotPosX + zone.offsetX
-        val worldOriginY = plotPosY + zone.offsetY
+        // The caller passes the exact world origin of the zone (e.g. parentPlot.posX + zone.offsetX)
+        val worldOriginX = plotPosX
+        val worldOriginY = plotPosY
 
         for (row in 0 until rows) {
-            val y = row * spacing + (spacing / 2f)
+            val y = (row + 0.5f) * stepY
             for (col in 0 until columns) {
-                val x = col * spacing + (spacing / 2f)
+                val x = (col + 0.5f) * stepX
                 plants += PlantInstanceRender(
                     worldX = worldOriginX + x,
                     worldY = worldOriginY + y,

@@ -41,7 +41,7 @@ fun ProfileAvatar(
     val avatarBitmap = remember(avatarAssetPath) {
         val path = avatarAssetPath
         if (!path.isNullOrEmpty()) {
-            AssetLoader.loadFromAssets(context, path)
+            AssetLoader.loadAvatarImage(context, path)
         } else null
     }
 

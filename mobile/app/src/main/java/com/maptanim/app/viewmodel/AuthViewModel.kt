@@ -2,6 +2,7 @@ package com.maptanim.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.maptanim.app.core.validation.AuthValidator
 import com.maptanim.backend.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,15 +24,12 @@ class AuthViewModel : ViewModel() {
         confirmPassword: String = password,
         acceptedTerms: Boolean = true
     ) {
-        val trimmedEmail = email.trim()
-        if (trimmedEmail.isBlank()) {
-            _uiState.value = AuthUiState(errorMessage = "Please enter your email address.")
+        val emailValidation = AuthValidator.validateGoogleEmail(email)
+        if (emailValidation is AuthValidator.ValidationResult.Invalid) {
+            _uiState.value = AuthUiState(errorMessage = emailValidation.message)
             return
         }
-        if (!trimmedEmail.contains("@") || !trimmedEmail.contains(".")) {
-            _uiState.value = AuthUiState(errorMessage = "Please enter a valid email address.")
-            return
-        }
+
         if (password.isBlank()) {
             _uiState.value = AuthUiState(errorMessage = "Please enter a password.")
             return
@@ -50,19 +48,15 @@ class AuthViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            _uiState.value = AuthUiState(
-                isLoading = true
-            )
+            _uiState.value = AuthUiState(isLoading = true)
 
             val result = repository.signUp(
-                email = trimmedEmail,
+                email = email.trim(),
                 password = password
             )
 
             result.onSuccess {
-                _uiState.value = AuthUiState(
-                    isSuccess = true
-                )
+                _uiState.value = AuthUiState(isSuccess = true)
             }
 
             result.onFailure {
@@ -135,12 +129,9 @@ class AuthViewModel : ViewModel() {
 
     fun resetPassword(email: String) {
         val trimmedEmail = email.trim()
-        if (trimmedEmail.isBlank()) {
-            _uiState.value = AuthUiState(errorMessage = "Please enter your email address.")
-            return
-        }
-        if (!trimmedEmail.contains("@") || !trimmedEmail.contains(".")) {
-            _uiState.value = AuthUiState(errorMessage = "Please enter a valid email address.")
+        val emailValidation = AuthValidator.validateGoogleEmail(trimmedEmail)
+        if (emailValidation is AuthValidator.ValidationResult.Invalid) {
+            _uiState.value = AuthUiState(errorMessage = emailValidation.message)
             return
         }
 

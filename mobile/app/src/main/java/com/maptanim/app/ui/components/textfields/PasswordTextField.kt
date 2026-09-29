@@ -20,9 +20,9 @@ fun PasswordTextField(
     onValueChange: (String) -> Unit,
 
     label: String,
-
-    modifier: Modifier = Modifier
-
+    modifier: Modifier = Modifier,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false
 ) {
 
     var passwordVisible by remember {
@@ -44,7 +44,8 @@ fun PasswordTextField(
         },
 
         modifier = modifier.fillMaxWidth(),
-
+        supportingText = supportingText,
+        isError = isError,
         singleLine = true,
 
         shape = RoundedCornerShape(14.dp),

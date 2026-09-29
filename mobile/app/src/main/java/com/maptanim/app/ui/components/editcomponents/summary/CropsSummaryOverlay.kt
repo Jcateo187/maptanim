@@ -1,5 +1,8 @@
 package com.maptanim.app.ui.components.editcomponents.summary
 
+import android.content.res.Configuration
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,27 +10,38 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
+import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.ui.screens.edit.CropPlantingDraft
 import java.time.LocalDate
@@ -67,42 +81,61 @@ fun CropsSummaryOverlay(
 
     var localValidationError by remember { mutableStateOf<String?>(null) }
     var calendarTargetDraftId by remember { mutableStateOf<String?>(null) }
+    var calendarTargetBedId by remember { mutableStateOf<String?>(null) }
     var varietyTargetDraftId by remember { mutableStateOf<String?>(null) }
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d, yyyy") }
+    var soilTargetBedId by remember { mutableStateOf<String?>(null) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
+
+    val bedGroups = remember(drafts) {
+        drafts.groupBy { it.bedId }
+    }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val coroutineScope = rememberCoroutineScope()
+    var selectedBedId by remember(bedGroups.keys) {
+        mutableStateOf(bedGroups.keys.firstOrNull() ?: "")
+    }
+
+    LaunchedEffect(bedGroups.keys) {
+        if (selectedBedId.isBlank() || !bedGroups.containsKey(selectedBedId)) {
+            selectedBedId = bedGroups.keys.firstOrNull() ?: ""
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF040A06).copy(alpha = 0.50f))
+            .background(Color(0xDD000000))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { /* block outside clicks */ }
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(
+                horizontal = if (isLandscape) 16.dp else 8.dp,
+                vertical = if (isLandscape) 8.dp else 12.dp
+            ),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(min = 360.dp, max = 540.dp)
-                .fillMaxWidth(0.70f)
-                .fillMaxHeight(0.96f)
-                .clip(RoundedCornerShape(20.dp)),
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF0C1E13).copy(alpha = 0.96f),
-            border = BorderStroke(1.2.dp, Color(0xFF2E7D32).copy(alpha = 0.75f)),
-            shadowElevation = 18.dp
+                .fillMaxWidth(if (isLandscape) 0.88f else 0.98f)
+                .widthIn(max = 760.dp)
+                .fillMaxHeight(if (isLandscape) 0.98f else 0.96f)
+                .clip(RoundedCornerShape(22.dp)),
+            shape = RoundedCornerShape(22.dp),
+            color = Color(0xFFF8FAFC),
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            shadowElevation = 24.dp
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Header Banner
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF1B5E20))
-                            )
-                        )
-                        .padding(horizontal = 14.dp, vertical = 9.dp)
+                        .background(Color(0xFFEAF5EE))
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -111,32 +144,32 @@ fun CropsSummaryOverlay(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(28.dp)
-                                    .background(Color.White.copy(alpha = 0.20f), CircleShape),
+                                    .size(36.dp)
+                                    .background(Color(0xFF1E6E38), RoundedCornerShape(10.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
+                                    imageVector = Icons.Default.Spa,
                                     contentDescription = null,
-                                    tint = Color(0xFFFFD54F),
-                                    modifier = Modifier.size(16.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                             Column {
                                 Text(
-                                    text = "Crops Planting Summary",
+                                    text = "Crop Summary",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = Color.White
+                                    fontSize = 17.sp,
+                                    color = Color(0xFF0F1E2A)
                                 )
                                 Text(
-                                    text = "$farmName • ${drafts.size} New / Changed Crops",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFFC8E6C9)
+                                    text = "$farmName • ${drafts.size} Pananim sa ${bedGroups.size} Bed",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF5B6976)
                                 )
                             }
                         }
@@ -144,113 +177,466 @@ fun CropsSummaryOverlay(
                         IconButton(
                             onClick = onCancel,
                             modifier = Modifier
-                                .size(26.dp)
-                                .background(Color.Black.copy(alpha = 0.25f), CircleShape)
+                                .size(32.dp)
+                                .background(Color.White, CircleShape)
+                                .border(1.dp, Color(0xFFD4ECD8), CircleShape)
                         ) {
-                            Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Close, "Close", tint = Color(0xFF1E6E38), modifier = Modifier.size(16.dp))
                         }
                     }
                 }
+
+                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
 
                 // Error or Validation Banner
                 val activeError = localValidationError ?: errorMessage
                 if (!activeError.isNullOrBlank()) {
                     Surface(
-                        color = Color(0xFFB71C1C).copy(alpha = 0.85f),
-                        border = BorderStroke(1.dp, Color(0xFFFF5252)),
-                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFEF2F2),
+                        border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Warning, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Text(activeError, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Icon(Icons.Default.Warning, null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
+                            Text(activeError, color = Color(0xFF991B1B), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
 
-                // List of Crop Plantings
+                // ── Quick Overview Banner ──────────────────────────────
+                if (drafts.isNotEmpty()) {
+                    val todayStr = remember { LocalDate.now().toString() }
+                    val plantedTodayCount = drafts.count { it.plantingDate == todayStr }
+                    val allDraftsToday = drafts.isNotEmpty() && plantedTodayCount == drafts.size
+                    Surface(
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Layers, null, tint = Color(0xFF1E6E38), modifier = Modifier.size(16.dp))
+                                Text(
+                                    text = "${bedGroups.size} Beds • ${drafts.size} Pananim",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF0F172A)
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (allDraftsToday) Color(0xFF1E6E38) else Color(0xFFF1F5F9),
+                                border = BorderStroke(1.dp, if (allDraftsToday) Color(0xFF1E6E38) else Color(0xFFE2E8F0)),
+                                modifier = Modifier.clickable {
+                                    drafts = drafts.map { it.copy(plantingDate = todayStr) }
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (allDraftsToday) Icons.Default.Check else Icons.Default.Today,
+                                        contentDescription = null,
+                                        tint = if (allDraftsToday) Color.White else Color(0xFF1E6E38),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = if (allDraftsToday) "$plantedTodayCount/${drafts.size} Nakatakda" else "Itanim Lahat ($plantedTodayCount/${drafts.size})",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (allDraftsToday) Color.White else Color(0xFF1E6E38)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (drafts.isEmpty()) {
                     Box(
                         modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Yard, null, tint = Color(0xFF4CAF50).copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                            Text("Walang bago o binagong pananim.", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
+                            Icon(Icons.Default.Yard, null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(48.dp))
+                            Text("Walang bago o binagong pananim.", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFF64748B))
                         }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    // ── Horizontal Bed Cards / Tabs ─────────────────────────────
+                    if (bedGroups.size > 1) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFEAF5EE),
+                            border = BorderStroke(1.dp, Color(0xFFD4ECD8)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 4.dp)
+                        ) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                bedGroups.forEach { (bedId, bedCrops) ->
+                                    val isSelected = bedId == selectedBedId
+                                    val bedLabel = bedCrops.firstOrNull()?.bedLabel ?: "Bed"
+                                    val cropCount = bedCrops.size
+
+                                    item(key = "bed-tab-$bedId") {
+                                        Surface(
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = if (isSelected) Color(0xFF1E6E38) else Color.White,
+                                            border = BorderStroke(
+                                                width = if (isSelected) 1.5.dp else 1.dp,
+                                                color = if (isSelected) Color(0xFF1E6E38) else Color(0xFFCBD5E1)
+                                            ),
+                                            shadowElevation = if (isSelected) 2.dp else 0.dp,
+                                            modifier = Modifier.clickable { selectedBedId = bedId }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .background(
+                                                            color = if (isSelected) Color.White.copy(alpha = 0.2f) else Color(0xFFEAF5EE),
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.GridOn,
+                                                        contentDescription = "Bed",
+                                                        tint = if (isSelected) Color.White else Color(0xFF1E6E38),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+
+                                                Column {
+                                                    Text(
+                                                        text = bedLabel.ifBlank { "Bed" },
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isSelected) Color.White else Color(0xFF0F1E2A)
+                                                    )
+                                                    Text(
+                                                        text = "$cropCount Pananim",
+                                                        fontSize = 11.sp,
+                                                        color = if (isSelected) Color.White.copy(alpha = 0.85f) else Color(0xFF64748B)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Active Bed Details & Paginated Crops Container ──────────
+                    val activeBedCrops = bedGroups[selectedBedId] ?: emptyList()
+                    val activeBedLabel = activeBedCrops.firstOrNull()?.bedLabel ?: "Bed"
+                    val activeBedDimensions = activeBedCrops.firstOrNull()?.bedDimensions ?: "1.5m × 2.0m"
+                    val activeBedSoil = activeBedCrops.firstOrNull()?.soilType ?: SoilType.LOAM
+                    val (soilEn, _) = getSoilDisplayName(activeBedSoil)
+                    val soilLabel = if (soilEn.endsWith("Soil", ignoreCase = true)) soilEn else "$soilEn Soil"
+
+                    val cropPages = remember(activeBedCrops) { activeBedCrops.chunked(2) }
+                    val pagerState = rememberPagerState(initialPage = 0, pageCount = { cropPages.size.coerceAtLeast(1) })
+
+                    LaunchedEffect(selectedBedId) {
+                        if (cropPages.isNotEmpty()) {
+                            pagerState.scrollToPage(0)
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(drafts, key = { it.id }) { draft ->
-                            val cropName = draft.cropName
-                            val cropId = draft.cropId
-                            val imageUri = remember(cropId, cropName) {
-                                CropMetadataAssetDataSource.resolveCropImage(cropId, cropName)
-                            }
-                            val currentDateStr = draft.plantingDate
-                            val currentLocalDate = remember(currentDateStr) {
-                                try { LocalDate.parse(currentDateStr) } catch (_: Exception) { LocalDate.now() }
-                            }
-                            val isSim = draft.variety.contains("10s", ignoreCase = true)
-                            val daysToHarvest = remember(cropName, isSim) {
-                                if (isSim) 1 else getDaysToHarvestEstimate(cropName)
-                            }
-                            val estimatedHarvestDate = remember(currentLocalDate, daysToHarvest) {
-                                currentLocalDate.plusDays(daysToHarvest.toLong())
-                            }
+                        // Bed Header Bar (Exact match with user mockup)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFEAF5EE),
+                            border = BorderStroke(1.dp, Color(0xFFD4ECD8)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                // Left: Green Square Icon + Title + Dimensions
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f, fill = false)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(Color(0xFF1E6E38), RoundedCornerShape(12.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.GridOn,
+                                            contentDescription = "Bed",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
 
-                            CropSummaryCard(
-                                draft = draft,
-                                cropName = cropName,
-                                variety = draft.variety,
-                                bedLabel = draft.bedLabel,
-                                plantCount = draft.plantCount,
-                                notes = draft.notes,
-                                imageUri = imageUri,
-                                plantedDate = currentLocalDate,
-                                estimatedHarvestDate = estimatedHarvestDate,
-                                daysToHarvest = daysToHarvest,
-                                dateFormatter = dateFormatter,
-                                onOpenCalendar = { calendarTargetDraftId = draft.id },
-                                onOpenVarietyDropdown = { varietyTargetDraftId = draft.id },
-                                onPlantCountChanged = { newCount ->
-                                    drafts = drafts.map { if (it.id == draft.id) it.copy(plantCount = newCount) else it }
-                                },
-                                onNotesChanged = { newNotes ->
-                                    drafts = drafts.map { if (it.id == draft.id) it.copy(notes = newNotes) else it }
+                                    Column {
+                                        Text(
+                                            text = activeBedLabel.ifBlank { "Bed" },
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF0F1E2A)
+                                        )
+                                        Text(
+                                            text = "$activeBedDimensions • ${activeBedCrops.size} Pananim",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF5B6976)
+                                        )
+                                    }
                                 }
-                            )
+
+                                // Right: Soil Selection Dropdown Pill
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color(0xFFD7EEDF),
+                                    border = BorderStroke(1.dp, Color(0xFFBCE3CD)),
+                                    modifier = Modifier.clickable { soilTargetBedId = selectedBedId }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.GridOn,
+                                            contentDescription = "Soil Type",
+                                            tint = Color(0xFF1E6E38),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = soilLabel,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E6E38)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Select Soil",
+                                            tint = Color(0xFF1E6E38),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tomato Research Reference if applicable
+                        if (activeBedCrops.any { it.cropName.contains("Tomato", ignoreCase = true) || it.cropName.contains("Kamatis", ignoreCase = true) }) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White,
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Science,
+                                            contentDescription = null,
+                                            tint = Color(0xFF1E6E38),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "Agricultural Research Reference (Published Trials)",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E6E38)
+                                        )
+                                    }
+                                    Text(
+                                        text = "• Study A (Camiguin, 2015–2016): Diamante Max F1 + Sawdust Mulch yielded 5.08 t/ha (Control: 4.28 t/ha)",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF475569)
+                                    )
+                                    Text(
+                                        text = "• Study B (Bacnotan, 2025): Off-Season Protected Rain Shelter + 3x Trehalose Foliar: Max fruit count & retention",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF475569)
+                                    )
+                                }
+                            }
+                        }
+
+                        // ── Horizontal Pager (2 Rows of Crops per View) ─────────
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) { pageIndex ->
+                            val pageCrops = cropPages.getOrNull(pageIndex) ?: emptyList()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                pageCrops.forEach { cropDraft ->
+                                    CropSummaryRow(
+                                        draft = cropDraft,
+                                        dateFormatter = dateFormatter,
+                                        onOpenCalendar = { calendarTargetDraftId = cropDraft.id },
+                                        onOpenVarietyDropdown = { varietyTargetDraftId = cropDraft.id },
+                                        onPlantToday = {
+                                            val todayStr = LocalDate.now().toString()
+                                            drafts = drafts.map { if (it.id == cropDraft.id) it.copy(plantingDate = todayStr) else it }
+                                        },
+                                        onNotesChanged = { newNotes ->
+                                            drafts = drafts.map { if (it.id == cropDraft.id) it.copy(notes = newNotes) else it }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // ── Crop Pagination Tabs: [ 1 ] [ 2 ] [ 3 ] ──────────────
+                        if (cropPages.size > 1) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color.White,
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp, bottom = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            tint = Color(0xFF64748B),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Pahina ${pagerState.currentPage + 1} ng ${cropPages.size} (${activeBedCrops.size} Pananim)",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF475569)
+                                        )
+                                    }
+
+                                    // Tab 1, 2, 3 ... buttons
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        cropPages.indices.forEach { pageIdx ->
+                                            val isPageActive = pagerState.currentPage == pageIdx
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isPageActive) Color(0xFF1E6E38) else Color(0xFFF1F5F9),
+                                                border = BorderStroke(
+                                                    width = 1.dp,
+                                                    color = if (isPageActive) Color(0xFF1E6E38) else Color(0xFFCBD5E1)
+                                                ),
+                                                modifier = Modifier.clickable {
+                                                    coroutineScope.launch {
+                                                        pagerState.animateScrollToPage(pageIdx)
+                                                    }
+                                                }
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier.size(width = 34.dp, height = 30.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "${pageIdx + 1}",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isPageActive) Color.White else Color(0xFF334155)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
 
                 // Fixed Bottom Actions
                 Surface(
-                    color = Color(0xFF07140B),
-                    border = BorderStroke(1.dp, Color(0xFF1E3A24)),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedButton(
                             onClick = onCancel,
                             shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.7f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier = Modifier.weight(1f).height(38.dp)
+                            border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                            modifier = Modifier.weight(1f).height(40.dp)
                         ) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
@@ -281,10 +667,10 @@ fun CropsSummaryOverlay(
                             },
                             enabled = !isSaving,
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier = Modifier.weight(1.3f).height(38.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E6E38)),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                            modifier = Modifier.weight(1.3f).height(40.dp)
                         ) {
                             if (isSaving) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -296,23 +682,20 @@ fun CropsSummaryOverlay(
                                 Text("Save Plantings", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                             }
                         }
-                    }
                 }
             }
         }
     }
+}
 
     calendarTargetDraftId?.let { targetId ->
         val target = drafts.firstOrNull { it.id == targetId }
         if (target != null) {
             val initialDateStr = target.plantingDate
-            val isSim = target.variety.contains("10s", ignoreCase = true)
-            val daysToHarvest = if (isSim) 1 else getDaysToHarvestEstimate(target.cropName)
             PlantingCalendarModal(
                 cropName = target.cropName,
                 plotLabel = target.bedLabel,
                 initialDateStr = initialDateStr,
-                daysToHarvest = daysToHarvest,
                 onDismiss = { calendarTargetDraftId = null },
                 onDateSelected = { newDate ->
                     val isValid = try {
@@ -333,6 +716,22 @@ fun CropsSummaryOverlay(
         }
     }
 
+    calendarTargetBedId?.let { targetBedId ->
+        val bedDrafts = drafts.filter { it.bedId == targetBedId }
+        val bedLabel = bedDrafts.firstOrNull()?.bedLabel ?: "Bed"
+        val initialDateStr = bedDrafts.firstOrNull()?.plantingDate ?: LocalDate.now().toString()
+        PlantingCalendarModal(
+            cropName = "Lahat sa $bedLabel",
+            plotLabel = bedLabel,
+            initialDateStr = initialDateStr,
+            onDismiss = { calendarTargetBedId = null },
+            onDateSelected = { newDate ->
+                drafts = drafts.map { if (it.bedId == targetBedId) it.copy(plantingDate = newDate) else it }
+                calendarTargetBedId = null
+            }
+        )
+    }
+
     varietyTargetDraftId?.let { targetId ->
         val target = drafts.firstOrNull { it.id == targetId }
         if (target != null) {
@@ -351,6 +750,21 @@ fun CropsSummaryOverlay(
                 }
             )
         }
+    }
+
+    soilTargetBedId?.let { targetBedId ->
+        val bedDrafts = drafts.filter { it.bedId == targetBedId }
+        val bedLabel = bedDrafts.firstOrNull()?.bedLabel ?: "Bed"
+        val currentSoil = bedDrafts.firstOrNull()?.soilType ?: SoilType.LOAM
+        BedSoilSelectorModal(
+            bedLabel = bedLabel,
+            selectedSoil = currentSoil,
+            onDismiss = { soilTargetBedId = null },
+            onSoilSelected = { newSoil ->
+                drafts = drafts.map { if (it.bedId == targetBedId) it.copy(soilType = newSoil) else it }
+                soilTargetBedId = null
+            }
+        )
     }
 }
 
@@ -395,307 +809,356 @@ fun CropsSummaryOverlay(
     )
 }
 
+
 /**
- * Compact Crop Plot Card inside CropsSummaryOverlay.
+ * CropSummaryRow — Individual crop card matching the user's design mockup:
+ * - Rounded white card with soft border
+ * - Crop photo thumbnail on left
+ * - Title + Leaf icon + "Variety" dropdown box
+ * - Top-right "Nakatakda" status pill + 3-dots more menu
+ * - Horizontal divider
+ * - Bottom row: Petsa ng Pagtatanim (left) | Tala / Note (right)
  */
 @Composable
-private fun CropSummaryCard(
+private fun CropSummaryRow(
     draft: CropPlantingDraft,
-    cropName: String,
-    variety: String,
-    bedLabel: String,
-    plantCount: Int,
-    notes: String,
-    imageUri: String,
-    plantedDate: LocalDate,
-    estimatedHarvestDate: LocalDate,
-    daysToHarvest: Int,
     dateFormatter: DateTimeFormatter,
     onOpenCalendar: () -> Unit,
     onOpenVarietyDropdown: () -> Unit,
-    onPlantCountChanged: (Int) -> Unit,
+    onPlantToday: () -> Unit,
     onNotesChanged: (String) -> Unit
 ) {
+    val cropName = draft.cropName
+    val cropId = draft.cropId
+    val imageUri = remember(cropId, cropName) {
+        CropMetadataAssetDataSource.resolveCropImage(cropId, cropName)
+    }
+    val currentDateStr = draft.plantingDate
+    val currentLocalDate = remember(currentDateStr) {
+        try { LocalDate.parse(currentDateStr.take(10)) } catch (_: Exception) { LocalDate.now() }
+    }
+    var showEditNoteDialog by remember { mutableStateOf(false) }
+
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFF132A1C),
-        border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.45f)),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(10.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ── Bed Number Header ──────────────────────────────────────
+            // ── Top Row ─────────────────────────────────────────
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF1B3D23),
-                    border = BorderStroke(1.dp, Color(0xFF4CAF50).copy(alpha = 0.6f))
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(Icons.Default.Inbox, contentDescription = null, tint = Color(0xFFFFD54F), modifier = Modifier.size(13.dp))
+                    // Crop Thumbnail
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = cropName,
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Bed Number: $bedLabel",
-                            fontSize = 11.sp,
+                            text = cropName,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE8F5E9)
+                            fontSize = 18.sp,
+                            color = Color(0xFF0F1E2A)
                         )
+
+                        // Variety Selector Row
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Spa,
+                                contentDescription = null,
+                                tint = Color(0xFF1E6E38),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Variety",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF64748B),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFF1F5F9),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    modifier = Modifier.clickable { onOpenVarietyDropdown() }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = draft.variety.ifBlank { "Pumili ng Variety..." },
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E293B),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Select Variety",
+                                            tint = Color(0xFF64748B),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                Surface(
-                    color = if (draft.isNew) Color(0xFF1B5E20) else Color(0xFF004D40),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = if (draft.isNew) "✨ BAGO" else if (draft.isChanged) "✏️ BINAGO" else "🌱 NAKATANIM",
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFA5D6A7),
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                    )
+                // Top Right: More Options Menu
+                Box {
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More Options",
+                            tint = Color(0xFF334155),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Itanim Ngayon (Day 1)") },
+                            onClick = {
+                                showMenu = false
+                                onPlantToday()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Today, null, tint = Color(0xFF1E6E38)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Baguhin ang Petsa") },
+                            onClick = {
+                                showMenu = false
+                                onOpenCalendar()
+                            },
+                            leadingIcon = { Icon(Icons.Default.CalendarMonth, null, tint = Color(0xFF1E6E38)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Palitan ang Variety") },
+                            onClick = {
+                                showMenu = false
+                                onOpenVarietyDropdown()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Spa, null, tint = Color(0xFF1E6E38)) }
+                        )
+                    }
                 }
             }
 
+            // Divider
+            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+
+            // ── Bottom Row: Date & Note ─────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── Left Side: Crop Image ──────────────────────────────────
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(64.dp)
+                // Left Column: Petsa ng Pagtatanim
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onOpenCalendar() }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
-                            .shadow(4.dp, RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9))
-                                ),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .border(1.2.dp, Color(0xFF43A047), RoundedCornerShape(12.dp)),
+                            .size(34.dp)
+                            .background(Color(0xFFEAF5EE), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = imageUri,
-                            contentDescription = cropName,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(42.dp).padding(2.dp)
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = Color(0xFF1E6E38),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Petsa ng Pagtatanim",
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = currentLocalDate.format(dateFormatter),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F1E2A)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                // Center Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .width(1.dp)
+                        .height(34.dp)
+                        .background(Color(0xFFE2E8F0))
+                )
 
-                // ── Right Side: Crop Info & Form Fields ──────────────────
-                Column(
-                    modifier = Modifier.weight(1f)
+                // Right Column: Tala / Note
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showEditNoteDialog = true }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = cropName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color.White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(3.dp))
-
-                    // Variety Picker
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Variety:",
-                            fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.65f)
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFFFB300).copy(alpha = 0.20f),
-                            border = BorderStroke(0.8.dp, Color(0xFFFFB300).copy(alpha = 0.7f)),
-                            modifier = Modifier.clickable { onOpenVarietyDropdown() }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Text(
-                                    text = variety.ifBlank { "Pumili ng Variety" },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFFE082)
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Select Variety",
-                                    tint = Color(0xFFFFD54F),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Planting Date Picker
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF09140E),
-                        border = BorderStroke(0.8.dp, Color(0xFF2E7D32).copy(alpha = 0.7f)),
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenCalendar() }
+                            .size(34.dp)
+                            .background(Color(0xFFEAF5EE), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = null,
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(13.dp)
-                                )
-
-                                Column {
-                                    Text(
-                                        text = "Plant Date",
-                                        fontSize = 9.sp,
-                                        color = Color(0xFF81C784),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = plantedDate.format(dateFormatter),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Baguhin",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF81C784)
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = "Pick Date",
-                                    tint = Color(0xFF81C784),
-                                    modifier = Modifier.size(15.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Plant Count Stepper
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Bilang ng Halaman (Count):",
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.7f)
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = Color(0xFF1E6E38),
+                            modifier = Modifier.size(18.dp)
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            IconButton(
-                                onClick = { if (plantCount > 1) onPlantCountChanged(plantCount - 1) },
-                                modifier = Modifier.size(24.dp).background(Color(0xFF1E3A24), CircleShape)
-                            ) {
-                                Icon(Icons.Default.Remove, "-", tint = Color.White, modifier = Modifier.size(12.dp))
-                            }
-                            Text(
-                                text = "$plantCount",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.widthIn(min = 24.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            IconButton(
-                                onClick = { onPlantCountChanged(plantCount + 1) },
-                                modifier = Modifier.size(24.dp).background(Color(0xFF2E7D32), CircleShape)
-                            ) {
-                                Icon(Icons.Default.Add, "+", tint = Color.White, modifier = Modifier.size(12.dp))
-                            }
-                        }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Notes Field
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = onNotesChanged,
-                        placeholder = { Text("Tala / Notes ukol sa pananim...", fontSize = 10.sp, color = Color.Gray) },
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = Color.White),
-                        modifier = Modifier.fillMaxWidth().height(42.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF4CAF50),
-                            unfocusedBorderColor = Color(0xFF2E7D32).copy(alpha = 0.4f),
-                            focusedContainerColor = Color(0xFF09140E),
-                            unfocusedContainerColor = Color(0xFF09140E)
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(3.dp))
-
-                    // Harvest Estimate Window
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "🌾 Inaasahang Ani:",
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.55f)
+                            text = "Tala / Note",
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "${estimatedHarvestDate.format(dateFormatter)} ($daysToHarvest d)",
-                            fontSize = 10.sp,
+                            text = draft.notes.ifBlank { "Magdagdag ng tala..." },
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFA5D6A7)
+                            color = if (draft.notes.isBlank()) Color(0xFF94A3B8) else Color(0xFF0F1E2A),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEditNoteDialog) {
+        NoteEditorDialog(
+            cropName = cropName,
+            initialNote = draft.notes,
+            onDismiss = { showEditNoteDialog = false },
+            onSave = {
+                onNotesChanged(it)
+                showEditNoteDialog = false
+            }
+        )
+    }
+}
+
+/**
+ * NoteEditorDialog — Clean dialog for editing crop notes.
+ */
+@Composable
+private fun NoteEditorDialog(
+    cropName: String,
+    initialNote: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var noteText by remember { mutableStateOf(initialNote) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            shadowElevation = 16.dp,
+            modifier = Modifier.fillMaxWidth(0.92f)
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Tala / Note para sa $cropName",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF0F1E2A)
+                )
+
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { noteText = it },
+                    placeholder = {
+                        Text(
+                            "Maglagay ng tala / note para sa pananim na ito...",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF1E6E38),
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedContainerColor = Color(0xFFF8FAFC),
+                        unfocusedContainerColor = Color(0xFFF8FAFC),
+                        focusedTextColor = Color(0xFF0F172A),
+                        unfocusedTextColor = Color(0xFF0F172A)
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Kanselahin", color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = { onSave(noteText) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E6E38)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("I-save", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -711,7 +1174,6 @@ private fun PlantingCalendarModal(
     cropName: String,
     plotLabel: String,
     initialDateStr: String,
-    daysToHarvest: Int,
     onDismiss: () -> Unit,
     onDateSelected: (String) -> Unit
 ) {
@@ -750,13 +1212,13 @@ private fun PlantingCalendarModal(
                         indication = null
                     ) { /* block touch */ },
                 shape = RoundedCornerShape(18.dp),
-                color = Color(0xFF102014).copy(alpha = 0.90f),
-                border = BorderStroke(1.2.dp, Color(0xFF2E7D32).copy(alpha = 0.85f)),
-                shadowElevation = 12.dp
+                color = Color.White,
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                shadowElevation = 16.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Header
                     Row(
@@ -766,24 +1228,24 @@ private fun PlantingCalendarModal(
                     ) {
                         Column {
                             Text(
-                                text = "Schedule Planting Date",
+                                text = "Petsa ng Pagtatanim",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = Color.White
+                                fontSize = 16.sp,
+                                color = Color(0xFF0F172A)
                             )
                             Text(
                                 text = "$cropName • Plot $plotLabel",
                                 fontSize = 11.sp,
-                                color = Color(0xFF81C784)
+                                color = Color(0xFF64748B)
                             )
                         }
 
                         IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF64748B))
                         }
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = Color(0xFFE2E8F0))
 
                     // Month Navigation Row
                     Row(
@@ -795,21 +1257,21 @@ private fun PlantingCalendarModal(
                             onClick = { currentYearMonth = currentYearMonth.minusMonths(1) },
                             modifier = Modifier.size(28.dp)
                         ) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = Color(0xFF475569), modifier = Modifier.size(18.dp))
                         }
 
                         Text(
                             text = "${currentYearMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${currentYearMonth.year}",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = Color.White
+                            fontSize = 14.sp,
+                            color = Color(0xFF0F172A)
                         )
 
                         IconButton(
                             onClick = { currentYearMonth = currentYearMonth.plusMonths(1) },
                             modifier = Modifier.size(28.dp)
                         ) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = Color(0xFF475569), modifier = Modifier.size(18.dp))
                         }
                     }
 
@@ -819,7 +1281,7 @@ private fun PlantingCalendarModal(
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         listOf("S", "M", "T", "W", "T", "F", "S").forEach { day ->
-                            Text(day, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.5f))
+                            Text(day, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
                         }
                     }
 
@@ -830,7 +1292,7 @@ private fun PlantingCalendarModal(
                     val totalCells = firstDayOfWeek + daysInMonth
                     val rows = (totalCells + 6) / 7
 
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         for (r in 0 until rows) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -842,20 +1304,17 @@ private fun PlantingCalendarModal(
                                         val dateObj = currentYearMonth.atDay(dayNum)
                                         val isSelected = dateObj == selectedDate
                                         val isToday = dateObj == today
-                                        val harvestDate = selectedDate.plusDays(daysToHarvest.toLong())
-                                        val isHarvestDay = dateObj == harvestDate
 
                                         val bgColor = when {
-                                            isSelected -> Color(0xFF2E7D32)
-                                            isHarvestDay -> Color(0xFFD48806)
-                                            isToday -> Color(0xFF2A3424)
+                                            isSelected -> Color(0xFF1E6E38)
+                                            isToday -> Color(0xFFEAF5EE)
                                             else -> Color.Transparent
                                         }
 
                                         val textColor = when {
-                                            isSelected || isHarvestDay -> Color.White
-                                            isToday -> Color(0xFF81C784)
-                                            else -> Color.White.copy(alpha = 0.85f)
+                                            isSelected -> Color.White
+                                            isToday -> Color(0xFF1E6E38)
+                                            else -> Color(0xFF0F172A)
                                         }
 
                                         Box(
@@ -865,7 +1324,7 @@ private fun PlantingCalendarModal(
                                                 .background(bgColor)
                                                 .border(
                                                     width = if (isToday && !isSelected) 1.dp else 0.dp,
-                                                    color = if (isToday) Color(0xFF81C784) else Color.Transparent,
+                                                    color = if (isToday) Color(0xFF1E6E38) else Color.Transparent,
                                                     shape = CircleShape
                                                 )
                                                 .clickable {
@@ -876,7 +1335,7 @@ private fun PlantingCalendarModal(
                                         ) {
                                             Text(
                                                 text = "$dayNum",
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                                                 color = textColor
                                             )
@@ -908,11 +1367,17 @@ private fun PlantingCalendarModal(
                                     onDateSelected(dVal.toString())
                                 },
                                 shape = RoundedCornerShape(6.dp),
-                                color = if (isSel) Color(0xFF2E7D32) else Color(0xFF203625),
+                                color = if (isSel) Color(0xFF1E6E38) else Color(0xFFF1F5F9),
+                                border = BorderStroke(1.dp, if (isSel) Color(0xFF1E6E38) else Color(0xFFE2E8F0)),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Box(modifier = Modifier.padding(vertical = 5.dp), contentAlignment = Alignment.Center) {
-                                    Text(label, fontSize = 9.sp, color = Color.White, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal)
+                                Box(modifier = Modifier.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        label,
+                                        fontSize = 10.sp,
+                                        color = if (isSel) Color.White else Color(0xFF475569),
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                    )
                                 }
                             }
                         }
@@ -926,21 +1391,22 @@ private fun PlantingCalendarModal(
                         OutlinedButton(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF475569)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(34.dp)
+                                .height(36.dp)
                         ) {
-                            Text("Cancel", fontSize = 12.sp, color = Color.White)
+                            Text("Cancel", fontSize = 12.sp, color = Color(0xFF475569))
                         }
 
                         Button(
                             onClick = { onDateSelected(selectedDate.toString()) },
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E6E38)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(34.dp)
+                                .height(36.dp)
                         ) {
                             Text("Confirm", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
@@ -987,9 +1453,9 @@ private fun CropVarietyPickerModal(
                         indication = null
                     ) { /* block touch */ },
                 shape = RoundedCornerShape(18.dp),
-                color = Color(0xFF102014).copy(alpha = 0.92f),
-                border = BorderStroke(1.2.dp, Color(0xFF2E7D32).copy(alpha = 0.85f)),
-                shadowElevation = 12.dp
+                color = Color.White,
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                shadowElevation = 16.dp
             ) {
                 Column(
                     modifier = Modifier
@@ -1005,24 +1471,24 @@ private fun CropVarietyPickerModal(
                     ) {
                         Column {
                             Text(
-                                text = "Select Crop Variety",
+                                text = "Pumili ng Variety",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.White
+                                fontSize = 16.sp,
+                                color = Color(0xFF0F172A)
                             )
                             Text(
                                 text = "$cropName • Plot $plotLabel",
                                 fontSize = 11.sp,
-                                color = Color(0xFF81C784)
+                                color = Color(0xFF64748B)
                             )
                         }
 
                         IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF64748B))
                         }
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = Color(0xFFE2E8F0))
 
                     // Grouped Variety List
                     LazyColumn(
@@ -1030,17 +1496,17 @@ private fun CropVarietyPickerModal(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(categorizedGroups) { group ->
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Text(group.iconEmoji, fontSize = 12.sp)
+                                    Text(group.iconEmoji, fontSize = 13.sp)
                                     Text(
                                         text = group.categoryName,
-                                        fontSize = 11.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFFD54F)
+                                        color = Color(0xFF1E6E38)
                                     )
                                 }
 
@@ -1050,31 +1516,31 @@ private fun CropVarietyPickerModal(
                                         onClick = {
                                             onVarietySelected(varietyName)
                                         },
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isSelected) Color(0xFF2E7D32) else Color(0xFF1E3323),
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSelected) Color(0xFFEAF5EE) else Color.White,
                                         border = BorderStroke(
-                                            0.8.dp,
-                                            if (isSelected) Color(0xFF81C784) else Color(0xFF2E7D32).copy(alpha = 0.3f)
+                                            1.dp,
+                                            if (isSelected) Color(0xFF1E6E38) else Color(0xFFE2E8F0)
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
                                                 text = varietyName,
-                                                fontSize = 11.sp,
+                                                fontSize = 13.sp,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = Color.White
+                                                color = if (isSelected) Color(0xFF1E6E38) else Color(0xFF0F172A)
                                             )
                                             if (isSelected) {
                                                 Icon(
                                                     imageVector = Icons.Default.Check,
                                                     contentDescription = "Selected",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(14.dp)
+                                                    tint = Color(0xFF1E6E38),
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }
@@ -1086,13 +1552,14 @@ private fun CropVarietyPickerModal(
 
                     Button(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(36.dp)
+                            .height(40.dp)
                     ) {
-                        Text("Close", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Isara", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
                     }
                 }
             }
@@ -1101,8 +1568,232 @@ private fun CropVarietyPickerModal(
 }
 
 /**
- * Returns categorized variety groupings for any crop.
+ * BedSoilSelectorModal — Dialog allowing the farmer to select the soil type for a garden bed.
+ * Displays high-resolution soil profile images from metadata/soil_images, English & Tagalog names,
+ * and DSS suitability guidance.
  */
+@Composable
+private fun BedSoilSelectorModal(
+    bedLabel: String,
+    selectedSoil: SoilType,
+    onDismiss: () -> Unit,
+    onSoilSelected: (SoilType) -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 320.dp, max = 460.dp)
+                    .fillMaxWidth(0.88f)
+                    .fillMaxHeight(0.85f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* block touch */ },
+                shape = RoundedCornerShape(18.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                shadowElevation = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Pumili ng Uri ng Lupa",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color(0xFF0F172A)
+                            )
+                            Text(
+                                text = "Itakda para sa $bedLabel (DSS Compatibility)",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B)
+                            )
+                        }
+
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF64748B))
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFE2E8F0))
+
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(SoilType.values()) { soil ->
+                            val isSelected = soil == selectedSoil
+                            val (enName, phName) = getSoilDisplayName(soil)
+                            val soilDesc = getSoilFullDescription(soil)
+                            val imageUrl = getSoilImageUrl(soil)
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) Color(0xFFEAF5EE) else Color.White,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) Color(0xFF1E6E38) else Color(0xFFE2E8F0)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSoilSelected(soil) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = soil.name,
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "$enName • $phName",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF0F172A)
+                                            )
+                                            if (soil == SoilType.LOAM) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = Color(0xFF1E6E38)
+                                                ) {
+                                                    Text(
+                                                        text = "Optimal",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color.White,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(Modifier.height(2.dp))
+
+                                        Text(
+                                            text = soilDesc,
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF64748B),
+                                            lineHeight = 14.sp
+                                        )
+                                    }
+
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { onSoilSelected(soil) },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = Color(0xFF1E6E38),
+                                            unselectedColor = Color(0xFFCBD5E1)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Footer
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                        ) {
+                            Text("Isara", fontSize = 12.sp, color = Color(0xFF475569))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Returns soil texture image asset URL from local assets.
+ */
+fun getSoilImageUrl(soilType: SoilType): String = when (soilType) {
+    SoilType.LOAM -> "file:///android_asset/metadata/soil_images/Loam_soil.png"
+    SoilType.CLAY -> "file:///android_asset/metadata/soil_images/Clay_soil.png"
+    SoilType.SANDY -> "file:///android_asset/metadata/soil_images/Sandy_soil.png"
+    SoilType.SILTY -> "file:///android_asset/metadata/soil_images/Silty_soil.png"
+    SoilType.PEATY -> "file:///android_asset/metadata/soil_images/Peaty_soil.png"
+    SoilType.CHALKY -> "file:///android_asset/metadata/soil_images/Chalky_soil.png"
+}
+
+/**
+ * Returns English and Tagalog display names for soil classification.
+ */
+fun getSoilDisplayName(soilType: SoilType): Pair<String, String> = when (soilType) {
+    SoilType.LOAM -> "Loam" to "Lupang Luto"
+    SoilType.CLAY -> "Clay" to "Lupang Luad"
+    SoilType.SANDY -> "Sandy" to "Lupang Buhangin"
+    SoilType.SILTY -> "Silty" to "Lupang Banlik"
+    SoilType.PEATY -> "Peaty" to "Lupang Peat"
+    SoilType.CHALKY -> "Chalky" to "Lupang Apog"
+}
+
+/**
+ * Contextual agronomic guidance for soil type based on crops in the bed.
+ */
+fun getSoilQuickAdvice(soilType: SoilType, crops: List<CropPlantingDraft>): String {
+    val hasTomato = crops.any { it.cropName.contains("Tomato", ignoreCase = true) || it.cropName.contains("Kamatis", ignoreCase = true) }
+    return when (soilType) {
+        SoilType.LOAM -> if (hasTomato) "Pinakamainam para sa kamatis (balanseng drainage at aeration)" else "Tamang balanse ng drainage at taba ng lupa"
+        SoilType.CLAY -> if (hasTomato) "Mataas ang tubig: Panganib sa bacterial wilt. Maglagay ng drainage at ipa" else "Mabigat ang lupa; maglagay ng compost at ipa para lumuwag"
+        SoilType.SANDY -> if (hasTomato) "Mabilis maubos ang tubig; maglagay ng sawdust/dayami mulch" else "Mabilis tumagos ang tubig; madalasang patubig"
+        SoilType.SILTY -> "Mabuting moisture retention; bungkalin kung magkaroon ng crust"
+        SoilType.PEATY -> if (hasTomato) "Maasim: Maglagay ng apog (lime) para maiwasan ang blossom end rot" else "Mataas ang organic matter subalit mababa ang pH"
+        SoilType.CHALKY -> "Alkalina: Lagyan ng sulfur o compost para maayos ang paghigop ng sustansya"
+    }
+}
+
+/**
+ * Detailed description of soil profile.
+ */
+fun getSoilFullDescription(soilType: SoilType): String = when (soilType) {
+    SoilType.LOAM -> "Balanseng 40-40-20 buhangin, banlik, at luad. Mayaman sa organic matter at pinakamainam para sa mga ugat ng gulay."
+    SoilType.CLAY -> "Mabigat at mataas ang water retention. Nangangailangan ng ipa o compost upang maiwasan ang bacterial wilt sa kamatis."
+    SoilType.SANDY -> "Buhaghag at mabilis matuyo. Nangangailangan ng dayami o sawdust mulch para mapanatili ang sustansya at tubig."
+    SoilType.SILTY -> "Pino at makinis na lupa na may magandang moisture retention. Bungkalin ang ibabaw matapos ang malakas na ulan."
+    SoilType.PEATY -> "Maitim at mayaman sa nabubulok na bagay subalit maasim (acidic). Maglagay ng apog (lime) para sa kamatis."
+    SoilType.CHALKY -> "Alkalina at may mga batong apog. Nangangailangan ng sulfur o compost para maayos ang paghigop ng sustansya."
+}
+
 internal fun getCategorizedVarietiesForCrop(cropName: String): List<CategorizedVarietyGroup> {
     val clean = cropName.lowercase()
     return when {
