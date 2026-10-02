@@ -6,16 +6,17 @@ import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.imageResource
-import com.maptanim.app.R
 import java.io.IOException
 
-
+/**
+ * AssetLoader — Lightweight loader for application UI assets and avatars.
+ * Obsolete procedural textures, background scenery, and sprite generator pipelines removed.
+ */
 object AssetLoader {
 
     private val assetCache = HashMap<String, ImageBitmap?>()
     private val drawableCache = HashMap<Int, ImageBitmap>()
 
-   
     fun loadFromAssets(context: Context, path: String): ImageBitmap? {
         if (assetCache.containsKey(path)) {
             return assetCache[path]
@@ -38,28 +39,6 @@ object AssetLoader {
         return drawableCache.getOrPut(resId) {
             ImageBitmap.imageResource(resources, resId)
         }
-    }
-
-
-
-
-
-
-    fun getBackgroundTexture(context: Context, fileName: String = "background_scenery/backgound_1.png"): ImageBitmap? {
-        val primary = loadFromAssets(context, fileName)
-        if (primary != null) return primary
-
-        val fallbacks = listOf(
-            "background_scenery/backgound_1.png",
-            "backgrounds/farm_bg_45x45.png",
-            "backgrounds/farm_bg_v2.png",
-            "background_scenery/farm_background_2to1.png"
-        )
-        for (path in fallbacks) {
-            val loaded = loadFromAssets(context, path)
-            if (loaded != null) return loaded
-        }
-        return null
     }
 
     /** Clear in-memory caches if memory is low */
@@ -101,4 +80,3 @@ object AssetLoader {
         }
     }
 }
-

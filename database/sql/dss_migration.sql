@@ -70,3 +70,39 @@ CREATE INDEX IF NOT EXISTS idx_dss_decisions_category ON public.dss_decisions(ca
 ALTER TABLE public.dss_decisions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "dss_decisions_all" ON public.dss_decisions;
 CREATE POLICY "dss_decisions_all" ON public.dss_decisions FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. TABLE: public.crop_logs (Farmer Stage Logs & Context-Driven Observations)
+CREATE TABLE IF NOT EXISTS public.crop_logs (
+    id                  TEXT                        PRIMARY KEY DEFAULT ('log_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
+    crop_planting_id    TEXT                        NOT NULL,
+    farm_id             TEXT                        NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
+    bed_id              TEXT,
+    crop_id             TEXT,
+    variety_id          TEXT,
+    crop_name           VARCHAR(100)                NOT NULL,
+    variety_name        VARCHAR(100)                NOT NULL,
+    current_stage       VARCHAR(50)                 NOT NULL,
+    log_context         VARCHAR(50)                 NOT NULL,
+    care_activity       VARCHAR(50),
+    selected_choice     VARCHAR(10)                 NOT NULL,
+    selected_checkboxes JSONB                       DEFAULT '[]',
+    notes               TEXT,
+    log_date            DATE                        NOT NULL DEFAULT CURRENT_DATE,
+    created_at          TIMESTAMPTZ                 NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_crop_logs_planting ON public.crop_logs(crop_planting_id);
+CREATE INDEX IF NOT EXISTS idx_crop_logs_farm ON public.crop_logs(farm_id);
+CREATE INDEX IF NOT EXISTS idx_crop_logs_date ON public.crop_logs(log_date DESC);
+
+ALTER TABLE public.crop_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "crop_logs_all" ON public.crop_logs;
+CREATE POLICY "crop_logs_all" ON public.crop_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. EXTEND: public.harvest_records with flow fields
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS harvest_method VARCHAR(100);
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS quantity NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS unit VARCHAR(50) DEFAULT 'kg';
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS marketable_pct NUMERIC(5,2);
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS crop_planting_id TEXT;
+

@@ -159,8 +159,7 @@ private enum class DragMode { IDLE, PAN, MOVE_PLOT, MOVE_CROP, RESIZE_HANDLE }
  * crop icons, free-form positioning, snapping, resize handles, and professional
  * design-editor interactions.
  *
- * Renders entirely in a flat orthographic top-down view with NO isometric projection,
- * NO 3D terrain, NO diagonal tiles.
+ * Renders entirely in a flat orthographic 2D top-down view with rectangular beds and vector SVG crops.
  */
 @Composable
 fun TopDownFarmCanvas(
@@ -484,6 +483,17 @@ fun TopDownFarmCanvas(
             val hoverW = if (isBedDrag) 2.0f else 1.0f
             val hoverH = 1.0f
             drawHoverTile(hoverWorldPos, isValidPlacement, camera, hoverW, hoverH)
+            if (!isBedDrag && activeCropName.isNotBlank()) {
+                val htl = TopDownProjection.worldToScreen(hoverWorldPos.x, hoverWorldPos.y, camera)
+                val hsw = TopDownProjection.worldSizeToScreen(hoverW, camera)
+                val hsh = TopDownProjection.worldSizeToScreen(hoverH, camera)
+                CropSvgRenderer.drawCropSvg(
+                    drawScope = this,
+                    cropName = activeCropName,
+                    center = Offset(htl.x + hsw / 2f, htl.y + hsh / 2f),
+                    sizePx = minOf(hsw, hsh) * 0.72f
+                )
+            }
         }
     }
 }
@@ -653,34 +663,33 @@ private fun DrawScope.drawPlotBed(
                     drawText(zMeasured, topLeft = Offset(ztl.x + 5f, ztl.y + 3f))
                 }
 
-                // Plant instances or repeated crop dots inside this crop zone
-                if (zone.plantInstances.isNotEmpty()) {
-                    zone.plantInstances.forEach { plant ->
-                        val screenPos = TopDownProjection.worldToScreen(plant.worldX, plant.worldY, camera)
-                        if (screenPos.x > tl.x + 2 && screenPos.x < tl.x + bedW - 2 &&
-                            screenPos.y > tl.y + 2 && screenPos.y < tl.y + bedH - 2) {
-                            drawCircle(cropCol, iconRadius, screenPos)
-                            drawCircle(cropCol.copy(alpha = 0.5f), iconRadius + 1f, screenPos, style = Stroke(0.5f))
-                        }
-                    }
+                // Render SVG Crop inside the crop zone
+                val unitCols = (zone.widthM / 0.8f).toInt().coerceAtLeast(1)
+                val unitRows = (zone.heightM / 0.8f).toInt().coerceAtLeast(1)
+                if (unitCols <= 1 && unitRows <= 1) {
+                    val svgSize = minOf(zW, zH) * 0.72f
+                    CropSvgRenderer.drawCropSvg(
+                        drawScope = this,
+                        cropName = zone.cropName ?: "",
+                        center = Offset(ztl.x + zW / 2f, ztl.y + zH / 2f),
+                        sizePx = svgSize
+                    )
                 } else {
-                    val effectiveSpacingX = if (zone.spacingM in 0.2f..zone.widthM) zone.spacingM else zone.widthM
-                    val effectiveSpacingY = if (zone.spacingM in 0.2f..zone.heightM) zone.spacingM else zone.heightM
-                    val cols = (zone.widthM / effectiveSpacingX).toInt().coerceAtLeast(1)
-                    val rows = (zone.heightM / effectiveSpacingY).toInt().coerceAtLeast(1)
-                    val stepX = zone.widthM / cols
-                    val stepY = zone.heightM / rows
-                    val dotRadius = TopDownProjection.worldSizeToScreen(minOf(stepX, stepY) * 0.25f, camera).coerceIn(2.5f, 9f)
-
-                    for (r in 0 until rows) {
-                        val cy = zoneWorldY + (r + 0.5f) * stepY
-                        for (c in 0 until cols) {
-                            val cx = zoneWorldX + (c + 0.5f) * stepX
-                            val screenPos = TopDownProjection.worldToScreen(cx, cy, camera)
-                            if (screenPos.x > tl.x + 2 && screenPos.x < tl.x + bedW - 2 &&
-                                screenPos.y > tl.y + 2 && screenPos.y < tl.y + bedH - 2) {
-                                drawCircle(cropCol, dotRadius, screenPos)
-                                drawCircle(cropCol.copy(alpha = 0.5f), dotRadius + 1f, screenPos, style = Stroke(0.5f))
+                    val cellW = zW / unitCols
+                    val cellH = zH / unitRows
+                    val svgSize = minOf(cellW, cellH) * 0.72f
+                    for (r in 0 until unitRows) {
+                        for (c in 0 until unitCols) {
+                            val itemCx = ztl.x + (c + 0.5f) * cellW
+                            val itemCy = ztl.y + (r + 0.5f) * cellH
+                            if (itemCx > tl.x + 2 && itemCx < tl.x + bedW - 2 &&
+                                itemCy > tl.y + 2 && itemCy < tl.y + bedH - 2) {
+                                CropSvgRenderer.drawCropSvg(
+                                    drawScope = this,
+                                    cropName = zone.cropName ?: "",
+                                    center = Offset(itemCx, itemCy),
+                                    sizePx = svgSize
+                                )
                             }
                         }
                     }
@@ -692,24 +701,22 @@ private fun DrawScope.drawPlotBed(
         if (!plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true)) {
             drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
             drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
-            val spacing = 0.8f
-            val iconRadius = TopDownProjection.worldSizeToScreen(spacing * 0.28f, camera).coerceIn(2f, 14f)
-            val cropCol = cropColor(plot.cropName ?: "")
-            val margin = 0.25f
-
-            var cx = plot.posX + margin + spacing / 2f
-            while (cx < plot.posX + plot.widthM - margin) {
-                var cy = plot.posY + margin + spacing / 2f
-                while (cy < plot.posY + plot.heightM - margin) {
-                    val screenPos = TopDownProjection.worldToScreen(cx, cy, camera)
-                    if (screenPos.x > tl.x + 2 && screenPos.x < tl.x + bedW - 2 &&
-                        screenPos.y > tl.y + 2 && screenPos.y < tl.y + bedH - 2) {
-                        drawCircle(cropCol, iconRadius, screenPos)
-                        drawCircle(cropCol.copy(alpha = 0.5f), iconRadius + 1f, screenPos, style = Stroke(0.5f))
-                    }
-                    cy += spacing
+            val unitCols = (plot.widthM / 1.0f).toInt().coerceAtLeast(1)
+            val unitRows = (plot.heightM / 1.0f).toInt().coerceAtLeast(1)
+            val cellW = bedW / unitCols
+            val cellH = bedH / unitRows
+            val svgSize = minOf(cellW, cellH) * 0.72f
+            for (r in 0 until unitRows) {
+                for (c in 0 until unitCols) {
+                    val itemCx = tl.x + (c + 0.5f) * cellW
+                    val itemCy = tl.y + (r + 0.5f) * cellH
+                    CropSvgRenderer.drawCropSvg(
+                        drawScope = this,
+                        cropName = plot.cropName ?: "",
+                        center = Offset(itemCx, itemCy),
+                        sizePx = svgSize
+                    )
                 }
-                cx += spacing
             }
         } else {
             drawRoundRect(BedFill, tl, bedSize, cornerR)

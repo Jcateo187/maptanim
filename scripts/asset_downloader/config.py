@@ -225,10 +225,6 @@ def ensure_directories():
         METADATA_DIR / "pests",
         MOBILE_ASSETS_DIR,
         MOBILE_METADATA_DIR / "crops",
-        SPRITES_DIR / "crops",
-        SPRITES_DIR / "trellises",
-        SPRITES_DIR / "soil",
-        SPRITES_DIR / "background_scenery",
         SPRITES_DIR / "ui",
     ]:
         path.mkdir(parents=True, exist_ok=True)

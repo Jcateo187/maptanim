@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Sitaw (Yardlong String Beans) - Slender Elegant Hanging Pods -->
+  <!-- Top Vine & Stem Cap -->
+  <path d="M42 12 Q46 6 52 4 Q50 10 48 14" stroke="#2E7D32" stroke-width="2.5" fill="none"/>
+  <!-- Leaflet Pair at Cap -->
+  <path d="M44 14 Q34 8 28 12 Q36 16 44 16 Z" fill="#388E3C"/>
+  <path d="M52 14 Q62 8 68 12 Q60 16 52 16 Z" fill="#43A047"/>
+  <ellipse cx="48" cy="16" rx="6" ry="3" fill="#1B5E20"/>
+  <!-- Bean Pod 1 (Curved Long) -->
+  <path d="M46 18 C40 32 36 52 40 70 C42 80 48 90 52 96" stroke="#4CAF50" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <path d="M46 18 C40 32 36 52 40 70 C42 80 48 90 52 96" stroke="#81C784" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <!-- Bean Pod 2 (Twin Hanging Pod) -->
+  <path d="M50 18 C56 32 60 52 56 70 C54 80 48 90 44 96" stroke="#388E3C" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M50 18 C56 32 60 52 56 70 C54 80 48 90 44 96" stroke="#66BB6A" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <!-- Seed Swellings along Pod 1 -->
+  <ellipse cx="38" cy="40" rx="3" ry="4.5" fill="#388E3C" opacity="0.4"/>
+  <ellipse cx="37" cy="55" rx="3" ry="4.5" fill="#388E3C" opacity="0.4"/>
+  <ellipse cx="41" cy="70" rx="3" ry="4.5" fill="#388E3C" opacity="0.4"/>
+</svg>

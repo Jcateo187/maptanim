@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -47,9 +50,13 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.domain.model.CropPlot
-import com.maptanim.app.domain.model.FarmTask
+import com.maptanim.app.domain.model.CropZone
+import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.domain.model.TaskType
+import com.maptanim.app.domain.model.VegetableCategory
 import com.maptanim.app.navigation.Routes
+import com.maptanim.app.ui.dialogs.AddLogDialog
+import com.maptanim.app.ui.dialogs.CropDssManagementDialog
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 import android.content.res.Configuration
@@ -68,7 +75,6 @@ fun FarmScreen(
     viewModel: FarmViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var isMenuExpanded by remember { mutableStateOf(false) }
 
     // Toast feedback
     LaunchedEffect(uiState.toastMessage) {
@@ -89,31 +95,10 @@ fun FarmScreen(
             // ── TOP BAR ───────────────────────────────────────────────────────
             FarmTopBar(
                 farmName = uiState.farmName,
+                isLoading = uiState.isLoading,
                 onBack = { navController.popBackStack() },
-                onMenuClick = { isMenuExpanded = true }
+                onGardenLayoutClick = { navController.navigate(Routes.EDIT) }
             )
-
-            // Optional Farm Actions Menu
-            DropdownMenu(
-                expanded = isMenuExpanded,
-                onDismissRequest = { isMenuExpanded = false },
-                modifier = Modifier.background(Color(0xFF1F291A))
-            ) {
-                DropdownMenuItem(
-                    text = { Text("✏️ Edit Farm Layout", color = White) },
-                    onClick = {
-                        isMenuExpanded = false
-                        navController.navigate(Routes.EDIT)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("🔄 Refresh Farm Data", color = White) },
-                    onClick = {
-                        isMenuExpanded = false
-                        viewModel.refreshData()
-                    }
-                )
-            }
 
             // ── CLEAN TAB NAVIGATION ──────────────────────────────────────────
             FarmTabNavigation(
@@ -157,13 +142,15 @@ fun FarmScreen(
                             onViewActivities = { viewModel.selectTab(FarmTab.ACTIVITY) }
                         )
                     }
-                    FarmTab.CROPS -> {
-                        FarmCropsTab(
+                    FarmTab.MONITORING -> {
+                        FarmMonitoringTab(
                             uiState = uiState,
                             onFilterSelected = { viewModel.selectCropsFilter(it) },
                             onOpenPlantDetails = { viewModel.openCropDetails(it) },
                             onOpenPlotDetails = { viewModel.openPlotDetails(it) },
-                            onStartPlanting = { plotId -> viewModel.startPlantingNow(plotId) }
+                            onStartPlanting = { plotId -> viewModel.startPlantingNow(plotId) },
+                            onDismissAlert = { alert, note -> viewModel.dismissAlertAndRecordHistory(alert, note) },
+                            onDismissAllAlerts = { alerts -> viewModel.dismissAllAlertsAndRecordHistory(alerts) }
                         )
                     }
                     FarmTab.CALENDAR -> {
@@ -213,12 +200,6 @@ fun FarmScreen(
                             onCompleteTask = { viewModel.completeTask(it) }
                         )
                     }
-                    FarmTab.MONITOR -> {
-                        FarmMonitorTab(
-                            uiState = uiState,
-                            onRecordObservationClick = { plot -> viewModel.openObservationDialog(plot) }
-                        )
-                    }
                     FarmTab.ACTIVITY -> {
                         FarmActivityTab(
                             uiState = uiState,
@@ -231,15 +212,18 @@ fun FarmScreen(
     }
 
     // ── MODALS ────────────────────────────────────────────────────────────────
-    // 1. Crop Details Dialog
+    // 1. Crop DSS Management Dialog
     if (uiState.selectedPlantForDetails != null || uiState.selectedPlotForDetails != null) {
-        CropDetailsDialog(
+        CropDssManagementDialog(
             plant = uiState.selectedPlantForDetails,
             plot = uiState.selectedPlotForDetails,
             onDismiss = { viewModel.closeCropDetails() },
-            onRecordObservation = { plot ->
+            onReadInLibrary = { cropName ->
                 viewModel.closeCropDetails()
-                viewModel.openObservationDialog(plot)
+                navController.navigate(Routes.libraryRoute(cropName))
+            },
+            onRecordObservation = {
+                // Handled internally by CropDssManagementDialog
             },
             onStartPlanting = { plotId ->
                 viewModel.startPlantingNow(plotId)
@@ -250,16 +234,45 @@ fun FarmScreen(
         )
     }
 
-    // 2. Record Observation Dialog
+    // 2. Interactive Record Observation Dialog (The Question, ABC Choices, and Selection Checkboxes)
     if (uiState.isObservationModalOpen) {
-        RecordObservationDialog(
-            initialPlot = uiState.observationTargetPlot,
-            availablePlots = uiState.plots.filter { it.cropName != null },
-            onDismiss = { viewModel.closeObservationDialog() },
-            onSubmit = { plotId, stage, condition, pestNotes, notes ->
-                viewModel.recordObservation(plotId, stage, condition, pestNotes, notes)
+        val targetPlot = uiState.observationTargetPlot
+            ?: uiState.plots.firstOrNull { !it.cropName.isNullOrBlank() }
+        if (targetPlot != null) {
+            val monitoredPlant = uiState.plantedPlants.firstOrNull { it.id == targetPlot.id || it.plotLabel == targetPlot.plotLabel }
+            val rawDate = targetPlot.plantedDate ?: monitoredPlant?.rawPlantedDate
+            val stage = if (!rawDate.isNullOrBlank()) {
+                val dateOnly = rawDate.take(10)
+                val pDate = try { LocalDate.parse(dateOnly) } catch (_: Exception) { LocalDate.now() }
+                val days = java.time.temporal.ChronoUnit.DAYS.between(pDate, LocalDate.now()).toInt().coerceAtLeast(0)
+                when {
+                    days < 10 -> ManagementStage.PREPARATION
+                    days < 25 -> ManagementStage.PLANTING
+                    days < 45 -> ManagementStage.EARLY_GROWTH
+                    days < 65 -> ManagementStage.VEGETATIVE_GROWTH
+                    days < 80 -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+                    else -> ManagementStage.HARVEST
+                }
+            } else {
+                ManagementStage.VEGETATIVE_GROWTH
             }
-        )
+            AddLogDialog(
+                cropPlantingId = targetPlot.id,
+                bedId = targetPlot.plotLabel,
+                cropId = targetPlot.cropId,
+                varietyId = targetPlot.cropVariety,
+                cropName = targetPlot.cropName ?: "Crop",
+                varietyName = targetPlot.cropVariety ?: "Standard Variety",
+                currentStage = stage,
+                plantingMethod = "Transplanting",
+                onDismiss = { viewModel.closeObservationDialog() },
+                onSubmitLog = { cropLog ->
+                    viewModel.submitCropLog(cropLog)
+                }
+            )
+        } else {
+            viewModel.closeObservationDialog()
+        }
     }
 }
 
@@ -274,14 +287,15 @@ fun FarmScreen(
 @Composable
 private fun FarmTopBar(
     farmName: String,
+    isLoading: Boolean,
     onBack: () -> Unit,
-    onMenuClick: () -> Unit
+    onGardenLayoutClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(54.dp)
                 .background(Color(0xFF10160F))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -296,27 +310,54 @@ private fun FarmTopBar(
                     tint = White
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = farmName.uppercase(),
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 color = White,
-                letterSpacing = 1.sp,
+                letterSpacing = 0.8.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
-                onClick = onMenuClick,
-                modifier = Modifier.size(36.dp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onGardenLayoutClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2E7D32),
+                    contentColor = White
+                ),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(34.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Farm Actions",
-                    tint = Color(0xFFA0B09A)
+                    imageVector = Icons.Default.Yard,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                    tint = Color(0xFFC8E6C9)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Garden Layout",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = White
                 )
             }
         }
-        HorizontalDivider(color = Color(0xFF243021), thickness = 1.dp)
+        if (isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp),
+                color = Color(0xFF4CAF50),
+                trackColor = Color(0xFF1B2419)
+            )
+        } else {
+            HorizontalDivider(color = Color(0xFF243021), thickness = 1.dp)
+        }
     }
 }
 
@@ -369,6 +410,45 @@ private fun FarmTabNavigation(
 // TAB 1: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// VEGETABLE CATEGORIES (DA/PSA Standard 8-category classification)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+private data class VegCategoryItem(
+    val category: VegetableCategory?,
+    val icon: String,
+    val shortName: String,
+    val displayName: String,
+    val examples: String
+)
+
+private val VEGETABLE_CATEGORY_ITEMS = listOf(
+    VegCategoryItem(null, "🌿", "All", "All Vegetables", "All 8 categories"),
+    VegCategoryItem(VegetableCategory.FRUIT, "🍅", "Fruit", "Fruit Vegetables", "Tomato, Eggplant, Squash"),
+    VegCategoryItem(VegetableCategory.LEAFY, "🥬", "Leafy", "Leafy Vegetables", "Pechay, Kangkong, Lettuce"),
+    VegCategoryItem(VegetableCategory.ROOT, "🥕", "Root", "Root Vegetables", "Carrot, Radish"),
+    VegCategoryItem(VegetableCategory.BULB, "🧅", "Bulb", "Bulb Vegetables", "Onion, Garlic"),
+    VegCategoryItem(VegetableCategory.STEM, "🎋", "Stem", "Stem Vegetables", "Celery, Asparagus"),
+    VegCategoryItem(VegetableCategory.SHOOT, "🌱", "Shoot", "Shoot Vegetables", "Bamboo Shoots, Togue"),
+    VegCategoryItem(VegetableCategory.FLOWER, "🥦", "Flower", "Flower Vegetables", "Broccoli, Cauliflower"),
+    VegCategoryItem(VegetableCategory.TUBER, "🥔", "Tuber", "Tuber Vegetables", "Potato, Sweet Potato")
+)
+
+private fun getCropVegetableCategory(cropName: String): VegetableCategory {
+    val clean = cropName.lowercase().replace(" ", "").replace("_", "").replace("-", "")
+    return when {
+        clean.contains("onion") || clean.contains("sibuyas") || clean.contains("garlic") || clean.contains("bawang") || clean.contains("bulb") -> VegetableCategory.BULB
+        clean.contains("celery") || clean.contains("asparagus") || clean.contains("kintsay") || clean.contains("stem") -> VegetableCategory.STEM
+        clean.contains("labong") || clean.contains("shoot") || clean.contains("sprout") || clean.contains("togue") -> VegetableCategory.SHOOT
+        clean.contains("pechay") || clean.contains("bokchoy") || clean.contains("pakchoi") || clean.contains("kangkong") || clean.contains("spinach") || clean.contains("lettuce") || clean.contains("litsugas") || clean.contains("cabbage") || clean.contains("repolyo") || clean.contains("mustasa") || clean.contains("leafy") -> VegetableCategory.LEAFY
+        clean.contains("broccoli") || clean.contains("cauliflower") || clean.contains("flower") -> VegetableCategory.FLOWER
+        clean.contains("carrot") || clean.contains("karot") || clean.contains("radish") || clean.contains("labanos") || clean.contains("root") -> VegetableCategory.ROOT
+        clean.contains("potato") || clean.contains("patatas") || clean.contains("kamote") || clean.contains("sweetpotato") || clean.contains("cassava") || clean.contains("tuber") -> VegetableCategory.TUBER
+        clean.contains("tomato") || clean.contains("kamatis") || clean.contains("eggplant") || clean.contains("talong") || clean.contains("squash") || clean.contains("pumpkin") || clean.contains("kalabasa") || clean.contains("okra") || clean.contains("cucumber") || clean.contains("pipino") || clean.contains("sili") || clean.contains("pepper") || clean.contains("chili") || clean.contains("corn") || clean.contains("mais") || clean.contains("ampalaya") || clean.contains("bittergourd") || clean.contains("sitaw") || clean.contains("bean") || clean.contains("fruit") -> VegetableCategory.FRUIT
+        else -> VegetableCategory.FRUIT
+    }
+}
+
 @Composable
 private fun FarmOverviewTab(
     uiState: FarmUiState,
@@ -388,6 +468,77 @@ private fun FarmOverviewTab(
         return
     }
 
+    var selectedPlotId by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by remember { mutableStateOf<VegetableCategory?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Aggregate all crops: planted and planned
+    val allCrops = remember(uiState.plantedPlants, uiState.plannedPlots) {
+        val list = uiState.plantedPlants.toMutableList()
+        uiState.plannedPlots.filter { !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) }.forEach { plot ->
+            if (list.none { it.id == plot.id }) {
+                list.add(
+                    MonitoredPlant(
+                        id = plot.id,
+                        farmId = plot.farmId,
+                        cropId = plot.cropId,
+                        cropName = plot.cropName ?: "Vegetable",
+                        localName = plot.cropName ?: "Gulay",
+                        cropVariety = plot.cropVariety ?: "Standard Variety",
+                        plotLabel = plot.plotLabel,
+                        currentStageIndex = 0,
+                        stageName = "Stage 1: Planned",
+                        daysPlanted = 0,
+                        daysToHarvest = 60,
+                        healthStatus = "Planned Crop",
+                        soilType = plot.soilType
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    val selectedPlot = uiState.plots.firstOrNull { it.id == selectedPlotId }
+
+    // Crops for currently selected bed
+    val allCropsForBed = remember(selectedPlotId, allCrops) {
+        if (selectedPlotId == null) {
+            allCrops
+        } else {
+            val label = selectedPlot?.plotLabel ?: ""
+            allCrops.filter {
+                it.plotLabel.equals(label, ignoreCase = true) ||
+                it.plotLabel.contains(label, ignoreCase = true) ||
+                it.id == selectedPlotId
+            }
+        }
+    }
+
+    // Filtered by selected vegetable category
+    val filteredCrops = remember(allCropsForBed, selectedCategory) {
+        if (selectedCategory == null) {
+            allCropsForBed
+        } else {
+            allCropsForBed.filter { crop ->
+                getCropVegetableCategory(crop.cropName) == selectedCategory
+            }
+        }
+    }
+
+    val cropPages = remember(filteredCrops) {
+        filteredCrops.chunked(4)
+    }
+
+    val pageCount = cropPages.size.coerceAtLeast(1)
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount })
+
+    LaunchedEffect(selectedPlotId, selectedCategory) {
+        if (pagerState.currentPage != 0) {
+            pagerState.scrollToPage(0)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -395,157 +546,431 @@ private fun FarmOverviewTab(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ── 1. FARM LAYOUT ───────────────────────────────────────────────────
-        Text(
-            text = "FARM LAYOUT",
-            color = White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
-        )
+        // ── 1. FARM LAYOUT (TOP) ─────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "FARM LAYOUT",
+                color = White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+            Text(
+                text = "${uiState.plots.size} Beds • ${uiState.cropZones.size} Crops",
+                color = Color(0xFFA0B09A),
+                fontSize = 11.sp
+            )
+        }
 
         ActualFarmLayoutCard(
             plots = uiState.plots,
-            onEditFarm = onEditFarm,
+            zones = uiState.cropZones,
             onOpenPlantDetails = onOpenPlantDetails,
             onOpenPlotDetails = onOpenPlotDetails,
             plantedPlants = uiState.plantedPlants
         )
 
-        HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
+        HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 2.dp))
 
-        // ── 2. FARM ATTENTION ────────────────────────────────────────────────
-        Text(
-            text = "FARM ATTENTION",
-            color = White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
-        )
+        // ── 2. FARM BEDS (MIDDLE) ────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "FARM BEDS",
+                color = White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+            Text(
+                text = "${uiState.plots.size} Beds Active",
+                color = Color(0xFFA0B09A),
+                fontSize = 11.sp
+            )
+        }
 
-        if (uiState.attentionItems.isEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "✅", fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = if (uiState.plots.isEmpty()) "No active crops to monitor" else "All crops healthy • No immediate attention required",
-                    color = Color(0xFFA0B09A),
-                    fontSize = 13.sp
-                )
+        // Horizontal scrollable Bed Cards (1 row, 4 visible columns per view)
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        val bedCardWidth = ((screenWidth - 32.dp - 24.dp) / 4).coerceAtLeast(78.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // "ALL" bed card
+            val isAllSelected = selectedPlotId == null
+            SmallBedCard(
+                plotLabel = "ALL",
+                soilType = "All Beds",
+                cropCount = allCrops.size,
+                isSelected = isAllSelected,
+                onClick = { selectedPlotId = null },
+                modifier = Modifier.width(bedCardWidth)
+            )
+
+            if (uiState.plots.isEmpty()) {
+                listOf("Bed 1", "Bed 2", "Bed 3").forEach { label ->
+                    SmallBedCard(
+                        plotLabel = label,
+                        soilType = "Loam",
+                        cropCount = 0,
+                        isSelected = false,
+                        onClick = onEditFarm,
+                        modifier = Modifier.width(bedCardWidth)
+                    )
+                }
+            } else {
+                uiState.plots.forEach { plot ->
+                    val isSelected = selectedPlotId == plot.id
+                    val bedCropCount = allCrops.count {
+                        it.plotLabel.equals(plot.plotLabel, ignoreCase = true) || it.id == plot.id
+                    }
+                    SmallBedCard(
+                        plotLabel = plot.plotLabel,
+                        soilType = plot.soilType.name.lowercase().replaceFirstChar { it.uppercase() },
+                        cropCount = bedCropCount,
+                        isSelected = isSelected,
+                        onClick = {
+                            selectedPlotId = if (selectedPlotId == plot.id) null else plot.id
+                        },
+                        modifier = Modifier.width(bedCardWidth)
+                    )
+                }
             }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                uiState.attentionItems.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable {
-                                val plant = uiState.plantedPlants.firstOrNull {
-                                    it.plotLabel.contains(item.plotLabel ?: "", true) ||
-                                    item.plotLabel?.contains(it.cropName, true) == true
-                                }
-                                if (plant != null) onOpenPlantDetails(plant)
-                            }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+        }
+
+        HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 2.dp))
+
+        // ── 3. CROPS SECTION (BOTTOM) ────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (selectedPlot != null) "${selectedPlot.plotLabel.uppercase()} CROPS" else "FARM CROPS",
+                    color = White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                if (filteredCrops.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF1E2A1B),
+                        border = BorderStroke(1.dp, Color(0xFF2E3E29))
                     ) {
                         Text(
-                            text = if (item.severity == AttentionSeverity.HIGH) "🔴" else "🟡",
-                            fontSize = 14.sp
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = item.plotLabel ?: item.title,
-                            color = White,
+                            text = "${filteredCrops.size}",
+                            color = Color(0xFF81C784),
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            modifier = Modifier.width(105.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                }
+            }
+
+            // Category Icon Dropdown for 8 Types of Vegetables
+            Box {
+                var isCategoryMenuExpanded by remember { mutableStateOf(false) }
+                val currentCategoryItem = VEGETABLE_CATEGORY_ITEMS.firstOrNull { it.category == selectedCategory }
+                    ?: VEGETABLE_CATEGORY_ITEMS.first()
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (selectedCategory != null) Color(0xFF2E7D32).copy(alpha = 0.25f) else Color(0xFF1B2419),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (selectedCategory != null) Color(0xFF4CAF50) else Color(0xFF2E3E29)
+                    ),
+                    modifier = Modifier.clickable { isCategoryMenuExpanded = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
-                            text = item.description,
-                            color = Color(0xFFBAC7B6),
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            text = currentCategoryItem.icon,
+                            fontSize = 13.sp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "›",
-                            color = Color(0xFFA0B09A),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            text = currentCategoryItem.shortName,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedCategory != null) Color(0xFF81C784) else White
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Category Filter",
+                            tint = Color(0xFFA0B09A),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Small vertical display dropdown menu
+                DropdownMenu(
+                    expanded = isCategoryMenuExpanded,
+                    onDismissRequest = { isCategoryMenuExpanded = false },
+                    modifier = Modifier
+                        .background(Color(0xFF161E14))
+                        .border(1.dp, Color(0xFF2B3A27), RoundedCornerShape(8.dp))
+                        .widthIn(min = 180.dp, max = 230.dp)
+                ) {
+                    Text(
+                        text = "VEGETABLE CATEGORY",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA0B09A),
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                    HorizontalDivider(color = Color(0xFF243021), thickness = 0.8.dp)
+
+                    VEGETABLE_CATEGORY_ITEMS.forEach { item ->
+                        val isSelected = (item.category == selectedCategory)
+                        val count = if (item.category == null) {
+                            allCropsForBed.size
+                        } else {
+                            allCropsForBed.count { getCropVegetableCategory(it.cropName) == item.category }
+                        }
+
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(text = item.icon, fontSize = 14.sp)
+                                        Column {
+                                            Text(
+                                                text = item.displayName,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color(0xFF81C784) else White
+                                            )
+                                            Text(
+                                                text = item.examples,
+                                                fontSize = 9.sp,
+                                                color = Color(0xFF7E8F7A)
+                                            )
+                                        }
+                                    }
+                                    if (count > 0) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isSelected) Color(0xFF2E7D32) else Color(0xFF222D1F)
+                                        ) {
+                                            Text(
+                                                text = "$count",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) White else Color(0xFFA0B09A),
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            onClick = {
+                                selectedCategory = item.category
+                                isCategoryMenuExpanded = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .background(if (isSelected) Color(0xFF1E2B1B) else Color.Transparent),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
         }
 
-        HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
-
-        // ── 3. TODAY ─────────────────────────────────────────────────────────
-        Text(
-            text = "TODAY",
-            color = White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
-        )
-
-        if (uiState.todayTasks.isEmpty()) {
-            Row(
+        if (filteredCrops.isEmpty()) {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onEditFarm() },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                border = BorderStroke(1.dp, Color(0xFF2B3825))
             ) {
-                Text(text = "○", fontSize = 16.sp, color = Color(0xFF6B7C66))
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = if (uiState.plots.isEmpty()) "No tasks scheduled for today" else "All scheduled tasks completed",
-                    color = Color(0xFFA0B09A),
-                    fontSize = 13.sp
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(text = "🌱", fontSize = 28.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = when {
+                            selectedCategory != null -> "No ${selectedCategory?.name?.lowercase() ?: ""} vegetables found"
+                            selectedPlot != null -> "No crops planted in ${selectedPlot.plotLabel} yet"
+                            else -> "No crops planted in farm yet"
+                        },
+                        color = White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Tap to open Farm Editor and plant crops",
+                        color = Color(0xFFA0B09A),
+                        fontSize = 11.sp
+                    )
+                }
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                uiState.todayTasks.forEach { task ->
+            // Horizontal Pager: 2 rows x 2 columns per page
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth()
+            ) { pageIdx ->
+                val pageItems = cropPages.getOrNull(pageIdx) ?: emptyList()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Row 1: items 0 and 1
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val item0 = pageItems.getOrNull(0)
+                        if (item0 != null) {
+                            SmallCropCard(
+                                plant = item0,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpenPlantDetails(item0) }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+
+                        val item1 = pageItems.getOrNull(1)
+                        if (item1 != null) {
+                            SmallCropCard(
+                                plant = item1,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpenPlantDetails(item1) }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
+                    // Row 2: items 2 and 3
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val item2 = pageItems.getOrNull(2)
+                        if (item2 != null) {
+                            SmallCropCard(
+                                plant = item2,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpenPlantDetails(item2) }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+
+                        val item3 = pageItems.getOrNull(3)
+                        if (item3 != null) {
+                            SmallCropCard(
+                                plant = item3,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpenPlantDetails(item3) }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            // ── Number tabs below 1 2 3 --- if more ──────────────────────────
+            if (cropPages.size > 1) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF141C12),
+                    border = BorderStroke(1.dp, Color(0xFF222C1F)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp)
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { onCompleteTask(task.id) }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (task.isCompleted) "●" else "○",
-                            color = if (task.isCompleted) Color(0xFF81C784) else Color(0xFFA0B09A),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = task.title,
-                            color = if (task.isCompleted) Color(0xFF8A9A84) else White,
-                            fontSize = 13.sp,
-                            fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = task.subLabel ?: "08:00 AM",
+                            text = "Page ${pagerState.currentPage + 1} of ${cropPages.size} (${filteredCrops.size} Crops)",
                             color = Color(0xFFA0B09A),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Normal
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
                         )
+
+                        // Tabs: [ 1 ] [ 2 ] [ 3 ] ...
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            cropPages.indices.forEach { pageIdx ->
+                                val isPageActive = pagerState.currentPage == pageIdx
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isPageActive) Color(0xFF4CAF50) else Color(0xFF1E281B),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = if (isPageActive) Color(0xFF81C784) else Color(0xFF2E3E29)
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(pageIdx)
+                                        }
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(width = 30.dp, height = 28.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${pageIdx + 1}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isPageActive) White else Color(0xFFA0B09A)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -554,9 +979,176 @@ private fun FarmOverviewTab(
 }
 
 @Composable
+private fun SmallBedCard(
+    plotLabel: String,
+    soilType: String,
+    cropCount: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFF1E2F1C) else Color(0xFF141C12)
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) Color(0xFF4CAF50) else Color(0xFF2B3825)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = plotLabel.uppercase(),
+                color = if (isSelected) Color(0xFF81C784) else White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = soilType,
+                color = Color(0xFFA0B09A),
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (isSelected) Color(0xFF2E442B) else Color(0xFF1F291B))
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = if (cropCount > 0) "$cropCount ${if (cropCount == 1) "crop" else "crops"}" else "Empty",
+                    color = if (cropCount > 0) Color(0xFF81C784) else Color(0xFF758570),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmallCropCard(
+    plant: MonitoredPlant,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161E14)),
+        border = BorderStroke(1.dp, Color(0xFF2B3825))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val imageModel = CropMetadataAssetDataSource.resolveCropImage(plant.cropId, plant.cropName, plant.imageUrl)
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageModel)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = plant.cropName,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF222C1F)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = plant.cropName,
+                        color = White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = plant.plotLabel,
+                        color = Color(0xFF81C784),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = plant.cropVariety ?: "Standard",
+                        color = Color(0xFFA0B09A),
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            val isOverdue = plant.healthStatus.contains("Overdue", true)
+            val isReady = plant.healthStatus.contains("Ready", true)
+            val badgeColor = when {
+                isOverdue -> Color(0xFFE53935)
+                isReady -> Color(0xFFFFA000)
+                else -> Color(0xFF4CAF50)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(badgeColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = plant.stageName.take(18),
+                    color = badgeColor,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "D${plant.daysPlanted}",
+                    color = Color(0xFFA0B09A),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ActualFarmLayoutCard(
     plots: List<CropPlot>,
-    onEditFarm: () -> Unit,
+    zones: List<CropZone> = emptyList(),
     onOpenPlantDetails: (MonitoredPlant) -> Unit,
     onOpenPlotDetails: (CropPlot) -> Unit,
     plantedPlants: List<MonitoredPlant>
@@ -570,18 +1162,19 @@ private fun ActualFarmLayoutCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(10.dp)
         ) {
             // ── Real 2D Top-Down Farm Layout Preview Canvas ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp)
+                    .height(240.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, Color(0xFF2B3825), RoundedCornerShape(8.dp))
             ) {
                 FarmLayoutPreviewCanvas(
                     plots = plots,
+                    zones = zones,
                     onPlotClick = { plot ->
                         val plant = plantedPlants.firstOrNull { it.id == plot.id }
                         if (plant != null) {
@@ -592,31 +1185,6 @@ private fun ActualFarmLayoutCard(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // [ Edit Farm ] button at bottom right
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Button(
-                    onClick = onEditFarm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2E7D32),
-                        contentColor = White
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Edit Farm",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = White
-                    )
-                }
             }
         }
     }
@@ -726,23 +1294,98 @@ private fun FarmLayoutMiniCanvas(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 2: CROPS (Separates Planted and Planned/Unplanted)
+// TAB 2: MONITORING (Separates Planted and Planned/Unplanted)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun FarmCropsTab(
+private fun FarmMonitoringTab(
     uiState: FarmUiState,
     onFilterSelected: (CropsFilter) -> Unit,
     onOpenPlantDetails: (MonitoredPlant) -> Unit,
     onOpenPlotDetails: (CropPlot) -> Unit,
-    onStartPlanting: (String) -> Unit
+    onStartPlanting: (String) -> Unit,
+    onDismissAlert: (FarmAttentionItem, String) -> Unit = { _, _ -> },
+    onDismissAllAlerts: (List<FarmAttentionItem>) -> Unit = {}
 ) {
+    var selectedPlotId by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by remember { mutableStateOf<VegetableCategory?>(null) }
+    var recommendationAlertForModal by remember { mutableStateOf<FarmAttentionItem?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Base crops list driven by segmented control: Planted vs Planned
+    val baseCrops = remember(uiState.cropsFilter, uiState.plantedPlants, uiState.plannedPlots) {
+        if (uiState.cropsFilter == CropsFilter.PLANTED) {
+            uiState.plantedPlants
+        } else {
+            uiState.plannedPlots.map { plot ->
+                MonitoredPlant(
+                    id = plot.id,
+                    farmId = plot.farmId,
+                    cropId = plot.cropId,
+                    cropName = plot.cropName ?: "Vegetable",
+                    localName = plot.cropName ?: "Gulay",
+                    cropVariety = plot.cropVariety ?: "Standard Variety",
+                    plotLabel = plot.plotLabel,
+                    currentStageIndex = 0,
+                    stageName = "Planned",
+                    daysPlanted = 0,
+                    daysToHarvest = 60,
+                    healthStatus = "Planned Crop",
+                    soilType = plot.soilType
+                )
+            }
+        }
+    }
+
+    val selectedPlot = uiState.plots.firstOrNull { it.id == selectedPlotId }
+
+    // Filter by selected bed
+    val cropsForBed = remember(selectedPlotId, baseCrops) {
+        if (selectedPlotId == null) {
+            baseCrops
+        } else {
+            val label = selectedPlot?.plotLabel ?: ""
+            baseCrops.filter {
+                it.plotLabel.equals(label, ignoreCase = true) ||
+                it.plotLabel.contains(label, ignoreCase = true) ||
+                it.id == selectedPlotId
+            }
+        }
+    }
+
+    // Filter by selected vegetable category
+    val filteredCrops = remember(cropsForBed, selectedCategory) {
+        if (selectedCategory == null) {
+            cropsForBed
+        } else {
+            cropsForBed.filter { crop ->
+                getCropVegetableCategory(crop.cropName) == selectedCategory
+            }
+        }
+    }
+
+    // 4 rows x 4 columns = 16 crops per page
+    val cropPages = remember(filteredCrops) {
+        filteredCrops.chunked(16)
+    }
+
+    val pageCount = cropPages.size.coerceAtLeast(1)
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount })
+
+    LaunchedEffect(selectedPlotId, selectedCategory, uiState.cropsFilter) {
+        if (pagerState.currentPage != 0) {
+            pagerState.scrollToPage(0)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Segmented Control: Planted vs Planned/Unplanted
+        // ── 1. SEGMENTED CONTROL: Planted vs Planned/Unplanted ────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -788,55 +1431,909 @@ private fun FarmCropsTab(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        // ── 1.5. COMPANION & FARM ALERTS (Swipeable Carousel with Fixed Height) ─
+        val relevantAlerts = remember(uiState.attentionItems, selectedPlotId, uiState.cropsFilter) {
+            uiState.attentionItems.filter { alert ->
+                if (selectedPlotId == null) {
+                    true
+                } else {
+                    val label = selectedPlot?.plotLabel ?: ""
+                    alert.plotLabel?.contains(label, ignoreCase = true) == true
+                }
+            }
+        }
 
-        // Crop List
-        if (uiState.cropsFilter == CropsFilter.PLANTED) {
-            if (uiState.plantedPlants.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (relevantAlerts.isNotEmpty()) {
+            val alertsPagerState = rememberPagerState(
+                initialPage = 0,
+                pageCount = { relevantAlerts.size }
+            )
+
+            LaunchedEffect(relevantAlerts.size) {
+                if (alertsPagerState.currentPage >= relevantAlerts.size && relevantAlerts.isNotEmpty()) {
+                    alertsPagerState.scrollToPage(relevantAlerts.size - 1)
+                }
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Header: Title + Dots indicator + Mark All Read button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "FARM ALERTS",
+                            color = Color(0xFFA0B09A),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        if (relevantAlerts.size > 1) {
+                            Text(
+                                text = "${alertsPagerState.currentPage + 1}/${relevantAlerts.size}",
+                                color = Color(0xFF81C784),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Pagination Dots
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                repeat(relevantAlerts.size.coerceAtMost(6)) { dotIndex ->
+                                    val isDotSelected = alertsPagerState.currentPage == dotIndex
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (isDotSelected) 6.dp else 4.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isDotSelected) Color(0xFF81C784) else Color(0xFF384A33))
+                                    )
+                                }
+                            }
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFF1E2D1A)
+                            ) {
+                                Text(
+                                    text = "1 Active",
+                                    color = Color(0xFF81C784),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Mark All as Read button
                     Text(
-                        text = "No planted crops recorded yet.\nCheck the Planned tab to start planting.",
-                        color = Color(0xFFA0B09A),
-                        textAlign = TextAlign.Center,
-                        fontSize = 14.sp
+                        text = if (relevantAlerts.size > 1) "Mark All as Read" else "Mark Read",
+                        color = Color(0xFF81C784),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onDismissAllAlerts(relevantAlerts) }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(uiState.plantedPlants, key = { it.id }) { plant ->
-                        PlantedCropCard(
-                            plant = plant,
-                            onOpenDetails = { onOpenPlantDetails(plant) }
+
+                // Horizontal Carousel: shows exactly 1 card at a time with fixed height
+                HorizontalPager(
+                    state = alertsPagerState,
+                    modifier = Modifier.fillMaxWidth()
+                ) { pageIdx ->
+                    val alert = relevantAlerts.getOrNull(pageIdx)
+                    if (alert != null) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 136.dp, max = 158.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF161F14),
+                            border = BorderStroke(
+                                1.dp,
+                                if (alert.severity == AttentionSeverity.HIGH) Color(0xFF7A3333) else Color(0xFF2E3E28)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                // Top row: Bed badge + Severity tag + Date
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (alert.severity == AttentionSeverity.HIGH) Color(0xFF421D1D) else Color(0xFF1E2D1A)
+                                        ) {
+                                            Text(
+                                                text = alert.plotLabel ?: "FARM BED",
+                                                color = if (alert.severity == AttentionSeverity.HIGH) Color(0xFFFF8A80) else Color(0xFF81C784),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                            )
+                                        }
+
+                                        if (alert.severity == AttentionSeverity.HIGH) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFF5C1D1D)
+                                            ) {
+                                                Text(
+                                                    text = "HIGH RISK",
+                                                    color = Color(0xFFFFCDD2),
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Text(
+                                        text = alert.date,
+                                        color = Color(0xFF8B9B85),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                // Title and concise description (max 2 lines)
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = alert.title,
+                                        color = White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = alert.description,
+                                        color = Color(0xFFC0CDC0),
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // Action buttons: "Mark as Read" & "View Recommendations"
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            onDismissAlert(alert, "Marked as read")
+                                        },
+                                        modifier = Modifier.weight(1f).height(34.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFF384A33)),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = Color(0xFFA0B09A)
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Mark as Read",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = Color(0xFFA0B09A)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Mark Read",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            recommendationAlertForModal = alert
+                                        },
+                                        modifier = Modifier.weight(1.3f).height(34.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF2E7D32),
+                                            contentColor = White
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lightbulb,
+                                            contentDescription = "View Recommendations",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = White
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Recommendations",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 2. BEDS CARDS (1 row, 5 columns, horizontally scrollable) ────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "FARM BEDS",
+                color = White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+            Text(
+                text = "${uiState.plots.size} Beds",
+                color = Color(0xFFA0B09A),
+                fontSize = 11.sp
+            )
+        }
+
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        // 5 columns visible per view
+        val bedCardWidth = ((screenWidth - 28.dp - 24.dp) / 5).coerceAtLeast(62.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // "ALL" bed card
+            val isAllSelected = selectedPlotId == null
+            CompactBedCard(
+                plotLabel = "ALL",
+                subtitle = "All Beds",
+                cropCount = baseCrops.size,
+                isSelected = isAllSelected,
+                onClick = { selectedPlotId = null },
+                modifier = Modifier.width(bedCardWidth)
+            )
+
+            uiState.plots.forEach { plot ->
+                val isSelected = selectedPlotId == plot.id
+                val bedCropCount = baseCrops.count {
+                    it.plotLabel.equals(plot.plotLabel, ignoreCase = true) || it.id == plot.id
+                }
+                CompactBedCard(
+                    plotLabel = plot.plotLabel,
+                    subtitle = plot.soilType.name.lowercase().replaceFirstChar { it.uppercase() },
+                    cropCount = bedCropCount,
+                    isSelected = isSelected,
+                    onClick = {
+                        selectedPlotId = if (selectedPlotId == plot.id) null else plot.id
+                    },
+                    modifier = Modifier.width(bedCardWidth)
+                )
+            }
+        }
+
+        HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 2.dp))
+
+        // ── 3. CROPS SECTION (4 rows x 4 columns with category dropdown) ───────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (selectedPlot != null) "${selectedPlot.plotLabel.uppercase()} CROPS" else "CROPS",
+                    color = White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                if (filteredCrops.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF1E2A1B),
+                        border = BorderStroke(1.dp, Color(0xFF2E3E29))
+                    ) {
+                        Text(
+                            text = "${filteredCrops.size}",
+                            color = Color(0xFF81C784),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
-        } else {
-            if (uiState.plannedPlots.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No planned or unplanted beds.\nAll configured beds currently have active plantings.",
-                        color = Color(0xFFA0B09A),
-                        textAlign = TextAlign.Center,
-                        fontSize = 14.sp
-                    )
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
+
+            // Category Icon Dropdown for 8 Types of Vegetables
+            Box {
+                var isCategoryMenuExpanded by remember { mutableStateOf(false) }
+                val currentCategoryItem = VEGETABLE_CATEGORY_ITEMS.firstOrNull { it.category == selectedCategory }
+                    ?: VEGETABLE_CATEGORY_ITEMS.first()
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (selectedCategory != null) Color(0xFF2E7D32).copy(alpha = 0.25f) else Color(0xFF1B2419),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (selectedCategory != null) Color(0xFF4CAF50) else Color(0xFF2E3E29)
+                    ),
+                    modifier = Modifier.clickable { isCategoryMenuExpanded = true }
                 ) {
-                    items(uiState.plannedPlots, key = { it.id }) { plot ->
-                        PlannedPlotCard(
-                            plot = plot,
-                            onOpenDetails = { onOpenPlotDetails(plot) },
-                            onStartPlanting = { onStartPlanting(plot.id) }
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = currentCategoryItem.icon,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = currentCategoryItem.shortName,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedCategory != null) Color(0xFF81C784) else White
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Category Filter",
+                            tint = Color(0xFFA0B09A),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+
+                // Small vertical display dropdown menu
+                DropdownMenu(
+                    expanded = isCategoryMenuExpanded,
+                    onDismissRequest = { isCategoryMenuExpanded = false },
+                    modifier = Modifier
+                        .background(Color(0xFF161E14))
+                        .border(1.dp, Color(0xFF2B3A27), RoundedCornerShape(8.dp))
+                        .widthIn(min = 180.dp, max = 230.dp)
+                ) {
+                    Text(
+                        text = "VEGETABLE CATEGORY",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA0B09A),
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                    HorizontalDivider(color = Color(0xFF243021), thickness = 0.8.dp)
+
+                    VEGETABLE_CATEGORY_ITEMS.forEach { item ->
+                        val isSelected = (item.category == selectedCategory)
+                        val count = if (item.category == null) {
+                            cropsForBed.size
+                        } else {
+                            cropsForBed.count { getCropVegetableCategory(it.cropName) == item.category }
+                        }
+
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(text = item.icon, fontSize = 14.sp)
+                                        Column {
+                                            Text(
+                                                text = item.displayName,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color(0xFF81C784) else White
+                                            )
+                                            Text(
+                                                text = item.examples,
+                                                fontSize = 9.sp,
+                                                color = Color(0xFF7E8F7A)
+                                            )
+                                        }
+                                    }
+                                    if (count > 0) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isSelected) Color(0xFF2E7D32) else Color(0xFF222D1F)
+                                        ) {
+                                            Text(
+                                                text = "$count",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) White else Color(0xFFA0B09A),
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            onClick = {
+                                selectedCategory = item.category
+                                isCategoryMenuExpanded = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .background(if (isSelected) Color(0xFF1E2B1B) else Color.Transparent),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (filteredCrops.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                border = BorderStroke(1.dp, Color(0xFF2B3825))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(text = "🌱", fontSize = 28.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = when {
+                            selectedCategory != null -> "No ${selectedCategory?.name?.lowercase() ?: ""} vegetables in this selection"
+                            selectedPlot != null -> "No ${if (uiState.cropsFilter == CropsFilter.PLANTED) "planted" else "planned"} crops in ${selectedPlot.plotLabel}"
+                            else -> "No ${if (uiState.cropsFilter == CropsFilter.PLANTED) "planted" else "planned"} crops found"
+                        },
+                        color = White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        } else {
+            // Horizontal Pager: 4 rows x 4 columns = 16 crops per page
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth()
+            ) { pageIdx ->
+                val pageItems = cropPages.getOrNull(pageIdx) ?: emptyList()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    for (rowIdx in 0 until 4) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            for (colIdx in 0 until 4) {
+                                val itemIndex = rowIdx * 4 + colIdx
+                                val item = pageItems.getOrNull(itemIndex)
+                                if (item != null) {
+                                    GridCropCard(
+                                        plant = item,
+                                        onClick = {
+                                            if (uiState.cropsFilter == CropsFilter.PLANTED) {
+                                                onOpenPlantDetails(item)
+                                            } else {
+                                                val plot = uiState.plots.firstOrNull { it.id == item.id }
+                                                if (plot != null) onOpenPlotDetails(plot) else onOpenPlantDetails(item)
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Number tabs below 1 2 3 ... ─────────────────────────────────
+            if (cropPages.size > 1) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF141C12),
+                    border = BorderStroke(1.dp, Color(0xFF222C1F)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Page ${pagerState.currentPage + 1} of ${cropPages.size} (${filteredCrops.size} Crops)",
+                            color = Color(0xFFA0B09A),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            cropPages.indices.forEach { pageIdx ->
+                                val isPageActive = pagerState.currentPage == pageIdx
+                                Surface(
+                                    shape = RoundedCornerShape(5.dp),
+                                    color = if (isPageActive) Color(0xFF4CAF50) else Color(0xFF1E281B),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = if (isPageActive) Color(0xFF81C784) else Color(0xFF2E3E29)
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(pageIdx)
+                                        }
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(width = 28.dp, height = 26.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${pageIdx + 1}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isPageActive) White else Color(0xFFA0B09A)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val currentModalAlert = recommendationAlertForModal
+    if (currentModalAlert != null) {
+        CompanionRecommendationDialog(
+            alert = currentModalAlert,
+            onDismiss = { recommendationAlertForModal = null },
+            onAcknowledge = {
+                onDismissAlert(currentModalAlert, "Recommendation Handled")
+                recommendationAlertForModal = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun CompanionRecommendationDialog(
+    alert: FarmAttentionItem,
+    onDismiss: () -> Unit,
+    onAcknowledge: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF141C13),
+            border = BorderStroke(1.dp, Color(0xFF2B3A26))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header with Bed and Date
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFF1E2D1A)
+                    ) {
+                        Text(
+                            text = alert.plotLabel ?: "FARM BED",
+                            color = Color(0xFF81C784),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    Text(
+                        text = alert.date,
+                        color = Color(0xFF8B9B85),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Text(
+                    text = alert.title,
+                    color = White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1A2418),
+                    border = BorderStroke(1.dp, Color(0xFF283624)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "OBSERVATION & CONTEXT",
+                            color = Color(0xFF81C784),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = alert.description,
+                            color = Color(0xFFC0CDC0),
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1F2B1B),
+                    border = BorderStroke(1.dp, Color(0xFF33472C)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "RECOMMENDED ACTION & COMPANIONS",
+                            color = Color(0xFFA5D6A7),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = alert.companionRecommendation
+                                ?: "Intercrop with aromatic herbs like Basil, Marigold, or Green Onion to deter insects and improve soil biology.",
+                            color = White,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFF384A33)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFA0B09A))
+                    ) {
+                        Text("Close", fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = onAcknowledge,
+                        modifier = Modifier.weight(1.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2E7D32),
+                            contentColor = White
+                        )
+                    ) {
+                        Text("Acknowledge & Record", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactBedCard(
+    plotLabel: String,
+    subtitle: String,
+    cropCount: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFF1E2F1C) else Color(0xFF141C12)
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) Color(0xFF4CAF50) else Color(0xFF2B3825)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 4.dp, vertical = 6.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = plotLabel.uppercase(),
+                color = if (isSelected) Color(0xFF81C784) else White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(1.dp))
+            Text(
+                text = subtitle,
+                color = Color(0xFFA0B09A),
+                fontSize = 8.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isSelected) Color(0xFF2E442B) else Color(0xFF1F291B))
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = if (cropCount > 0) "$cropCount" else "0",
+                    color = if (cropCount > 0) Color(0xFF81C784) else Color(0xFF758570),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GridCropCard(
+    plant: MonitoredPlant,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161E14)),
+        border = BorderStroke(1.dp, Color(0xFF2B3825))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val imageModel = CropMetadataAssetDataSource.resolveCropImage(plant.cropId, plant.cropName, plant.imageUrl)
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageModel)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = plant.cropName,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF222C1F)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = plant.cropName,
+                color = White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = plant.plotLabel,
+                color = Color(0xFF81C784),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            val isPlanned = plant.healthStatus.contains("Planned", true)
+            val isOverdue = plant.healthStatus.contains("Overdue", true)
+            val isReady = plant.healthStatus.contains("Ready", true)
+            val badgeColor = when {
+                isPlanned -> Color(0xFFFFA000)
+                isOverdue -> Color(0xFFE53935)
+                isReady -> Color(0xFFFFB300)
+                else -> Color(0xFF4CAF50)
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(badgeColor.copy(alpha = 0.15f), RoundedCornerShape(3.dp))
+                    .padding(vertical = 1.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isPlanned) "Planned" else "D${plant.daysPlanted}",
+                    color = badgeColor,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
             }
         }
     }
@@ -1631,191 +3128,7 @@ private fun getEventColor(type: CalendarEventType): Color = when (type) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 4: MONITOR (Observations & Tracking Feeding DSS)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-@Composable
-private fun FarmMonitorTab(
-    uiState: FarmUiState,
-    onRecordObservationClick: (CropPlot?) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp)
-    ) {
-        // Header with "+ Record Observation" button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "CROP OBSERVATIONS",
-                    color = White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Directly feeds the DSS Engine",
-                    color = Color(0xFFA0B09A),
-                    fontSize = 11.sp
-                )
-            }
-
-            Button(
-                onClick = { onRecordObservationClick(null) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Record",
-                    tint = White,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Record Observation", fontSize = 12.sp, color = White)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        if (uiState.monitorItems.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No active plantings to monitor.\nPlant crops first to track conditions.",
-                    color = Color(0xFFA0B09A),
-                    textAlign = TextAlign.Center,
-                    fontSize = 14.sp
-                )
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(uiState.monitorItems, key = { it.plot.id }) { item ->
-                    MonitorCard(
-                        item = item,
-                        onRecord = { onRecordObservationClick(item.plot) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonitorCard(
-    item: CropMonitorCardData,
-    onRecord: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF182216)),
-        shape = RoundedCornerShape(12.dp),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF2C3927)))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = item.crop?.name ?: item.plot.cropName ?: "Vegetable",
-                        color = White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = "${item.plot.plotLabel} • Variety: ${item.plot.cropVariety ?: "Standard"}",
-                        color = Color(0xFFA0B09A),
-                        fontSize = 11.sp
-                    )
-                }
-
-                // Stage pill
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xFF2E7D32).copy(alpha = 0.2f), RoundedCornerShape(6.dp))
-                        .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = item.currentStageName,
-                        color = Color(0xFF81C784),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Observation Details
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF202A1E), RoundedCornerShape(8.dp))
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Row {
-                    Text("Condition: ", color = Color(0xFFA0B09A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(item.plantCondition, color = White, fontSize = 11.sp)
-                }
-                Row {
-                    Text("Pest/Disease: ", color = Color(0xFFA0B09A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(item.pestObservation, color = Color(0xFFFFCC80), fontSize = 11.sp)
-                }
-                Row {
-                    Text("Observation: ", color = Color(0xFFA0B09A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(item.growthObservation, color = Color(0xFFD0DFCC), fontSize = 11.sp)
-                }
-                if (item.lastRecordedAt != null) {
-                    Text(
-                        text = "Last recorded: ${item.lastRecordedAt}",
-                        color = Color(0xFF8A9A84),
-                        fontSize = 10.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Action
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                OutlinedButton(
-                    onClick = onRecord,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestGreen),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E7D32)),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EditNote,
-                        contentDescription = "Log Observation",
-                        tint = ForestGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Record Observation", fontSize = 11.sp, color = ForestGreen)
-                }
-            }
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TAB 5: ACTIVITY (Historical Farm Records)
+// TAB 4: ACTIVITY HISTORY (Historical Farm Records)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
@@ -1959,380 +3272,9 @@ private fun ActivityHistoryCard(act: FarmHistoryItem) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MODAL 1: CROP DETAILS DIALOG
-// ═══════════════════════════════════════════════════════════════════════════════
-
-@Composable
-private fun CropDetailsDialog(
-    plant: MonitoredPlant?,
-    plot: CropPlot?,
-    onDismiss: () -> Unit,
-    onRecordObservation: (CropPlot) -> Unit,
-    onStartPlanting: (String) -> Unit,
-    onHarvest: (String) -> Unit
-) {
-    val cropName = plant?.cropName ?: plot?.cropName ?: "Vegetable"
-    val plotLabel = plant?.plotLabel ?: plot?.plotLabel ?: "Bed"
-    val variety = plant?.cropVariety ?: plot?.cropVariety ?: "Standard Variety"
-    val soil = plant?.soilType ?: plot?.soilType
-    val isPlanted = plant != null || plot?.plantedDate != null
-    val plotId = plant?.id ?: plot?.id ?: ""
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF161E14)),
-            shape = RoundedCornerShape(16.dp),
-            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF2E3E29)))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                // Header with close button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = cropName,
-                            color = White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "$plotLabel • $variety",
-                            color = Color(0xFFA0B09A),
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = White
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Image Hero
-                val imageModel = CropMetadataAssetDataSource.resolveCropImage(plant?.cropId ?: plot?.cropId, cropName, plant?.imageUrl)
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageModel)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = cropName,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(130.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF222C1F)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Quick stats
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OverviewMetricCard("Soil", soil?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Loam", Color(0xFF4CAF50), Modifier.weight(1f))
-                    OverviewMetricCard("Status", if (isPlanted) "Planted" else "Planned", if (isPlanted) Color(0xFF4CAF50) else Color(0xFFFFA000), Modifier.weight(1f))
-                    if (plant != null) {
-                        OverviewMetricCard("Days", "${plant.daysPlanted}/${plant.daysToHarvest}d", Color(0xFF42A5F5), Modifier.weight(1f))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Companion & Care Guidance
-                if (plant != null) {
-                    Text("COMPANION ANALYSIS", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(plant.companionStatus, color = Color(0xFFC0D0BA), fontSize = 11.sp)
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text("GROWING TIP", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(plant.growingTip, color = Color(0xFFC0D0BA), fontSize = 11.sp)
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text("PEST SURVEILLANCE", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(plant.pestInfo, color = Color(0xFFFFCC80), fontSize = 11.sp)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Actions
-                if (isPlanted) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                if (plot != null) onRecordObservation(plot)
-                                else if (plant != null) {
-                                    // Construct dummy CropPlot to pass
-                                    val dummyPlot = CropPlot(
-                                        id = plant.id,
-                                        farmId = plant.farmId,
-                                        plotLabel = plant.plotLabel,
-                                        cropName = plant.cropName,
-                                        cropId = plant.cropId,
-                                        cropVariety = plant.cropVariety,
-                                        soilType = plant.soilType,
-                                        posX = 0f,
-                                        posY = 0f,
-                                        widthM = 10f,
-                                        heightM = 5f,
-                                        plantedDate = plant.rawPlantedDate
-                                    )
-                                    onRecordObservation(dummyPlot)
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E7D32))
-                        ) {
-                            Text("📝 Observation", fontSize = 12.sp, color = ForestGreen)
-                        }
-
-                        Button(
-                            onClick = { onHarvest(plotId) },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA000)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("🌾 Harvest", fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = { onStartPlanting(plotId) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("🌱 Start Planting Now", fontSize = 13.sp, color = White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-    }
-}
+// MODAL 1: CROP DSS MANAGEMENT DIALOG — Moved to reusable CropDssManagementDialog
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MODAL 2: RECORD OBSERVATION DIALOG (Feeds directly to DSS)
+// MODAL 2: INTERACTIVE RECORD OBSERVATION DIALOG (The Question, ABC, Selection)
+// Handled by reusable AddLogDialog
 // ═══════════════════════════════════════════════════════════════════════════════
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RecordObservationDialog(
-    initialPlot: CropPlot?,
-    availablePlots: List<CropPlot>,
-    onDismiss: () -> Unit,
-    onSubmit: (String, String, String, String, String) -> Unit
-) {
-    var selectedPlotId by remember { mutableStateOf(initialPlot?.id ?: availablePlots.firstOrNull()?.id ?: "") }
-    var selectedStage by remember { mutableStateOf("Vegetative") }
-    var selectedCondition by remember { mutableStateOf("Healthy & Vigorously Growing") }
-    var pestNotes by remember { mutableStateOf("No pests observed") }
-    var generalNotes by remember { mutableStateOf("") }
-
-    val stages = listOf("Sprout", "Seedling", "Vegetative", "Flowering", "Fruiting", "Mature")
-    val conditions = listOf(
-        "Healthy & Vigorously Growing",
-        "Mild Water Stress",
-        "Nutrient Deficiency",
-        "Pest / Disease Detected",
-        "Wilting / Stunted"
-    )
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF161E14)),
-            shape = RoundedCornerShape(16.dp),
-            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF2E3E29)))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Record Crop Observation",
-                            color = White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Updates DSS rules & alerts immediately",
-                            color = Color(0xFFA0B09A),
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Bed selection if multiple
-                Text("Select Bed / Crop:", color = Color(0xFFC0D0BA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    availablePlots.forEach { plot ->
-                        val isSelected = plot.id == selectedPlotId
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedPlotId = plot.id },
-                            label = { Text("${plot.plotLabel} (${plot.cropName})", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF2E7D32),
-                                selectedLabelColor = White,
-                                containerColor = Color(0xFF1A2317),
-                                labelColor = Color(0xFFA0B09A)
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Growth Stage
-                Text("Observed Growth Stage:", color = Color(0xFFC0D0BA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    stages.forEach { stage ->
-                        FilterChip(
-                            selected = stage == selectedStage,
-                            onClick = { selectedStage = stage },
-                            label = { Text(stage, fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF2E7D32),
-                                selectedLabelColor = White,
-                                containerColor = Color(0xFF1A2317),
-                                labelColor = Color(0xFFA0B09A)
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Condition
-                Text("Plant Condition:", color = Color(0xFFC0D0BA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    conditions.forEach { cond ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (cond == selectedCondition) Color(0xFF202E1D) else Color.Transparent)
-                                .clickable { selectedCondition = cond }
-                                .padding(horizontal = 8.dp, vertical = 6.dp)
-                        ) {
-                            RadioButton(
-                                selected = cond == selectedCondition,
-                                onClick = { selectedCondition = cond },
-                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF4CAF50), unselectedColor = Color(0xFF8A9A84))
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = cond, color = White, fontSize = 12.sp)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Pest observations
-                OutlinedTextField(
-                    value = pestNotes,
-                    onValueChange = { pestNotes = it },
-                    label = { Text("Pest / Disease Presence", color = Color(0xFFA0B09A)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        focusedBorderColor = Color(0xFF4CAF50),
-                        unfocusedBorderColor = Color(0xFF2A3824)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Additional notes
-                OutlinedTextField(
-                    value = generalNotes,
-                    onValueChange = { generalNotes = it },
-                    label = { Text("Detailed Observation Notes", color = Color(0xFFA0B09A)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        focusedBorderColor = Color(0xFF4CAF50),
-                        unfocusedBorderColor = Color(0xFF2A3824)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        if (selectedPlotId.isNotBlank()) {
-                            onSubmit(selectedPlotId, selectedStage, selectedCondition, pestNotes, generalNotes)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Save Observation & Feed DSS", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-        }
-    }
-}

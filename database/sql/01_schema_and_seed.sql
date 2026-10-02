@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- MapTanim Consolidated Master Database Schema & Seed Script for Supabase
 -- Target Project: ojilvcglpzbtpjxguhzj.supabase.co
--- Fully Synchronized with Migrations 001 through 021 (Current App Version 1.2.6)
+-- Fully Synchronized with Migrations 001 through 021 (Current App Version 1.2.7)
 --
 -- Includes:
 --   1. Enum Types (including WEED, TRELLIS, NUTRITION, ROTATION_ALERT)
@@ -839,6 +839,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.feedback);
 
 INSERT INTO public.notifications (title, body, notification_type, is_read)
 VALUES
+    ('📢 System Update v1.2.7', 'MapTanim updated with beginner backyard DSS, matrix evaluator, crop summary improvements, and SVG rendering.', 'SYSTEM_UPDATE', FALSE),
     ('📢 System Update v1.2.6', 'MapTanim updated with practical agronomy guides, trellis requirements, and crop rotation protection.', 'SYSTEM_UPDATE', FALSE),
     ('🌾 Practical Agronomy Added', '15 Approved Philippine vegetables now include Filipino soil preparation and harvest indicators.', 'CROP_ADDITION', FALSE),
     ('🛠 Bug Fix & Security Patch', 'Resolved offline database synchronization and plot status updating issues.', 'BUG_FIX', TRUE)

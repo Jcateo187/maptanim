@@ -14,9 +14,12 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 
 class CropPlotRepositoryImpl(
-    private val cropPlotDao: CropPlotDao? = null,
+    private val initialDao: CropPlotDao? = null,
     private val remoteDataSource: CropPlotRemoteDataSource = CropPlotRemoteDataSource()
 ) : CropPlotRepository {
+
+    private val cropPlotDao: CropPlotDao?
+        get() = initialDao ?: RepositoryProvider.getDatabase()?.cropPlotDao()
 
     private val inMemoryCache = MutableStateFlow<Map<String, List<CropPlot>>>(emptyMap())
 

@@ -89,13 +89,21 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.LIBRARY,
+            route = "${Routes.LIBRARY}?cropName={cropName}",
+            arguments = listOf(
+                navArgument("cropName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
             enterTransition = { EnterTransition.None },
             exitTransition = { ExitTransition.None },
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }
-        ) {
-            VegetablesScreen(navController = navController)
+        ) { backStackEntry ->
+            val cropName = backStackEntry.arguments?.getString("cropName")
+            VegetablesScreen(navController = navController, initialCropName = cropName)
         }
 
         composable(

@@ -19,7 +19,8 @@ data class VarietyDetail(
     val daysToHarvest: Int,
     val characteristics: String,
     val diseaseResistance: String,
-    val optimalSeason: String
+    val optimalSeason: String,
+    val stageDays: Map<String, Int>? = null
 )
 
 data class GrowingSeasonInfo(
@@ -83,8 +84,66 @@ data class PestDiseaseItem(
     val type: String, // "Insect Pest" or "Disease"
     val symptoms: String,
     val organicControl: String,
-    val prevention: String
+    val prevention: String,
+    val chemicalControl: String? = null,
+    val imageAsset: String? = null
 )
+
+object AgronomicAssetHelper {
+    fun resolvePestImage(pestName: String, explicitAsset: String? = null): String? {
+        if (!explicitAsset.isNullOrBlank()) return explicitAsset
+        val lower = pestName.lowercase()
+        return when {
+            lower.contains("fruit borer") || (lower.contains("borer") && !lower.contains("shoot")) -> "file:///android_asset/metadata/pest/Fruit_borer.png"
+            lower.contains("leaf curl") || lower.contains("tylcv") -> "file:///android_asset/metadata/pest/Tomato_leaf_curlvirus.png"
+            lower.contains("bacterial wilt") || lower.contains("ralstonia") -> "file:///android_asset/metadata/pest/Bacterial_wilt.png"
+            lower.contains("leafminer") || lower.contains("miner") -> "file:///android_asset/metadata/pest/Vegetable_leafminer.png"
+            lower.contains("flea beetle") || lower.contains("fleabeetle") -> "file:///android_asset/metadata/pest/Eggplant_and_brassica_fleabeetle.png"
+            lower.contains("diamondback") || lower.contains("dbm") -> "file:///android_asset/metadata/pest/Diamondback_moth.png"
+            lower.contains("aphid") -> "file:///android_asset/metadata/pest/Melon_and_cotton_aphids.png"
+            lower.contains("anthracnose") -> "file:///android_asset/metadata/pest/Chilli_anthracnose_fruit_rot.png"
+            lower.contains("downy mildew") || lower.contains("downy") -> "file:///android_asset/metadata/pest/Cucurbit_downy_mildew.png"
+            lower.contains("powdery mildew") || lower.contains("powdery") -> "file:///android_asset/metadata/pest/Powdery_mildew.png"
+            lower.contains("armyworm") || lower.contains("spodoptera") -> "file:///android_asset/metadata/pest/Fall_armyworm.png"
+            lower.contains("thrip") -> "file:///android_asset/metadata/pest/Onion_thrips.png"
+            else -> null
+        }
+    }
+
+    fun resolveSoilImage(soilTypes: String): String {
+        val lower = soilTypes.lowercase()
+        return when {
+            lower.contains("sandy loam") || lower.contains("sandy") -> "file:///android_asset/metadata/soil_images/Sandy_soil.png"
+            lower.contains("clay loam") || lower.contains("clay") -> "file:///android_asset/metadata/soil_images/Clay_soil.png"
+            lower.contains("silt") -> "file:///android_asset/metadata/soil_images/Silty_soil.png"
+            lower.contains("peat") -> "file:///android_asset/metadata/soil_images/Peaty_soil.png"
+            lower.contains("chalk") -> "file:///android_asset/metadata/soil_images/Chalky_soil.png"
+            else -> "file:///android_asset/metadata/soil_images/Loam_soil.png"
+        }
+    }
+
+    fun resolveCompanionCropImage(plantName: String): String? {
+        val lower = plantName.lowercase()
+        return when {
+            lower.contains("tomato") || lower.contains("kamatis") -> "file:///android_asset/metadata/crops_images/tomato.png"
+            lower.contains("eggplant") || lower.contains("talong") -> "file:///android_asset/metadata/crops_images/eggplant.png"
+            lower.contains("pechay") || lower.contains("petsay") -> "file:///android_asset/metadata/crops_images/pechay.png"
+            lower.contains("carrot") || lower.contains("karot") -> "file:///android_asset/metadata/crops_images/carrot.png"
+            lower.contains("corn") || lower.contains("mais") -> "file:///android_asset/metadata/crops_images/corn.png"
+            lower.contains("onion") || lower.contains("sibuyas") || lower.contains("garlic") -> "file:///android_asset/metadata/crops_images/onion.png"
+            lower.contains("pipino") || lower.contains("cucumber") -> "file:///android_asset/metadata/crops_images/pipino.png"
+            lower.contains("sitaw") || lower.contains("bean") -> "file:///android_asset/metadata/crops_images/sitaw.png"
+            lower.contains("cabbage") || lower.contains("repolyo") -> "file:///android_asset/metadata/crops_images/cabbage.png"
+            lower.contains("pepper") || lower.contains("sili") -> "file:///android_asset/metadata/crops_images/sili.png"
+            lower.contains("ampalaya") || lower.contains("bitter") -> "file:///android_asset/metadata/crops_images/ampalaya.png"
+            lower.contains("okra") -> "file:///android_asset/metadata/crops_images/okra.png"
+            lower.contains("lettuce") || lower.contains("litsugas") -> "file:///android_asset/metadata/crops_images/lettuce.png"
+            lower.contains("kangkong") -> "file:///android_asset/metadata/crops_images/kangkong.png"
+            lower.contains("pumpkin") || lower.contains("kalabasa") || lower.contains("squash") -> "file:///android_asset/metadata/crops_images/pumpkin.png"
+            else -> null
+        }
+    }
+}
 
 data class CompanionInfo(
     val beneficialCompanions: List<String>,
@@ -180,7 +239,14 @@ object VegetableGuideProvider {
                     daysToHarvest = 60,
                     characteristics = "Thick-walled, firm oval fruits, high shipping tolerance, deep red when ripe.",
                     diseaseResistance = "High resistance to Tomato Yellow Leaf Curl Virus (TyLCV) and Bacterial Wilt.",
-                    optimalSeason = "Year-Round (Wet & Dry)"
+                    optimalSeason = "Year-Round (Wet & Dry)",
+                    stageDays = mapOf(
+                        "Sprout" to 5,
+                        "Seedling" to 13,
+                        "Vegetative" to 20,
+                        "Flowering" to 16,
+                        "Harvest" to 6
+                    )
                 ),
                 VarietyDetail(
                     name = "Apollo",
@@ -188,7 +254,14 @@ object VegetableGuideProvider {
                     daysToHarvest = 72,
                     characteristics = "Open-pollinated lowland variety producing fleshy, sweet-tart fruits.",
                     diseaseResistance = "Moderate tolerance to Early Blight and Fusarium Wilt.",
-                    optimalSeason = "Dry Season (Oct – March)"
+                    optimalSeason = "Dry Season (Oct – March)",
+                    stageDays = mapOf(
+                        "Sprout" to 6,
+                        "Seedling" to 15,
+                        "Vegetative" to 24,
+                        "Flowering" to 20,
+                        "Harvest" to 7
+                    )
                 ),
                 VarietyDetail(
                     name = "Rosas F1",
@@ -196,7 +269,14 @@ object VegetableGuideProvider {
                     daysToHarvest = 65,
                     characteristics = "High-yielding determinate bush variety with uniform round-to-oblong fruit sets.",
                     diseaseResistance = "TyLCV tolerant and heat stress resilient.",
-                    optimalSeason = "Year-Round"
+                    optimalSeason = "Year-Round",
+                    stageDays = mapOf(
+                        "Sprout" to 5,
+                        "Seedling" to 14,
+                        "Vegetative" to 22,
+                        "Flowering" to 18,
+                        "Harvest" to 6
+                    )
                 )
             ),
             growingSeason = GrowingSeasonInfo(
@@ -268,10 +348,51 @@ object VegetableGuideProvider {
                 GrowthStageItem(5, "Ripening & Harvest", "Days 61–75+", "Fruit color changes from breaker green to vibrant red; sugars peak.", "Harvest early morning at breaker or turning stage for market.")
             ),
             pestsAndDiseases = listOf(
-                PestDiseaseItem("Fruit Borer (Helicoverpa armigera)", "Insect Pest", "Holes bored into developing fruits with visible larval frass, causing premature rotting.", "Spray Bacillus thuringiensis (BT) or Neem oil extract early morning. Handpick infested fruits.", "Pheromone traps and marigold border companion planting."),
-                PestDiseaseItem("Tomato Yellow Leaf Curl Virus (TyLCV)", "Disease (Viral)", "Upward curling of leaf margins, yellowing (chlorosis), stunting, and aborted blossoms.", "Whitefly vector control using yellow sticky traps and neem spray. Remove and burn infected plants.", "Plant TyLCV-resistant varieties like Diamante Max F1."),
-                PestDiseaseItem("Bacterial Wilt (Ralstonia solanacearum)", "Disease (Bacterial)", "Rapid daytime wilting of green foliage without prior yellowing; vascular browning.", "No chemical cure once infected. Drench soil with bio-fungicide (Trichoderma).", "Crop rotation with non-solanaceous crops (corn, rice, beans)."),
-                PestDiseaseItem("Early Blight (Alternaria solani)", "Disease (Fungal)", "Concentric target-like brown spots on older lower leaves leading to premature defoliation.", "Copper hydroxide or Mancozeb fungicide spray; prune lower yellowing leaves.", "Avoid overhead irrigation and mulch soil to stop fungal splash.")
+                PestDiseaseItem(
+                    name = "Fruit Borer (Helicoverpa armigera)",
+                    type = "Insect Pest",
+                    symptoms = "Caterpillars bore circular entry holes into developing fruits with visible dark frass, causing premature rotting and fruit drop.",
+                    organicControl = "Spray Bacillus thuringiensis (Bt) or 5% Neem extract early morning. Install pheromone lures (4 traps/ha). Handpick infested fruits.",
+                    prevention = "Plant African Marigold border rows as trap crop. Rotate with non-host crops. Avoid planting adjacent to sweet corn.",
+                    chemicalControl = "Chlorantraniliprole (Prevathon) or Emamectin benzoate at egg-hatch stage.",
+                    imageAsset = "file:///android_asset/metadata/pest/Fruit_borer.png"
+                ),
+                PestDiseaseItem(
+                    name = "Tomato Yellow Leaf Curl Virus (TyLCV)",
+                    type = "Disease (Viral)",
+                    symptoms = "Severe upward cupping and curling of leaflets, marginal chlorosis, stunted terminal growth, and blossom drop with no fruit set.",
+                    organicControl = "Vector control: Whitefly (Bemisia tabaci) eradication using yellow sticky boards (20/ha) and neem oil soap. Rogue out infected plants immediately.",
+                    prevention = "Plant certified TyLCV-resistant varieties like Diamante Max F1 and Rosas F1. Install 40-mesh insect nets in seedling beds.",
+                    chemicalControl = "Dinotefuran or Imidacloprid drench at transplanting.",
+                    imageAsset = "file:///android_asset/metadata/pest/Tomato_leaf_curlvirus.png"
+                ),
+                PestDiseaseItem(
+                    name = "Bacterial Wilt (Ralstonia solanacearum)",
+                    type = "Disease (Bacterial)",
+                    symptoms = "Rapid daytime wilting of entire green foliage without prior yellowing. Stem vascular browning; white bacterial ooze in clear water suspension test.",
+                    organicControl = "No chemical cure once infected. Rogue out diseased plants with root ball. Drench soil perimeter with Trichoderma bio-control agent.",
+                    prevention = "Strict 3-year crop rotation with wetland paddy rice or corn. Construct 25–30 cm raised beds to eliminate stagnant root moisture.",
+                    chemicalControl = "Copper hydroxide soil drench barrier around infection perimeter.",
+                    imageAsset = "file:///android_asset/metadata/pest/Bacterial_wilt.png"
+                ),
+                PestDiseaseItem(
+                    name = "Vegetable Leafminer (Liriomyza spp.)",
+                    type = "Insect Pest",
+                    symptoms = "Serpentine, winding white or translucent trails mined through leaf mesophyll. Heavily mined leaves dry up, dropping and exposing fruit to sunscald.",
+                    organicControl = "Place yellow sticky cards 15 cm above crop canopy. Spray botanical insecticidal soap or neem oil extract. Protect Diglyphus parasitoids.",
+                    prevention = "Deep plowing to bury pupae. Prune and compost infested lower foliage. Eradicate surrounding weed hosts.",
+                    chemicalControl = "Cyromazine or Abamectin when active mines exceed 5 per leaf.",
+                    imageAsset = "file:///android_asset/metadata/pest/Vegetable_leafminer.png"
+                ),
+                PestDiseaseItem(
+                    name = "Early Blight (Alternaria solani)",
+                    type = "Disease (Fungal)",
+                    symptoms = "Concentric target-like brown spots on older lower leaves, yellow halo margin, leading to premature defoliation from ground level up.",
+                    organicControl = "Copper-based fungicide spray (Bordeaux mixture). Prune lower leaves up to 20 cm from ground level to halt soil-splash inoculation.",
+                    prevention = "Apply silver-black plastic mulch or thick rice straw mulch. Avoid overhead sprinkler watering; irrigate strictly at root base.",
+                    chemicalControl = "Mancozeb or Azoxystrobin spray every 7–10 days during rainy weather.",
+                    imageAsset = null
+                )
             ),
             companionPlants = CompanionInfo(
                 beneficialCompanions = listOf("Marigold", "Basil", "Onion / Garlic", "Carrot", "Pechay"),

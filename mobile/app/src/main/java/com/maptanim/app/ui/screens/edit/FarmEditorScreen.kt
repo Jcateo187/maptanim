@@ -114,7 +114,7 @@ fun FarmEditorScreen(
         }
     }
 
-    // 2D Camera state — flat orthographic, no isometric
+    // 2D Camera state — flat orthographic
     var liveCamera by remember { mutableStateOf(TopDownCamera()) }
 
     // Drag & Drop state
@@ -661,11 +661,14 @@ fun FarmEditorScreen(
                         }
                     }
                 } else {
-                    val imageModel: Any = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(
-                        cropId = dragCropName, cropName = dragCropName, imageUrl = dragCropImageUrl
-                    )
-                    AsyncImage(model = imageModel, contentDescription = "Floating Crop",
-                        contentScale = ContentScale.Fit, modifier = Modifier.size(50.dp))
+                    Canvas(modifier = Modifier.size(46.dp)) {
+                        com.maptanim.app.renderer.canvas.CropSvgRenderer.drawCropSvg(
+                            drawScope = this,
+                            cropName = dragCropName,
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            sizePx = size.width * 0.85f
+                        )
+                    }
                 }
             }
         }

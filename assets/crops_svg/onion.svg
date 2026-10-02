@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Roots at base -->
+  <path d="M48 84 Q46 94 44 98" stroke="#D7CCC8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M50 84 Q50 95 50 99" stroke="#D7CCC8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M52 84 Q54 94 56 98" stroke="#D7CCC8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <!-- Green Scallion Shoots from Top -->
+  <path d="M48 30 Q44 14 36 6 Q42 16 48 32 Z" fill="#43A047"/>
+  <path d="M52 30 Q54 14 52 4 Q54 16 52 32 Z" fill="#4CAF50"/>
+  <path d="M51 30 Q58 14 66 8 Q60 16 52 32 Z" fill="#388E3C"/>
+  <!-- Onion Bulb Body -->
+  <radialGradient id="onionGrad" cx="42%" cy="46%" r="55%">
+    <stop offset="0%" stop-color="#FFAB91"/>
+    <stop offset="60%" stop-color="#E64A19"/>
+    <stop offset="100%" stop-color="#BF360C"/>
+  </radialGradient>
+  <path d="M50 28 C56 28 78 44 78 62 C78 78 64 86 50 86 C36 86 22 78 22 62 C22 44 44 28 50 28 Z" fill="url(#onionGrad)"/>
+  <!-- Concentric Layer Lines -->
+  <path d="M50 28 C42 40 34 54 34 66 C34 76 42 84 50 86" stroke="#D84315" stroke-width="1.6" fill="none" opacity="0.6"/>
+  <path d="M50 28 C58 40 66 54 66 66 C66 76 58 84 50 86" stroke="#D84315" stroke-width="1.6" fill="none" opacity="0.6"/>
+  <path d="M50 28 C48 42 44 54 44 68 C44 78 48 84 50 86" stroke="#D84315" stroke-width="1.6" fill="none" opacity="0.6"/>
+  <path d="M50 28 C52 42 56 54 56 68 C56 78 52 84 50 86" stroke="#D84315" stroke-width="1.6" fill="none" opacity="0.6"/>
+  <!-- Highlight -->
+  <ellipse cx="38" cy="52" rx="7" ry="14" transform="rotate(-25 38 52)" fill="#FFFFFF" opacity="0.3"/>
+</svg>

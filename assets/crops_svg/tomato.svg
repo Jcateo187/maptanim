@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Tomato Body -->
+  <radialGradient id="tomGrad" cx="38%" cy="32%" r="65%">
+    <stop offset="0%" stop-color="#FF5252"/>
+    <stop offset="55%" stop-color="#E53935"/>
+    <stop offset="100%" stop-color="#B71C1C"/>
+  </radialGradient>
+  <radialGradient id="highGrad" cx="30%" cy="26%" r="20%">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+  <ellipse cx="50" cy="57" rx="38" ry="34" fill="url(#tomGrad)"/>
+  <!-- Highlight -->
+  <ellipse cx="36" cy="46" rx="14" ry="8" transform="rotate(-20 36 46)" fill="url(#highGrad)"/>
+  <!-- Tomato Stem & Sepals (Green Calyx) -->
+  <path d="M50 25 C50 14, 53 10, 58 7 C56 7, 52 11, 48 24 Z" fill="#2E7D32"/>
+  <!-- Sepals 5-point star -->
+  <path d="M50 25 Q42 16 32 18 Q41 24 45 28 Z" fill="#388E3C"/>
+  <path d="M50 25 Q58 16 68 18 Q59 24 55 28 Z" fill="#388E3C"/>
+  <path d="M50 25 Q62 28 69 34 Q58 33 53 30 Z" fill="#43A047"/>
+  <path d="M50 25 Q38 28 31 34 Q42 33 47 30 Z" fill="#43A047"/>
+  <path d="M50 25 Q50 36 50 38 Q48 32 50 25 Z" fill="#2E7D32"/>
+  <circle cx="50" cy="27" r="4" fill="#1B5E20"/>
+</svg>

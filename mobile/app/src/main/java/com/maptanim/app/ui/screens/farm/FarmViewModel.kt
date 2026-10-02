@@ -11,6 +11,7 @@ import com.maptanim.app.domain.usecase.*
 import com.maptanim.app.dss.engine.CompanionAlert
 import com.maptanim.app.dss.engine.DssEngine
 import com.maptanim.app.dss.engine.DssRule
+import com.maptanim.app.dss.engine.DssLogEvaluator
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,10 +24,9 @@ import java.util.UUID
 
 enum class FarmTab(val title: String) {
     OVERVIEW("Overview"),
-    CROPS("Crops"),
+    MONITORING("Monitoring"),
     CALENDAR("Calendar"),
-    MONITOR("Monitor"),
-    ACTIVITY("Activity")
+    ACTIVITY("Activity History")
 }
 
 enum class CropsFilter(val label: String) {
@@ -44,7 +44,12 @@ data class FarmAttentionItem(
     val description: String,
     val severity: AttentionSeverity,
     val icon: String,
-    val plotLabel: String? = null
+    val plotLabel: String? = null,
+    val date: String = LocalDate.now().toString(),
+    val companionRecommendation: String? = null,
+    val isCompanionAlert: Boolean = false,
+    val cropA: String? = null,
+    val cropB: String? = null
 )
 
 enum class ActivityCategory(val label: String) {
@@ -111,6 +116,7 @@ data class FarmUiState(
     // Overview data
     val plots: List<CropPlot> = emptyList(),
     val crops: List<Crop> = emptyList(),
+    val cropZones: List<CropZone> = emptyList(),
     val attentionItems: List<FarmAttentionItem> = emptyList(),
     val todayTasks: List<FarmTask> = emptyList(),
     val recentActivities: List<FarmHistoryItem> = emptyList(),
@@ -138,6 +144,13 @@ data class FarmUiState(
     val errorMessage: String? = null
 )
 
+private data class FarmInputGroup(
+    val plots: List<CropPlot>,
+    val zones: List<CropZone>,
+    val crops: List<Crop>,
+    val tasks: List<FarmTask>
+)
+
 class FarmViewModel(
     private val plotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,
     private val cropRepository: CropRepository = RepositoryProvider.cropRepository,
@@ -157,11 +170,14 @@ class FarmViewModel(
     private val observeFarmActivitiesUseCase: ObserveFarmActivitiesUseCase = ObserveFarmActivitiesUseCase(activityRepository),
     private val logFarmActivityUseCase: LogFarmActivityUseCase = LogFarmActivityUseCase(activityRepository),
     private val startPlantingUseCase: StartPlantingUseCase = StartPlantingUseCase(plotRepository),
-    private val recordHarvestUseCase: RecordHarvestUseCase = RecordHarvestUseCase(harvestRepository)
+    private val recordHarvestUseCase: RecordHarvestUseCase = RecordHarvestUseCase(harvestRepository),
+    private val cropZoneRepository: CropZoneRepository = RepositoryProvider.cropZoneRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FarmUiState())
     val uiState: StateFlow<FarmUiState> = _uiState.asStateFlow()
+
+    private val dismissedAlertIds = mutableSetOf<String>()
 
     private var observeFarmJob: Job? = null
 
@@ -184,6 +200,7 @@ class FarmViewModel(
         }
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observeFarmData() {
         observeFarmJob?.cancel()
         observeFarmJob = viewModelScope.launch {
@@ -204,11 +221,20 @@ class FarmViewModel(
             val todayStr = LocalDate.now().toString()
 
             // Observe dynamic database streams via Use Cases
-            val flowGroup1 = combine(
-                getFarmPlotsUseCase(resolvedFarmId),
-                getAllCropsUseCase(),
-                getTodayTasksUseCase(resolvedFarmId, todayStr)
-            ) { plots, crops, tasks -> Triple(plots, crops, tasks) }
+            val flowGroup1 = getFarmPlotsUseCase(resolvedFarmId).flatMapLatest { plots ->
+                val plotIds = plots.map { it.id }
+                val zonesFlow = if (plotIds.isNotEmpty()) {
+                    cropZoneRepository.observeZonesByPlotIds(plotIds)
+                } else {
+                    flowOf(emptyList())
+                }
+                combine(
+                    flowOf(plots),
+                    zonesFlow,
+                    getAllCropsUseCase(),
+                    getTodayTasksUseCase(resolvedFarmId, todayStr)
+                ) { p, z, c, t -> FarmInputGroup(p, z, c, t) }
+            }
 
             val flowGroup2 = combine(
                 observeFarmActivitiesUseCase(),
@@ -219,9 +245,10 @@ class FarmViewModel(
             combine(flowGroup1, flowGroup2) { g1, g2 ->
                 buildFarmState(
                     farmId = resolvedFarmId,
-                    plots = g1.first,
-                    crops = g1.second,
-                    tasks = g1.third,
+                    plots = g1.plots,
+                    zones = g1.zones,
+                    crops = g1.crops,
+                    tasks = g1.tasks,
                     activities = g2.first.filter { it.farmId == resolvedFarmId },
                     dynamicRules = g2.second,
                     allPests = g2.third,
@@ -241,6 +268,7 @@ class FarmViewModel(
     private fun buildFarmState(
         farmId: String,
         plots: List<CropPlot>,
+        zones: List<CropZone> = emptyList(),
         crops: List<Crop>,
         tasks: List<FarmTask>,
         activities: List<Activity>,
@@ -267,92 +295,118 @@ class FarmViewModel(
         val plannedPlotsList = mutableListOf<CropPlot>()
 
         for (plot in effectivePlots) {
-            val isPlainBed = plot.cropName.isNullOrBlank() ||
-                plot.cropName.equals("Bed", ignoreCase = true) ||
-                plot.cropId.equals("bed", ignoreCase = true)
+            val matchingZones = zones.filter {
+                it.plotId == plot.id &&
+                !it.cropName.isNullOrBlank() &&
+                !it.cropName.equals("Bed", ignoreCase = true)
+            }
 
-            val crop = crops.firstOrNull { it.name.equals(plot.cropName, ignoreCase = true) }
-            val isPlanted = !isPlainBed && plot.plantedDate != null
-
-            if (isPlanted) {
-                val plantedLocalDate = try {
-                    LocalDate.parse(plot.plantedDate!!.take(10))
-                } catch (e: Exception) {
-                    today
-                }
-                val isFuture = plantedLocalDate.isAfter(today)
-                val daysPlanted = if (!isFuture) ChronoUnit.DAYS.between(plantedLocalDate, today).toInt().coerceAtLeast(0) else 0
-                val daysToHarvest = crop?.daysToHarvest?.takeIf { it > 0 } ?: 60
-                val progress = if (daysToHarvest > 0 && !isFuture) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
-
-                val stageIndex = when {
-                    isFuture -> 0
-                    progress < 0.15f -> 0
-                    progress < 0.35f -> 1
-                    progress < 0.65f -> 2
-                    progress < 0.90f -> 3
-                    else -> 4
-                }
-
-                val isOverdue = !isFuture && daysPlanted > daysToHarvest
-                val isHarvestReady = !isFuture && (stageIndex == 4 || daysPlanted >= daysToHarvest)
-
-                val stageName = when {
-                    isFuture -> "Planned (${plot.plantedDate?.take(10)})"
-                    isOverdue -> "Stage 5: Harvest Overdue ⚠️"
-                    isHarvestReady -> "Stage 5: Harvest Ready 🌾"
-                    stageIndex == 3 -> "Stage 4: Flowering"
-                    stageIndex == 2 -> "Stage 3: Vegetative"
-                    stageIndex == 1 -> "Stage 2: Seedling"
-                    else -> "Stage 1: Sprout"
-                }
-
-                val cropCleanName = (crop?.name ?: plot.cropName ?: "carrot").lowercase().replace(" ", "")
-                val soilScore = dssResult.soilScores.firstOrNull { it.plotLabel == plot.plotLabel }?.score
-                val plotTasks = dssResult.tasks.filter { it.plotId == plot.id }
-                val plotAlerts = dssResult.companionAlerts.filter {
-                    it.plotALabel == plot.plotLabel || it.plotBLabel == plot.plotLabel
-                }
-
-                plantedPlotsList.add(
-                    MonitoredPlant(
-                        id = plot.id,
-                        farmId = plot.farmId,
-                        cropId = plot.cropId ?: crop?.id,
-                        cropName = crop?.name ?: plot.cropName ?: "Vegetable",
-                        localName = crop?.localName ?: plot.cropName ?: "Gulay",
-                        cropVariety = plot.cropVariety ?: "Standard Variety",
-                        plotLabel = plot.plotLabel,
-                        seasonality = SeasonalityFilter.ALL,
-                        category = CropCategoryFilter.ALL,
-                        currentStageIndex = stageIndex,
-                        stageName = stageName,
-                        daysPlanted = daysPlanted,
-                        daysToHarvest = daysToHarvest,
-                        healthStatus = when {
-                            isFuture -> "📅 Scheduled for ${plot.plantedDate?.take(10)}"
-                            isOverdue -> "Harvest Overdue — Harvest Immediately"
-                            isHarvestReady -> "Harvest Ready — Ready to harvest"
-                            else -> "Active Healthy Growth"
-                        },
-                        companionCrop = crop?.companionPlants?.joinToString(", ") ?: "None",
-                        companionStatus = if (plotAlerts.isNotEmpty()) "Alert: ${plotAlerts.first().message}" else "Good Companion Environment",
-                        growingTip = crop?.description ?: "Ensure adequate irrigation and weed management.",
-                        pestInfo = allPests.firstOrNull { it.affectedCrops.any { c -> c.contains(plot.cropName ?: "", true) } }?.name ?: "Regular inspection recommended.",
-                        assetPath = "crops/crop_${cropCleanName}_${stageIndex + 1}.png",
-                        imageUrl = crop?.imageUrl,
-                        rawPlantedDate = plot.plantedDate,
-                        isMonitoringStarted = true,
-                        soilType = plot.soilType,
-                        suitableSoils = crop?.suitableSoils ?: listOf(plot.soilType),
-                        season = Season.YEAR_ROUND,
-                        soilScore = soilScore,
-                        dssTasks = plotTasks,
-                        companionAlerts = plotAlerts
+            val plotsToProcess: List<CropPlot> = if (matchingZones.isNotEmpty()) {
+                matchingZones.mapIndexed { zIdx, zone ->
+                    val zoneCropName = zone.cropName ?: "Vegetable"
+                    val zoneCropId = zone.cropId ?: zoneCropName.lowercase()
+                    plot.copy(
+                        id = if (matchingZones.size > 1) "${plot.id}_zone_${zone.id}" else plot.id,
+                        plotLabel = if (matchingZones.size > 1) "${plot.plotLabel} (C${zIdx + 1})" else plot.plotLabel,
+                        cropName = zoneCropName,
+                        cropId = zoneCropId,
+                        plantedDate = plot.plantedDate ?: todayStr
                     )
-                )
+                }
             } else {
-                plannedPlotsList.add(plot)
+                listOf(plot)
+            }
+
+            for (targetPlot in plotsToProcess) {
+                val isPlainBed = targetPlot.cropName.isNullOrBlank() ||
+                    targetPlot.cropName.equals("Bed", ignoreCase = true) ||
+                    targetPlot.cropId.equals("bed", ignoreCase = true)
+
+                val crop = crops.firstOrNull { it.name.equals(targetPlot.cropName, ignoreCase = true) }
+                val isPlanted = !isPlainBed && targetPlot.plantedDate != null
+
+                if (isPlanted) {
+                    val plantedLocalDate = try {
+                        LocalDate.parse(targetPlot.plantedDate!!.take(10))
+                    } catch (e: Exception) {
+                        today
+                    }
+                    val isFuture = plantedLocalDate.isAfter(today)
+                    val daysPlanted = if (!isFuture) ChronoUnit.DAYS.between(plantedLocalDate, today).toInt().coerceAtLeast(0) else 0
+                    val daysToHarvest = crop?.daysToHarvest?.takeIf { it > 0 } ?: 60
+                    val progress = if (daysToHarvest > 0 && !isFuture) (daysPlanted.toFloat() / daysToHarvest).coerceIn(0f, 1f) else 0f
+
+                    val stageIndex = when {
+                        isFuture -> 0
+                        progress < 0.15f -> 0
+                        progress < 0.30f -> 1
+                        progress < 0.50f -> 2
+                        progress < 0.70f -> 3
+                        progress < 0.90f -> 4
+                        else -> 5
+                    }
+
+                    val isOverdue = !isFuture && daysPlanted > daysToHarvest
+                    val isHarvestReady = !isFuture && (stageIndex == 5 || daysPlanted >= daysToHarvest)
+
+                    val stageName = when {
+                        isFuture -> "Planned (${targetPlot.plantedDate?.take(10)})"
+                        isOverdue -> "Stage 6: Harvest Overdue ⚠️"
+                        isHarvestReady -> "Stage 6: Harvest Ready 🌾"
+                        stageIndex == 4 -> "Stage 5: Flowering & Fruit"
+                        stageIndex == 3 -> "Stage 4: Vegetative Growth"
+                        stageIndex == 2 -> "Stage 3: Early Growth"
+                        stageIndex == 1 -> "Stage 2: Planting"
+                        else -> "Stage 1: Preparation"
+                    }
+
+                    val cropCleanName = (crop?.name ?: targetPlot.cropName ?: "carrot").lowercase().replace(" ", "")
+                    val soilScore = dssResult.soilScores.firstOrNull { it.plotLabel == targetPlot.plotLabel }?.score
+                    val plotTasks = dssResult.tasks.filter { it.plotId == targetPlot.id }
+                    val plotAlerts = dssResult.companionAlerts.filter {
+                        it.plotALabel == targetPlot.plotLabel || it.plotBLabel == targetPlot.plotLabel
+                    }
+
+                    plantedPlotsList.add(
+                        MonitoredPlant(
+                            id = targetPlot.id,
+                            farmId = targetPlot.farmId,
+                            cropId = targetPlot.cropId ?: crop?.id,
+                            cropName = crop?.name ?: targetPlot.cropName ?: "Vegetable",
+                            localName = crop?.localName ?: targetPlot.cropName ?: "Gulay",
+                            cropVariety = targetPlot.cropVariety ?: "Standard Variety",
+                            plotLabel = targetPlot.plotLabel,
+                            seasonality = SeasonalityFilter.ALL,
+                            category = CropCategoryFilter.ALL,
+                            currentStageIndex = stageIndex,
+                            stageName = stageName,
+                            daysPlanted = daysPlanted,
+                            daysToHarvest = daysToHarvest,
+                            healthStatus = when {
+                                isFuture -> "📅 Scheduled for ${targetPlot.plantedDate?.take(10)}"
+                                isOverdue -> "Harvest Overdue — Harvest Immediately"
+                                isHarvestReady -> "Harvest Ready — Ready to harvest"
+                                else -> "Active Healthy Growth"
+                            },
+                            companionCrop = crop?.companionPlants?.joinToString(", ") ?: "None",
+                            companionStatus = if (plotAlerts.isNotEmpty()) "Alert: ${plotAlerts.first().message}" else "Good Companion Environment",
+                            growingTip = crop?.description ?: "Ensure adequate irrigation and weed management.",
+                            pestInfo = allPests.firstOrNull { it.affectedCrops.any { c -> c.contains(targetPlot.cropName ?: "", true) } }?.name ?: "Regular inspection recommended.",
+                            assetPath = "crops/crop_${cropCleanName}_${stageIndex + 1}.png",
+                            imageUrl = crop?.imageUrl,
+                            rawPlantedDate = targetPlot.plantedDate,
+                            isMonitoringStarted = true,
+                            soilType = targetPlot.soilType,
+                            suitableSoils = crop?.suitableSoils ?: listOf(targetPlot.soilType),
+                            season = Season.YEAR_ROUND,
+                            soilScore = soilScore,
+                            dssTasks = plotTasks,
+                            companionAlerts = plotAlerts
+                        )
+                    )
+                } else {
+                    plannedPlotsList.add(targetPlot)
+                }
             }
         }
 
@@ -361,16 +415,54 @@ class FarmViewModel(
 
         // DSS Companion Alerts
         dssResult.companionAlerts.forEach { alert ->
+            val rec = when (alert.relationship) {
+                CompanionRelation.ANTAGONIST -> "Separate ${alert.cropA} and ${alert.cropB} by placing them in different beds. Good companions for ${alert.cropA}: Basil, Marigold, Garlic. Good companions for ${alert.cropB}: Lettuce, Radish, Bush Beans."
+                CompanionRelation.NEUTRAL -> "Crops are compatible without strong synergy. Consider intercropping with aromatic herbs like Basil or Mint to deter common garden pests."
+                CompanionRelation.BENEFICIAL -> "Great combination! ${alert.cropA} and ${alert.cropB} benefit each other. Continue current spacing and watering protocol."
+            }
             attentionList.add(
                 FarmAttentionItem(
                     id = "alert-${alert.plotALabel}-${alert.plotBLabel}",
-                    title = "Companion Risk Detected",
+                    title = "Companion Risk: ${alert.cropA} & ${alert.cropB}",
                     description = alert.message,
                     severity = AttentionSeverity.HIGH,
-                    icon = "⚠️",
-                    plotLabel = "${alert.plotALabel} & ${alert.plotBLabel}"
+                    icon = "warning",
+                    plotLabel = "${alert.plotALabel} & ${alert.plotBLabel}",
+                    date = today.toString(),
+                    companionRecommendation = rec,
+                    isCompanionAlert = true,
+                    cropA = alert.cropA,
+                    cropB = alert.cropB
                 )
             )
+        }
+
+        // Companion Advisories for planted or planned beds
+        val bedsWithCrops = (plantedPlotsList.map { it.plotLabel to it.cropName } + plannedPlotsList.map { it.plotLabel to (it.cropName ?: "") })
+            .filter { it.second.isNotBlank() }
+            .distinctBy { it.first }
+
+        bedsWithCrops.forEach { (plotLabel, cropName) ->
+            val hasAntagonist = dssResult.companionAlerts.any { it.plotALabel == plotLabel || it.plotBLabel == plotLabel }
+            if (!hasAntagonist) {
+                val cropObj = crops.firstOrNull { it.name.equals(cropName, ignoreCase = true) }
+                val companionList = cropObj?.companionPlants?.filter { it.isNotBlank() }
+                val companions = if (!companionList.isNullOrEmpty()) companionList.joinToString(", ") else "Basil, Marigold, Green Onion"
+                attentionList.add(
+                    FarmAttentionItem(
+                        id = "companion-info-$plotLabel",
+                        title = "Companion Advisory: $cropName",
+                        description = "Beneficial companion plants identified for $cropName on $plotLabel to enhance yield and deter insects.",
+                        severity = AttentionSeverity.INFO,
+                        icon = "info",
+                        plotLabel = plotLabel,
+                        date = today.toString(),
+                        companionRecommendation = "Recommended beneficial companions for $cropName on $plotLabel: $companions. Intercropping these promotes pollinator activity, nutrient uptake, and natural pest suppression.",
+                        isCompanionAlert = true,
+                        cropA = cropName
+                    )
+                )
+            }
         }
 
         // Overdue Harvests
@@ -381,8 +473,9 @@ class FarmViewModel(
                     title = "Harvest Overdue",
                     description = "${plant.plotLabel} (${plant.cropName}) is past its ${plant.daysToHarvest}-day harvest window.",
                     severity = AttentionSeverity.HIGH,
-                    icon = "🌾",
-                    plotLabel = plant.plotLabel
+                    icon = "harvest",
+                    plotLabel = plant.plotLabel,
+                    date = today.toString()
                 )
             )
         }
@@ -390,32 +483,44 @@ class FarmViewModel(
         // Pest risks on planted crops
         plantedPlotsList.forEach { plant ->
             val pest = allPests.firstOrNull { it.affectedCrops.any { c -> c.contains(plant.cropName, true) } }
-            if (pest != null && attentionList.size < 4) {
+            if (pest != null && attentionList.size < 8) {
                 attentionList.add(
                     FarmAttentionItem(
                         id = "pest-${plant.id}-${pest.id}",
                         title = "Pest Alert: ${pest.name}",
                         description = "${plant.cropName} on ${plant.plotLabel} is vulnerable to ${pest.name}. Early scouting recommended.",
                         severity = AttentionSeverity.MEDIUM,
-                        icon = "🐛",
-                        plotLabel = plant.plotLabel
+                        icon = "pest",
+                        plotLabel = plant.plotLabel,
+                        date = today.toString()
                     )
                 )
             }
         }
 
         // Planned / Unplanted notice
-        if (plannedPlotsList.isNotEmpty() && attentionList.size < 4) {
+        if (plannedPlotsList.isNotEmpty() && attentionList.size < 8) {
             attentionList.add(
                 FarmAttentionItem(
                     id = "unplanted-notice",
                     title = "Beds Ready for Planting",
                     description = "${plannedPlotsList.size} bed(s) planned and waiting for crops.",
                     severity = AttentionSeverity.INFO,
-                    icon = "🌱",
-                    plotLabel = plannedPlotsList.firstOrNull()?.plotLabel
+                    icon = "seedling",
+                    plotLabel = plannedPlotsList.firstOrNull()?.plotLabel,
+                    date = today.toString()
                 )
             )
+        }
+
+        // Filter out dismissed alerts and sort by priority (HIGH severity first)
+        attentionList.removeAll { dismissedAlertIds.contains(it.id) }
+        attentionList.sortBy {
+            when (it.severity) {
+                AttentionSeverity.HIGH -> 0
+                AttentionSeverity.MEDIUM -> 1
+                AttentionSeverity.INFO -> 2
+            }
         }
 
         // ── 3. Today's Tasks (Room Tasks + DSS generated tasks) ───────────────
@@ -567,7 +672,7 @@ class FarmViewModel(
                 FarmTimelineEvent(
                     id = "mon-germ-${plant.id}",
                     title = "Monitoring: Pagpapatubo (Germination)",
-                    subtitle = "${plant.cropName} (${plant.plotLabel}) • Early Sprout Check",
+                    subtitle = "${plant.cropName} (${plant.plotLabel}) • Early Growth Check",
                     date = monGermDate,
                     type = CalendarEventType.MONITORING,
                     plotLabel = plant.plotLabel,
@@ -801,6 +906,7 @@ class FarmViewModel(
             current.copy(
                 plots = effectivePlots,
                 crops = crops,
+                cropZones = zones,
                 attentionItems = attentionList,
                 todayTasks = todayTasksList,
                 recentActivities = historyList.take(5),
@@ -934,6 +1040,79 @@ class FarmViewModel(
         }
     }
 
+    fun submitCropLog(cropLog: CropLog) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == cropLog.cropPlantingId }
+                ?: _uiState.value.observationTargetPlot
+            val bedLabel = plot?.plotLabel ?: cropLog.bedId.ifBlank { "Bed" }
+            val cropName = plot?.cropName ?: cropLog.cropName.ifBlank { "Crop" }
+            val farmId = plot?.farmId ?: _uiState.value.farmId
+
+            try {
+                // 1. Save log to CropLogRepository
+                RepositoryProvider.cropLogRepository.insertLog(cropLog)
+
+                // 2. Evaluate with DSS
+                val evalResult = DssLogEvaluator().evaluate(
+                    log = cropLog,
+                    previousLogs = emptyList<CropLog>(),
+                    currentStage = cropLog.currentStage,
+                    pendingTasks = emptyList<FarmTask>(),
+                    plantingDate = plot?.plantedDate ?: LocalDate.now().toString(),
+                    plantingMethod = "Transplanting",
+                    daysToHarvest = 60
+                )
+
+                // 3. Persist generated tasks to TaskRepository
+                if (evalResult.newTasks.isNotEmpty()) {
+                    val farmTasks = evalResult.newTasks.map { genTask ->
+                        FarmTask(
+                            id = genTask.id,
+                            farmId = farmId,
+                            plotId = cropLog.cropPlantingId,
+                            plotLabel = bedLabel,
+                            cropName = cropName,
+                            taskType = genTask.taskType,
+                            title = genTask.title,
+                            subLabel = genTask.description,
+                            dueDate = genTask.dueDate,
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    }
+                    RepositoryProvider.taskRepository.upsertTasks(farmTasks)
+                }
+
+                // 4. Log Activity History with Bed Number, Date, Crop
+                val dateOnly = try { cropLog.date.take(10) } catch (_: Exception) { LocalDate.now().toString() }
+                val details = if (cropLog.selectedCheckboxes.isNotEmpty()) " (${cropLog.selectedCheckboxes.joinToString(", ")})" else ""
+                val notesText = "Observation logged for $bedLabel • $cropName: Stage ${cropLog.currentStage.label}, Choice ${cropLog.selectedChoice}$details on $dateOnly" +
+                        (if (!cropLog.notes.isNullOrBlank()) " • ${cropLog.notes}" else "")
+
+                logFarmActivityUseCase(
+                    Activity(
+                        id = UUID.randomUUID().toString(),
+                        plotId = cropLog.cropPlantingId,
+                        farmId = farmId,
+                        type = TaskType.OBSERVATION,
+                        notes = notesText,
+                        performedAt = ZonedDateTime.now().toString()
+                    )
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("FarmViewModel", "Error submitting crop log: ${e.message}", e)
+            }
+
+            _uiState.update {
+                it.copy(
+                    isObservationModalOpen = false,
+                    observationTargetPlot = null,
+                    toastMessage = "Observation evaluated & recorded for $cropName ($bedLabel)! 📝"
+                )
+            }
+        }
+    }
+
     fun startPlantingNow(plotId: String, date: String = LocalDate.now().toString(), variety: String? = null) {
         viewModelScope.launch {
             val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
@@ -986,13 +1165,19 @@ class FarmViewModel(
                 )
             )
 
+            val cropName = plot.cropName ?: "Vegetable"
+            val varietySuffix = if (!plot.cropVariety.isNullOrBlank()) " (${plot.cropVariety})" else ""
+            val dateOnly = try { now.take(10) } catch (_: Exception) { java.time.LocalDate.now().toString() }
+            val yieldText = if (yieldKg > 0) "$yieldKg kg" else "Harvest completed"
+            val activityNotes = "Harvested $yieldText of $cropName$varietySuffix from ${plot.plotLabel} on $dateOnly"
+
             logFarmActivityUseCase(
                 Activity(
                     id = UUID.randomUUID().toString(),
                     plotId = plotId,
                     farmId = plot.farmId,
                     type = TaskType.HARVEST,
-                    notes = "Harvest recorded: ${if (yieldKg > 0) "$yieldKg kg" else "Harvest completed"} for ${plot.plotLabel}",
+                    notes = activityNotes,
                     performedAt = now
                 )
             )
@@ -1001,6 +1186,102 @@ class FarmViewModel(
                 it.copy(
                     selectedPlantForDetails = null,
                     toastMessage = "Harvest recorded successfully! 🌾"
+                )
+            }
+        }
+    }
+
+    fun dismissAlertAndRecordHistory(alert: FarmAttentionItem, actionNote: String = "Marked as read") {
+        viewModelScope.launch {
+            dismissedAlertIds.add(alert.id)
+            val todayStr = LocalDate.now().toString()
+            val nowIso = ZonedDateTime.now().toString()
+            val plotLabel = alert.plotLabel ?: "Farm Bed"
+
+            // 1. Log activity to domain repository
+            val targetPlot = _uiState.value.plots.firstOrNull { it.plotLabel.equals(plotLabel, ignoreCase = true) }
+            val plotId = targetPlot?.id ?: _uiState.value.plots.firstOrNull()?.id ?: UUID.randomUUID().toString()
+            val farmId = targetPlot?.farmId ?: _uiState.value.farmId
+
+            logFarmActivityUseCase(
+                Activity(
+                    id = UUID.randomUUID().toString(),
+                    plotId = plotId,
+                    farmId = farmId,
+                    type = TaskType.OBSERVATION,
+                    notes = "$actionNote: ${alert.title} on $plotLabel ($todayStr)",
+                    performedAt = nowIso
+                )
+            )
+
+            // 2. Add to UI state activityHistory and remove from attentionItems
+            val historyItem = FarmHistoryItem(
+                id = UUID.randomUUID().toString(),
+                title = "$actionNote: ${alert.title}",
+                subtitle = "$plotLabel • $todayStr",
+                details = "${alert.description} (Action taken on $todayStr for $plotLabel)",
+                timestamp = nowIso,
+                category = ActivityCategory.ACTIVITY_COMPLETED,
+                plotLabel = plotLabel
+            )
+
+            _uiState.update { state ->
+                state.copy(
+                    attentionItems = state.attentionItems.filterNot { it.id == alert.id },
+                    activityHistory = listOf(historyItem) + state.activityHistory,
+                    recentActivities = listOf(historyItem) + state.recentActivities.take(9),
+                    toastMessage = "Alert handled and recorded in Activity History for $plotLabel"
+                )
+            }
+        }
+    }
+
+    fun dismissAllAlertsAndRecordHistory(alerts: List<FarmAttentionItem>) {
+        if (alerts.isEmpty()) return
+        viewModelScope.launch {
+            val todayStr = LocalDate.now().toString()
+            val nowIso = ZonedDateTime.now().toString()
+
+            val newHistoryItems = mutableListOf<FarmHistoryItem>()
+            val idsToRemove = alerts.map { it.id }.toSet()
+            dismissedAlertIds.addAll(idsToRemove)
+
+            alerts.forEach { alert ->
+                val plotLabel = alert.plotLabel ?: "Farm Bed"
+                val targetPlot = _uiState.value.plots.firstOrNull { it.plotLabel.equals(plotLabel, ignoreCase = true) }
+                val plotId = targetPlot?.id ?: _uiState.value.plots.firstOrNull()?.id ?: UUID.randomUUID().toString()
+                val farmId = targetPlot?.farmId ?: _uiState.value.farmId
+
+                logFarmActivityUseCase(
+                    Activity(
+                        id = UUID.randomUUID().toString(),
+                        plotId = plotId,
+                        farmId = farmId,
+                        type = TaskType.OBSERVATION,
+                        notes = "Marked as read: ${alert.title} on $plotLabel ($todayStr)",
+                        performedAt = nowIso
+                    )
+                )
+
+                newHistoryItems.add(
+                    FarmHistoryItem(
+                        id = UUID.randomUUID().toString(),
+                        title = "Marked as read: ${alert.title}",
+                        subtitle = "$plotLabel • $todayStr",
+                        details = "${alert.description} (Marked as read on $todayStr for $plotLabel)",
+                        timestamp = nowIso,
+                        category = ActivityCategory.ACTIVITY_COMPLETED,
+                        plotLabel = plotLabel
+                    )
+                )
+            }
+
+            _uiState.update { state ->
+                state.copy(
+                    attentionItems = state.attentionItems.filterNot { idsToRemove.contains(it.id) },
+                    activityHistory = newHistoryItems + state.activityHistory,
+                    recentActivities = newHistoryItems.take(5) + state.recentActivities.take(5),
+                    toastMessage = "${alerts.size} alerts marked as read and saved to Activity History"
                 )
             }
         }

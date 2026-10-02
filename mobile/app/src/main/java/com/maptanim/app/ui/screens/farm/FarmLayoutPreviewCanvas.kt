@@ -24,9 +24,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.domain.model.CropZone
 import com.maptanim.app.renderer.canvas.BedBorder
 import com.maptanim.app.renderer.canvas.BedFill
-import com.maptanim.app.renderer.canvas.CanvasBg
+import com.maptanim.app.renderer.canvas.CropSvgRenderer
 import com.maptanim.app.renderer.canvas.FarmBorderColor
 import com.maptanim.app.renderer.canvas.FarmInnerBg
 import com.maptanim.app.renderer.canvas.GridDotColor
@@ -35,12 +36,14 @@ import com.maptanim.app.renderer.canvas.PlantedBedFill
 import com.maptanim.app.renderer.canvas.cropColor
 
 /**
- * FarmLayoutPreviewCanvas — Scaled 2D top-down visual preview of the actual farm layout
- * referencing the exact visual styling, design tokens, and bed representation from the Farm Editor.
+ * FarmLayoutPreviewCanvas — 2D top-down preview of the actual farm layout.
+ * Shows the whole canvas top-down with beds and crops with no cut or edge clipping.
+ * Renders bed soil, child crop zones, and vector SVG crop icons.
  */
 @Composable
 fun FarmLayoutPreviewCanvas(
     plots: List<CropPlot>,
+    zones: List<CropZone> = emptyList(),
     onPlotClick: (CropPlot) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,28 +52,32 @@ fun FarmLayoutPreviewCanvas(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(plots) {
+            .pointerInput(plots, zones) {
                 detectTapGestures { tapOffset ->
                     if (plots.isEmpty()) return@detectTapGestures
 
-                    // Compute current camera mapping
-                    val minX = plots.minOf { it.posX }.coerceAtLeast(0f)
-                    val maxX = plots.maxOf { it.posX + it.widthM }.coerceAtLeast(8f)
-                    val minY = plots.minOf { it.posY }.coerceAtLeast(0f)
-                    val maxY = plots.maxOf { it.posY + it.heightM }.coerceAtLeast(8f)
+                    val minX = plots.minOf { it.posX }
+                    val maxX = plots.maxOf { it.posX + it.widthM }
+                    val minY = plots.minOf { it.posY }
+                    val maxY = plots.maxOf { it.posY + it.heightM }
 
-                    val margin = 2.5f
-                    val farmMinX = (minX - margin).coerceAtLeast(0f)
-                    val farmMinY = (minY - margin).coerceAtLeast(0f)
-                    val farmMaxX = (maxX + margin).coerceAtMost(45f)
-                    val farmMaxY = (maxY + margin).coerceAtMost(45f)
-                    val farmW = (farmMaxX - farmMinX).coerceAtLeast(14f)
-                    val farmH = (farmMaxY - farmMinY).coerceAtLeast(10f)
+                    val margin = 3.5f
+                    val bMinX = minX - margin
+                    val bMaxX = maxX + margin
+                    val bMinY = minY - margin
+                    val bMaxY = maxY + margin
+
+                    val contentW = (bMaxX - bMinX).coerceAtLeast(14f)
+                    val contentH = (bMaxY - bMinY).coerceAtLeast(10f)
+
+                    val screenPad = 18f
+                    val availW = (size.width - screenPad * 2).coerceAtLeast(20f)
+                    val availH = (size.height - screenPad * 2).coerceAtLeast(20f)
 
                     val ppm = 40f
-                    val zoom = minOf(size.width / (farmW * ppm), size.height / (farmH * ppm))
-                    val centerWorldX = (farmMinX + farmMaxX) / 2f
-                    val centerWorldY = (farmMinY + farmMaxY) / 2f
+                    val zoom = minOf(availW / (contentW * ppm), availH / (contentH * ppm))
+                    val centerWorldX = (bMinX + bMaxX) / 2f
+                    val centerWorldY = (bMinY + bMaxY) / 2f
                     val panX = size.width / 2f - centerWorldX * ppm * zoom
                     val panY = size.height / 2f - centerWorldY * ppm * zoom
 
@@ -129,7 +136,7 @@ fun FarmLayoutPreviewCanvas(
             )
 
             val mTitle = textMeasurer.measure("NO BEDS PLACED YET", titleStyle)
-            val mSub = textMeasurer.measure("Tap 'Edit Farm' to layout beds & plant crops", subStyle)
+            val mSub = textMeasurer.measure("Tap 'Garden Layout' to layout beds & plant crops", subStyle)
 
             val totalH = mTitle.size.height + mSub.size.height + 6f
             val startY = (size.height - totalH) / 2f
@@ -146,61 +153,67 @@ fun FarmLayoutPreviewCanvas(
         }
 
         // ── 2. POPULATED ACTUAL FARM LAYOUT ───────────────────────────────────
-        val minX = plots.minOf { it.posX }.coerceAtLeast(0f)
-        val maxX = plots.maxOf { it.posX + it.widthM }.coerceAtLeast(8f)
-        val minY = plots.minOf { it.posY }.coerceAtLeast(0f)
-        val maxY = plots.maxOf { it.posY + it.heightM }.coerceAtLeast(8f)
+        // Calculate bounding box that encloses all beds with safe margin so NO CUT occurs
+        val minX = plots.minOf { it.posX }
+        val maxX = plots.maxOf { it.posX + it.widthM }
+        val minY = plots.minOf { it.posY }
+        val maxY = plots.maxOf { it.posY + it.heightM }
 
-        val margin = 2.5f
-        val farmMinX = (minX - margin).coerceAtLeast(0f)
-        val farmMinY = (minY - margin).coerceAtLeast(0f)
-        val farmMaxX = (maxX + margin).coerceAtMost(45f)
-        val farmMaxY = (maxY + margin).coerceAtMost(45f)
-        val farmW = (farmMaxX - farmMinX).coerceAtLeast(14f)
-        val farmH = (farmMaxY - farmMinY).coerceAtLeast(10f)
+        val margin = 3.5f
+        val bMinX = minX - margin
+        val bMaxX = maxX + margin
+        val bMinY = minY - margin
+        val bMaxY = maxY + margin
 
-        val zoom = minOf(size.width / (farmW * ppm), size.height / (farmH * ppm))
-        val centerWorldX = (farmMinX + farmMaxX) / 2f
-        val centerWorldY = (farmMinY + farmMaxY) / 2f
+        val contentW = (bMaxX - bMinX).coerceAtLeast(14f)
+        val contentH = (bMaxY - bMinY).coerceAtLeast(10f)
+
+        val screenPad = 18f
+        val availW = (size.width - screenPad * 2).coerceAtLeast(20f)
+        val availH = (size.height - screenPad * 2).coerceAtLeast(20f)
+
+        val zoom = minOf(availW / (contentW * ppm), availH / (contentH * ppm))
+        val centerWorldX = (bMinX + bMaxX) / 2f
+        val centerWorldY = (bMinY + bMaxY) / 2f
         val panX = size.width / 2f - centerWorldX * ppm * zoom
         val panY = size.height / 2f - centerWorldY * ppm * zoom
 
         // Draw Farm Ground Surface & Boundary
-        val farmScreenTL = Offset(farmMinX * ppm * zoom + panX, farmMinY * ppm * zoom + panY)
-        val farmScreenSize = Size(farmW * ppm * zoom, farmH * ppm * zoom)
+        val groundTL = Offset(bMinX * ppm * zoom + panX, bMinY * ppm * zoom + panY)
+        val groundSize = Size(contentW * ppm * zoom, contentH * ppm * zoom)
 
         drawRoundRect(
             color = FarmInnerBg,
-            topLeft = farmScreenTL,
-            size = farmScreenSize,
-            cornerRadius = CornerRadius(6f)
+            topLeft = groundTL,
+            size = groundSize,
+            cornerRadius = CornerRadius(8f)
         )
         drawRoundRect(
-            color = FarmBorderColor.copy(alpha = 0.55f),
-            topLeft = farmScreenTL,
-            size = farmScreenSize,
-            cornerRadius = CornerRadius(6f),
+            color = FarmBorderColor.copy(alpha = 0.6f),
+            topLeft = groundTL,
+            size = groundSize,
+            cornerRadius = CornerRadius(8f),
             style = Stroke(
                 width = 2f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
             )
         )
 
-        // Subtle Dot Grid
+        // Subtle Dot Grid across visible ground
         val gridStep = 1.0f
-        var gx = farmMinX
-        while (gx <= farmMaxX) {
-            var gy = farmMinY
-            while (gy <= farmMaxY) {
+        var gx = bMinX
+        while (gx <= bMaxX) {
+            var gy = bMinY
+            while (gy <= bMaxY) {
                 val sx = gx * ppm * zoom + panX
                 val sy = gy * ppm * zoom + panY
-                drawCircle(GridDotColor.copy(alpha = 0.6f), 1.2f, Offset(sx, sy))
+                drawCircle(GridDotColor.copy(alpha = 0.55f), 1.2f, Offset(sx, sy))
                 gy += gridStep
             }
             gx += gridStep
         }
 
-        // Draw Plots
+        // Draw Beds & Crops
         for (plot in plots) {
             val tl = Offset(plot.posX * ppm * zoom + panX, plot.posY * ppm * zoom + panY)
             val bedW = plot.widthM * ppm * zoom
@@ -208,16 +221,25 @@ fun FarmLayoutPreviewCanvas(
             val bedSize = Size(bedW, bedH)
             val cornerR = CornerRadius(4f)
 
-            val isPlainBed = plot.cropName.isNullOrBlank() ||
-                plot.cropName.equals("Bed", ignoreCase = true) ||
-                plot.cropId.equals("bed", ignoreCase = true)
+            // Child crop zones associated with this bed
+            val bedZones = zones.filter {
+                it.plotId == plot.id &&
+                !it.cropName.isNullOrBlank() &&
+                !it.cropName.equals("Bed", ignoreCase = true)
+            }
 
-            if (isPlainBed) {
-                // Plain unplanted bed — brown garden soil
+            val hasSingleCrop = !plot.cropName.isNullOrBlank() &&
+                !plot.cropName.equals("Bed", ignoreCase = true) &&
+                !plot.cropId.equals("bed", ignoreCase = true)
+
+            val isPlanted = bedZones.isNotEmpty() || hasSingleCrop
+
+            if (!isPlanted) {
+                // ── Plain unplanted bed — brown garden soil ─────────────────
                 drawRoundRect(BedFill, tl, bedSize, cornerR)
                 drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f))
 
-                // Furrow lines
+                // Subtle furrow lines
                 val lineCount = (plot.heightM * 1.5f).toInt().coerceIn(1, 8)
                 val lineSpacing = bedH / (lineCount + 1)
                 for (i in 1..lineCount) {
@@ -230,46 +252,106 @@ fun FarmLayoutPreviewCanvas(
                     )
                 }
             } else {
-                // Planted bed — rich soil with crop patterns
+                // ── Planted bed — rich soil with actual crops ───────────────
                 drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
                 drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f))
 
-                // Colored crop dots
-                val spacing = 0.9f // meters
-                val iconRadius = (spacing * 0.28f * ppm * zoom).coerceIn(2f, 10f)
-                val cropCol = cropColor(plot.cropName ?: "")
-                val marginM = 0.3f
+                if (bedZones.isNotEmpty()) {
+                    // Render each child crop zone inside this bed
+                    bedZones.forEach { zone ->
+                        val cropCol = cropColor(zone.cropName ?: "")
+                        val zoneWorldX = plot.posX + zone.offsetX
+                        val zoneWorldY = plot.posY + zone.offsetY
+                        val ztl = Offset(zoneWorldX * ppm * zoom + panX, zoneWorldY * ppm * zoom + panY)
+                        val zW = zone.widthM * ppm * zoom
+                        val zH = zone.heightM * ppm * zoom
 
-                var cx = plot.posX + marginM + spacing / 2f
-                while (cx < plot.posX + plot.widthM - marginM) {
-                    var cy = plot.posY + marginM + spacing / 2f
-                    while (cy < plot.posY + plot.heightM - marginM) {
-                        val sx = cx * ppm * zoom + panX
-                        val sy = cy * ppm * zoom + panY
-                        if (sx > tl.x + 2 && sx < tl.x + bedW - 2 &&
-                            sy > tl.y + 2 && sy < tl.y + bedH - 2) {
-                            drawCircle(cropCol, iconRadius, Offset(sx, sy))
-                            drawCircle(cropCol.copy(alpha = 0.4f), iconRadius + 0.8f, Offset(sx, sy), style = Stroke(0.6f))
+                        // Crop zone container boundary
+                        val zoneCornerR = CornerRadius(3f)
+                        drawRoundRect(
+                            color = cropCol.copy(alpha = 0.22f),
+                            topLeft = ztl,
+                            size = Size(zW, zH),
+                            cornerRadius = zoneCornerR
+                        )
+                        drawRoundRect(
+                            color = cropCol.copy(alpha = 0.6f),
+                            topLeft = ztl,
+                            size = Size(zW, zH),
+                            cornerRadius = zoneCornerR,
+                            style = Stroke(
+                                width = 1f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+                            )
+                        )
+
+                        // Render SVG Crops inside the crop zone
+                        val unitCols = (zone.widthM / 0.8f).toInt().coerceAtLeast(1)
+                        val unitRows = (zone.heightM / 0.8f).toInt().coerceAtLeast(1)
+
+                        if (unitCols <= 1 && unitRows <= 1) {
+                            val svgSize = (minOf(zW, zH) * 0.72f).coerceAtLeast(12f)
+                            CropSvgRenderer.drawCropSvg(
+                                drawScope = this,
+                                cropName = zone.cropName ?: "",
+                                center = Offset(ztl.x + zW / 2f, ztl.y + zH / 2f),
+                                sizePx = svgSize
+                            )
+                        } else {
+                            val cellW = zW / unitCols
+                            val cellH = zH / unitRows
+                            val svgSize = (minOf(cellW, cellH) * 0.72f).coerceAtLeast(12f)
+                            for (r in 0 until unitRows) {
+                                for (c in 0 until unitCols) {
+                                    val cx = ztl.x + (c + 0.5f) * cellW
+                                    val cy = ztl.y + (r + 0.5f) * cellH
+                                    CropSvgRenderer.drawCropSvg(
+                                        drawScope = this,
+                                        cropName = zone.cropName ?: "",
+                                        center = Offset(cx, cy),
+                                        sizePx = svgSize
+                                    )
+                                }
+                            }
                         }
-                        cy += spacing
                     }
-                    cx += spacing
+                } else if (hasSingleCrop) {
+                    // Legacy or single-crop bed: render SVG crops in a grid across the bed
+                    val cols = (plot.widthM / 1.0f).toInt().coerceAtLeast(1)
+                    val rows = (plot.heightM / 1.0f).toInt().coerceAtLeast(1)
+                    val cellW = bedW / cols
+                    val cellH = bedH / rows
+                    val svgSize = (minOf(cellW, cellH) * 0.68f).coerceAtLeast(12f)
+                    for (r in 0 until rows) {
+                        for (c in 0 until cols) {
+                            val cx = tl.x + (c + 0.5f) * cellW
+                            val cy = tl.y + (r + 0.5f) * cellH
+                            CropSvgRenderer.drawCropSvg(
+                                drawScope = this,
+                                cropName = plot.cropName ?: "",
+                                center = Offset(cx, cy),
+                                sizePx = svgSize
+                            )
+                        }
+                    }
                 }
             }
 
-            // Crop / Bed Name Label
+            // Bed Label Badge
             val displayName = when {
-                isPlainBed -> plot.plotLabel.ifBlank { "BED" }
+                !isPlanted -> plot.plotLabel.ifBlank { "BED" }
+                bedZones.size == 1 -> "${plot.plotLabel}: ${(bedZones.first().cropName ?: "").uppercase()}"
+                bedZones.size > 1 -> "${plot.plotLabel} (${bedZones.size} CROPS)"
                 else -> (plot.cropName ?: plot.plotLabel).uppercase()
             }
 
-            if (bedW > 24f && bedH > 16f) {
-                val fontSize = (10f * (zoom / 0.5f)).coerceIn(8f, 13f)
+            if (bedW > 28f && bedH > 18f) {
+                val fontSize = (9.5f * (zoom / 0.5f)).coerceIn(8f, 12f)
                 val textStyle = TextStyle(
                     fontSize = fontSize.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    letterSpacing = 0.8.sp
+                    letterSpacing = 0.6.sp
                 )
                 val measured = textMeasurer.measure(
                     text = displayName,
@@ -281,7 +363,7 @@ fun FarmLayoutPreviewCanvas(
                 val labelW = measured.size.width.toFloat() + 8f
                 val labelH = measured.size.height.toFloat() + 4f
                 val labelX = tl.x + (bedW - labelW) / 2f
-                val labelY = tl.y + (bedH - labelH) / 2f
+                val labelY = tl.y + 4f
 
                 if (labelW < bedW && labelH < bedH) {
                     drawRoundRect(

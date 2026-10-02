@@ -19,7 +19,7 @@ object LegalContent {
         - Guest users may operate the App locally, but cloud synchronization requires an active account.
 
         4. INTELLECTUAL PROPERTY & DATA
-        All trademarks, software architecture, isometric canvas rendering engines, and Philippines-tailored crop database structures belong to the MapTanim Capstone Development Team and STI West Negros University.
+        All trademarks, software architecture, 2D canvas rendering engines, and Philippines-tailored crop database structures belong to the MapTanim Capstone Development Team and STI West Negros University.
 
         5. LIMITATION OF LIABILITY
         MapTanim and its development team shall not be liable for crop loss, adverse weather impact, or farming yields resulting from natural disasters or improper agricultural practices.

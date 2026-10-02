@@ -27,4 +27,5 @@ object Routes {
     const val REPORTS = "reports"
 
     fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
+    fun libraryRoute(cropName: String? = null) = if (cropName.isNullOrBlank()) LIBRARY else "$LIBRARY?cropName=$cropName"
 }

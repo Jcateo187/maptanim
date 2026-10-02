@@ -4,7 +4,6 @@ import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.EditTool
 import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.renderer.model.CropZoneRenderData
-import com.maptanim.app.renderer.model.FarmObjectRenderData
 import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.ui.components.editcomponents.croptray.AVAILABLE_CROP_CATALOG
 import com.maptanim.app.ui.components.editcomponents.croptray.CropOption
@@ -27,7 +26,9 @@ data class CropPlantingDraft(
     val notes: String = "",          // Farmer notes
     val isNew: Boolean = true,
     val isChanged: Boolean = false,
-    val validationError: String? = null
+    val validationError: String? = null,
+    val plantingMethod: String = "Direct Seeding",
+    val growingApproach: String = "Organic"
 )
 
 /**
@@ -37,7 +38,6 @@ data class EditUiState(
     val editedPlots: List<CropPlot> = emptyList(),
     val plots: List<PlotRenderData> = emptyList(),
     val cropZones: List<CropZoneRenderData> = emptyList(),
-    val farmObjects: List<FarmObjectRenderData> = emptyList(),
     val availableCrops: List<CropOption> = AVAILABLE_CROP_CATALOG,
     val isSyncingCrops: Boolean = false,
     val selectedPlotId: String? = null,

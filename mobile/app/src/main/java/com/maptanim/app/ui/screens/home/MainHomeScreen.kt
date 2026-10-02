@@ -38,11 +38,13 @@ import com.maptanim.app.core.audio.AmbientSound
 import com.maptanim.app.core.audio.BackgroundTrack
 import com.maptanim.app.core.audio.TrackAmbientEffect
 import com.maptanim.app.core.audio.TrackBgmEffect
-import com.maptanim.app.domain.model.FarmTask
+import com.maptanim.app.domain.model.*
+import java.time.LocalDate
 import com.maptanim.app.navigation.BottomNavItem
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.ui.components.avatar.ProfileAvatar
+import com.maptanim.app.ui.dialogs.CropDssManagementDialog
 import com.maptanim.app.ui.theme.*
 
 import androidx.compose.animation.core.animateDpAsState
@@ -89,6 +91,7 @@ fun MainHomeScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var isSideNavOpen by remember { mutableStateOf(false) }
+    var selectedCropForDss by remember { mutableStateOf<PlotRenderData?>(null) }
 
     val plantedCrops = remember(uiState.plots) {
         uiState.plots.filter {
@@ -98,22 +101,42 @@ fun MainHomeScreen(
             it.cropId != "bed"
         }
     }
-    val firstPlantedCrop = plantedCrops.firstOrNull()
-    val realCropLabel = firstPlantedCrop?.let { "${it.cropName} (${it.plotLabel})" } ?: "Farm Garden"
-    val realCropTopic = firstPlantedCrop?.let { crop ->
-        when (crop.growthStage) {
-            1 -> "Sprouting care & moisture check (DSS Guidance)"
-            2 -> "Seedling thinning & sunlight (DSS Guidance)"
-            3 -> "Vegetative fertilizer application (DSS Guidance)"
-            4 -> "Flowering-stage care & pollination (DSS Guidance)"
-            else -> "Harvest readiness & quality control (DSS Guidance)"
-        }
-    } ?: "Seasonal vegetable care & soil health (DSS Guidance)"
+    val alertTask = uiState.todayTasks.firstOrNull()
+    val alertPlot = if (alertTask != null) {
+        uiState.plots.firstOrNull { it.id == alertTask.plotId } ?: plantedCrops.firstOrNull() ?: uiState.plots.firstOrNull()
+    } else {
+        plantedCrops.firstOrNull() ?: uiState.plots.firstOrNull()
+    }
+    val alertBedLabel = alertTask?.plotLabel ?: alertPlot?.plotLabel ?: "Bed #1"
+    val alertCropName = alertTask?.cropName ?: alertPlot?.cropName ?: "Tomato"
+    val alertTitle = "Farm Alert • $alertBedLabel"
+    val alertMessage = when {
+        alertTask != null -> "[$alertBedLabel • $alertCropName] ${alertTask.taskType.name}: ${alertTask.title}"
+        alertPlot != null && !alertPlot.cropName.isNullOrBlank() -> "[$alertBedLabel • ${alertPlot.cropName}] ${when(alertPlot.growthStage) {
+            1 -> "Stage 1: Preparation • Bed and soil conditioning, organic compost application."
+            2 -> "Stage 2: Planting • Seed depth & spacing calibration, initial gentle watering."
+            3 -> "Stage 3: Early Growth • Seedling emergence check, root aeration, weed suppression."
+            4 -> "Stage 4: Vegetative Growth • Rapid foliage expansion, vermicast side-dressing, trellising."
+            5 -> "Stage 5: Flowering & Fruit Development • Bloom protection, potassium nutrition, pest scouting."
+            else -> "Stage 6: Harvest • Fruit maturity assessment, selective morning harvesting."
+        }}"
+        else -> "[$alertBedLabel] Bed prepared • Tap to assign crops and plant."
+    }
 
-    val realAlertMessage = when {
-        uiState.todayTasks.isNotEmpty() -> "${uiState.todayTasks.first().taskType}: ${uiState.todayTasks.first().title}"
-        firstPlantedCrop != null -> "${firstPlantedCrop.cropName} is in ${when(firstPlantedCrop.growthStage) { 1 -> "sprout"; 2 -> "seedling"; 3 -> "vegetative"; 4 -> "flowering"; else -> "harvest ready" }} stage"
-        else -> "All beds healthy • No urgent alerts"
+    val insightPlot = plantedCrops.firstOrNull() ?: uiState.plots.firstOrNull()
+    val insightBedLabel = insightPlot?.plotLabel ?: "Bed #1"
+    val insightCropName = insightPlot?.cropName ?: "Tomato"
+    val insightVariety = insightPlot?.cropVariety?.takeIf { it.isNotBlank() } ?: "Diamante Max F1"
+    val insightStage = insightPlot?.growthStage ?: 3
+
+    val destinationCropLabel = "[$insightBedLabel] $insightCropName ($insightVariety)"
+    val destinationInsightTopic = when (insightStage) {
+        1 -> "Stage 1 (Preparation): Maintain consistent soil moisture and organic matter in $insightBedLabel."
+        2 -> "Stage 2 (Planting): Verify proper spacing and adequate shading for newly planted seedlings."
+        3 -> "Stage 3 (Early Growth): Clear root-zone weeds and check early root establishment."
+        4 -> "Stage 4 (Vegetative Growth): Side-dress with organic vermicast and check mulch to suppress weed competition."
+        5 -> "Stage 5 (Flowering & Fruit): Boost potassium nutrition and monitor for pests and blossom drop."
+        else -> "Stage 6 (Harvest): Check fruit maturity break. Harvest in the cool early morning."
     }
 
     // Refresh on resume
@@ -288,7 +311,8 @@ fun MainHomeScreen(
                                         farmName = uiState.activeFarm?.farmName?.ifBlank { "San Isidro Farm" } ?: "San Isidro Farm",
                                         plots = uiState.plots,
                                         activeCropsCount = plantedCrops.size,
-                                        onViewFarm = { navController.navigate(Routes.FARMS) }
+                                        onViewFarm = { navController.navigate(Routes.FARMS) },
+                                        onSelectPlot = { plot -> selectedCropForDss = plot }
                                     )
                                 }
 
@@ -384,9 +408,10 @@ fun MainHomeScreen(
                                     }
 
                                     FarmAlertsHeroCard(
-                                        alertTitle = "Farm Alerts",
-                                        alertMessage = realAlertMessage,
-                                        onViewGuide = { navController.navigate(Routes.VEGETABLES) }
+                                        alertTitle = alertTitle,
+                                        alertMessage = alertMessage,
+                                        onViewGuide = { navController.navigate(Routes.libraryRoute(alertCropName)) },
+                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.EDIT) }
                                     )
                                 }
                             }
@@ -405,13 +430,18 @@ fun MainHomeScreen(
                             ) {
                                 MyCropsSection(
                                     plots = uiState.plots,
-                                    onCropClick = { navController.navigate(Routes.VEGETABLES) },
+                                    onCropClick = { plot -> selectedCropForDss = plot },
                                     onManageCrops = { navController.navigate(Routes.EDIT) }
                                 )
 
                                 TodaysTasksCard(
                                     tasks = uiState.todayTasks,
+                                    plots = uiState.plots,
                                     onToggleTask = { taskId -> homeViewModel.completeTask(taskId) },
+                                    onTaskClick = { task ->
+                                        val targetPlot = uiState.plots.firstOrNull { it.id == task.plotId } ?: plantedCrops.firstOrNull()
+                                        if (targetPlot != null) selectedCropForDss = targetPlot
+                                    },
                                     onViewAllTasks = { navController.navigate(Routes.FARMS) }
                                 )
                             }
@@ -421,9 +451,11 @@ fun MainHomeScreen(
                                 verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
                                 FarmInsightCard(
-                                    cropLabel = realCropLabel,
-                                    insightTopic = realCropTopic,
-                                    onViewRecommendation = { navController.navigate(Routes.VEGETABLES) }
+                                    cropLabel = destinationCropLabel,
+                                    insightTopic = destinationInsightTopic,
+                                    cropName = insightCropName,
+                                    onViewRecommendation = { navController.navigate(Routes.libraryRoute(insightCropName)) },
+                                    onClick = { if (insightPlot != null) selectedCropForDss = insightPlot }
                                 )
 
                                 Spacer(modifier = Modifier.height(64.dp))
@@ -600,6 +632,7 @@ fun MainHomeScreen(
                                     plots = uiState.plots,
                                     activeCropsCount = plantedCrops.size,
                                     onViewFarm = { navController.navigate(Routes.FARMS) },
+                                    onSelectPlot = { plot -> selectedCropForDss = plot },
                                     modifier = Modifier.weight(5f)
                                 )
 
@@ -625,9 +658,10 @@ fun MainHomeScreen(
                                     }
 
                                     FarmAlertsHeroCard(
-                                        alertTitle = "Farm Alerts",
-                                        alertMessage = realAlertMessage,
-                                        onViewGuide = { navController.navigate(Routes.VEGETABLES) }
+                                        alertTitle = alertTitle,
+                                        alertMessage = alertMessage,
+                                        onViewGuide = { navController.navigate(Routes.libraryRoute(alertCropName)) },
+                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.EDIT) }
                                     )
                                 }
                             }
@@ -643,20 +677,27 @@ fun MainHomeScreen(
                     ) {
                         MyCropsSection(
                             plots = uiState.plots,
-                            onCropClick = { navController.navigate(Routes.VEGETABLES) },
+                            onCropClick = { plot -> selectedCropForDss = plot },
                             onManageCrops = { navController.navigate(Routes.EDIT) }
                         )
 
                         TodaysTasksCard(
                             tasks = uiState.todayTasks,
+                            plots = uiState.plots,
                             onToggleTask = { taskId -> homeViewModel.completeTask(taskId) },
+                            onTaskClick = { task ->
+                                val targetPlot = uiState.plots.firstOrNull { it.id == task.plotId } ?: plantedCrops.firstOrNull()
+                                if (targetPlot != null) selectedCropForDss = targetPlot
+                            },
                             onViewAllTasks = { navController.navigate(Routes.FARMS) }
                         )
 
                         FarmInsightCard(
-                            cropLabel = realCropLabel,
-                            insightTopic = realCropTopic,
-                            onViewRecommendation = { navController.navigate(Routes.VEGETABLES) }
+                            cropLabel = destinationCropLabel,
+                            insightTopic = destinationInsightTopic,
+                            cropName = insightCropName,
+                            onViewRecommendation = { navController.navigate(Routes.libraryRoute(insightCropName)) },
+                            onClick = { if (insightPlot != null) selectedCropForDss = insightPlot }
                         )
 
                         Spacer(modifier = Modifier.height(72.dp))
@@ -665,79 +706,67 @@ fun MainHomeScreen(
             }
         }
     }
+
+    // ── Interactive Crop DSS Management Dialog (Decision Support System) ─────
+    if (selectedCropForDss != null) {
+        CropDssManagementDialog(
+            plotRender = selectedCropForDss,
+            onDismiss = { selectedCropForDss = null },
+            onReadInLibrary = { cropName ->
+                selectedCropForDss = null
+                navController.navigate(Routes.libraryRoute(cropName))
+            },
+            onRecordObservation = {
+                homeViewModel.refresh()
+            },
+            onHarvest = {
+                selectedCropForDss = null
+                homeViewModel.refresh()
+            },
+            onStartPlanting = {
+                selectedCropForDss = null
+                navController.navigate(Routes.FARMS)
+            }
+        )
+    }
 }
 
 // ─── Farm Canvas Plot Thumbnail (Canvas View Plot) ───────────────────────────
 @Composable
 private fun FarmCanvasPlotThumbnail(
     plots: List<PlotRenderData>,
+    onSelectPlot: (PlotRenderData) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val displayPlots = remember(plots) {
+        if (plots.isNotEmpty()) plots.take(4) else listOf(
+            PlotRenderData(
+                id = "demo_plot_1",
+                farmId = "farm-1",
+                plotLabel = "Bed #1",
+                cropName = "Tomato",
+                cropId = "tomato",
+                cropVariety = "Diamante Max F1",
+                soilType = SoilType.LOAM,
+                posX = 0f,
+                posY = 0f,
+                widthM = 1.2f,
+                heightM = 3.0f
+            )
+        )
+    }
+
     Box(
         modifier = modifier
             .background(Color(0xFF132217))
+            .padding(3.dp)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-
-            // 1. Draw subtle background grass/soil grid
-            val gridStep = 16f
-            var x = 0f
-            while (x < w) {
-                drawLine(
-                    color = Color(0x1A2E4D3E),
-                    start = Offset(x, 0f),
-                    end = Offset(x, h),
-                    strokeWidth = 1f
-                )
-                x += gridStep
-            }
-            var y = 0f
-            while (y < h) {
-                drawLine(
-                    color = Color(0x1A2E4D3E),
-                    start = Offset(0f, y),
-                    end = Offset(w, y),
-                    strokeWidth = 1f
-                )
-                y += gridStep
-            }
-
-            // 2. Draw Plot Beds
-            val bedCount = if (plots.isNotEmpty()) plots.size.coerceIn(1, 4) else 1
-            val paddingH = 6f
-            val paddingV = 6f
-            val spacing = 5f
-            val bedW = (w - (paddingH * 2) - ((bedCount - 1) * spacing)) / bedCount
-            val bedH = h - (paddingV * 2)
-
-            for (index in 0 until bedCount) {
-                val bedX = paddingH + index * (bedW + spacing)
-                val bedY = paddingV
-                val plotItem = plots.getOrNull(index)
-
-                // Bed Soil Fill (rich brown garden soil)
-                drawRoundRect(
-                    color = Color(0xFF3E2723),
-                    topLeft = Offset(bedX, bedY),
-                    size = Size(bedW, bedH),
-                    cornerRadius = CornerRadius(4f, 4f)
-                )
-
-                // Bed Wooden / Soil Border
-                drawRoundRect(
-                    color = Color(0xFF5D4037),
-                    topLeft = Offset(bedX, bedY),
-                    size = Size(bedW, bedH),
-                    cornerRadius = CornerRadius(4f, 4f),
-                    style = Stroke(width = 1.2f)
-                )
-
-                // Furrow Lines inside the bed
-                val furrows = 3
-                val furrowSpacing = bedH / (furrows + 1)
-                val rawCropName = plotItem?.cropName?.lowercase() ?: ""
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            displayPlots.forEach { plotItem ->
+                val rawCropName = plotItem.cropName?.lowercase() ?: ""
                 val isRealCrop = rawCropName.isNotBlank() &&
                     !rawCropName.startsWith("bed") &&
                     !rawCropName.equals("bed")
@@ -752,54 +781,80 @@ private fun FarmCanvasPlotThumbnail(
                     else -> Color(0xFF81C784)
                 }
 
-                for (f in 1..furrows) {
-                    val fy = bedY + f * furrowSpacing
-                    drawLine(
-                        color = Color(0x33795548),
-                        start = Offset(bedX + 2f, fy),
-                        end = Offset(bedX + bedW - 2f, fy),
-                        strokeWidth = 1f
-                    )
-
-                    // Crop Sprouts along the furrow (only drawn if a real crop is planted!)
-                    if (isRealCrop) {
-                        val cropDots = 2
-                        val dotSpacing = bedW / (cropDots + 1)
-                        for (d in 1..cropDots) {
-                            val dx = bedX + d * dotSpacing
-                            drawCircle(
-                                color = cropTint,
-                                radius = 2.4f,
-                                center = Offset(dx, fy)
-                            )
-                            drawCircle(
-                                color = Color(0xFF81C784),
-                                radius = 1.2f,
-                                center = Offset(dx - 0.7f, fy - 0.7f)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF2C1E17))
+                        .border(
+                            1.dp,
+                            if (plotItem.isHarvestReady) Color(0xFFFFD54F) else Color(0xFF5D4037),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .clickable { onSelectPlot(plotItem) }
+                        .padding(horizontal = 3.dp, vertical = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Bed Number badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Color(0x99000000))
+                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = plotItem.plotLabel,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFD7CCC8),
+                                maxLines = 1
                             )
                         }
+
+                        // Sprout dots
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isRealCrop) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(cropTint)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(4.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF81C784))
+                                )
+                            } else {
+                                Text(
+                                    text = "Ready",
+                                    fontSize = 7.sp,
+                                    color = Color(0xFF8D6E63)
+                                )
+                            }
+                        }
+
+                        // Crop label or harvest ready
+                        Text(
+                            text = if (plotItem.isHarvestReady) "Harvest" else (if (isRealCrop) (plotItem.cropName ?: "Planted") else "Planned"),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (plotItem.isHarvestReady) Color(0xFFFFD54F) else (if (isRealCrop) Color(0xFFA5D6A7) else Color(0xFFBCAAA4)),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
-        }
-
-        // Small badge on the canvas thumbnail
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(3.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xCC0D1B11))
-                .border(0.6.dp, Color(0x664CAF50), RoundedCornerShape(3.dp))
-                .padding(horizontal = 3.5.dp, vertical = 1.dp)
-        ) {
-            Text(
-                text = "PLOT VIEW",
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF81C784),
-                letterSpacing = 0.4.sp
-            )
         }
     }
 }
@@ -811,6 +866,7 @@ private fun FarmOverviewHeroCard(
     plots: List<PlotRenderData>,
     activeCropsCount: Int,
     onViewFarm: () -> Unit,
+    onSelectPlot: (PlotRenderData) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val bedCount = plots.size
@@ -856,13 +912,13 @@ private fun FarmOverviewHeroCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(68.dp)
+                    .height(72.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, Color(0xFF2E4D3E), RoundedCornerShape(8.dp))
-                    .clickable { onViewFarm() }
             ) {
                 FarmCanvasPlotThumbnail(
                     plots = plots,
+                    onSelectPlot = onSelectPlot,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -942,9 +998,11 @@ private fun FarmAlertsHeroCard(
     alertTitle: String = "Farm Alerts",
     alertMessage: String = "Pechay needs pest checking",
     onViewGuide: () -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
+        onClick = { onClick?.invoke() ?: onViewGuide() },
         shape = RoundedCornerShape(18.dp),
         color = Color(0xFF131D15).copy(alpha = 0.94f),
         border = BorderStroke(1.2.dp, Color(0xFFE67E22).copy(alpha = 0.85f)),
@@ -1019,21 +1077,66 @@ private fun FarmAlertsHeroCard(
 @Composable
 private fun TodaysTasksCard(
     tasks: List<FarmTask>,
+    plots: List<PlotRenderData> = emptyList(),
     onToggleTask: (String) -> Unit,
+    onTaskClick: ((FarmTask) -> Unit)? = null,
     onViewAllTasks: () -> Unit
 ) {
-    val displayTasks = remember(tasks) {
+    val displayTasks = remember(tasks, plots) {
         if (tasks.isNotEmpty()) {
-            tasks.take(3).map { it.title to it.id }
+            tasks.take(4)
         } else {
+            val p1 = plots.getOrNull(0)?.plotLabel ?: "Bed #1"
+            val c1 = plots.getOrNull(0)?.cropName ?: "Tomato"
+            val p2 = plots.getOrNull(1)?.plotLabel ?: "Bed #2"
+            val c2 = plots.getOrNull(1)?.cropName ?: "Eggplant"
+            val p3 = plots.getOrNull(2)?.plotLabel ?: "Bed #3"
+            val c3 = plots.getOrNull(2)?.cropName ?: "Pechay"
+
             listOf(
-                "Check Tomato #1" to "default_task_1",
-                "Monitor Eggplant #1" to "default_task_2",
-                "Inspect Pechay #1" to "default_task_3"
+                FarmTask(
+                    id = "default_task_1",
+                    farmId = "farm-1",
+                    plotId = plots.getOrNull(0)?.id ?: "plot-1",
+                    plotLabel = p1,
+                    cropName = c1,
+                    taskType = TaskType.WATER,
+                    title = "Morning Soil Moisture Check",
+                    subLabel = "Check root zone 5cm depth moisture",
+                    dueDate = LocalDate.now().toString(),
+                    isCompleted = false,
+                    completedAt = null
+                ),
+                FarmTask(
+                    id = "default_task_2",
+                    farmId = "farm-1",
+                    plotId = plots.getOrNull(1)?.id ?: "plot-2",
+                    plotLabel = p2,
+                    cropName = c2,
+                    taskType = TaskType.FERTILIZE,
+                    title = "Organic Vermicast Top-Dress",
+                    subLabel = "Apply 2 kg/m² compost",
+                    dueDate = LocalDate.now().toString(),
+                    isCompleted = false,
+                    completedAt = null
+                ),
+                FarmTask(
+                    id = "default_task_3",
+                    farmId = "farm-1",
+                    plotId = plots.getOrNull(2)?.id ?: "plot-3",
+                    plotLabel = p3,
+                    cropName = c3,
+                    taskType = TaskType.OBSERVATION,
+                    title = "Foliage & Pest Scouting",
+                    subLabel = "Inspect undersides for leafminers",
+                    dueDate = LocalDate.now().toString(),
+                    isCompleted = false,
+                    completedAt = null
+                )
             )
         }
     }
-    val taskCount = if (tasks.isNotEmpty()) tasks.size else 3
+    val taskCount = if (tasks.isNotEmpty()) tasks.size else displayTasks.size
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1047,35 +1150,86 @@ private fun TodaysTasksCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "TODAY'S TASKS · $taskCount",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = White.copy(alpha = 0.9f),
-                letterSpacing = 0.5.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "TODAY'S TASKS · $taskCount",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = White.copy(alpha = 0.9f),
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = "Area Specific",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MonitoringGreenLight
+                )
+            }
             Spacer(modifier = Modifier.height(14.dp))
-            displayTasks.forEach { (title, id) ->
+            displayTasks.forEach { task ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onToggleTask(id) }
+                        .clickable { onTaskClick?.invoke(task) ?: onToggleTask(task.id) }
                         .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
+                            .size(20.dp)
                             .border(1.8.dp, MonitoringGreenLight.copy(alpha = 0.8f), CircleShape)
-                    )
-                    Text(
-                        text = title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = White.copy(alpha = 0.9f)
-                    )
+                            .clickable { onToggleTask(task.id) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (task.isCompleted) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(MonitoringGreenLight)
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0x3381C784))
+                            .border(0.8.dp, Color(0x6681C784), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = task.plotLabel ?: "Bed #1",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MonitoringGreenLight
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = task.title,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = White.copy(alpha = 0.92f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val cropPart = task.cropName?.takeIf { it.isNotBlank() } ?: "Garden"
+                        val typePart = task.taskType.name.lowercase().replaceFirstChar { it.uppercase() }
+                        Text(
+                            text = "$cropPart • $typePart",
+                            fontSize = 10.sp,
+                            color = Color(0xFFA5D6A7),
+                            maxLines = 1
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(14.dp))
@@ -1149,7 +1303,7 @@ private fun getCropAccentColor(cropName: String): Color {
 @Composable
 private fun MyCropsSection(
     plots: List<PlotRenderData>,
-    onCropClick: () -> Unit,
+    onCropClick: (PlotRenderData) -> Unit,
     onManageCrops: () -> Unit
 ) {
     val plantedPlots = remember(plots) {
@@ -1164,11 +1318,12 @@ private fun MyCropsSection(
     val displayCrops = remember(plantedPlots) {
         plantedPlots.map { p ->
             val stageLabel = when (p.growthStage) {
-                1 -> "Sprout"
-                2 -> "Seedling"
-                3 -> "Vegetative"
-                4 -> "Flowering"
-                else -> if (p.isHarvestReady) "Harvest Ready" else "Maturity"
+                1 -> "Preparation"
+                2 -> "Planting"
+                3 -> "Early Growth"
+                4 -> "Vegetative Growth"
+                5 -> "Flowering & Fruit"
+                else -> if (p.isHarvestReady) "Harvest Ready" else "Harvest"
             }
             val daysLeft = (p.daysToHarvest - p.daysPlanted).coerceAtLeast(0)
             val daysText = if (p.isHarvestReady) "Harvest Ready" else "${daysLeft}d left"
@@ -1313,8 +1468,9 @@ private fun MyCropsSection(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 displayCrops.forEach { cropItem ->
+                    val plot = plantedPlots.firstOrNull { it.id == cropItem.plotId }
                     Surface(
-                        onClick = onCropClick,
+                        onClick = { if (plot != null) onCropClick(plot) },
                         shape = RoundedCornerShape(14.dp),
                         color = MonitoringCard,
                         border = BorderStroke(1.dp, if (cropItem.isHarvestReady) Color(0x80FFD54F) else MonitoringBorder),
@@ -1355,14 +1511,15 @@ private fun MyCropsSection(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(4.dp))
-                                            .background(Color(0x33FFD54F))
-                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                            .background(Color(0xFFE65100))
+                                            .clickable { if (plot != null) onCropClick(plot) }
+                                            .padding(horizontal = 5.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = "READY",
+                                            text = "HARVEST",
                                             fontSize = 8.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFFFD54F)
+                                            color = White
                                         )
                                     }
                                 }
@@ -1444,7 +1601,9 @@ private fun MyCropsSection(
 private fun FarmInsightCard(
     cropLabel: String,
     insightTopic: String,
-    onViewRecommendation: () -> Unit
+    cropName: String = "Crop",
+    onViewRecommendation: () -> Unit,
+    onClick: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -1458,6 +1617,7 @@ private fun FarmInsightCard(
             modifier = Modifier.padding(bottom = 10.dp)
         )
         Surface(
+            onClick = { onClick?.invoke() ?: onViewRecommendation() },
             shape = RoundedCornerShape(16.dp),
             color = MonitoringCard,
             border = BorderStroke(1.2.dp, MonitoringBorder),
@@ -1475,7 +1635,7 @@ private fun FarmInsightCard(
                 ) {
                     Text("🌱", fontSize = 14.sp)
                     Text(
-                        text = "What needs attention next?",
+                        text = "Area Guidance & Recommendations",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MonitoringGreenLight
@@ -1484,7 +1644,7 @@ private fun FarmInsightCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = cropLabel,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = White
                 )
@@ -1492,7 +1652,8 @@ private fun FarmInsightCard(
                     text = insightTopic,
                     fontSize = 13.sp,
                     color = White.copy(alpha = 0.85f),
-                    modifier = Modifier.padding(top = 2.dp)
+                    lineHeight = 17.sp,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(
@@ -1510,7 +1671,7 @@ private fun FarmInsightCard(
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "VIEW RECOMMENDATION",
+                                text = "VIEW ${cropName.uppercase()} RECOMMENDATION",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MonitoringGreenLight,

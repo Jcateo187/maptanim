@@ -148,7 +148,13 @@ data class HarvestRecord(
     val growingDurationDays: Int = 0,
     val yieldKg: Float = 0f,
     val qualityRating: Int = 5,   // 1–5
-    val notes: String? = null
+    val notes: String? = null,
+    // New fields from Crop Management flow spec
+    val harvestMethod: String? = null,     // e.g. "Manual Pick", "Cut at Base"
+    val quantity: Float = 0f,              // Numeric quantity harvested
+    val unit: String = "kg",               // "kg", "pcs", "bundles", "sacks"
+    val marketablePct: Float? = null,      // Optional: % marketable
+    val cropPlantingId: String? = null      // Links to crop_planting for lifecycle tracking
 )
 
 // ─── Activity (farmer manual log) ─────────────────────────────────────────
@@ -160,6 +166,36 @@ data class Activity(
     val type: TaskType,
     val notes: String?,
     val performedAt: String
+)
+
+// ─── CropLog (crop management observation / action log) ───────────────────
+
+/**
+ * Represents a single log entry in the Crop Management flow.
+ * Created when the farmer submits a log via the "Add Log" dialog.
+ *
+ * Flow: STAGE → LOG_CONTEXT → QUESTION → CHOICE (A/B/C) → CHECKBOXES → SUBMIT
+ *
+ * After submission, this log is sent to the DSS engine for evaluation
+ * which may update tasks, recommendations, alerts, and trigger stage progression.
+ */
+data class CropLog(
+    val id: String,
+    val cropPlantingId: String,      // Links to crop_planting (plot/zone ID)
+    val farmId: String = "farm-1",
+    val bedId: String = "",
+    val cropId: String? = null,
+    val cropName: String = "",
+    val varietyId: String? = null,
+    val varietyName: String? = null,
+    val currentStage: ManagementStage = ManagementStage.PREPARATION,
+    val logContext: LogContext = LogContext.PREPARATION,
+    val selectedChoice: String = "A",       // "A", "B", or "C"
+    val selectedCheckboxes: List<String> = emptyList(),  // List of checkbox labels that were checked
+    val careActivity: CareActivity? = null, // Only for CARE_MAINTENANCE context
+    val notes: String? = null,
+    val date: String = "",                 // ISO-8601 date (YYYY-MM-DD)
+    val createdAt: String = ""             // ISO-8601 datetime
 )
 
 // ─── Notification ──────────────────────────────────────────────────────────

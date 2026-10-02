@@ -160,3 +160,17 @@ interface CropZoneRepository {
     suspend fun saveZones(zones: List<CropZone>)
     suspend fun deleteZone(zoneId: String)
 }
+
+// ─── CropLogRepository ────────────────────────────────────────────────────
+
+interface CropLogRepository {
+    fun observeLogsForPlanting(cropPlantingId: String): Flow<List<CropLog>>
+    fun observeLogsForBed(bedId: String): Flow<List<CropLog>>
+    fun observeLogsForFarm(farmId: String): Flow<List<CropLog>>
+    suspend fun getLogsForPlanting(cropPlantingId: String): List<CropLog>
+    suspend fun getLatestLog(cropPlantingId: String): CropLog?
+    suspend fun countLogsForStage(cropPlantingId: String, stage: ManagementStage): Int
+    suspend fun insertLog(log: CropLog)
+    suspend fun deleteLog(id: String)
+}
+

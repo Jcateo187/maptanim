@@ -641,16 +641,18 @@ private fun CropChipCard(
                         }
                     }
                 } else {
-                    val imageModel: Any = com.maptanim.app.data.datasource.CropMetadataAssetDataSource.resolveCropImage(crop.id, crop.name, crop.imageUrl)
-
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = crop.name,
-                        contentScale = ContentScale.Fit,
+                    Canvas(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(2.dp)
-                    )
+                            .padding(4.dp)
+                    ) {
+                        com.maptanim.app.renderer.canvas.CropSvgRenderer.drawCropSvg(
+                            drawScope = this,
+                            cropName = crop.name,
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            sizePx = size.width * 0.85f
+                        )
+                    }
                 }
             }
 

@@ -46,7 +46,7 @@ class GetFarmSummaryUseCase(
 
 /**
  * Returns a live stream of all active crop plots for the farm canvas.
- * Drives isometric canvas rendering — plot positions, soil, crop come from Room.
+ * Drives 2D farm canvas rendering — plot positions, soil, crop come from Room.
  */
 class GetFarmPlotsUseCase(
     private val plotRepository: CropPlotRepository

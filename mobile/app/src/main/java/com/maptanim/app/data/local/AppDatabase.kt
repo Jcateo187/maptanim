@@ -28,9 +28,10 @@ import kotlinx.coroutines.launch
         CropVarietyEntity::class,
         CropGrowthStageEntity::class,
         CropSoilCompatibilityEntity::class,
-        CropPestDiseaseGuideEntity::class
+        CropPestDiseaseGuideEntity::class,
+        CropLogEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -51,6 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cropGrowthStageDao(): CropGrowthStageDao
     abstract fun cropSoilCompatibilityDao(): CropSoilCompatibilityDao
     abstract fun cropPestDiseaseGuideDao(): CropPestDiseaseGuideDao
+    abstract fun cropLogDao(): CropLogDao
 
     companion object {
         @Volatile

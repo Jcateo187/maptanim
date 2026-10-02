@@ -9,8 +9,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class CropZoneRepositoryImpl(
-    private val cropZoneDao: CropZoneDao? = null
+    private val initialDao: CropZoneDao? = null
 ) : CropZoneRepository {
+
+    private val cropZoneDao: CropZoneDao?
+        get() = initialDao ?: RepositoryProvider.getDatabase()?.cropZoneDao()
 
     private val inMemoryCache = mutableMapOf<String, List<CropZone>>()
 

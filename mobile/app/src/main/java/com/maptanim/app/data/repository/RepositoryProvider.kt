@@ -30,6 +30,17 @@ object RepositoryProvider {
         }
     }
 
+    fun getDatabase(): AppDatabase? {
+        if (database == null && appContext != null) {
+            try {
+                database = AppDatabase.getInstance(appContext!!)
+            } catch (e: Throwable) {
+                android.util.Log.e("RepositoryProvider", "Failed to get AppDatabase: ${e.message}", e)
+            }
+        }
+        return database
+    }
+
     val cropPlotRepository: CropPlotRepository by lazy {
         CropPlotRepositoryImpl(database?.cropPlotDao())
     }
@@ -71,6 +82,9 @@ object RepositoryProvider {
     }
     val dssRepository: com.maptanim.app.domain.repository.DssRepository by lazy {
         DssRepositoryImpl(database?.dssDecisionDao())
+    }
+    val cropLogRepository: com.maptanim.app.domain.repository.CropLogRepository by lazy {
+        CropLogRepositoryImpl(database?.cropLogDao())
     }
     val policyConsentDao: com.maptanim.app.data.local.dao.PolicyConsentDao? by lazy {
         database?.policyConsentDao()
