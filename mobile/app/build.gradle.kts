@@ -38,10 +38,8 @@ android {
             }
         }
         debug {
-            applicationIdSuffix = ".test"
-            versionNameSuffix = "-test"
             firebaseAppDistribution {
-                appId = "1:605883983200:android:6e05673853bff2ad422a05"
+                appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
                 releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.7 Debug Test Build - DSS matrix, beginner backyard mode, and SVG rendering improvements"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
