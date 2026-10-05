@@ -21,7 +21,7 @@ import com.maptanim.app.features.splash.screen.LoadingScreen
 import com.maptanim.app.features.profile.ProfileScreen
 import com.maptanim.app.features.reports.screen.ReportsScreen
 import com.maptanim.app.features.splash.screen.CompanyLogoScreen
-import com.maptanim.app.features.library.screen.VegetablesScreen
+import com.maptanim.app.features.library.screen.LibraryScreen
 import com.maptanim.app.features.notifications.screen.NotificationsScreen
 
 @Composable
@@ -93,7 +93,7 @@ fun AppNavGraph() {
             popExitTransition = { ExitTransition.None }
         ) { backStackEntry ->
             val cropName = backStackEntry.arguments?.getString("cropName")
-            VegetablesScreen(navController = navController, initialCropName = cropName)
+            LibraryScreen(navController = navController, initialCropName = cropName)
         }
 
         composable(
