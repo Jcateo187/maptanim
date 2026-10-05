@@ -64,16 +64,6 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.EDIT,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }
-        ) {
-            FarmScreen(navController = navController)
-        }
-
-        composable(
             route = Routes.PROFILE
         ) {
             ProfileScreen(navController = navController, initialTab = 0)
@@ -124,7 +114,7 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.FARMS,
+            route = Routes.FARM,
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,

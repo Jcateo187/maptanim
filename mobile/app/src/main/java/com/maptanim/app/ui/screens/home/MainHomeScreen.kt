@@ -169,7 +169,7 @@ fun MainHomeScreen(
             // Floating Action Button (Green Pencil) -> Navigates to FarmEditorScreen to add crops & edit
             FloatingActionButton(
                 onClick = {
-                    navController.navigate(Routes.EDIT)
+                    navController.navigate(Routes.FARM)
                 },
                 containerColor = ForestGreen,
                 contentColor = White,
@@ -311,7 +311,7 @@ fun MainHomeScreen(
                                         farmName = uiState.activeFarm?.farmName?.ifBlank { "San Isidro Farm" } ?: "San Isidro Farm",
                                         plots = uiState.plots,
                                         activeCropsCount = plantedCrops.size,
-                                        onViewFarm = { navController.navigate(Routes.FARMS) },
+                                        onViewFarm = { navController.navigate(Routes.FARM) },
                                         onSelectPlot = { plot -> selectedCropForDss = plot }
                                     )
                                 }
@@ -411,7 +411,7 @@ fun MainHomeScreen(
                                         alertTitle = alertTitle,
                                         alertMessage = alertMessage,
                                         onViewGuide = { navController.navigate(Routes.libraryRoute(alertCropName)) },
-                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.EDIT) }
+                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.FARM) }
                                     )
                                 }
                             }
@@ -431,7 +431,7 @@ fun MainHomeScreen(
                                 MyCropsSection(
                                     plots = uiState.plots,
                                     onCropClick = { plot -> selectedCropForDss = plot },
-                                    onManageCrops = { navController.navigate(Routes.EDIT) }
+                                    onManageCrops = { navController.navigate(Routes.FARM) }
                                 )
 
                                 TodaysTasksCard(
@@ -442,7 +442,7 @@ fun MainHomeScreen(
                                         val targetPlot = uiState.plots.firstOrNull { it.id == task.plotId } ?: plantedCrops.firstOrNull()
                                         if (targetPlot != null) selectedCropForDss = targetPlot
                                     },
-                                    onViewAllTasks = { navController.navigate(Routes.FARMS) }
+                                    onViewAllTasks = { navController.navigate(Routes.FARM) }
                                 )
                             }
 
@@ -631,7 +631,7 @@ fun MainHomeScreen(
                                     farmName = uiState.activeFarm?.farmName?.ifBlank { "San Isidro Farm" } ?: "San Isidro Farm",
                                     plots = uiState.plots,
                                     activeCropsCount = plantedCrops.size,
-                                    onViewFarm = { navController.navigate(Routes.FARMS) },
+                                    onViewFarm = { navController.navigate(Routes.FARM) },
                                     onSelectPlot = { plot -> selectedCropForDss = plot },
                                     modifier = Modifier.weight(5f)
                                 )
@@ -661,7 +661,7 @@ fun MainHomeScreen(
                                         alertTitle = alertTitle,
                                         alertMessage = alertMessage,
                                         onViewGuide = { navController.navigate(Routes.libraryRoute(alertCropName)) },
-                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.EDIT) }
+                                        onClick = { if (alertPlot != null) selectedCropForDss = alertPlot else navController.navigate(Routes.FARM) }
                                     )
                                 }
                             }
@@ -678,7 +678,7 @@ fun MainHomeScreen(
                         MyCropsSection(
                             plots = uiState.plots,
                             onCropClick = { plot -> selectedCropForDss = plot },
-                            onManageCrops = { navController.navigate(Routes.EDIT) }
+                            onManageCrops = { navController.navigate(Routes.FARM) }
                         )
 
                         TodaysTasksCard(
@@ -689,7 +689,7 @@ fun MainHomeScreen(
                                 val targetPlot = uiState.plots.firstOrNull { it.id == task.plotId } ?: plantedCrops.firstOrNull()
                                 if (targetPlot != null) selectedCropForDss = targetPlot
                             },
-                            onViewAllTasks = { navController.navigate(Routes.FARMS) }
+                            onViewAllTasks = { navController.navigate(Routes.FARM) }
                         )
 
                         FarmInsightCard(
@@ -725,7 +725,7 @@ fun MainHomeScreen(
             },
             onStartPlanting = {
                 selectedCropForDss = null
-                navController.navigate(Routes.FARMS)
+                navController.navigate(Routes.FARM)
             }
         )
     }
@@ -1720,9 +1720,9 @@ fun MainBottomNavBar(
             BottomNavItem.items.forEach { item ->
                 val isSelected = when (item) {
                     BottomNavItem.Home -> selectedRoute == Routes.HOME
-                    BottomNavItem.Farm -> selectedRoute == Routes.FARMS || selectedRoute == Routes.FARM
+                    BottomNavItem.Farm -> selectedRoute == Routes.FARM
                     BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
-                    BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY || selectedRoute == Routes.VEGETABLES || selectedRoute == Routes.KNOWLEDGE
+                    BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
                     BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile")
                 }
                 NavigationBarItem(
@@ -1798,9 +1798,9 @@ fun LandscapeSideNavBar(
                 BottomNavItem.items.forEach { item ->
                     val isSelected = when (item) {
                         BottomNavItem.Home -> selectedRoute == Routes.HOME
-                        BottomNavItem.Farm -> selectedRoute == Routes.FARMS || selectedRoute == Routes.FARM
+                        BottomNavItem.Farm -> selectedRoute == Routes.FARM
                         BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
-                        BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY || selectedRoute == Routes.VEGETABLES || selectedRoute == Routes.KNOWLEDGE
+                        BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
                         BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile")
                     }
 

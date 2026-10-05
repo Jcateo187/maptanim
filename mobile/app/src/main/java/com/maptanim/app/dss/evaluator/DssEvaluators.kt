@@ -4,7 +4,7 @@ import com.maptanim.app.domain.model.Activity
 import com.maptanim.app.domain.model.CompanionRelation
 import com.maptanim.app.domain.model.Crop
 import com.maptanim.app.domain.model.CropPlot
-import com.maptanim.app.domain.model.GrowthStage
+import com.maptanim.app.domain.model.CropGrowthStage
 import com.maptanim.app.domain.model.HarvestRecord
 import com.maptanim.app.domain.model.Season
 import com.maptanim.app.domain.model.TaskType
@@ -293,8 +293,8 @@ class DssGrowthCareEvaluator(
 
             // 2. Fertilization / Organic Nutrition Scheduling by Stage
             val isFertilizeStage = stage in listOf(
-                GrowthStage.SEEDLING, GrowthStage.VEGETATIVE, GrowthStage.FLOWERING,
-                GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE
+                CropGrowthStage.SEEDLING, CropGrowthStage.VEGETATIVE, CropGrowthStage.FLOWERING,
+                CropGrowthStage.RIPENING
             )
             if (isFertilizeStage) {
                 val lastFertilized = input.farmerData.recentActivities
@@ -306,7 +306,7 @@ class DssGrowthCareEvaluator(
                     ?: crop.fertilizeIntervalDays
 
                 if (daysSinceFert >= crop.fertilizeIntervalDays) {
-                    val isFlowering = stage == GrowthStage.FLOWERING || stage == GrowthStage.FRUITING
+                    val isFlowering = stage == CropGrowthStage.FLOWERING || stage == CropGrowthStage.RIPENING
                     val nutritionSummary = if (isTomato) {
                         if (isFlowering) {
                             "Add 1 handful of vermicast and sprinkle a spoonful of crushed eggshells (for calcium) or a pinch of wood ash around the plant base."
@@ -405,7 +405,7 @@ class DssGrowthCareEvaluator(
                 val studyB = input.referenceData.yieldStudies.firstOrNull { it.studyCode == "STUDY_B_BACNOTAN_2025" }
 
                 // Study A: Camiguin (2015-2016) Mulching Protocol
-                if (stage == GrowthStage.VEGETATIVE || stage == GrowthStage.MID_VEGETATIVE || daysElapsed in 15..35) {
+                if (stage == CropGrowthStage.VEGETATIVE || daysElapsed in 15..35) {
                     decisions.add(
                         DssDecision(
                             id = "dss_rec_mulch_camiguin_${plot.id}",
@@ -428,7 +428,7 @@ class DssGrowthCareEvaluator(
                 }
 
                 // Study B: Bacnotan (2025) Trehalose Foliar Spray Protocol
-                if (stage == GrowthStage.FLOWERING || stage == GrowthStage.FRUITING || daysElapsed in 35..55) {
+                if (stage == CropGrowthStage.FLOWERING || stage == CropGrowthStage.RIPENING || daysElapsed in 35..55) {
                     decisions.add(
                         DssDecision(
                             id = "dss_rec_trehalose_bacnotan_${plot.id}",
@@ -451,7 +451,7 @@ class DssGrowthCareEvaluator(
                 }
 
                 // DA-BPI IPM Fruit Borer Scout Task
-                if (stage == GrowthStage.FLOWERING || stage == GrowthStage.FRUITING) {
+                if (stage == CropGrowthStage.FLOWERING || stage == CropGrowthStage.RIPENING) {
                     decisions.add(
                         DssDecision(
                             id = "dss_task_borer_scout_${plot.id}",
@@ -722,7 +722,8 @@ class DssHarvestEvaluator(
             val stage = calculator.calculate(plantedDate, crop.daysToHarvest, today)
             val daysElapsed = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
 
-            if (stage == GrowthStage.OVERDUE) {
+            val isOverdue = crop.daysToHarvest > 0 && daysElapsed > crop.daysToHarvest
+            if (isOverdue) {
                 val rule = DssRuleCatalog.findRuleByCode("HARVEST_OVERDUE_DEPRECIATION")
                 decisions.add(
                     DssDecision(
@@ -744,7 +745,7 @@ class DssHarvestEvaluator(
                         evaluatedAt = today.toString()
                     )
                 )
-            } else if (stage == GrowthStage.HARVEST_READY) {
+            } else if (stage == CropGrowthStage.HARVEST) {
                 val rule = DssRuleCatalog.findRuleByCode("HARVEST_OPTIMAL_WINDOW")
                 val indicators = crop.harvestIndicators ?: "Fruit reaches standard size and firm coloration"
                 decisions.add(

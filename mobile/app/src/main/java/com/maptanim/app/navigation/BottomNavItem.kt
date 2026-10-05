@@ -18,7 +18,7 @@ sealed class BottomNavItem(
     val label: String
 ) {
     object Home : BottomNavItem(Routes.HOME, Icons.Default.Home, "Home")
-    object Farm : BottomNavItem(Routes.FARMS, Icons.Default.Agriculture, "Farm")
+    object Farm : BottomNavItem(Routes.FARM, Icons.Default.Agriculture, "Farm")
     object Community : BottomNavItem(Routes.COMMUNITY, Icons.Default.Groups, "Community")
     object Vegetables : BottomNavItem(Routes.LIBRARY, Icons.AutoMirrored.Filled.MenuBook, "Library")
     object Profile : BottomNavItem(Routes.PROFILE, Icons.Default.Person, "Profile")

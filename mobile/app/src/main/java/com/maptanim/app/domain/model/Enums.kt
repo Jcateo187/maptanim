@@ -28,23 +28,7 @@ enum class SoilType {
     CHALKY   // Off-white, alkaline, low water retention
 }
 
-/**
- * Growth stage of a planting bed, calculated from:
- *   beds.planted_date (Room DB) + crops.days_to_harvest (Room DB)
- * by GrowthStageCalculator. Never hardcoded.
- */
-enum class GrowthStage {
-    SPROUT,             // Stage 1: Germination / Emergence (0–15% progress)
-    SEEDLING,           // Stage 2: Early Leaf Development (15–35% progress)
-    VEGETATIVE,         // Stage 3: Rapid Stem & Leaf Expansion (35–65% progress)
-    FLOWERING,          // Stage 4: Budding / Podding / Fruiting (65–90% progress)
-    HARVEST_READY,      // Stage 5: Full Maturation (90%+ progress)
-    GERMINATION,        // Legacy alias for SPROUT
-    EARLY_VEGETATIVE,   // Legacy alias for SEEDLING
-    MID_VEGETATIVE,     // Legacy alias for VEGETATIVE
-    FRUITING,           // Legacy alias for FLOWERING
-    OVERDUE             // Legacy alias for HARVEST_READY
-}
+
 
 /**
  * Edit tool enum. Active tool drives left panel highlight and canvas gesture behavior.

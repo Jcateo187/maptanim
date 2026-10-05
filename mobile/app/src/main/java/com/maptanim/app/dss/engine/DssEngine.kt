@@ -10,23 +10,21 @@ import java.time.temporal.ChronoUnit
  * Calculates the current growth stage for a plot's crop.
  *
  * Input:  crop_plots.planted_date (Room DB) + crops.days_to_harvest (Room DB)
- * Output: GrowthStage enum value
+ * Output: CropGrowthStage enum value (6 stages)
  */
 class GrowthStageCalculator {
 
-    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): GrowthStage {
+    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): CropGrowthStage {
         val daysSincePlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
-        if (daysToHarvest > 0 && daysSincePlanting > daysToHarvest) {
-            return GrowthStage.OVERDUE
-        }
         val progress = if (daysToHarvest > 0) (daysSincePlanting.toFloat() / daysToHarvest.toFloat()).coerceIn(0f, 1f) else 0f
 
         return when {
-            progress < 0.15f -> GrowthStage.SPROUT
-            progress < 0.35f -> GrowthStage.SEEDLING
-            progress < 0.65f -> GrowthStage.VEGETATIVE
-            progress < 0.90f -> GrowthStage.FLOWERING
-            else             -> GrowthStage.HARVEST_READY
+            progress < 0.15f -> CropGrowthStage.GERMINATION
+            progress < 0.30f -> CropGrowthStage.SEEDLING
+            progress < 0.55f -> CropGrowthStage.VEGETATIVE
+            progress < 0.75f -> CropGrowthStage.FLOWERING
+            progress < 0.95f -> CropGrowthStage.RIPENING
+            else             -> CropGrowthStage.HARVEST
         }
     }
 }
@@ -189,7 +187,7 @@ class DssEngine(
     private fun generateTasksForPlot(
         plot: CropPlot,
         crop: Crop,
-        stage: GrowthStage,
+        stage: CropGrowthStage,
         activities: List<Activity>,
         today: LocalDate
     ): List<GeneratedTask> {
@@ -215,7 +213,7 @@ class DssEngine(
         }
 
         // ── FERTILIZE task ────────────────────────────────────────────────
-        if (stage in listOf(GrowthStage.SEEDLING, GrowthStage.VEGETATIVE, GrowthStage.FLOWERING, GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE)) {
+        if (stage in listOf(CropGrowthStage.SEEDLING, CropGrowthStage.VEGETATIVE, CropGrowthStage.FLOWERING, CropGrowthStage.RIPENING)) {
             val lastFertilized = activities
                 .filter { it.plotId == plot.id && it.type == TaskType.FERTILIZE }
                 .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
@@ -236,7 +234,7 @@ class DssEngine(
         }
 
         // ── HARVEST task ──────────────────────────────────────────────────
-        if (stage == GrowthStage.HARVEST_READY || stage == GrowthStage.OVERDUE) {
+        if (stage == CropGrowthStage.HARVEST) {
             generated.add(GeneratedTask(
                 plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                 taskType = TaskType.HARVEST,

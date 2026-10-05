@@ -130,7 +130,7 @@ data class TaskPinData(
     val plotId: String
 )
 
-typealias GrowthStage = com.maptanim.app.domain.model.GrowthStage
+typealias CropGrowthStage = com.maptanim.app.domain.model.CropGrowthStage
 typealias TaskType    = com.maptanim.app.domain.model.TaskType
 
 // ─── CropZoneRenderData ──────────────────────────────────────────────────

@@ -120,9 +120,9 @@ fun VegetablesScreen(
         containerColor = MonitoringBg,
         bottomBar = {
             MainBottomNavBar(
-                selectedRoute = Routes.VEGETABLES,
+                selectedRoute = Routes.LIBRARY,
                 onNavigate = { route ->
-                    if (route != Routes.VEGETABLES && route != Routes.LIBRARY) {
+                    if (route != Routes.LIBRARY) {
                         navController.navigate(route) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
