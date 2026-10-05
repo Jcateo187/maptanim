@@ -24,6 +24,8 @@ import java.util.UUID
 data class FarmHubUiState(
     val activeFarmId: String = "",
     val farmName: String = "My Farm",
+    val farmEnvironment: com.maptanim.app.domain.model.FarmEnvironment = com.maptanim.app.domain.model.FarmEnvironment(),
+    val showFarmSetupDialog: Boolean = false,
     val selectedTopTab: TopTab = TopTab.PLAN,
     val planState: FarmHubPlanState = FarmHubPlanState(),
     val guideState: FarmHubGuideState = FarmHubGuideState(),
@@ -75,7 +77,61 @@ class FarmHubViewModel(
             }
             val farmId = localFarm?.id ?: user?.id?.takeIf { it.isNotBlank() } ?: "farm-default"
             val farmName = localFarm?.farmName ?: "My Farm"
-            _uiState.update { it.copy(activeFarmId = farmId, farmName = farmName) }
+            val env = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().getFarmEnvironment(farmId)
+            _uiState.update {
+                it.copy(
+                    activeFarmId = farmId,
+                    farmName = farmName,
+                    farmEnvironment = env,
+                    planState = it.planState.copy(farmEnvironment = env, activeSoilType = env.defaultSoil)
+                )
+            }
+        }
+    }
+
+    fun openFarmSetupDialog() {
+        _uiState.update {
+            it.copy(
+                showFarmSetupDialog = true,
+                planState = it.planState.copy(showFarmSetupDialog = true)
+            )
+        }
+    }
+
+    fun closeFarmSetupDialog() {
+        _uiState.update {
+            it.copy(
+                showFarmSetupDialog = false,
+                planState = it.planState.copy(showFarmSetupDialog = false)
+            )
+        }
+    }
+
+    fun updateFarmSetup(name: String, environment: com.maptanim.app.domain.model.FarmEnvironment) {
+        viewModelScope.launch {
+            val farmId = _uiState.value.activeFarmId
+            com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().saveFarmEnvironment(farmId, environment)
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val db = RepositoryProvider.getDatabase()
+                val existing = db?.farmDao()?.getFarmById(farmId) ?: db?.farmDao()?.getActiveFarm()
+                if (existing != null) {
+                    db?.farmDao()?.upsertFarm(existing.copy(farmName = name))
+                }
+            }
+
+            _uiState.update { state ->
+                state.copy(
+                    farmName = name,
+                    farmEnvironment = environment,
+                    showFarmSetupDialog = false,
+                    planState = state.planState.copy(
+                        farmEnvironment = environment,
+                        activeSoilType = environment.defaultSoil,
+                        showFarmSetupDialog = false
+                    )
+                )
+            }
         }
     }
 

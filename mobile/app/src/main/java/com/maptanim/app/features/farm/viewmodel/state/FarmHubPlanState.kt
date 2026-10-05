@@ -32,5 +32,7 @@ data class FarmHubPlanState(
     val hasUnsavedChanges: Boolean = false,
     val pendingCropPlantings: List<CropPlantingDraft> = emptyList(),
     val showAddBedDialog: Boolean = false,
-    val showBasketballScale: Boolean = false
+    val showBasketballScale: Boolean = false,
+    val farmEnvironment: com.maptanim.app.domain.model.FarmEnvironment = com.maptanim.app.domain.model.FarmEnvironment(),
+    val showFarmSetupDialog: Boolean = false
 )

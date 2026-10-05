@@ -2,6 +2,52 @@ package com.maptanim.app.domain.model
 
 import com.maptanim.app.domain.model.SoilType
 
+// ─── Farm Environment & Agro-Zone ──────────────────────────────────────────
+
+enum class AgroZone(val label: String, val description: String, val elevationRange: String) {
+    LOWLAND("Lowland", "Warm tropical climate (0–500m elevation). Thrives with warm-season fruiting vegetables.", "0 – 500 m"),
+    HIGHLAND("Highland", "Cool temperate microclimate (>500m elevation). Ideal for brassicas and root crops.", "> 500 m");
+
+    companion object {
+        fun fromName(name: String?): AgroZone =
+            entries.firstOrNull { it.name.equals(name, ignoreCase = true) || it.label.equals(name, ignoreCase = true) } ?: LOWLAND
+    }
+}
+
+enum class SiteConstraint(val code: String, val label: String, val description: String) {
+    FLOODING("fl", "Flooding / Poor Drainage", "Prone to water pooling during tropical downpours; requires elevated beds."),
+    WIND_EXPOSURE("wi", "Strong Wind Exposure", "Open or gusty site; tall and trellised plants require sturdy staking."),
+    SHADY("sh", "Shady (< 5 hrs sun)", "Limited direct sunlight; fruiting crops need full sun or reflective mulch."),
+    WATER_SCARCITY("nw", "Water Scarcity", "Limited tap or well water access; requires heavy mulching or drip bottles.");
+
+    companion object {
+        fun fromCode(code: String?): SiteConstraint? =
+            entries.firstOrNull { it.code.equals(code, ignoreCase = true) || it.name.equals(code, ignoreCase = true) }
+    }
+}
+
+data class FarmEnvironment(
+    val zone: AgroZone = AgroZone.LOWLAND,
+    val defaultSoil: SoilType = SoilType.LOAM,
+    val widthM: Float = 10f,
+    val heightM: Float = 8f,
+    val constraints: Set<SiteConstraint> = emptySet()
+) {
+    val areaSqM: Float get() = widthM * heightM
+    val basketballCourtPct: Float get() = (areaSqM / 420.0f) * 100f
+
+    val basketballComparisonText: String get() {
+        val pct = basketballCourtPct
+        return when {
+            pct < 2.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (compact backyard corner)."
+            pct < 10.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (small backyard garden)."
+            pct < 25.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (medium backyard plot)."
+            pct < 55.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (roughly half-court size)."
+            else -> "About ${String.format("%.1f", pct)}% of a standard basketball court (large backyard lot)."
+        }
+    }
+}
+
 // ─── Farm ──────────────────────────────────────────────────────────────────
 
 data class Farm(
@@ -9,7 +55,8 @@ data class Farm(
     val farmerId: String,
     val farmName: String,      // e.g. "Murcia Farm"
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val environment: FarmEnvironment = FarmEnvironment()
 )
 
 

@@ -246,7 +246,7 @@ fun FarmCanvasView(
                         modifier = Modifier.padding(bottom = 4.dp)
                     ) {
                         Text(
-                            text = "🏀 ${selectedPlot.plotLabel} (${String.format("%.1f", selectedPlot.widthM)}m × ${String.format("%.1f", selectedPlot.heightM)}m = ${String.format("%.1f", areaSqm)}m²) • ${String.format("%.2f", courtPct)}% of Basketball Court",
+                            text = "SCALE: ${selectedPlot.plotLabel} (${String.format("%.1f", selectedPlot.widthM)}m × ${String.format("%.1f", selectedPlot.heightM)}m = ${String.format("%.1f", areaSqm)}m²) • ${String.format("%.2f", courtPct)}% of Basketball Court",
                             color = Color(0xFFFFD54F),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,

@@ -1,15 +1,17 @@
 package com.maptanim.app.features.farm.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +22,7 @@ import androidx.navigation.NavController
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.features.farm.canvas.FarmCanvasView
 import com.maptanim.app.features.farm.dialogs.AddBedDialog
+import com.maptanim.app.features.farm.dialogs.FarmSetupDialog
 import com.maptanim.app.features.farm.tabs.CheckUpTab
 import com.maptanim.app.features.farm.tabs.GuideTab
 import com.maptanim.app.features.farm.tabs.HarvestTab
@@ -86,6 +89,34 @@ fun FarmHubScreen(
                             fontSize = 12.sp,
                             color = DeepBlack
                         )
+                    }
+                },
+                actions = {
+                    Surface(
+                        onClick = { viewModel.openFarmSetupDialog() },
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF1F8E9),
+                        border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f)),
+                        modifier = Modifier.padding(end = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = "Farm Setup",
+                                tint = LushGreen,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "${uiState.farmEnvironment.zone.label} • ${uiState.farmEnvironment.defaultSoil.name}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LushGreen
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -279,6 +310,9 @@ fun FarmHubScreen(
                                     },
                                     onRedo = {
                                         viewModel.redo()
+                                    },
+                                    onOpenSetupDialog = {
+                                        viewModel.openFarmSetupDialog()
                                     }
                                 )
                             }
@@ -416,6 +450,18 @@ fun FarmHubScreen(
                 }
             },
             containerColor = Color.White
+        )
+    }
+
+    // ── Farm Setup & Agro-Zone Environment Calibration Dialog ────────────────
+    if (uiState.showFarmSetupDialog) {
+        FarmSetupDialog(
+            initialName = uiState.farmName,
+            initialEnvironment = uiState.farmEnvironment,
+            onConfirm = { name, env ->
+                viewModel.updateFarmSetup(name, env)
+            },
+            onDismiss = { viewModel.closeFarmSetupDialog() }
         )
     }
 }
