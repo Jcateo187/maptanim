@@ -33,7 +33,11 @@ data class FarmHubUiState(
     val harvestState: FarmHubHarvestState = FarmHubHarvestState(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
-)
+) {
+    val activePlot: CropPlot?
+        get() = planState.rawPlots.firstOrNull { it.id == planState.selectedPlotId }
+            ?: planState.rawPlots.firstOrNull()
+}
 
 /**
  * FarmHubViewModel — Consolidated Hub ViewModel coordinating the 4 core agricultural pillars:

@@ -34,7 +34,7 @@ data class CropSpacingInfo(
     val nutrientAppetite: String
 )
 
-private fun getCropSpacing(cropName: String?): CropSpacingInfo = when (cropName?.lowercase()) {
+fun getCropSpacing(cropName: String?): CropSpacingInfo = when (cropName?.lowercase()) {
     "tomato", "kamatis" -> CropSpacingInfo(50, 80, "Heavy Feeder (5 kg/m² compost)")
     "eggplant", "talong" -> CropSpacingInfo(50, 75, "Heavy Feeder (5 kg/m² compost)")
     "chili", "sili" -> CropSpacingInfo(40, 50, "Medium Feeder (3 kg/m² compost)")
@@ -46,6 +46,16 @@ private fun getCropSpacing(cropName: String?): CropSpacingInfo = when (cropName?
     "sitaw" -> CropSpacingInfo(30, 60, "Light Feeder (Fixes Nitrogen)")
     "corn", "mais", "sweet corn" -> CropSpacingInfo(30, 75, "Heavy Feeder (5 kg/m² compost)")
     else -> CropSpacingInfo(30, 40, "Standard Bed Spacing")
+}
+
+fun calculatePlantCapacity(widthM: Float, heightM: Float, cropName: String?): Int {
+    if (cropName.isNullOrBlank()) return 0
+    val spacing = getCropSpacing(cropName)
+    val dim1 = maxOf(widthM, heightM) * 100f
+    val dim2 = minOf(widthM, heightM) * 100f
+    val plantsInRow = maxOf(1, (dim1 / spacing.plantSpacingCm).toInt())
+    val numRows = maxOf(1, (dim2 / spacing.rowSpacingCm).toInt())
+    return plantsInRow * numRows
 }
 
 /**

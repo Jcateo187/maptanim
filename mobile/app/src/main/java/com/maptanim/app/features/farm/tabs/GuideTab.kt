@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.CropGrowthStage
 import com.maptanim.app.dss.engine.DssLogEvaluator
 import com.maptanim.app.features.farm.viewmodel.DssTab
@@ -36,8 +37,10 @@ private val LightSurface = Color(0xFFF9FAF8)
 @Composable
 fun GuideTab(
     state: FarmHubGuideState,
+    activePlot: CropPlot? = null,
     onSelectDssTab: (DssTab) -> Unit,
     onCompleteTask: (String) -> Unit,
+    onNavigateToPlan: () -> Unit = {},
     onNavigateToCheckUp: () -> Unit = {},
     onNavigateToHarvest: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -49,6 +52,46 @@ fun GuideTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── 0. Active Bed Orientation Header ─────────────────────────────────
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFF1F8E9),
+                border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "ACTIVE PRODUCTION BED",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = activePlot?.let { "${it.plotLabel}: ${it.cropName ?: "Unplanted"}" }
+                                ?: "No Bed Selected (Showing General Guide)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                    }
+                    if (activePlot?.cropName == null) {
+                        TextButton(onClick = onNavigateToPlan) {
+                            Text("Assign Crop →", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = LushGreen)
+                        }
+                    }
+                }
+            }
+        }
+
         // ── 1. Growth Stage Progression Card ────────────────────────────────
         item {
             Surface(
@@ -258,7 +301,7 @@ fun GuideTab(
         if (state.selectedDssTab == DssTab.TASKS) {
             if (state.dynamicTasks.isEmpty()) {
                 item {
-                    EmptyGuidanceCard(
+                    com.maptanim.app.features.farm.components.GuideEmptyStateCard(
                         title = "All Caught Up!",
                         description = "No pending care tasks for this growth stage. Next scheduled check will appear tomorrow."
                     )
@@ -274,14 +317,14 @@ fun GuideTab(
         } else {
             if (state.dynamicRecommendations.isEmpty()) {
                 item {
-                    EmptyGuidanceCard(
+                    com.maptanim.app.features.farm.components.GuideEmptyStateCard(
                         title = "Standard Protocol",
                         description = "Maintain baseline watering and aeration. Scientific advisories will appear based on weather and soil data."
                     )
                 }
             } else {
                 items(state.dynamicRecommendations) { rec ->
-                    RecommendationCard(recommendation = rec)
+                    com.maptanim.app.features.farm.components.GuideRecommendationCard(recommendation = rec)
                 }
             }
         }
@@ -376,77 +419,3 @@ private fun TaskCard(
     }
 }
 
-@Composable
-private fun RecommendationCard(recommendation: DssLogEvaluator.LogRecommendation) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFF1F8E9),
-        border = BorderStroke(1.dp, Color(0xFFC8E6C9))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Icon(
-                imageVector = Icons.Default.Lightbulb,
-                contentDescription = null,
-                tint = LushGreen,
-                modifier = Modifier.size(20.dp)
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = recommendation.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = DeepBlack
-                )
-                Text(
-                    text = recommendation.content,
-                    fontSize = 12.sp,
-                    color = Color(0xFF333333),
-                    lineHeight = 16.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyGuidanceCard(title: String, description: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = LightSurface,
-        border = BorderStroke(1.dp, CardBorderColor)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = LushGreen,
-                modifier = Modifier.size(36.dp)
-            )
-            Text(
-                text = title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = DeepBlack
-            )
-            Text(
-                text = description,
-                fontSize = 12.sp,
-                color = Color(0xFF666666)
-            )
-        }
-    }
-}

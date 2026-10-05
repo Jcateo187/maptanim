@@ -61,7 +61,50 @@ fun PlanTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── 0. Place Suitability & Alternative Methods Card ─────────────────
+        // ── 0A. Beginner "Start Here" Card if no beds exist ─────────────────
+        if (state.rawPlots.isEmpty()) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFF1F8E9),
+                    border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "STEP 2: DESIGN & ADD YOUR FIRST BED",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = "Your farm is ready on the 2D canvas. Tap below to place Bed #1, select your vegetable, and see the exact plant capacity and crop spacing.",
+                            fontSize = 12.sp,
+                            color = DeepBlack,
+                            lineHeight = 16.sp
+                        )
+                        Button(
+                            onClick = onAddNewBed,
+                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("＋ Add Bed #1 to Canvas", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 0B. Place Suitability & Alternative Methods Card ─────────────────
         item {
             val selectedPlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
                 ?: state.rawPlots.firstOrNull()
@@ -205,6 +248,18 @@ fun PlanTab(
                     onSelect = { onSelectPlot(plot.id) },
                     onDelete = { onDeleteBed(plot.id) }
                 )
+            }
+            item {
+                Button(
+                    onClick = onNavigateToGuide,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
+                ) {
+                    Text("Proceed to Step 3: Daily Production Guide →", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
     }

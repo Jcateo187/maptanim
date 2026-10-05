@@ -21,8 +21,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.features.farm.canvas.FarmCanvasView
+import com.maptanim.app.features.farm.components.InterconnectedWorkflowHeader
+import com.maptanim.app.features.farm.components.WorkflowStep
 import com.maptanim.app.features.farm.dialogs.AddBedDialog
 import com.maptanim.app.features.farm.dialogs.FarmSetupDialog
+import com.maptanim.app.features.farm.dialogs.HarvestRecordDialog
 import com.maptanim.app.features.farm.tabs.CheckUpTab
 import com.maptanim.app.features.farm.tabs.GuideTab
 import com.maptanim.app.features.farm.tabs.HarvestTab
@@ -59,9 +62,6 @@ fun FarmHubScreen(
     var sheetState by remember { mutableStateOf(SheetExpandState.HALF) }
     var showAddBedDialog by remember { mutableStateOf(false) }
     var showHarvestDialog by remember { mutableStateOf(false) }
-    var harvestYieldInput by remember { mutableStateOf("") }
-    var harvestNotesInput by remember { mutableStateOf("") }
-    var isFinalHarvestChecked by remember { mutableStateOf(true) }
 
     val animatedWeight by animateFloatAsState(
         targetValue = when (sheetState) {
@@ -222,6 +222,29 @@ fun FarmHubScreen(
                     .fillMaxWidth()
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
+                    // ── Active Bed & Workflow Interconnected Header ──────────
+                    InterconnectedWorkflowHeader(
+                        activePlot = uiState.activePlot,
+                        allPlots = uiState.planState.rawPlots,
+                        currentTab = uiState.selectedTopTab,
+                        environment = uiState.farmEnvironment,
+                        onSelectPlot = { plotId ->
+                            viewModel.selectPlot(plotId)
+                            editViewModel.selectPlot(plotId)
+                        },
+                        onAddNewBed = { showAddBedDialog = true },
+                        onSelectStep = { step ->
+                            when (step) {
+                                WorkflowStep.FARM_SETUP -> viewModel.openFarmSetupDialog()
+                                WorkflowStep.BED_PLANNING -> viewModel.selectTopTab(TopTab.PLAN)
+                                WorkflowStep.DAILY_GUIDE -> viewModel.selectTopTab(TopTab.GUIDE)
+                                WorkflowStep.CHECKUP -> viewModel.selectTopTab(TopTab.CHECKUP)
+                                WorkflowStep.HARVEST -> viewModel.selectTopTab(TopTab.HARVEST)
+                            }
+                        },
+                        onOpenSetupDialog = { viewModel.openFarmSetupDialog() }
+                    )
+
                     TabRow(
                         selectedTabIndex = uiState.selectedTopTab.ordinal,
                         containerColor = Color.White,
@@ -322,8 +345,10 @@ fun FarmHubScreen(
                             TopTab.GUIDE -> {
                                 GuideTab(
                                     state = uiState.guideState,
+                                    activePlot = uiState.activePlot,
                                     onSelectDssTab = { viewModel.selectDssTab(it) },
                                     onCompleteTask = { viewModel.completeTask(it) },
+                                    onNavigateToPlan = { viewModel.selectTopTab(TopTab.PLAN) },
                                     onNavigateToCheckUp = { viewModel.selectTopTab(TopTab.CHECKUP) },
                                     onNavigateToHarvest = { viewModel.selectTopTab(TopTab.HARVEST) }
                                 )
@@ -331,13 +356,16 @@ fun FarmHubScreen(
                             TopTab.CHECKUP -> {
                                 CheckUpTab(
                                     state = uiState.checkUpState,
+                                    activePlot = uiState.activePlot,
                                     onOpenAddLog = { viewModel.setAddLogOpen(true) },
-                                    onNavigateToGuide = { viewModel.selectTopTab(TopTab.GUIDE) }
+                                    onNavigateToGuide = { viewModel.selectTopTab(TopTab.GUIDE) },
+                                    onNavigateToHarvest = { viewModel.selectTopTab(TopTab.HARVEST) }
                                 )
                             }
                             TopTab.HARVEST -> {
                                 HarvestTab(
                                     state = uiState.harvestState,
+                                    activePlot = uiState.activePlot,
                                     onOpenHarvestModal = { showHarvestDialog = true },
                                     onNavigateToPlan = { viewModel.selectTopTab(TopTab.PLAN) }
                                 )
@@ -371,92 +399,21 @@ fun FarmHubScreen(
 
     // ── Harvest Yield Recording Modal ────────────────────────────────────────
     if (showHarvestDialog) {
-        val selectedPlot = uiState.planState.rawPlots.firstOrNull { it.id == uiState.planState.selectedPlotId }
-            ?: uiState.planState.rawPlots.firstOrNull()
-
-        AlertDialog(
-            onDismissRequest = { showHarvestDialog = false },
-            title = {
-                Text(
-                    text = "Record Harvest Yield",
-                    fontWeight = FontWeight.Bold,
-                    color = DeepBlack
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Plot: ${selectedPlot?.plotLabel ?: "Bed #1"} • ${selectedPlot?.cropName ?: "Produce"}",
-                        fontSize = 13.sp,
-                        color = LushGreen,
-                        fontWeight = FontWeight.SemiBold
+        val selectedPlot = uiState.activePlot
+        HarvestRecordDialog(
+            selectedPlot = selectedPlot,
+            onDismiss = { showHarvestDialog = false },
+            onConfirm = { yieldKg, notes, isFinalHarvest ->
+                selectedPlot?.let {
+                    viewModel.recordHarvest(
+                        plotId = it.id,
+                        yieldKg = yieldKg,
+                        notes = notes,
+                        isFinalHarvest = isFinalHarvest
                     )
-
-                    OutlinedTextField(
-                        value = harvestYieldInput,
-                        onValueChange = { harvestYieldInput = it },
-                        label = { Text("Yield (kg)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LushGreen,
-                            focusedLabelColor = LushGreen
-                        )
-                    )
-
-                    OutlinedTextField(
-                        value = harvestNotesInput,
-                        onValueChange = { harvestNotesInput = it },
-                        label = { Text("Notes (optional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LushGreen,
-                            focusedLabelColor = LushGreen
-                        )
-                    )
-
-                    Row(
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = isFinalHarvestChecked,
-                            onCheckedChange = { isFinalHarvestChecked = it },
-                            colors = CheckboxDefaults.colors(checkedColor = LushGreen)
-                        )
-                        Text(
-                            text = "Reset bed for next crop rotation",
-                            fontSize = 12.sp,
-                            color = DeepBlack
-                        )
-                    }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val yield = harvestYieldInput.toFloatOrNull() ?: 0f
-                        selectedPlot?.let {
-                            viewModel.recordHarvest(
-                                plotId = it.id,
-                                yieldKg = yield,
-                                notes = harvestNotesInput,
-                                isFinalHarvest = isFinalHarvestChecked
-                            )
-                        }
-                        showHarvestDialog = false
-                        harvestYieldInput = ""
-                        harvestNotesInput = ""
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
-                ) {
-                    Text("Save Record", color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showHarvestDialog = false }) {
-                    Text("Cancel", color = DeepBlack)
-                }
-            },
-            containerColor = Color.White
+                showHarvestDialog = false
+            }
         )
     }
 

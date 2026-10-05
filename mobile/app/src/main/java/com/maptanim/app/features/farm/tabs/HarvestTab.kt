@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.HarvestRecord
 import com.maptanim.app.features.farm.viewmodel.state.FarmHubHarvestState
 
@@ -34,6 +35,7 @@ private val LightSurface = Color(0xFFF9FAF8)
 @Composable
 fun HarvestTab(
     state: FarmHubHarvestState,
+    activePlot: CropPlot? = null,
     onOpenHarvestModal: () -> Unit,
     onNavigateToPlan: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -45,7 +47,95 @@ fun HarvestTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── 0. Workflow Crop Succession Navigation ───────────────────────────
+        // ── 0A. Active Bed Target Header ──────────────────────────────────────
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFF1F8E9),
+                border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "HARVEST TARGET BED",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = activePlot?.let { "${it.plotLabel}: ${it.cropName ?: "Unplanted"}" }
+                                ?: "General Farm Harvest",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                    }
+                    Text(
+                        text = "Step 5 of 5",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LushGreen
+                    )
+                }
+            }
+        }
+
+        // ── 0B. DSS Crop Succession & Rotation Recommendation Card ────────────
+        item {
+            val crop = activePlot?.cropName?.lowercase()
+            val (nextCrop, rationale) = when {
+                crop in listOf("tomato", "kamatis", "eggplant", "talong", "sili", "chili") ->
+                    "Sitaw (Pole Sitao) or Pechay" to "Solanaceae are heavy feeders and susceptible to bacterial wilt (Ralstonia). Rotating to Sitaw restores soil nitrogen and breaks the disease cycle."
+                crop in listOf("sitaw", "stringbeans", "beans") ->
+                    "Sweet Corn, Pechay, or Lettuce" to "Sitaw naturally fixed nitrogen into this bed's soil. Follow with leafy greens or sweet corn to capitalize on this fertility without synthetic fertilizers."
+                crop in listOf("pechay", "lettuce", "litsugas", "cabbage", "repolyo") ->
+                    "Kalabasa (Squash) or Kamatis (Tomato)" to "Leafy greens extracted shallow nitrogen. Follow with deeper rooting fruiting vegetables with 3–5 kg/m² compost."
+                else ->
+                    "Sitaw (Legume) or Pechay" to "Rotate crop families every season to prevent nutrient exhaustion and soil pest buildup."
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFE8F5E9),
+                border = BorderStroke(1.dp, Color(0xFFA5D6A7))
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "DSS CROP SUCCESSION RECOMMENDATION",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LushGreen,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "Recommended Next Crop: $nextCrop",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepBlack
+                    )
+                    Text(
+                        text = rationale,
+                        fontSize = 11.sp,
+                        color = Color(0xFF333333),
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+        }
+
+        // ── 0C. Workflow Crop Succession Navigation ───────────────────────────
         item {
             OutlinedButton(
                 onClick = onNavigateToPlan,
@@ -53,7 +143,7 @@ fun HarvestTab(
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, CardBorderColor)
             ) {
-                Text("← Return to Farm Bed Planning (Plan Tab)", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
+                Text("← Plan Succession for this Bed (Step 2)", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
             }
         }
         // ── 1. Action Button: Record Harvest ─────────────────────────────────

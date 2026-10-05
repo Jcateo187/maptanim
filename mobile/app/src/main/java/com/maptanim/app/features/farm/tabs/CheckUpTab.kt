@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.CropLog
+import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.features.farm.viewmodel.state.FarmHubCheckUpState
 
 private val LushGreen = Color(0xFF2E7D32)
@@ -33,8 +34,10 @@ private val LightSurface = Color(0xFFF9FAF8)
 @Composable
 fun CheckUpTab(
     state: FarmHubCheckUpState,
+    activePlot: CropPlot? = null,
     onOpenAddLog: () -> Unit,
     onNavigateToGuide: () -> Unit = {},
+    onNavigateToHarvest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -44,7 +47,48 @@ fun CheckUpTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── 0. Workflow Back Navigation ───────────────────────────────────────
+        // ── 0A. Active Bed Context Header ─────────────────────────────────────
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFF1F8E9),
+                border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "DIAGNOSTIC TARGET BED",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = activePlot?.let { "${it.plotLabel}: ${it.cropName ?: "Unplanted"}" }
+                                ?: "General Farm Inspection",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                    }
+                    Text(
+                        text = "Step 4 of 5",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LushGreen
+                    )
+                }
+            }
+        }
+
+        // ── 0B. Workflow Back Navigation ───────────────────────────────────────
         item {
             OutlinedButton(
                 onClick = onNavigateToGuide,
@@ -52,7 +96,7 @@ fun CheckUpTab(
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, CardBorderColor)
             ) {
-                Text("← Return to Daily Production Guide", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
+                Text("← Return to Step 3: Daily Care Guide", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
             }
         }
         // ── 1. Action Button: Log Observation ────────────────────────────────
@@ -180,6 +224,20 @@ fun CheckUpTab(
         } else {
             items(state.observedLogs) { log ->
                 ObservationLogCard(log = log)
+            }
+        }
+
+        // ── 5. Forward Step Navigation ───────────────────────────────────────
+        item {
+            Button(
+                onClick = onNavigateToHarvest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
+            ) {
+                Text("Proceed to Step 5: Harvest Yield & Succession →", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
