@@ -27,81 +27,74 @@ class CropKnowledgeRepositoryImpl(
         val dbStudies = database?.cropYieldStudyDao()?.getStudiesForCropSync(cropName).orEmpty()
         if (dbStudies.isNotEmpty()) {
             dbStudies
-        } else if (cropName.equals("Tomato", ignoreCase = true)) {
-            CropKnowledgeSeed.tomatoYieldStudies
         } else {
-            emptyList()
+            CropKnowledgeSeed.allYieldStudies.filter { it.cropName.equals(cropName, ignoreCase = true) }
         }
     }
 
     override suspend fun getAllYieldStudies(): List<CropYieldStudyEntity> = withContext(Dispatchers.IO) {
         val dbStudies = database?.cropYieldStudyDao()?.getAllStudiesSync().orEmpty()
-        if (dbStudies.isNotEmpty()) dbStudies else CropKnowledgeSeed.tomatoYieldStudies
+        if (dbStudies.isNotEmpty()) dbStudies else CropKnowledgeSeed.allYieldStudies
     }
 
     override suspend fun getVarieties(cropName: String): List<CropVarietyEntity> = withContext(Dispatchers.IO) {
         val dbVarieties = database?.cropVarietyDao()?.getVarietiesForCropSync(cropName).orEmpty()
         if (dbVarieties.isNotEmpty()) {
             dbVarieties
-        } else if (cropName.equals("Tomato", ignoreCase = true)) {
-            CropKnowledgeSeed.tomatoVarieties
         } else {
-            emptyList()
+            CropKnowledgeSeed.allVarieties.filter { it.cropName.equals(cropName, ignoreCase = true) }
         }
     }
 
     override suspend fun getAllVarieties(): List<CropVarietyEntity> = withContext(Dispatchers.IO) {
         val dbVarieties = database?.cropVarietyDao()?.getAllVarietiesSync().orEmpty()
-        if (dbVarieties.isNotEmpty()) dbVarieties else CropKnowledgeSeed.tomatoVarieties
+        if (dbVarieties.isNotEmpty()) dbVarieties else CropKnowledgeSeed.allVarieties
     }
 
     override suspend fun getGrowthStages(cropName: String): List<CropGrowthStageEntity> = withContext(Dispatchers.IO) {
         val dbStages = database?.cropGrowthStageDao()?.getStagesForCropSync(cropName).orEmpty()
         if (dbStages.isNotEmpty()) {
             dbStages
-        } else if (cropName.equals("Tomato", ignoreCase = true)) {
-            CropKnowledgeSeed.tomatoGrowthStages
         } else {
-            emptyList()
+            CropKnowledgeSeed.allGrowthStages.filter { it.cropName.equals(cropName, ignoreCase = true) }
         }
     }
 
     override suspend fun getAllGrowthStages(): List<CropGrowthStageEntity> = withContext(Dispatchers.IO) {
         val dbStages = database?.cropGrowthStageDao()?.getAllStagesSync().orEmpty()
-        if (dbStages.isNotEmpty()) dbStages else CropKnowledgeSeed.tomatoGrowthStages
+        if (dbStages.isNotEmpty()) dbStages else CropKnowledgeSeed.allGrowthStages
     }
 
     override suspend fun getSoilCompatibility(cropName: String, soilType: String): CropSoilCompatibilityEntity? = withContext(Dispatchers.IO) {
         val dbCompat = database?.cropSoilCompatibilityDao()?.getCompatibility(cropName, soilType)
         if (dbCompat != null) {
             dbCompat
-        } else if (cropName.equals("Tomato", ignoreCase = true)) {
-            CropKnowledgeSeed.tomatoSoilCompatibilities.firstOrNull { it.soilType.equals(soilType, ignoreCase = true) }
         } else {
-            null
+            CropKnowledgeSeed.allSoilCompatibilities.firstOrNull {
+                it.cropName.equals(cropName, ignoreCase = true) && it.soilType.equals(soilType, ignoreCase = true)
+            }
         }
     }
 
     override suspend fun getAllSoilCompatibilities(): List<CropSoilCompatibilityEntity> = withContext(Dispatchers.IO) {
         val dbCompat = database?.cropSoilCompatibilityDao()?.getAllCompatibilitiesSync().orEmpty()
-        if (dbCompat.isNotEmpty()) dbCompat else CropKnowledgeSeed.tomatoSoilCompatibilities
+        if (dbCompat.isNotEmpty()) dbCompat else CropKnowledgeSeed.allSoilCompatibilities
     }
 
     override suspend fun getPestGuides(cropName: String, season: String): List<CropPestDiseaseGuideEntity> = withContext(Dispatchers.IO) {
         val dbGuides = database?.cropPestDiseaseGuideDao()?.getSeasonalGuides(cropName, season).orEmpty()
         if (dbGuides.isNotEmpty()) {
             dbGuides
-        } else if (cropName.equals("Tomato", ignoreCase = true)) {
-            CropKnowledgeSeed.tomatoPestDiseaseGuides.filter {
-                it.riskSeason.equals(season, ignoreCase = true) || it.riskSeason.equals("YEAR_ROUND", ignoreCase = true)
-            }
         } else {
-            emptyList()
+            CropKnowledgeSeed.allPestDiseaseGuides.filter {
+                it.cropName.equals(cropName, ignoreCase = true) &&
+                (it.riskSeason.equals(season, ignoreCase = true) || it.riskSeason.equals("YEAR_ROUND", ignoreCase = true))
+            }
         }
     }
 
     override suspend fun getAllPestGuides(): List<CropPestDiseaseGuideEntity> = withContext(Dispatchers.IO) {
         val dbGuides = database?.cropPestDiseaseGuideDao()?.getAllGuidesSync().orEmpty()
-        if (dbGuides.isNotEmpty()) dbGuides else CropKnowledgeSeed.tomatoPestDiseaseGuides
+        if (dbGuides.isNotEmpty()) dbGuides else CropKnowledgeSeed.allPestDiseaseGuides
     }
 }

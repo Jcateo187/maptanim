@@ -90,11 +90,11 @@ abstract class AppDatabase : RoomDatabase() {
 
         private suspend fun seedDefaultKnowledge(database: AppDatabase) {
             try {
-                database.cropYieldStudyDao().insertAll(CropKnowledgeSeed.tomatoYieldStudies)
-                database.cropVarietyDao().insertAll(CropKnowledgeSeed.tomatoVarieties)
-                database.cropGrowthStageDao().insertAll(CropKnowledgeSeed.tomatoGrowthStages)
-                database.cropSoilCompatibilityDao().insertAll(CropKnowledgeSeed.tomatoSoilCompatibilities)
-                database.cropPestDiseaseGuideDao().insertAll(CropKnowledgeSeed.tomatoPestDiseaseGuides)
+                database.cropYieldStudyDao().insertAll(CropKnowledgeSeed.allYieldStudies)
+                database.cropVarietyDao().insertAll(CropKnowledgeSeed.allVarieties)
+                database.cropGrowthStageDao().insertAll(CropKnowledgeSeed.allGrowthStages)
+                database.cropSoilCompatibilityDao().insertAll(CropKnowledgeSeed.allSoilCompatibilities)
+                database.cropPestDiseaseGuideDao().insertAll(CropKnowledgeSeed.allPestDiseaseGuides)
             } catch (e: Exception) {
                 android.util.Log.e("AppDatabase", "Error seeding crop knowledge: ${e.message}")
             }
