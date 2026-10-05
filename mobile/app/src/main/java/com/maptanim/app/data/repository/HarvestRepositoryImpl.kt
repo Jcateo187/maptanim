@@ -21,6 +21,12 @@ class HarvestRepositoryImpl(
         }
     }
 
+    override fun observeAllHarvestRecords(): Flow<List<HarvestRecord>> {
+        return harvestDao.observeAllHarvestRecords().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override suspend fun recordHarvest(record: HarvestRecord) {
         harvestDao.upsertHarvest(record.toEntity())
 

@@ -9,6 +9,9 @@ interface HarvestDao {
     @Query("SELECT * FROM harvest_records WHERE farm_id = :farmId ORDER BY harvested_at DESC")
     fun observeHarvestRecords(farmId: String): Flow<List<HarvestEntity>>
 
+    @Query("SELECT * FROM harvest_records ORDER BY harvested_at DESC")
+    fun observeAllHarvestRecords(): Flow<List<HarvestEntity>>
+
     @Upsert
     fun upsertHarvest(record: HarvestEntity)
 

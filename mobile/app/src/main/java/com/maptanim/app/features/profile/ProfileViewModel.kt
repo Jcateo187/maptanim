@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -72,9 +75,16 @@ class ProfileViewModel(
             }
         }
 
-        // Observe real harvest history records
+        // Observe real harvest history records dynamically for active farm
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         viewModelScope.launch {
-            RepositoryProvider.harvestRepository.observeHarvestRecords("farm-1").collect { records ->
+            _uiState.map { it.activeFarmId }.distinctUntilChanged().flatMapLatest { farmId ->
+                if (!farmId.isNullOrBlank()) {
+                    RepositoryProvider.harvestRepository.observeHarvestRecords(farmId)
+                } else {
+                    RepositoryProvider.harvestRepository.observeAllHarvestRecords()
+                }
+            }.collect { records ->
                 _uiState.update { it.copy(harvestHistory = records) }
             }
         }

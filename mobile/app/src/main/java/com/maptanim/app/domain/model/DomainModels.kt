@@ -187,7 +187,7 @@ data class Activity(
 data class CropLog(
     val id: String,
     val cropPlantingId: String,      // Links to crop_planting (plot/zone ID)
-    val farmId: String = "farm-1",
+    val farmId: String = "",
     val bedId: String = "",
     val cropId: String? = null,
     val cropName: String = "",

@@ -117,6 +117,7 @@ interface NotificationRepository {
 
 interface HarvestRepository {
     fun observeHarvestRecords(farmId: String): Flow<List<HarvestRecord>>
+    fun observeAllHarvestRecords(): Flow<List<HarvestRecord>>
     suspend fun recordHarvest(record: HarvestRecord)
 }
 

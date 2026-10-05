@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.home.viewmodel
+package com.maptanim.app.features.home.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -145,7 +145,7 @@ class HomeViewModel(
                     } else {
                         // Create initial default farm if newly registered user
                         val defaultFarm = Farm(
-                            id = if (farmerId == "guest") "farm-1" else "farm_${farmerId.take(8)}",
+                            id = if (farmerId == "guest") "farm-guest" else "farm_${farmerId.take(8)}",
                             farmerId = farmerId,
                             farmName = "My Vegetable Farm",
                             createdAt = LocalDate.now().toString(),
