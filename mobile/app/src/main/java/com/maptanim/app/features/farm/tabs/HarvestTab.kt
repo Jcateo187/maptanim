@@ -35,6 +35,7 @@ private val LightSurface = Color(0xFFF9FAF8)
 fun HarvestTab(
     state: FarmHubHarvestState,
     onOpenHarvestModal: () -> Unit,
+    onNavigateToPlan: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -44,6 +45,17 @@ fun HarvestTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── 0. Workflow Crop Succession Navigation ───────────────────────────
+        item {
+            OutlinedButton(
+                onClick = onNavigateToPlan,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Text("← Return to Farm Bed Planning (Plan Tab)", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
+            }
+        }
         // ── 1. Action Button: Record Harvest ─────────────────────────────────
         item {
             Button(

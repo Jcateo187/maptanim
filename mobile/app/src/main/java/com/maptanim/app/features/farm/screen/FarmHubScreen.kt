@@ -313,6 +313,9 @@ fun FarmHubScreen(
                                     },
                                     onOpenSetupDialog = {
                                         viewModel.openFarmSetupDialog()
+                                    },
+                                    onNavigateToGuide = {
+                                        viewModel.selectTopTab(TopTab.GUIDE)
                                     }
                                 )
                             }
@@ -320,19 +323,23 @@ fun FarmHubScreen(
                                 GuideTab(
                                     state = uiState.guideState,
                                     onSelectDssTab = { viewModel.selectDssTab(it) },
-                                    onCompleteTask = { viewModel.completeTask(it) }
+                                    onCompleteTask = { viewModel.completeTask(it) },
+                                    onNavigateToCheckUp = { viewModel.selectTopTab(TopTab.CHECKUP) },
+                                    onNavigateToHarvest = { viewModel.selectTopTab(TopTab.HARVEST) }
                                 )
                             }
                             TopTab.CHECKUP -> {
                                 CheckUpTab(
                                     state = uiState.checkUpState,
-                                    onOpenAddLog = { viewModel.setAddLogOpen(true) }
+                                    onOpenAddLog = { viewModel.setAddLogOpen(true) },
+                                    onNavigateToGuide = { viewModel.selectTopTab(TopTab.GUIDE) }
                                 )
                             }
                             TopTab.HARVEST -> {
                                 HarvestTab(
                                     state = uiState.harvestState,
-                                    onOpenHarvestModal = { showHarvestDialog = true }
+                                    onOpenHarvestModal = { showHarvestDialog = true },
+                                    onNavigateToPlan = { viewModel.selectTopTab(TopTab.PLAN) }
                                 )
                             }
                         }

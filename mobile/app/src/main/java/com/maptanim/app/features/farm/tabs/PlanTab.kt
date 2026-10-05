@@ -51,6 +51,7 @@ fun PlanTab(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onOpenSetupDialog: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -92,111 +93,53 @@ fun PlanTab(
                         plot = activePlot,
                         environment = state.farmEnvironment,
                         onResize = { w, h -> onResizeBed(activePlot.id, w, h) },
-                        onAssignCrop = { id, name -> onAssignCrop(activePlot.id, id, name) }
+                        onAssignCrop = { id, name -> onAssignCrop(activePlot.id, id, name) },
+                        onNavigateToGuide = onNavigateToGuide
                     )
                 }
             }
         }
 
-        // ── 2. Toolbar & Undo/Redo Controls ──────────────────────────────────
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = LightSurface,
-                border = BorderStroke(1.dp, CardBorderColor)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        // ── 2. Canvas Edit History (Undo/Redo) ──────────────────────────────
+        if (state.canUndo || state.canRedo) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = onUndo,
-                            enabled = state.canUndo
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = "Undo",
-                                tint = if (state.canUndo) LushGreen else Color(0xFF9E9E9E)
-                            )
-                        }
-                        IconButton(
-                            onClick = onRedo,
-                            enabled = state.canRedo
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Redo,
-                                contentDescription = "Redo",
-                                tint = if (state.canRedo) LushGreen else Color(0xFF9E9E9E)
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = onAddNewBed,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LushGreen,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Add Bed",
+                            text = "EDIT HISTORY",
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            color = Color(0xFF666666)
                         )
-                    }
-                }
-            }
-        }
-
-        // ── 3. Canvas Layer Filters ──────────────────────────────────────────
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "CANVAS LAYERS",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    letterSpacing = 1.sp,
-                    color = Color(0xFF555555)
-                )
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(CanvasLayer.values()) { layer ->
-                        val isSelected = state.canvasLayer == layer
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { onSetCanvasLayer(layer) },
-                            label = {
-                                Text(
-                                    text = layer.name,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconButton(onClick = onUndo, enabled = state.canUndo, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                                    contentDescription = "Undo",
+                                    tint = if (state.canUndo) LushGreen else Color(0xFF9E9E9E),
+                                    modifier = Modifier.size(18.dp)
                                 )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = LushGreen,
-                                selectedLabelColor = Color.White,
-                                containerColor = Color.White,
-                                labelColor = DeepBlack
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = isSelected,
-                                borderColor = if (isSelected) LushGreen else CardBorderColor
-                            )
-                        )
+                            }
+                            IconButton(onClick = onRedo, enabled = state.canRedo, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Redo,
+                                    contentDescription = "Redo",
+                                    tint = if (state.canRedo) LushGreen else Color(0xFF9E9E9E),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

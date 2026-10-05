@@ -34,6 +34,7 @@ private val LightSurface = Color(0xFFF9FAF8)
 fun CheckUpTab(
     state: FarmHubCheckUpState,
     onOpenAddLog: () -> Unit,
+    onNavigateToGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -43,6 +44,17 @@ fun CheckUpTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── 0. Workflow Back Navigation ───────────────────────────────────────
+        item {
+            OutlinedButton(
+                onClick = onNavigateToGuide,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Text("← Return to Daily Production Guide", fontSize = 11.sp, color = DeepBlack, fontWeight = FontWeight.Bold)
+            }
+        }
         // ── 1. Action Button: Log Observation ────────────────────────────────
         item {
             Button(

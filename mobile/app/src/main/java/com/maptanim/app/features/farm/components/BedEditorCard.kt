@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
@@ -27,10 +28,30 @@ private val DeepBlack = Color(0xFF111813)
 private val CardBorderColor = Color(0xFFE0E0E0)
 private val LightSurface = Color(0xFFF9FAF8)
 
+data class CropSpacingInfo(
+    val plantSpacingCm: Int,
+    val rowSpacingCm: Int,
+    val nutrientAppetite: String
+)
+
+private fun getCropSpacing(cropName: String?): CropSpacingInfo = when (cropName?.lowercase()) {
+    "tomato", "kamatis" -> CropSpacingInfo(50, 80, "Heavy Feeder (5 kg/m² compost)")
+    "eggplant", "talong" -> CropSpacingInfo(50, 75, "Heavy Feeder (5 kg/m² compost)")
+    "chili", "sili" -> CropSpacingInfo(40, 50, "Medium Feeder (3 kg/m² compost)")
+    "okra" -> CropSpacingInfo(30, 60, "Medium Feeder (3 kg/m² compost)")
+    "pechay" -> CropSpacingInfo(20, 25, "Light Feeder (2–3 kg/m² compost)")
+    "lettuce", "litsugas" -> CropSpacingInfo(20, 25, "Light Feeder (2–3 kg/m² compost)")
+    "kangkong" -> CropSpacingInfo(15, 20, "Medium Feeder (3 kg/m² compost)")
+    "cucumber", "pipino" -> CropSpacingInfo(40, 80, "Heavy Feeder (4 kg/m² compost)")
+    "sitaw" -> CropSpacingInfo(30, 60, "Light Feeder (Fixes Nitrogen)")
+    "corn", "mais", "sweet corn" -> CropSpacingInfo(30, 75, "Heavy Feeder (5 kg/m² compost)")
+    else -> CropSpacingInfo(30, 40, "Standard Bed Spacing")
+}
+
 /**
  * BedEditorCard — Contextual editor for the selected bed.
- * Allows quick size adjusting (width, length) and assigning canonical crops
- * with real-time suitability tier indicators.
+ * Calculates physical plant capacity based on crop spacing math (§2.3 of Doc 43)
+ * and provides clear navigation to the Step-by-Step Daily Guide.
  */
 @Composable
 fun BedEditorCard(
@@ -38,6 +59,7 @@ fun BedEditorCard(
     environment: FarmEnvironment = FarmEnvironment(),
     onResize: (Float, Float) -> Unit,
     onAssignCrop: (String, String) -> Unit,
+    onNavigateToGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val evaluator = remember { PlaceBasedCropEvaluator() }
@@ -152,6 +174,69 @@ fun BedEditorCard(
                 }
             }
 
+            // ── Physical Plant Capacity Math (§2.3 of Doc 43) ───────────────
+            val spacing = getCropSpacing(plot.cropName)
+            val dim1 = maxOf(plot.widthM, plot.heightM) * 100f
+            val dim2 = minOf(plot.widthM, plot.heightM) * 100f
+            val plantsInRow = maxOf(1, (dim1 / spacing.plantSpacingCm).toInt())
+            val numRows = maxOf(1, (dim2 / spacing.rowSpacingCm).toInt())
+            val totalCapacity = if (plot.cropName.isNullOrBlank()) 0 else plantsInRow * numRows
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = LightSurface,
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "PHYSICAL PLANT CAPACITY",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF666666)
+                        )
+                        if (plot.cropName.isNullOrBlank()) {
+                            Text(
+                                text = "Assign a crop below to compute plant count",
+                                fontSize = 11.sp,
+                                color = Color(0xFF888888)
+                            )
+                        } else {
+                            Text(
+                                text = "$totalCapacity Plants ($numRows rows × $plantsInRow plants)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LushGreen
+                            )
+                            Text(
+                                text = "Spacing: ${spacing.plantSpacingCm}cm in row × ${spacing.rowSpacingCm}cm between rows",
+                                fontSize = 10.sp,
+                                color = DeepBlack
+                            )
+                        }
+                    }
+                    if (!plot.cropName.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE8F5E9)
+                        ) {
+                            Text(
+                                text = spacing.nutrientAppetite.substringBefore("(").trim(),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LushGreen,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Quick Assign Crop: 10 Canonical Philippine Crops with Place Suitability Dot
             Text(
                 text = "ASSIGN CROP TO BED (WITH SUITABILITY)",
@@ -210,6 +295,34 @@ fun BedEditorCard(
                             borderColor = if (isAssigned) LushGreen else CardBorderColor
                         )
                     )
+                }
+            }
+
+            // ── Primary Guided Workflow CTA ───────────────────────────────────
+            if (!plot.cropName.isNullOrBlank()) {
+                Button(
+                    onClick = onNavigateToGuide,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Open Step-by-Step Daily Guide for ${plot.cropName}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Go to Guide",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

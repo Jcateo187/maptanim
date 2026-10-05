@@ -38,6 +38,8 @@ fun GuideTab(
     state: FarmHubGuideState,
     onSelectDssTab: (DssTab) -> Unit,
     onCompleteTask: (String) -> Unit,
+    onNavigateToCheckUp: () -> Unit = {},
+    onNavigateToHarvest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -106,6 +108,119 @@ fun GuideTab(
             }
         }
 
+        // ── 1B. 3-Phase Daily Step-by-Step Guide (§3 Pillar 2 of Doc 43) ──
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "3-PHASE DAILY PRODUCTION PROTOCOL",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.5.sp,
+                        color = LushGreen
+                    )
+
+                    // Phase 1: Prepare
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LightSurface, RoundedCornerShape(8.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "PHASE 1: PREPARE SOIL & DOSING",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "• Loosen soil 25–30 cm deep. Mix 3–5 kg/m² compost or vermicast into top 15 cm.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                        Text(
+                            text = "• If soil pH < 5.5, apply 100 g/m² agricultural lime 1 week prior to planting.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                    }
+
+                    // Phase 2: Plant
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LightSurface, RoundedCornerShape(8.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "PHASE 2: SOWING & TRANSPLANTING",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "• Sow in shallow furrows (0.5–1 cm deep); water gently with fine rose nozzle.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                        Text(
+                            text = "• Late PM Rule: Sow or transplant after 4:00 PM to protect young seedlings from solar shock.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                    }
+
+                    // Phase 3: Care Milestones
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LightSurface, RoundedCornerShape(8.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "PHASE 3: CARE & MAINTENANCE MILESTONES",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "• Day 0–7: Maintain consistent moisture; replant missing spots.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                        Text(
+                            text = "• Day 7–14: First weeding, 5cm rice-straw mulch, scout for leaf pests.",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                        Text(
+                            text = "• Day 21–28: Side-dress vermicast ring + diluted FPJ (1:1000).",
+                            fontSize = 10.sp,
+                            color = Color(0xFF444444),
+                            lineHeight = 13.sp
+                        )
+                    }
+                }
+            }
+        }
+
         // ── 2. DSS Tab Toggle (Tasks vs Recommendations) ─────────────────────
         item {
             TabRow(
@@ -167,6 +282,46 @@ fun GuideTab(
             } else {
                 items(state.dynamicRecommendations) { rec ->
                     RecommendationCard(recommendation = rec)
+                }
+            }
+        }
+
+        // ── 4. Workflow Navigation Shortcuts ────────────────────────────────
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "NEXT STEPS IN FARM WORKFLOW",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF666666),
+                    letterSpacing = 0.5.sp
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onNavigateToCheckUp,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, CardBorderColor)
+                    ) {
+                        Text("Diagnose Plant →", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                    }
+
+                    Button(
+                        onClick = onNavigateToHarvest,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
+                    ) {
+                        Text("Record Harvest →", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
