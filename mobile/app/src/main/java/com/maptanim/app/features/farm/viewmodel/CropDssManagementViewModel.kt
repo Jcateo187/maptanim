@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.viewmodel
+package com.maptanim.app.features.farm.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,10 +22,10 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 enum class TopTab(val label: String) {
-    PLAN("🌱 Plan"),
-    GUIDE("📖 Guide"),
-    CHECKUP("🩺 Check"),
-    HARVEST("🌾 Harvest")
+    PLAN("Plan"),
+    GUIDE("Guide"),
+    CHECKUP("Check"),
+    HARVEST("Harvest")
 }
 
 enum class DssTab(val label: String) {
