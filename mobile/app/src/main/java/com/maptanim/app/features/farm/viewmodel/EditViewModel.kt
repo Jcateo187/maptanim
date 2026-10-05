@@ -1569,8 +1569,7 @@ class EditViewModel(
                     } catch (_: Exception) {
                         java.time.LocalDate.now()
                     }
-                    val isSim = draft.variety.contains("10s", ignoreCase = true)
-                    val daysToHarvest = if (isSim) 1 else getDaysToHarvestEstimate(draft.cropName)
+                    val daysToHarvest = getDaysToHarvestEstimate(draft.cropName)
                     val harvestDate = anchorDate.plusDays(daysToHarvest.toLong())
                     val isClimbing = draft.cropName.lowercase().let { c ->
                         c.contains("ampalaya") || c.contains("sitaw") || c.contains("tomato") ||

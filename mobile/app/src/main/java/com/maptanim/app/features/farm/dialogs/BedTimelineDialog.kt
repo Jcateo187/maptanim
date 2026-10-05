@@ -9,7 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -99,11 +99,26 @@ fun BedTimelineDialog(
                         }
                     }
                 } else {
+                    val resolvedPlantedDateMillis = remember(plot.plantedDate) {
+                        if (!plot.plantedDate.isNullOrBlank()) {
+                            try {
+                                if (plot.plantedDate.contains("T")) {
+                                    java.time.ZonedDateTime.parse(plot.plantedDate).toInstant().toEpochMilli()
+                                } else {
+                                    java.time.LocalDate.parse(plot.plantedDate.take(10)).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                                }
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
+                            }
+                        } else {
+                            System.currentTimeMillis()
+                        }
+                    }
                     val grouped = zonesInBed.groupBy { it.cropName ?: "Crop" }
                     for ((name, zones) in grouped) {
                         CropHarvestTimelineCard(
                             cropName = name,
-                            plantedDateMillis = System.currentTimeMillis() - (14L * 24 * 60 * 60 * 1000), // Default demo: 14 days planted
+                            plantedDateMillis = resolvedPlantedDateMillis,
                             plantCount = zones.size
                         )
                     }

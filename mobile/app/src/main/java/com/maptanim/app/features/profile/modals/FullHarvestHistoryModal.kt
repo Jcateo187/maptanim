@@ -316,7 +316,7 @@ fun FullHarvestHistoryModal(
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                             Icon(Icons.Default.Timer, contentDescription = null, tint = LushGreen, modifier = Modifier.size(11.dp))
-                                            Text("${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}", fontSize = 10.sp, color = LushGreen)
+                                            Text("${record.growingDurationDays} Days", fontSize = 10.sp, color = LushGreen)
                                         }
                                     }
 

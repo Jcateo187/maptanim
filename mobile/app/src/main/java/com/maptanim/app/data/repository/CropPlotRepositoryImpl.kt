@@ -104,20 +104,21 @@ class CropPlotRepositoryImpl(
             val farmId = plot.farmId
             val currentYield = yieldKg ?: 0f
 
-            // Calculate total growing duration (days or sim seconds)
-            val isSim = cropName.lowercase().contains("ampalaya") || cropVariety?.contains("10s", ignoreCase = true) == true
-            val growingDurationDays = if (isSim) {
-                val plantedMs = try {
-                    java.time.ZonedDateTime.parse(plantedDate).toInstant().toEpochMilli()
-                } catch (e: Exception) { 0L }
-                val elapsedMs = (System.currentTimeMillis() - plantedMs).coerceAtLeast(0L)
-                (elapsedMs / 1000L).toInt()
-            } else if (!plantedDate.isNullOrBlank()) {
+            // Calculate total growing duration in real days
+            val growingDurationDays = if (!plantedDate.isNullOrBlank()) {
                 try {
-                    val pDate = java.time.LocalDate.parse(plantedDate.take(10))
-                    java.time.temporal.ChronoUnit.DAYS.between(pDate, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
-                } catch (e: Exception) { 30 }
-            } else { 30 }
+                    val pDate = if (plantedDate.contains("T")) {
+                        java.time.ZonedDateTime.parse(plantedDate).toLocalDate()
+                    } else {
+                        java.time.LocalDate.parse(plantedDate.take(10))
+                    }
+                    java.time.temporal.ChronoUnit.DAYS.between(pDate, java.time.LocalDate.now()).toInt().coerceAtLeast(1)
+                } catch (e: Exception) {
+                    30
+                }
+            } else {
+                30
+            }
 
             val farmDao = RepositoryProvider.getDatabase()?.farmDao()
             val activeFarm = farmDao?.getFarmById(farmId) ?: farmDao?.getActiveFarm()

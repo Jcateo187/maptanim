@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.components
+package com.maptanim.app.features.farm.components
 
 import android.content.res.Configuration
 import androidx.compose.animation.animateContentSize
@@ -2295,67 +2295,54 @@ internal fun getCategorizedVarietiesForCrop(cropName: String): List<CategorizedV
     return when {
         clean.contains("ampalaya") || clean.contains("bitter") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Galaxy Max F1", "Jade Star XL F1", "Trident F1")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Bonito F1", "Sta. Rita", "Pinakbet Special")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Ampalaya 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Bonito F1", "Sta. Rita", "Pinakbet Special"))
         )
         clean.contains("tomato") || clean.contains("kamatis") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Diamante Max F1", "Avatar F1", "Marimar F1")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Rosanna", "Apollo", "Kamatis Tagalog")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Tomato 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Rosanna", "Apollo", "Kamatis Tagalog"))
         )
         clean.contains("eggplant") || clean.contains("talong") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Fortuner F1", "Morena F1", "Banate King F1")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Dumaguete Long Purple", "Dingras Multiple Purple")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Eggplant 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Dumaguete Long Purple", "Dingras Multiple Purple"))
         )
         clean.contains("carrot") || clean.contains("karot") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Terracotta F1", "Chantenay Supreme")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Kuroda Improved", "Early Nantes")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Carrot 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Kuroda Improved", "Early Nantes"))
         )
         clean.contains("cabbage") || clean.contains("repolyo") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Rare Ball F1", "K-S Cross F1", "Kyross F1")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Scorpio", "Golden Acre")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Cabbage 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("Scorpio", "Golden Acre"))
         )
         clean.contains("pechay") || clean.contains("bokchoy") -> listOf(
             CategorizedVarietyGroup("Commercial & Popular", "🌟", listOf("Black Behi", "Pavon", "Ching-Chiang")),
-            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Baby Bokchoy Local", "Native Pechay")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Pechay 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Baby Bokchoy Local", "Native Pechay"))
         )
         clean.contains("onion") || clean.contains("sibuyas") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Red Pinoy F1", "Yellow Granex F1", "Superpex F1")),
-            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Batanes Red", "Tanduyong Red Shallot")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Onion 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Batanes Red", "Tanduyong Red Shallot"))
         )
         clean.contains("pumpkin") || clean.contains("squash") || clean.contains("kalabasa") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Suprema F1", "Horizon F1")),
-            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Rizalina", "Native Tagalog Kalabasa")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Squash 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Rizalina", "Native Tagalog Kalabasa"))
         )
         clean.contains("corn") || clean.contains("mais") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Macho Sweet F1", "Machismo F1", "Sweet Pearl F1")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("IPB Var 6 (White)", "Lagkitan Glutinous")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Corn 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("IPB Var 6 (White)", "Lagkitan Glutinous"))
         )
         clean.contains("okra") -> listOf(
             CategorizedVarietyGroup("Commercial & Popular", "🌟", listOf("Smooth Green F1", "Kamiling Green")),
-            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Native Deep Green", "Clemson Spineless")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Okra 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Native Deep Green", "Clemson Spineless"))
         )
         clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Django F1 (Siling Haba)", "Hot Pepper F1")),
-            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Siling Labuyo Native", "Taiwan Hot")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Chili 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Local", "🌾", listOf("Siling Labuyo Native", "Taiwan Hot"))
         )
         clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> listOf(
             CategorizedVarietyGroup("Commercial F1 Hybrids (High Yield)", "🌟", listOf("Sandigan F1", "Galante F1", "Negros Dark Green")),
-            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("UPLB Green", "Bongabon Striped")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("Sitaw 10s Simulation Test ⚡"))
+            CategorizedVarietyGroup("Open Pollinated / Traditional", "🌾", listOf("UPLB Green", "Bongabon Striped"))
         )
         else -> listOf(
-            CategorizedVarietyGroup("Standard Cultivar", "🌟", listOf("East-West Standard F1", "Local Standard Cultivar")),
-            CategorizedVarietyGroup("Simulation Fast Track", "⚡", listOf("10s Fast Simulation Test ⚡"))
+            CategorizedVarietyGroup("Standard Cultivar", "🌟", listOf("East-West Standard F1", "Local Standard Cultivar"))
         )
     }
 }

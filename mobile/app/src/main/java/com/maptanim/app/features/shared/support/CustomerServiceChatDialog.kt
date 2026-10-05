@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.shared.support
+package com.maptanim.app.features.shared.support
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -249,13 +249,28 @@ fun CustomerServiceChatDialog(
             delay(150)
             listState.animateScrollToItem(messages.size)
             isAgentTyping = true
-            delay(800)
+            
+            // Dispatch live ticket to Supabase feedback table
+            val isSent = try {
+                com.maptanim.app.data.repository.RepositoryProvider.userRepository.sendSupportTicket(
+                    subject = "Support In-App Message",
+                    message = textToSend,
+                    category = "ACCOUNT_SUPPORT"
+                )
+            } catch (_: Exception) {
+                false
+            }
+            
+            delay(600)
             isAgentTyping = false
-            val ticketNumber = (1000..9999).random()
             val agentReply = SupportChatMessage(
                 id = "agent_${System.currentTimeMillis()}",
                 sender = MessageSender.AGENT,
-                text = "Thank you for providing those details. Your request has been logged under Support Ticket #MT-$ticketNumber.\n\nOur team is reviewing your account. If you need urgent assistance, you may also reach us directly via support@maptanim.ph."
+                text = if (isSent) {
+                    "Thank you for your message. Your support request has been logged and sent to the MapTanim administrative desk.\n\nOur agronomic support team reviews inquiries regularly. When an admin replies, you will receive an advisory notification in your Notifications tab."
+                } else {
+                    "Your message has been received. If you are currently offline, your request will be reviewed once connection is restored. You can also reach our team directly at support@maptanim.ph."
+                }
             )
             messages = messages + agentReply
             delay(100)

@@ -242,7 +242,7 @@ fun UserHarvestHistoryCard(
                                         modifier = Modifier.size(11.dp)
                                     )
                                     Text(
-                                        text = "${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}",
+                                        text = "${record.growingDurationDays} Days",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = LushGreen

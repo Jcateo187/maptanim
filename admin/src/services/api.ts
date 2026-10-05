@@ -1765,7 +1765,32 @@ class ApiService {
 
 
   // System Audit Logs
+  // System Audit Logs
   async getAuditLogs(): Promise<SystemAuditLog[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('admin_audit_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (!error && data && data.length > 0) {
+          return data.map((d: any) => ({
+            id: d.id,
+            timestamp: d.created_at,
+            adminEmail: d.admin_email,
+            action: d.action,
+            targetModule: d.target_module,
+            details: d.details,
+            status: (d.status as any) || 'SUCCESS',
+            ipAddress: d.ip_address || 'Admin Gateway',
+          }));
+        }
+      } catch (err) {
+        console.warn('Failed to load audit logs from Supabase', err);
+      }
+    }
     return Promise.resolve(this.logs);
   }
 
@@ -1833,18 +1858,42 @@ class ApiService {
     }
   }
 
-  private logAction(action: string, targetModule: string, details: string) {
+  private async logAction(action: string, targetModule: string, details: string, targetId?: string) {
+    const sessionRes = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const session = sessionRes.data?.session;
+    const adminEmail = session?.user?.email || 'admin@maptanim.com';
+    const adminId = session?.user?.id || 'admin-local';
+
     const log: SystemAuditLog = {
-      id: `log-${Date.now().toString().slice(-4)}`,
+      id: `audit-${Date.now()}`,
       timestamp: new Date().toISOString(),
-      adminEmail: 'admin@system.local',
+      adminEmail,
       action,
       targetModule,
       details,
       status: 'SUCCESS',
-      ipAddress: '112.198.75.12',
+      ipAddress: 'Console',
     };
     this.logs.unshift(log);
+
+    if (isSupabaseConfigured && session?.user) {
+      try {
+        await supabase.from('admin_audit_logs').insert([
+          {
+            admin_id: adminId,
+            admin_email: adminEmail,
+            action,
+            target_module: targetModule,
+            details,
+            target_id: targetId || null,
+            status: 'SUCCESS',
+            ip_address: 'Console',
+          },
+        ]);
+      } catch (err) {
+        console.warn('Failed to persist audit log in Supabase', err);
+      }
+    }
   }
 }
 

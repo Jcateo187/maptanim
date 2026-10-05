@@ -739,33 +739,38 @@ private fun FarmCanvasPlotThumbnail(
     onSelectPlot: (PlotRenderData) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val displayPlots = remember(plots) {
-        if (plots.isNotEmpty()) plots.take(4) else listOf(
-            PlotRenderData(
-                id = "demo_plot_1",
-                farmId = "farm-1",
-                plotLabel = "Bed #1",
-                cropName = "Tomato",
-                cropId = "tomato",
-                cropVariety = "Diamante Max F1",
-                soilType = SoilType.LOAM,
-                posX = 0f,
-                posY = 0f,
-                widthM = 1.2f,
-                heightM = 3.0f
-            )
-        )
-    }
+    val displayPlots = remember(plots) { plots.take(4) }
 
     Box(
         modifier = modifier
             .background(Color(0xFF132217))
-            .padding(3.dp)
+            .padding(3.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        if (displayPlots.isEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color(0xFF81C784),
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "No beds mapped yet — tap to plan",
+                    fontSize = 9.sp,
+                    color = Color(0xFFA5D6A7),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
             displayPlots.forEach { plotItem ->
                 val rawCropName = plotItem.cropName?.lowercase() ?: ""
                 val isRealCrop = rawCropName.isNotBlank() &&
@@ -858,6 +863,7 @@ private fun FarmCanvasPlotThumbnail(
             }
         }
     }
+}
 }
 
 // ─── 1. Farm Overview Hero Card (Farm Name Section) ─────────────────────────
