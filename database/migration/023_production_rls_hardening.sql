@@ -174,13 +174,6 @@ CREATE POLICY "dss_rules_update_admin" ON public.dss_rules
 CREATE POLICY "dss_rules_delete_admin" ON public.dss_rules
     FOR DELETE USING (public.is_admin());
 
--- public.crop_profiles
-ALTER TABLE IF EXISTS public.crop_profiles ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "crop_profiles_select_all" ON public.crop_profiles;
-DROP POLICY IF EXISTS "crop_profiles_select" ON public.crop_profiles;
-CREATE POLICY "crop_profiles_select" ON public.crop_profiles
-    FOR SELECT USING (true);
-
 -- ==============================================================================
 -- 6. RLS HARDENING: USERS & PROFILES
 -- ==============================================================================
