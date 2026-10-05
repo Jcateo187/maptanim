@@ -31,5 +31,6 @@ data class FarmHubPlanState(
     val canRedo: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
     val pendingCropPlantings: List<CropPlantingDraft> = emptyList(),
-    val showAddBedDialog: Boolean = false
+    val showAddBedDialog: Boolean = false,
+    val showBasketballScale: Boolean = false
 )

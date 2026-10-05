@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.MainBottomNavBar
+import com.maptanim.app.features.farm.canvas.FarmCanvasView
 import com.maptanim.app.features.farm.tabs.CheckUpTab
 import com.maptanim.app.features.farm.tabs.GuideTab
 import com.maptanim.app.features.farm.tabs.HarvestTab
@@ -96,7 +97,26 @@ fun FarmHubScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // ── 4 Modular Hub Tabs ───────────────────────────────────────────
+            // ── 1. Interactive 2D Top-Down Farm Canvas Viewport ─────────────
+            FarmCanvasView(
+                plots = uiState.planState.rawPlots,
+                selectedPlotId = uiState.planState.selectedPlotId,
+                layer = uiState.planState.canvasLayer,
+                isResizeMode = uiState.planState.isResizeMode,
+                showCourtScale = uiState.planState.showBasketballScale,
+                onSelectPlot = { viewModel.selectPlot(it) },
+                onMovePlot = { id, dx, dy -> viewModel.movePlot(id, dx, dy) },
+                onResizePlot = { id, w, h -> viewModel.resizePlot(id, w, h) },
+                onToggleResizeMode = { viewModel.toggleResizeMode() },
+                onToggleCourtScale = { viewModel.toggleBasketballScale() },
+                onSetLayer = { viewModel.setCanvasLayer(it) },
+                onAddNewBed = { viewModel.addPlot() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(230.dp)
+            )
+
+            // ── 2. 4 Modular Hub Tabs ───────────────────────────────────────
             TabRow(
                 selectedTabIndex = uiState.selectedTopTab.ordinal,
                 containerColor = Color.White,
@@ -162,6 +182,8 @@ fun FarmHubScreen(
                             onSelectPlot = { viewModel.selectPlot(it) },
                             onAddNewBed = { viewModel.addPlot() },
                             onDeleteBed = { viewModel.deletePlot(it) },
+                            onResizeBed = { id, w, h -> viewModel.resizePlot(id, w, h) },
+                            onAssignCrop = { id, cId, cName -> viewModel.assignCropToPlot(id, cId, cName) },
                             onSetCanvasLayer = { viewModel.setCanvasLayer(it) },
                             onSetTool = { viewModel.setEditTool(it) },
                             onUndo = { viewModel.undo() },

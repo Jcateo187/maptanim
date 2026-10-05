@@ -123,6 +123,60 @@ class FarmHubViewModel(
         }
     }
 
+    fun toggleResizeMode() {
+        _uiState.update { state ->
+            state.copy(planState = state.planState.copy(isResizeMode = !state.planState.isResizeMode))
+        }
+    }
+
+    fun toggleBasketballScale() {
+        _uiState.update { state ->
+            state.copy(planState = state.planState.copy(showBasketballScale = !state.planState.showBasketballScale))
+        }
+    }
+
+    fun movePlot(plotId: String, deltaX: Float, deltaY: Float) {
+        val currentPlot = _uiState.value.planState.rawPlots.firstOrNull { it.id == plotId } ?: return
+        val newX = (currentPlot.posX + deltaX).coerceIn(0.5f, 40f)
+        val newY = (currentPlot.posY + deltaY).coerceIn(0.5f, 40f)
+        val updated = currentPlot.copy(posX = newX, posY = newY)
+
+        viewModelScope.launch {
+            cropPlotRepository.upsertPlot(updated)
+        }
+    }
+
+    fun resizePlot(plotId: String, newWidthM: Float, newHeightM: Float) {
+        val currentPlot = _uiState.value.planState.rawPlots.firstOrNull { it.id == plotId } ?: return
+        val clampedW = newWidthM.coerceIn(0.5f, 15f)
+        val clampedH = newHeightM.coerceIn(0.5f, 15f)
+        val updated = currentPlot.copy(widthM = clampedW, heightM = clampedH)
+
+        undoStack.addLast(EditAction.ModifyPlot(currentPlot, updated))
+        redoStack.clear()
+
+        viewModelScope.launch {
+            cropPlotRepository.upsertPlot(updated)
+            updateUndoRedoState()
+        }
+    }
+
+    fun assignCropToPlot(plotId: String, cropId: String, cropName: String) {
+        val currentPlot = _uiState.value.planState.rawPlots.firstOrNull { it.id == plotId } ?: return
+        val updated = currentPlot.copy(
+            cropId = cropId,
+            cropName = cropName,
+            plantedDate = currentPlot.plantedDate ?: LocalDate.now().toString()
+        )
+        undoStack.addLast(EditAction.ModifyPlot(currentPlot, updated))
+        redoStack.clear()
+
+        viewModelScope.launch {
+            cropPlotRepository.upsertPlot(updated)
+            updateUndoRedoState()
+        }
+    }
+
     fun addPlot(
         cropName: String? = null,
         widthM: Float = 1.5f,

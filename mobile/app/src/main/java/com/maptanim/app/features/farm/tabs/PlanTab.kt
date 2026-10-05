@@ -41,6 +41,8 @@ fun PlanTab(
     onSelectPlot: (String?) -> Unit,
     onAddNewBed: () -> Unit,
     onDeleteBed: (String) -> Unit,
+    onResizeBed: (String, Float, Float) -> Unit = { _, _, _ -> },
+    onAssignCrop: (String, String, String) -> Unit = { _, _, _ -> },
     onSetCanvasLayer: (CanvasLayer) -> Unit,
     onSetTool: (EditTool) -> Unit,
     onUndo: () -> Unit,
@@ -64,6 +66,20 @@ fun PlanTab(
                 cropName = selectedPlot?.cropName ?: "Vegetable Bed",
                 plotLabel = selectedPlot?.plotLabel ?: "Bed #1"
             )
+        }
+
+        // ── 1B. Bed Resizing & Crop Assignment (Active Bed Controls) ─────────
+        if (state.selectedPlotId != null) {
+            val activePlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
+            if (activePlot != null) {
+                item {
+                    BedEditorCard(
+                        plot = activePlot,
+                        onResize = { w, h -> onResizeBed(activePlot.id, w, h) },
+                        onAssignCrop = { id, name -> onAssignCrop(activePlot.id, id, name) }
+                    )
+                }
+            }
         }
 
         // ── 2. Toolbar & Undo/Redo Controls ──────────────────────────────────
@@ -282,6 +298,173 @@ private fun BedCard(
                     tint = Color(0xFFD32F2F),
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BedEditorCard(
+    plot: CropPlot,
+    onResize: (Float, Float) -> Unit,
+    onAssignCrop: (String, String) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White,
+        border = BorderStroke(1.5.dp, LushGreen)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "EDIT ${plot.plotLabel.uppercase()}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.sp,
+                        color = LushGreen
+                    )
+                    Text(
+                        text = "Crop: ${plot.cropName ?: "None"}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DeepBlack
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFFE8F5E9)
+                ) {
+                    Text(
+                        text = "${String.format("%.1f", plot.widthM * plot.heightM)} m²",
+                        color = LushGreen,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            HorizontalDivider(color = CardBorderColor)
+
+            // Resizing Steppers: Width & Length
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Width Stepper
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "WIDTH", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF666666))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = { onResize((plot.widthM - 0.5f).coerceAtLeast(0.5f), plot.heightM) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease Width", tint = LushGreen)
+                        }
+                        Text(
+                            text = "${String.format("%.1f", plot.widthM)}m",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = DeepBlack
+                        )
+                        IconButton(
+                            onClick = { onResize((plot.widthM + 0.5f).coerceAtMost(15f), plot.heightM) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase Width", tint = LushGreen)
+                        }
+                    }
+                }
+
+                // Length Stepper
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "LENGTH", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF666666))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = { onResize(plot.widthM, (plot.heightM - 0.5f).coerceAtLeast(0.5f)) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease Length", tint = LushGreen)
+                        }
+                        Text(
+                            text = "${String.format("%.1f", plot.heightM)}m",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = DeepBlack
+                        )
+                        IconButton(
+                            onClick = { onResize(plot.widthM, (plot.heightM + 0.5f).coerceAtMost(15f)) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase Length", tint = LushGreen)
+                        }
+                    }
+                }
+            }
+
+            // Quick Assign Crop: 10 Canonical Philippine Crops
+            Text(
+                text = "ASSIGN CROP TO BED",
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = Color(0xFF666666)
+            )
+            val crops = listOf(
+                "tomato" to "Tomato",
+                "eggplant" to "Eggplant",
+                "chili" to "Chili",
+                "okra" to "Okra",
+                "pechay" to "Pechay",
+                "lettuce" to "Lettuce",
+                "kangkong" to "Kangkong",
+                "cucumber" to "Cucumber",
+                "sitaw" to "Yardlong Bean",
+                "corn" to "Sweet Corn"
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(crops) { (cId, cName) ->
+                    val isAssigned = plot.cropName.equals(cName, ignoreCase = true)
+                    FilterChip(
+                        selected = isAssigned,
+                        onClick = { onAssignCrop(cId, cName) },
+                        label = {
+                            Text(
+                                text = cName,
+                                fontSize = 11.sp,
+                                fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = LushGreen,
+                            selectedLabelColor = Color.White,
+                            containerColor = LightSurface,
+                            labelColor = DeepBlack
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isAssigned,
+                            borderColor = if (isAssigned) LushGreen else CardBorderColor
+                        )
+                    )
+                }
             }
         }
     }
