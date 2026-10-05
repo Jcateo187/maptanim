@@ -84,6 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
                 })
                 .build()
                 INSTANCE = instance
+                com.maptanim.app.dss.knowledgebase.CompanionDataProvider.initialize(instance.dssRuleDao())
                 instance
             }
         }
@@ -95,6 +96,8 @@ abstract class AppDatabase : RoomDatabase() {
                 database.cropGrowthStageDao().insertAll(CropKnowledgeSeed.allGrowthStages)
                 database.cropSoilCompatibilityDao().insertAll(CropKnowledgeSeed.allSoilCompatibilities)
                 database.cropPestDiseaseGuideDao().insertAll(CropKnowledgeSeed.allPestDiseaseGuides)
+                database.dssRuleDao().upsertRules(CropKnowledgeSeed.allCompanionRules)
+                com.maptanim.app.dss.knowledgebase.CompanionDataProvider.refreshCache()
             } catch (e: Exception) {
                 android.util.Log.e("AppDatabase", "Error seeding crop knowledge: ${e.message}")
             }

@@ -19,6 +19,7 @@ object CropKnowledgeSeed {
     val allGrowthStages: List<CropGrowthStageEntity> = CropGrowthStageSeeds.list
     val allSoilCompatibilities: List<CropSoilCompatibilityEntity> = CropSoilCompatibilitySeeds.list
     val allPestDiseaseGuides: List<CropPestDiseaseGuideEntity> = CropPestDiseaseSeeds.list
+    val allCompanionRules: List<DssRuleEntity> = CropCompanionSeeds.allRules
 
     // Backward-compatible accessors
     val tomatoYieldStudies: List<CropYieldStudyEntity>
