@@ -49,7 +49,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 CREATE TABLE IF NOT EXISTS public.dss_evaluations (
     id                  TEXT                        PRIMARY KEY DEFAULT ('dss_eval_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
     session_id          VARCHAR(100)                NOT NULL,
-    farm_id             TEXT                        NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
+    farm_id             TEXT                        NOT NULL,
     farmer_id           TEXT,
     summary             JSONB                       DEFAULT '{}',
     evaluated_at        TIMESTAMPTZ                 NOT NULL DEFAULT NOW(),
@@ -62,8 +62,8 @@ CREATE INDEX IF NOT EXISTS idx_dss_eval_date ON public.dss_evaluations(evaluated
 CREATE TABLE IF NOT EXISTS public.dss_decisions (
     id                  TEXT                        PRIMARY KEY,
     evaluation_id       TEXT                        REFERENCES public.dss_evaluations(id) ON DELETE CASCADE,
-    farm_id             TEXT                        NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
-    plot_id             TEXT                        REFERENCES public.crop_plots(id) ON DELETE SET NULL,
+    farm_id             TEXT                        NOT NULL,
+    plot_id             TEXT,
     plot_label          VARCHAR(50),
     crop_name           VARCHAR(100),
     decision_type       dss_decision_type_enum      NOT NULL,
@@ -89,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_dss_decisions_category ON public.dss_decisions(ca
 CREATE TABLE IF NOT EXISTS public.crop_logs (
     id                  TEXT                        PRIMARY KEY DEFAULT ('log_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
     crop_planting_id    TEXT                        NOT NULL,
-    farm_id             TEXT                        NOT NULL REFERENCES public.farms(id) ON DELETE CASCADE,
+    farm_id             TEXT                        NOT NULL,
     bed_id              TEXT,
     crop_id             TEXT,
     variety_id          TEXT,
