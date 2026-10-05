@@ -66,6 +66,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "maptanim_db"
                 )
                 .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .addCallback(object : Callback() {
                     override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                         super.onCreate(db)

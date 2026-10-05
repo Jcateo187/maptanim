@@ -41,7 +41,7 @@ object DatabaseMigrations {
             ensureColumn(db, "crop_plots", "harvest_count", "INTEGER NOT NULL DEFAULT 0")
             ensureColumn(db, "crop_plots", "total_yield_kg", "REAL NOT NULL DEFAULT 0.0")
             ensureColumn(db, "crop_plots", "previous_crops_history", "TEXT NOT NULL DEFAULT ''")
-            ensureColumn(db, "harvests", "is_final_harvest", "INTEGER NOT NULL DEFAULT 1")
+            ensureColumn(db, "harvest_records", "is_final_harvest", "INTEGER NOT NULL DEFAULT 1")
         }
     }
 
@@ -54,8 +54,12 @@ object DatabaseMigrations {
             ensureColumn(db, "crop_plots", "total_yield_kg", "REAL NOT NULL DEFAULT 0.0")
             ensureColumn(db, "crop_plots", "previous_crops_history", "TEXT NOT NULL DEFAULT ''")
             ensureColumn(db, "crop_plots", "crop_variety", "TEXT")
-            ensureColumn(db, "harvests", "is_final_harvest", "INTEGER NOT NULL DEFAULT 1")
-            ensureColumn(db, "harvests", "crop_planting_id", "TEXT")
+            ensureColumn(db, "harvest_records", "is_final_harvest", "INTEGER NOT NULL DEFAULT 1")
+            ensureColumn(db, "harvest_records", "crop_planting_id", "TEXT")
+            ensureColumn(db, "harvest_records", "harvest_method", "TEXT")
+            ensureColumn(db, "harvest_records", "quantity", "REAL NOT NULL DEFAULT 0")
+            ensureColumn(db, "harvest_records", "unit", "TEXT NOT NULL DEFAULT 'kg'")
+            ensureColumn(db, "harvest_records", "marketable_pct", "REAL")
         }
     }
 
@@ -66,6 +70,13 @@ object DatabaseMigrations {
     )
 
     private fun ensureColumn(db: SupportSQLiteDatabase, table: String, column: String, colDef: String) {
+        // 1. Verify table exists first to avoid SQLiteException
+        val tableCheck = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?", arrayOf(table))
+        val tableExists = tableCheck.moveToFirst()
+        tableCheck.close()
+        if (!tableExists) return
+
+        // 2. Check if column already exists
         val cursor = db.query("PRAGMA table_info(`$table`)")
         var columnExists = false
         val nameIndex = cursor.getColumnIndex("name")
@@ -76,6 +87,8 @@ object DatabaseMigrations {
             }
         }
         cursor.close()
+
+        // 3. Add column if absent
         if (!columnExists) {
             db.execSQL("ALTER TABLE `$table` ADD COLUMN `$column` $colDef")
         }
