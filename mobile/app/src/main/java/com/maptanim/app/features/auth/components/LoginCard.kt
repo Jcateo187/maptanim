@@ -1,0 +1,205 @@
+﻿package com.maptanim.app.features.auth.components
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.maptanim.app.navigation.Routes
+import com.maptanim.app.features.auth.components.PrimaryButton
+import com.maptanim.app.features.auth.components.AppTextField
+import com.maptanim.app.features.auth.components.PasswordTextField
+import com.maptanim.app.features.auth.viewmodel.AuthViewModel
+
+@Composable
+fun LoginCard(
+    navController: NavController
+) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("maptanim_auth_prefs", android.content.Context.MODE_PRIVATE) }
+
+    val savedRemember = remember { prefs.getBoolean("remember_me", false) }
+    val savedEmail = remember { if (savedRemember) prefs.getString("saved_email", "") ?: "" else "" }
+
+    val authViewModel: AuthViewModel = viewModel()
+    val uiState by authViewModel.uiState.collectAsState()
+
+    var email by remember { mutableStateOf(savedEmail) }
+    var password by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(savedRemember) }
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            if (rememberMe) {
+                prefs.edit()
+                    .putBoolean("remember_me", true)
+                    .putString("saved_email", email.trim())
+                    .apply()
+            } else {
+                prefs.edit()
+                    .putBoolean("remember_me", false)
+                    .remove("saved_email")
+                    .apply()
+            }
+
+            navController.navigate(Routes.LOADING) {
+                popUpTo(Routes.LOGIN) {
+                    inclusive = true
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .width(430.dp)
+            .padding(24.dp),
+        elevation = CardDefaults.cardElevation(10.dp)
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Text(
+                text = "Welcome Back",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Sign in to continue using MapTanim.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            AppTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                },
+                label = "Email"
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PasswordTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                },
+                label = "Password"
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { rememberMe = !rememberMe }
+                ) {
+
+                    Checkbox(
+                        checked = rememberMe,
+                        onCheckedChange = { rememberMe = it }
+                    )
+
+                    Text(
+                        text = "Remember Me",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                }
+
+                Text(
+                    text = "Forgot Password?",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable {
+                        navController.navigate(Routes.FORGOT_PASSWORD)
+                    }
+                )
+
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            PrimaryButton(
+                text = "Sign In",
+                onClick = {
+                    authViewModel.signIn(
+                        email = email,
+                        password = password
+                    )
+                }
+            )
+
+            if (uiState.isLoading) {
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                CircularProgressIndicator()
+
+            }
+
+            uiState.errorMessage?.let {
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error
+                )
+
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Row {
+
+                Text("Don't have an account? ")
+
+                Text(
+                    text = "Create Account",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable {
+
+                        navController.navigate(Routes.WELCOME)
+
+                    }
+                )
+
+            }
+
+        }
+
+    }
+}

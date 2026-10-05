@@ -1,4 +1,4 @@
-package com.maptanim.app
+﻿package com.maptanim.app
 
 import android.Manifest
 import android.content.Context
@@ -27,7 +27,7 @@ import com.maptanim.app.core.notification.NotificationHelper
 import com.maptanim.app.core.orientation.OrientationHelper
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.navigation.AppNavGraph
-import com.maptanim.app.ui.components.orientation.RotationSuggestionOverlay
+import com.maptanim.app.features.shared.orientation.RotationSuggestionOverlay
 import com.maptanim.app.ui.theme.MapTanimTheme
 import kotlin.math.abs
 

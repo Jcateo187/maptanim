@@ -10,18 +10,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.maptanim.app.ui.screens.about.AboutScreen
-import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
-import com.maptanim.app.ui.screens.auth.LoginScreen
-import com.maptanim.app.ui.screens.auth.WelcomeScreen
-import com.maptanim.app.ui.screens.community.CommunityScreen
-import com.maptanim.app.ui.screens.farm.FarmScreen
-import com.maptanim.app.ui.screens.home.MainHomeScreen
-import com.maptanim.app.ui.screens.loading.LoadingScreen
-import com.maptanim.app.ui.screens.profile.ProfileScreen
-import com.maptanim.app.ui.screens.reports.ReportsScreen
-import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
-import com.maptanim.app.ui.screens.vegetables.VegetablesScreen
+import com.maptanim.app.features.about.screen.AboutScreen
+import com.maptanim.app.features.auth.screen.ForgotPasswordScreen
+import com.maptanim.app.features.auth.screen.LoginScreen
+import com.maptanim.app.features.auth.screen.WelcomeScreen
+import com.maptanim.app.features.community.screen.CommunityScreen
+import com.maptanim.app.features.farm.screen.FarmScreen
+import com.maptanim.app.features.home.screen.MainHomeScreen
+import com.maptanim.app.features.splash.screen.LoadingScreen
+import com.maptanim.app.features.profile.ProfileScreen
+import com.maptanim.app.features.reports.screen.ReportsScreen
+import com.maptanim.app.features.splash.screen.CompanyLogoScreen
+import com.maptanim.app.features.library.screen.VegetablesScreen
+import com.maptanim.app.features.notifications.screen.NotificationsScreen
 
 @Composable
 fun AppNavGraph() {
@@ -110,7 +111,7 @@ fun AppNavGraph() {
         composable(
             route = Routes.NOTIFICATIONS
         ) {
-            com.maptanim.app.ui.screens.notifications.NotificationsScreen(navController = navController)
+            NotificationsScreen(navController = navController)
         }
 
         composable(
