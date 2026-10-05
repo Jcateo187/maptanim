@@ -6,6 +6,7 @@
 -- 1. Helper function: public.is_admin()
 -- Evaluates whether the current authenticated JWT belongs to an active administrator
 -- or is executing under the Supabase service_role key.
+-- Explicitly casts id::text = (auth.uid())::text to avoid uuid = text operator mismatches.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -16,7 +17,7 @@ AS $$
     COALESCE(auth.role() = 'service_role', false)
     OR EXISTS (
       SELECT 1 FROM public.users
-      WHERE id = (auth.uid())::text
+      WHERE id::text = (auth.uid())::text
         AND role IN ('ADMIN', 'SUPER_ADMIN')
         AND status = 'ACTIVE'
     )
@@ -190,29 +191,29 @@ DROP POLICY IF EXISTS "users_read_all" ON public.users;
 DROP POLICY IF EXISTS "users_select_self_or_admin" ON public.users;
 CREATE POLICY "users_select_self_or_admin" ON public.users
     FOR SELECT USING (
-        id = (auth.uid())::text
+        id::text = (auth.uid())::text
         OR public.is_admin()
     );
 
 DROP POLICY IF EXISTS "users_insert_self_or_admin" ON public.users;
 CREATE POLICY "users_insert_self_or_admin" ON public.users
     FOR INSERT WITH CHECK (
-        id = (auth.uid())::text
+        id::text = (auth.uid())::text
         OR public.is_admin()
     );
 
 DROP POLICY IF EXISTS "users_update_self_or_admin" ON public.users;
 CREATE POLICY "users_update_self_or_admin" ON public.users
     FOR UPDATE USING (
-        id = (auth.uid())::text
+        id::text = (auth.uid())::text
         OR public.is_admin()
     )
     WITH CHECK (
         public.is_admin()
         OR (
-            id = (auth.uid())::text
-            AND role = (SELECT u.role FROM public.users u WHERE u.id = (auth.uid())::text)
-            AND status = (SELECT u.status FROM public.users u WHERE u.id = (auth.uid())::text)
+            id::text = (auth.uid())::text
+            AND role = (SELECT u.role FROM public.users u WHERE u.id::text = (auth.uid())::text)
+            AND status = (SELECT u.status FROM public.users u WHERE u.id::text = (auth.uid())::text)
         )
     );
 
@@ -226,9 +227,9 @@ DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 CREATE POLICY "profiles_select_all" ON public.profiles
     FOR SELECT USING (true);
 CREATE POLICY "profiles_insert_own" ON public.profiles
-    FOR INSERT WITH CHECK (id = auth.uid() OR public.is_admin());
+    FOR INSERT WITH CHECK (id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "profiles_update_own" ON public.profiles
-    FOR UPDATE USING (id = auth.uid() OR public.is_admin());
+    FOR UPDATE USING (id::text = (auth.uid())::text OR public.is_admin());
 
 -- ==============================================================================
 -- 7. RLS HARDENING: FARMER PRIVATE AGRONOMIC DATA (OWNER-SCOPED)
@@ -242,13 +243,13 @@ DROP POLICY IF EXISTS "farms_update_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_delete_all" ON public.farms;
 
 CREATE POLICY "farms_select_owner_or_admin" ON public.farms
-    FOR SELECT USING (farmer_id = (auth.uid())::text OR public.is_admin());
+    FOR SELECT USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "farms_insert_owner_or_admin" ON public.farms
-    FOR INSERT WITH CHECK (farmer_id = (auth.uid())::text OR public.is_admin());
+    FOR INSERT WITH CHECK (farmer_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "farms_update_owner_or_admin" ON public.farms
-    FOR UPDATE USING (farmer_id = (auth.uid())::text OR public.is_admin());
+    FOR UPDATE USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "farms_delete_owner_or_admin" ON public.farms
-    FOR DELETE USING (farmer_id = (auth.uid())::text OR public.is_admin());
+    FOR DELETE USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
 
 -- public.crop_plots
 ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
@@ -257,22 +258,22 @@ DROP POLICY IF EXISTS "crop_plots_read_all" ON public.crop_plots;
 
 CREATE POLICY "crop_plots_select" ON public.crop_plots
     FOR SELECT USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_plots_insert" ON public.crop_plots
     FOR INSERT WITH CHECK (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_plots_update" ON public.crop_plots
     FOR UPDATE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_plots_delete" ON public.crop_plots
     FOR DELETE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -282,37 +283,37 @@ DROP POLICY IF EXISTS "crop_zones_all" ON public.crop_zones;
 
 CREATE POLICY "crop_zones_select" ON public.crop_zones
     FOR SELECT USING (
-        plot_id IN (
-            SELECT p.id FROM public.crop_plots p
-            JOIN public.farms f ON p.farm_id = f.id
-            WHERE f.farmer_id = (auth.uid())::text
+        plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
         )
         OR public.is_admin()
     );
 CREATE POLICY "crop_zones_insert" ON public.crop_zones
     FOR INSERT WITH CHECK (
-        plot_id IN (
-            SELECT p.id FROM public.crop_plots p
-            JOIN public.farms f ON p.farm_id = f.id
-            WHERE f.farmer_id = (auth.uid())::text
+        plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
         )
         OR public.is_admin()
     );
 CREATE POLICY "crop_zones_update" ON public.crop_zones
     FOR UPDATE USING (
-        plot_id IN (
-            SELECT p.id FROM public.crop_plots p
-            JOIN public.farms f ON p.farm_id = f.id
-            WHERE f.farmer_id = (auth.uid())::text
+        plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
         )
         OR public.is_admin()
     );
 CREATE POLICY "crop_zones_delete" ON public.crop_zones
     FOR DELETE USING (
-        plot_id IN (
-            SELECT p.id FROM public.crop_plots p
-            JOIN public.farms f ON p.farm_id = f.id
-            WHERE f.farmer_id = (auth.uid())::text
+        plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
         )
         OR public.is_admin()
     );
@@ -323,26 +324,26 @@ DROP POLICY IF EXISTS "harvest_records_all" ON public.harvest_records;
 
 CREATE POLICY "harvest_records_select" ON public.harvest_records
     FOR SELECT USING (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_insert" ON public.harvest_records
     FOR INSERT WITH CHECK (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_update" ON public.harvest_records
     FOR UPDATE USING (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_delete" ON public.harvest_records
     FOR DELETE USING (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -356,22 +357,22 @@ DROP POLICY IF EXISTS "tasks_all" ON public.tasks;
 
 CREATE POLICY "tasks_select" ON public.tasks
     FOR SELECT USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "tasks_insert" ON public.tasks
     FOR INSERT WITH CHECK (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "tasks_update" ON public.tasks
     FOR UPDATE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "tasks_delete" ON public.tasks
     FOR DELETE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -381,22 +382,22 @@ DROP POLICY IF EXISTS "crop_logs_all" ON public.crop_logs;
 
 CREATE POLICY "crop_logs_select" ON public.crop_logs
     FOR SELECT USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_logs_insert" ON public.crop_logs
     FOR INSERT WITH CHECK (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_logs_update" ON public.crop_logs
     FOR UPDATE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "crop_logs_delete" ON public.crop_logs
     FOR DELETE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -406,14 +407,14 @@ DROP POLICY IF EXISTS "dss_evaluations_all" ON public.dss_evaluations;
 
 CREATE POLICY "dss_evaluations_select" ON public.dss_evaluations
     FOR SELECT USING (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "dss_evaluations_insert" ON public.dss_evaluations
     FOR INSERT WITH CHECK (
-        farmer_id = (auth.uid())::text
-        OR farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farmer_id::text = (auth.uid())::text
+        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -422,17 +423,17 @@ DROP POLICY IF EXISTS "dss_decisions_all" ON public.dss_decisions;
 
 CREATE POLICY "dss_decisions_select" ON public.dss_decisions
     FOR SELECT USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "dss_decisions_insert" ON public.dss_decisions
     FOR INSERT WITH CHECK (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "dss_decisions_update" ON public.dss_decisions
     FOR UPDATE USING (
-        farm_id IN (SELECT f.id FROM public.farms f WHERE f.farmer_id = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -445,9 +446,9 @@ ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "feedback_all" ON public.feedback;
 
 CREATE POLICY "feedback_select" ON public.feedback
-    FOR SELECT USING (user_id = (auth.uid())::text OR public.is_admin());
+    FOR SELECT USING (user_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "feedback_insert" ON public.feedback
-    FOR INSERT WITH CHECK (user_id = (auth.uid())::text OR user_id IS NULL OR public.is_admin());
+    FOR INSERT WITH CHECK (user_id::text = (auth.uid())::text OR user_id IS NULL OR public.is_admin());
 CREATE POLICY "feedback_update" ON public.feedback
     FOR UPDATE USING (public.is_admin());
 
@@ -457,7 +458,7 @@ DROP POLICY IF EXISTS "notifications_all" ON public.notifications;
 
 CREATE POLICY "notifications_select" ON public.notifications
     FOR SELECT USING (
-        user_id = (auth.uid())::text
+        user_id::text = (auth.uid())::text
         OR user_id IS NULL
         OR public.is_admin()
     );
@@ -465,7 +466,7 @@ CREATE POLICY "notifications_insert" ON public.notifications
     FOR INSERT WITH CHECK (public.is_admin());
 CREATE POLICY "notifications_update" ON public.notifications
     FOR UPDATE USING (
-        user_id = (auth.uid())::text
+        user_id::text = (auth.uid())::text
         OR public.is_admin()
     );
 CREATE POLICY "notifications_delete" ON public.notifications
@@ -481,11 +482,11 @@ DROP POLICY IF EXISTS "community_posts_delete_all" ON public.community_posts;
 CREATE POLICY "community_posts_select" ON public.community_posts
     FOR SELECT USING (true);
 CREATE POLICY "community_posts_insert" ON public.community_posts
-    FOR INSERT WITH CHECK (author_id = (auth.uid())::text OR public.is_admin());
+    FOR INSERT WITH CHECK (author_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "community_posts_update" ON public.community_posts
-    FOR UPDATE USING (author_id = (auth.uid())::text OR public.is_admin());
+    FOR UPDATE USING (author_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "community_posts_delete" ON public.community_posts
-    FOR DELETE USING (author_id = (auth.uid())::text OR public.is_admin());
+    FOR DELETE USING (author_id::text = (auth.uid())::text OR public.is_admin());
 
 -- public.community_comments
 ALTER TABLE public.community_comments ENABLE ROW LEVEL SECURITY;
@@ -497,11 +498,11 @@ DROP POLICY IF EXISTS "community_comments_delete_all" ON public.community_commen
 CREATE POLICY "community_comments_select" ON public.community_comments
     FOR SELECT USING (true);
 CREATE POLICY "community_comments_insert" ON public.community_comments
-    FOR INSERT WITH CHECK (author_id = (auth.uid())::text OR public.is_admin());
+    FOR INSERT WITH CHECK (author_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "community_comments_update" ON public.community_comments
-    FOR UPDATE USING (author_id = (auth.uid())::text OR public.is_admin());
+    FOR UPDATE USING (author_id::text = (auth.uid())::text OR public.is_admin());
 CREATE POLICY "community_comments_delete" ON public.community_comments
-    FOR DELETE USING (author_id = (auth.uid())::text OR public.is_admin());
+    FOR DELETE USING (author_id::text = (auth.uid())::text OR public.is_admin());
 
 -- public.community_reports
 ALTER TABLE public.community_reports ENABLE ROW LEVEL SECURITY;
