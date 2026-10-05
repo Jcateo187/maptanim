@@ -1,6 +1,7 @@
-﻿package com.maptanim.app.features.profile.modals
+package com.maptanim.app.features.profile.modals
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.Close
@@ -28,10 +31,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.maptanim.app.domain.model.Farm
-import com.maptanim.app.ui.theme.Danger
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
+
+/**
+ * FullFarmsListModal — Paginated full modal of registered farm workspaces in Daylight theme.
+ */
 @Composable
 fun FullFarmsListModal(
     farms: List<Farm>,
@@ -55,7 +64,7 @@ fun FullFarmsListModal(
 
     val totalPages = (filteredFarms.size + itemsPerPage - 1).coerceAtLeast(1) / itemsPerPage
     val pageItems = remember(filteredFarms, currentPage) {
-        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val safePage = currentPage.coerceIn(1, totalPages.coerceAtLeast(1))
         val startIndex = (safePage - 1) * itemsPerPage
         filteredFarms.drop(startIndex).take(itemsPerPage)
     }
@@ -68,9 +77,9 @@ fun FullFarmsListModal(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.88f)
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-            color = Color(0xFA121811)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp)),
+            color = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -86,17 +95,17 @@ fun FullFarmsListModal(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.Agriculture,
+                            imageVector = Icons.Default.Agriculture,
                             contentDescription = null,
-                            tint = ForestGreen,
+                            tint = LushGreen,
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "🚜 My Registered Farms (${filteredFarms.size})",
+                            text = "My Registered Farms (${filteredFarms.size})",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = White
+                            color = DeepBlack
                         )
                     }
 
@@ -108,24 +117,17 @@ fun FullFarmsListModal(
                             onClick = onCreateFarmClick,
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = ForestGreen,
-                                contentColor = White
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
                             modifier = Modifier.height(34.dp)
                         ) {
                             Icon(
-                                Icons.Default.Add,
+                                imageVector = Icons.Default.Add,
                                 contentDescription = "Create Farm",
-                                modifier = Modifier.size(16.dp),
-                                tint = White
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "New Farm",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
+                            Text("New", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
 
                         IconButton(
@@ -133,9 +135,10 @@ fun FullFarmsListModal(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Close Modal",
-                                tint = White
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = DeepBlack,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -143,96 +146,90 @@ fun FullFarmsListModal(
 
                 // Search Bar
                 Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF2A3424),
-                    border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth()
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = White.copy(alpha = 0.5f),
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = LushGreen,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it; currentPage = 1 },
-                            singleLine = true,
-                            textStyle = TextStyle(color = White, fontSize = 12.sp),
-                            cursorBrush = SolidColor(ForestGreen),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        "Search farms by name...",
-                                        color = White.copy(alpha = 0.45f),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isBlank()) {
+                                Text("Search farms by name...", color = MutedText, fontSize = 12.sp)
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = {
+                                    searchQuery = it
+                                    currentPage = 1
+                                },
+                                singleLine = true,
+                                textStyle = TextStyle(color = DeepBlack, fontSize = 12.sp),
+                                cursorBrush = SolidColor(LushGreen),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MutedText, modifier = Modifier.size(14.dp))
+                            }
+                        }
                     }
                 }
 
-                // Farm Items List
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (pageItems.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "No matching farms found.",
-                                    color = White.copy(alpha = 0.6f),
-                                    fontSize = 13.sp
-                                )
-                            }
+                // List Items
+                if (filteredFarms.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = LushGreen, modifier = Modifier.size(36.dp))
+                            Text("No farms found", color = DeepBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Try adjusting your search criteria.", color = MutedText, fontSize = 12.sp)
                         }
-                    } else {
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(pageItems) { farm ->
                             val isActive = farm.id == activeFarmId
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF1B2317),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isActive) ForestGreen else ForestGreen.copy(alpha = 0.3f)
-                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                color = LightSurface,
+                                border = BorderStroke(1.dp, if (isActive) LushGreen else CardBorderColor),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            farm.farmName,
+                                            text = farm.farmName,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp,
-                                            color = White
+                                            color = DeepBlack
                                         )
                                         Text(
                                             text = if (farm.createdAt.isNotBlank()) "Created: ${farm.createdAt}" else "Farm Workspace",
-                                            fontSize = 10.sp,
-                                            color = White.copy(alpha = 0.5f)
+                                            fontSize = 11.sp,
+                                            color = MutedText
                                         )
                                     }
 
@@ -243,14 +240,14 @@ fun FullFarmsListModal(
                                         if (isActive) {
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
-                                                color = ForestGreen.copy(alpha = 0.25f),
-                                                border = BorderStroke(1.dp, ForestGreen)
+                                                color = Color(0xFFE8F5E9),
+                                                border = BorderStroke(1.dp, LushGreen)
                                             ) {
                                                 Text(
-                                                    "ACTIVE",
+                                                    text = "ACTIVE",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = White,
+                                                    color = LushGreen,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                                 )
                                             }
@@ -259,14 +256,14 @@ fun FullFarmsListModal(
                                                 onClick = { onSelectActiveFarm(farm.id) },
                                                 shape = RoundedCornerShape(6.dp),
                                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
+                                                border = BorderStroke(1.dp, LushGreen),
                                                 modifier = Modifier.height(28.dp)
                                             ) {
                                                 Text(
-                                                    "Select",
+                                                    text = "Select",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.SemiBold,
-                                                    color = ForestGreen
+                                                    color = LushGreen
                                                 )
                                             }
                                         }
@@ -277,9 +274,9 @@ fun FullFarmsListModal(
                                             modifier = Modifier.size(30.dp)
                                         ) {
                                             Icon(
-                                                Icons.Default.Edit,
+                                                imageVector = Icons.Default.Edit,
                                                 contentDescription = "Rename Farm",
-                                                tint = White.copy(alpha = 0.85f),
+                                                tint = DeepBlack,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -291,9 +288,9 @@ fun FullFarmsListModal(
                                                 modifier = Modifier.size(30.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Default.Delete,
+                                                    imageVector = Icons.Default.Delete,
                                                     contentDescription = "Delete Farm",
-                                                    tint = Danger.copy(alpha = 0.85f),
+                                                    tint = Color(0xFFC62828),
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             }
@@ -315,22 +312,28 @@ fun FullFarmsListModal(
                         OutlinedButton(
                             onClick = { if (currentPage > 1) currentPage-- },
                             enabled = currentPage > 1,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Previous", fontSize = 11.sp, color = DeepBlack)
                         }
                         Text(
-                            "Page $currentPage of $totalPages",
+                            text = "Page $currentPage of $totalPages",
                             fontSize = 12.sp,
-                            color = White,
+                            color = DeepBlack,
                             fontWeight = FontWeight.Bold
                         )
                         OutlinedButton(
                             onClick = { if (currentPage < totalPages) currentPage++ },
                             enabled = currentPage < totalPages,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("Next ►", fontSize = 11.sp, color = White)
+                            Text("Next", fontSize = 11.sp, color = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
                         }
                     }
                 }

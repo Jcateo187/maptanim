@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.modals
+package com.maptanim.app.features.profile.modals
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -9,10 +9,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +36,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.maptanim.app.domain.model.HarvestRecord
 import com.maptanim.app.features.profile.utils.formatActivityTime
-import com.maptanim.app.features.profile.utils.getCropEmoji
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
+
+/**
+ * FullHarvestHistoryModal — Complete paginated harvest yield history in Daylight theme.
+ */
 @Composable
 fun FullHarvestHistoryModal(
     harvestHistory: List<HarvestRecord>,
@@ -60,9 +74,9 @@ fun FullHarvestHistoryModal(
         }
     }
 
-    val totalPages = (filteredRecords.size + itemsPerPage - 1) / itemsPerPage
+    val totalPages = (filteredRecords.size + itemsPerPage - 1).coerceAtLeast(1) / itemsPerPage
     val pageItems = remember(filteredRecords, currentPage) {
-        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val safePage = currentPage.coerceIn(1, totalPages.coerceAtLeast(1))
         val startIndex = (safePage - 1) * itemsPerPage
         filteredRecords.drop(startIndex).take(itemsPerPage)
     }
@@ -75,9 +89,9 @@ fun FullHarvestHistoryModal(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.88f)
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, Color(0xFFD48806).copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
-            color = Color(0xFA121811)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp)),
+            color = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -85,126 +99,154 @@ fun FullHarvestHistoryModal(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Agriculture, contentDescription = null, tint = Color(0xFFD48806), modifier = Modifier.size(22.dp))
+                        Icon(
+                            imageVector = Icons.Default.Agriculture,
+                            contentDescription = null,
+                            tint = LushGreen,
+                            modifier = Modifier.size(22.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedDateFilter != null) "🌾 Harvests on $selectedDateFilter (${filteredRecords.size})" else "🌾 Complete Harvest History (${filteredRecords.size})",
+                            text = if (selectedDateFilter != null) "Harvests on $selectedDateFilter (${filteredRecords.size})" else "Complete Harvest History (${filteredRecords.size})",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = White
+                            color = DeepBlack
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = DeepBlack)
                     }
                 }
 
-                // Search Bar with Date Selection Icon Button
+                // Search Bar with Date Filter Button
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF2A3424),
-                    border = BorderStroke(1.dp, Color(0xFFD48806).copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth()
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor),
+                    modifier = Modifier.fillMaxWidth().height(38.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it; currentPage = 1 },
-                            singleLine = true,
-                            textStyle = TextStyle(color = White, fontSize = 12.sp),
-                            cursorBrush = SolidColor(Color(0xFFD48806)),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text("Search harvest history by crop, variety, plot...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = LushGreen,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isBlank()) {
+                                Text("Search crop, farm, plot...", color = MutedText, fontSize = 12.sp)
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = {
+                                    searchQuery = it
+                                    currentPage = 1
+                                },
+                                singleLine = true,
+                                textStyle = TextStyle(color = DeepBlack, fontSize = 12.sp),
+                                cursorBrush = SolidColor(LushGreen),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MutedText, modifier = Modifier.size(14.dp))
+                            }
+                        }
+
                         IconButton(
                             onClick = { showDatePickerModal = true },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = "Select Activity Date",
-                                tint = if (selectedDateFilter != null) Color(0xFFD48806) else White.copy(alpha = 0.7f)
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Filter by Date",
+                                tint = if (selectedDateFilter != null) LushGreen else MutedText,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
 
-                // Date Filter Badge if Active
+                // Active Date Filter Badge
                 if (selectedDateFilter != null) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFD48806).copy(alpha = 0.25f),
-                            border = BorderStroke(1.dp, Color(0xFFD48806))
+                            color = Color(0xFFE8F5E9),
+                            border = BorderStroke(1.dp, LushGreen)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .clickable { selectedDateFilter = null }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LushGreen, modifier = Modifier.size(12.dp))
                                 Text(
-                                    text = "📅 Activity Date: $selectedDateFilter ✖",
+                                    text = "Date: $selectedDateFilter",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = White
+                                    color = LushGreen
                                 )
                             }
                         }
-                        Text(
-                            text = "Showing all harvest activity on $selectedDateFilter",
-                            fontSize = 10.sp,
-                            color = White.copy(alpha = 0.6f)
-                        )
+
+                        TextButton(
+                            onClick = {
+                                selectedDateFilter = null
+                                currentPage = 1
+                            }
+                        ) {
+                            Text("Clear Date Filter", fontSize = 11.sp, color = LushGreen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (pageItems.isEmpty()) {
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = if (selectedDateFilter != null) "No harvest activities found on $selectedDateFilter." else "No harvest records match your search filter.",
-                                    color = White.copy(alpha = 0.6f),
-                                    fontSize = 13.sp
-                                )
-                            }
+                // List Items
+                if (filteredRecords.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = LushGreen, modifier = Modifier.size(36.dp))
+                            Text("No harvest records match", color = DeepBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Try adjusting your search or date filter.", color = MutedText, fontSize = 12.sp)
                         }
-                    } else {
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(pageItems) { record ->
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF1B2317),
-                                border = BorderStroke(1.dp, Color(0xFF2A3828)),
+                                shape = RoundedCornerShape(10.dp),
+                                color = LightSurface,
+                                border = BorderStroke(1.dp, CardBorderColor),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(14.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Row(
@@ -213,32 +255,34 @@ fun FullHarvestHistoryModal(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(getCropEmoji(record.cropName), fontSize = 18.sp)
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = LushGreen, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = record.cropName.uppercase(),
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                color = White
+                                                fontSize = 13.sp,
+                                                color = DeepBlack
                                             )
                                             if (!record.cropVariety.isNullOrBlank()) {
                                                 Text(
                                                     text = " (${record.cropVariety})",
                                                     fontSize = 12.sp,
-                                                    color = ForestGreen
+                                                    color = LushGreen,
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                             }
                                         }
+
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFD48806).copy(alpha = 0.25f),
-                                            border = BorderStroke(1.dp, Color(0xFFD48806))
+                                            color = Color(0xFFE8F5E9),
+                                            border = BorderStroke(1.dp, LushGreen)
                                         ) {
                                             Text(
                                                 text = record.farmName,
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = White,
+                                                color = LushGreen,
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                             )
                                         }
@@ -248,28 +292,44 @@ fun FullHarvestHistoryModal(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("📍 Plot/Zone: ${record.plotLabel}", fontSize = 11.sp, color = White.copy(alpha = 0.8f))
-                                        Text("⚖️ Yield: ${if (record.yieldKg > 0f) "${record.yieldKg} kg" else "N/A"}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD48806))
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = LushGreen, modifier = Modifier.size(13.dp))
+                                            Text("Plot: ${record.plotLabel}", fontSize = 11.sp, color = DeepBlack)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Default.Scale, contentDescription = null, tint = LushGreen, modifier = Modifier.size(13.dp))
+                                            Text("Yield: ${if (record.yieldKg > 0f) "${record.yieldKg} kg" else "N/A"}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                        }
                                     }
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("🌱 Planted: ${record.plantedDate?.take(10) ?: "N/A"}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
-                                        Text("🌾 Harvested: ${record.harvestedAt.take(10)}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
-                                        Text("⏱️ ${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}", fontSize = 10.sp, color = ForestGreen)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MutedText, modifier = Modifier.size(11.dp))
+                                            Text("Planted: ${record.plantedDate?.take(10) ?: "N/A"}", fontSize = 10.sp, color = MutedText)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Default.Agriculture, contentDescription = null, tint = MutedText, modifier = Modifier.size(11.dp))
+                                            Text("Harvested: ${record.harvestedAt.take(10)}", fontSize = 10.sp, color = MutedText)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Default.Timer, contentDescription = null, tint = LushGreen, modifier = Modifier.size(11.dp))
+                                            Text("${record.growingDurationDays} ${if (record.cropName.lowercase().contains("ampalaya") || record.cropVariety?.contains("10s", ignoreCase = true) == true) "Secs" else "Days"}", fontSize = 10.sp, color = LushGreen)
+                                        }
                                     }
 
-                                    Text(
-                                        text = "🕒 Activity Time: ${formatActivityTime(record.harvestedAt)}",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFFD48806)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Icon(Icons.Default.Schedule, contentDescription = null, tint = MutedText, modifier = Modifier.size(11.dp))
+                                        Text("Activity: ${formatActivityTime(record.harvestedAt)}", fontSize = 10.sp, color = MutedText)
+                                    }
 
                                     if (!record.notes.isNullOrBlank()) {
-                                        Text("📝 Notes: ${record.notes}", fontSize = 11.sp, color = White.copy(alpha = 0.8f))
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null, tint = MutedText, modifier = Modifier.size(12.dp))
+                                            Text("Notes: ${record.notes}", fontSize = 11.sp, color = DeepBlack)
+                                        }
                                     }
                                 }
                             }
@@ -277,6 +337,7 @@ fun FullHarvestHistoryModal(
                     }
                 }
 
+                // Pagination Controls
                 if (totalPages > 1) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -286,17 +347,28 @@ fun FullHarvestHistoryModal(
                         OutlinedButton(
                             onClick = { if (currentPage > 1) currentPage-- },
                             enabled = currentPage > 1,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Previous", fontSize = 11.sp, color = DeepBlack)
                         }
-                        Text("Page $currentPage of $totalPages", fontSize = 12.sp, color = White, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Page $currentPage of $totalPages",
+                            fontSize = 12.sp,
+                            color = DeepBlack,
+                            fontWeight = FontWeight.Bold
+                        )
                         OutlinedButton(
                             onClick = { if (currentPage < totalPages) currentPage++ },
                             enabled = currentPage < totalPages,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("Next ►", fontSize = 11.sp, color = White)
+                            Text("Next", fontSize = 11.sp, color = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
                         }
                     }
                 }
@@ -305,9 +377,17 @@ fun FullHarvestHistoryModal(
     }
 
     if (showDatePickerModal) {
+        val availableDates = remember(harvestHistory) {
+            harvestHistory.map { it.harvestedAt.take(10) }.distinct().sortedDescending()
+        }
         DatePickerSelectionDialog(
+            availableDates = availableDates,
             selectedDate = selectedDateFilter,
-            onDateSelected = { selectedDateFilter = it; currentPage = 1 },
+            onSelectDate = {
+                selectedDateFilter = it
+                currentPage = 1
+                showDatePickerModal = false
+            },
             onDismiss = { showDatePickerModal = false }
         )
     }

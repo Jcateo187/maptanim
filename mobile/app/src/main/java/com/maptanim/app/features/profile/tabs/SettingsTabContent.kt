@@ -1,58 +1,46 @@
-﻿package com.maptanim.app.features.profile.tabs
+package com.maptanim.app.features.profile.tabs
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.maptanim.app.core.audio.LocalSoundManager
 import com.maptanim.app.core.audio.SoundEffect
-import com.maptanim.app.navigation.Routes
-import com.maptanim.app.features.profile.ProfileUiState
 import com.maptanim.app.features.profile.ProfileViewModel
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
+import com.maptanim.app.features.profile.model.ProfileUiState
 import com.maptanim.app.features.shared.guide.TutorialViewModel
+import com.maptanim.app.navigation.Routes
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
+
+/**
+ * SettingsTabContent — App settings, audio controls, account binding, and support in Daylight theme.
+ */
 @Composable
 fun SettingsTabContent(
     uiState: ProfileUiState,
@@ -61,19 +49,21 @@ fun SettingsTabContent(
 ) {
     var showAudioSettingsModal by remember { mutableStateOf(false) }
     val soundManager = LocalSoundManager.current
+    var isAudioMuted by remember { mutableStateOf(soundManager.isMuted) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Audio & Sound Settings Section
+        // 1. Audio & Sound Settings Section
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
@@ -90,35 +80,30 @@ fun SettingsTabContent(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(
-                        imageVector = if (soundManager.isMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
+                        imageVector = if (isAudioMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = null,
-                        tint = ForestGreen
+                        tint = LushGreen
                     )
                     Column {
-                        Text("Audio Adjustment", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Text("Audio & Sound Effects", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (soundManager.isMuted) "Master Audio Muted" else "Music & SFX Enabled",
-                            color = if (soundManager.isMuted) Color(0xFFEF9A9A) else ForestGreen,
-                            fontSize = 13.sp
+                            text = if (isAudioMuted) "Master Audio Muted" else "Music & Sound Effects Active",
+                            color = if (isAudioMuted) Color(0xFFC62828) else LushGreen,
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
             }
         }
 
-        if (showAudioSettingsModal) {
-            AudioSettingsDialog(
-                onDismissRequest = { showAudioSettingsModal = false }
-            )
-        }
-
-        // Replay Tutorial Section
+        // 2. Replay Tutorial Section
         val tutorialViewModel: TutorialViewModel = viewModel()
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
@@ -140,26 +125,27 @@ fun SettingsTabContent(
                     Icon(
                         imageVector = Icons.Default.School,
                         contentDescription = null,
-                        tint = ForestGreen
+                        tint = LushGreen
                     )
                     Column {
-                        Text("Replay Farm Guide Tutorial", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Text("Replay Farmer Guide Tutorial", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Restart Tatay Juan step-by-step interactive guide",
-                            color = White.copy(alpha = 0.6f),
-                            fontSize = 13.sp
+                            text = "Restart Tatay Juan step-by-step interactive onboarding",
+                            color = MutedText,
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
             }
         }
 
-        // Bind Account Section
+        // 3. Bind Account Section
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -169,35 +155,37 @@ fun SettingsTabContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Account Binding", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Account Cloud Backup", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (uiState.userProfile.isAccountBound)
-                            "Already bound (${uiState.userProfile.boundEmail})"
-                        else "Not bound to external cloud",
-                        color = if (uiState.userProfile.isAccountBound) ForestGreen else White.copy(alpha = 0.6f),
-                        fontSize = 13.sp
+                            "Bound to ${uiState.userProfile.boundEmail}"
+                        else "Not synced to external account",
+                        color = if (uiState.userProfile.isAccountBound) LushGreen else MutedText,
+                        fontSize = 12.sp
                     )
                 }
 
                 if (!uiState.userProfile.isAccountBound) {
                     Button(
                         onClick = { viewModel.openBindAccount() },
-                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Bind Account")
+                        Text("Bind", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 } else {
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Bound", tint = ForestGreen)
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Bound", tint = LushGreen)
                 }
             }
         }
 
-        // System Recommendation & Report Issue
+        // 4. Report Issue / Feedback Section
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { viewModel.openReportIssue() }
@@ -210,18 +198,19 @@ fun SettingsTabContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Report Issue / Feedback", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                    Text("Report Issue / Feedback", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text("Send system feedback or issues to Admin", color = White.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text("Submit agricultural bug or system feedback to Admin", color = MutedText, fontSize = 12.sp)
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
             }
         }
 
-        // About MapTanim Section
+        // 5. About MapTanim Section
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
@@ -240,31 +229,31 @@ fun SettingsTabContent(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = ForestGreen
+                        tint = LushGreen
                     )
                     Column {
-                        Text("About MapTanim", fontWeight = FontWeight.Bold, color = White, fontSize = 15.sp)
+                        Text("About MapTanim", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Capstone project, development team, and legal documents",
-                            color = White.copy(alpha = 0.6f),
-                            fontSize = 13.sp
+                            text = "Research citation, project info, and terms",
+                            color = MutedText,
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = White)
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
             }
         }
 
-        // Log out Section
+        // 6. Log Out Section
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF1E261A),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { viewModel.openLogoutConfirm() }
         ) {
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -273,11 +262,67 @@ fun SettingsTabContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Color(0xFFC62828))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Log Out", fontWeight = FontWeight.Bold, color = Color.Red, fontSize = 15.sp)
+                    Text("Log Out", fontWeight = FontWeight.Bold, color = Color(0xFFC62828), fontSize = 14.sp)
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Red)
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFC62828))
+            }
+        }
+    }
+
+    // Modal: Audio Settings Dialog
+    if (showAudioSettingsModal) {
+        Dialog(onDismissRequest = { showAudioSettingsModal = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, CardBorderColor),
+                modifier = Modifier.fillMaxWidth(0.92f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Audio Settings", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DeepBlack)
+                    Text(
+                        text = "Toggle background sound and interactive feedback effects.",
+                        fontSize = 12.sp,
+                        color = MutedText
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Mute All Audio", fontSize = 14.sp, color = DeepBlack)
+                        Switch(
+                            checked = isAudioMuted,
+                            onCheckedChange = { muted ->
+                                soundManager.isMuted = muted
+                                isAudioMuted = muted
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = LushGreen
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            onClick = { showAudioSettingsModal = false },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
+                        ) {
+                            Text("Done", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
     }
@@ -286,33 +331,40 @@ fun SettingsTabContent(
     if (uiState.showBindAccountModal) {
         AlertDialog(
             onDismissRequest = { viewModel.closeBindAccount() },
-            title = { Text("Bind Account", color = White, fontWeight = FontWeight.Bold) },
+            title = { Text("Bind Account", color = DeepBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter email to bind your local farm data to Supabase cloud:", color = White.copy(alpha = 0.8f))
+                    Text("Enter email to bind your local farm data to cloud backup:", color = MutedText, fontSize = 13.sp)
                     OutlinedTextField(
                         value = uiState.bindEmailInput,
                         onValueChange = { viewModel.updateBindEmailInput(it) },
-                        label = { Text("Email Address") },
+                        label = { Text("Email Address", color = MutedText) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ForestGreen, focusedTextColor = White, unfocusedTextColor = White)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LushGreen,
+                            unfocusedBorderColor = CardBorderColor,
+                            focusedTextColor = DeepBlack,
+                            unfocusedTextColor = DeepBlack
+                        )
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = { viewModel.submitBindAccount() },
-                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
                 ) {
-                    Text("Create & Bind")
+                    Text("Bind", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeBindAccount() }) {
-                    Text("Cancel", color = White.copy(alpha = 0.7f))
+                    Text("Cancel", color = MutedText)
                 }
             },
-            containerColor = Color(0xFF1E261A)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -320,32 +372,39 @@ fun SettingsTabContent(
     if (uiState.showReportIssueModal) {
         AlertDialog(
             onDismissRequest = { viewModel.closeReportIssue() },
-            title = { Text("Report Issue to Admin", color = White, fontWeight = FontWeight.Bold) },
+            title = { Text("Report Issue to Admin", color = DeepBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 OutlinedTextField(
                     value = uiState.issueTextInput,
                     onValueChange = { viewModel.updateIssueInput(it) },
-                    label = { Text("Describe the issue...") },
+                    label = { Text("Describe the issue...", color = MutedText) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ForestGreen, focusedTextColor = White, unfocusedTextColor = White)
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LushGreen,
+                        unfocusedBorderColor = CardBorderColor,
+                        focusedTextColor = DeepBlack,
+                        unfocusedTextColor = DeepBlack
+                    )
                 )
             },
             confirmButton = {
                 Button(
                     onClick = { viewModel.submitReportIssue() },
-                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
                 ) {
-                    Text("Send to Admin")
+                    Text("Send", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeReportIssue() }) {
-                    Text("Cancel", color = White.copy(alpha = 0.7f))
+                    Text("Cancel", color = MutedText)
                 }
             },
-            containerColor = Color(0xFF1E261A)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -353,8 +412,8 @@ fun SettingsTabContent(
     if (uiState.showLogoutConfirmDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelLogout() },
-            title = { Text("Log Out Confirmation", color = White, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to log out?", color = White.copy(alpha = 0.9f)) },
+            title = { Text("Log Out Confirmation", color = DeepBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = { Text("Are you sure you want to log out?", color = DeepBlack, fontSize = 13.sp) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -364,22 +423,23 @@ fun SettingsTabContent(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
                 ) {
-                    Text("Yes, Log Out")
+                    Text("Yes, Log Out", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { viewModel.cancelLogout() }) {
-                    Text("No, Stay in Audio Adjustment", color = White)
+                OutlinedButton(
+                    onClick = { viewModel.cancelLogout() },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Text("Cancel", color = DeepBlack)
                 }
             },
-            containerColor = Color(0xFF1E261A)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
-}
-
-@Composable
-fun AudioSettingsDialog(onDismissRequest: () -> Unit) {
-    TODO("Not yet implemented")
 }

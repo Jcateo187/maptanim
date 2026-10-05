@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.modals
+package com.maptanim.app.features.profile.modals
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -19,10 +19,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.maptanim.app.ui.theme.Danger
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+
+/**
+ * CreateFarmDialog — Modal dialog to register a new farm workspace in Daylight theme.
+ */
 @Composable
 fun CreateFarmDialog(
     farmName: String,
@@ -39,9 +44,9 @@ fun CreateFarmDialog(
             modifier = Modifier
                 .fillMaxWidth(0.90f)
                 .wrapContentHeight()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-            color = Color(0xFF1B2418)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp)),
+            color = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -62,14 +67,14 @@ fun CreateFarmDialog(
                         Icon(
                             imageVector = Icons.Default.Agriculture,
                             contentDescription = null,
-                            tint = ForestGreen,
+                            tint = LushGreen,
                             modifier = Modifier.size(24.dp)
                         )
                         Text(
                             text = "Create New Farm",
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
-                            color = White
+                            color = DeepBlack
                         )
                     }
                     IconButton(
@@ -79,7 +84,7 @@ fun CreateFarmDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = White.copy(alpha = 0.7f),
+                            tint = DeepBlack,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -88,7 +93,7 @@ fun CreateFarmDialog(
                 Text(
                     text = "Add a new farm workspace to configure and manage your crop plots and tasks.",
                     fontSize = 12.sp,
-                    color = White.copy(alpha = 0.75f),
+                    color = MutedText,
                     lineHeight = 16.sp
                 )
 
@@ -97,32 +102,30 @@ fun CreateFarmDialog(
                     value = farmName,
                     onValueChange = onFarmNameChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Farm Name", color = White.copy(alpha = 0.7f), fontSize = 13.sp) },
-                    placeholder = { Text("e.g. Murcia Vegetable Farm", color = White.copy(alpha = 0.4f), fontSize = 13.sp) },
+                    label = { Text("Farm Name", color = MutedText, fontSize = 13.sp) },
+                    placeholder = { Text("e.g. Backyard Vegetable Garden", color = MutedText.copy(alpha = 0.6f), fontSize = 13.sp) },
                     singleLine = true,
                     isError = errorMessage != null,
                     supportingText = {
                         if (errorMessage != null) {
                             Text(
                                 text = errorMessage,
-                                color = Danger,
+                                color = Color(0xFFC62828),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        focusedBorderColor = ForestGreen,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        errorBorderColor = Danger,
-                        focusedLabelColor = ForestGreen,
-                        cursorColor = ForestGreen,
-                        focusedContainerColor = Color(0xFF141A12),
-                        unfocusedContainerColor = Color(0xFF141A12)
+                        focusedTextColor = DeepBlack,
+                        unfocusedTextColor = DeepBlack,
+                        focusedBorderColor = LushGreen,
+                        unfocusedBorderColor = CardBorderColor,
+                        errorBorderColor = Color(0xFFC62828),
+                        focusedLabelColor = LushGreen,
+                        cursorColor = LushGreen
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 )
 
                 // Actions
@@ -133,9 +136,9 @@ fun CreateFarmDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, White.copy(alpha = 0.3f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = White)
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, CardBorderColor),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DeepBlack)
                     ) {
                         Text("Cancel", fontSize = 13.sp)
                     }
@@ -144,13 +147,10 @@ fun CreateFarmDialog(
 
                     Button(
                         onClick = onConfirm,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ForestGreen,
-                            contentColor = White
-                        )
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
                     ) {
-                        Text("Create Farm", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Create Farm", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                     }
                 }
             }
@@ -158,6 +158,9 @@ fun CreateFarmDialog(
     }
 }
 
+/**
+ * RenameFarmDialog — Modal dialog to rename an existing farm in Daylight theme.
+ */
 @Composable
 fun RenameFarmDialog(
     currentFarmName: String,
@@ -175,9 +178,9 @@ fun RenameFarmDialog(
             modifier = Modifier
                 .fillMaxWidth(0.90f)
                 .wrapContentHeight()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-            color = Color(0xFF1B2418)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp)),
+            color = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -198,14 +201,14 @@ fun RenameFarmDialog(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            tint = ForestGreen,
+                            tint = LushGreen,
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
                             text = "Rename Farm",
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
-                            color = White
+                            color = DeepBlack
                         )
                     }
                     IconButton(
@@ -215,7 +218,7 @@ fun RenameFarmDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = White.copy(alpha = 0.7f),
+                            tint = DeepBlack,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -224,7 +227,7 @@ fun RenameFarmDialog(
                 Text(
                     text = "Enter a new name for '$currentFarmName':",
                     fontSize = 12.sp,
-                    color = White.copy(alpha = 0.75f),
+                    color = MutedText,
                     lineHeight = 16.sp
                 )
 
@@ -233,32 +236,30 @@ fun RenameFarmDialog(
                     value = nameInput,
                     onValueChange = onNameChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Farm Name", color = White.copy(alpha = 0.7f), fontSize = 13.sp) },
-                    placeholder = { Text("Enter farm name", color = White.copy(alpha = 0.4f), fontSize = 13.sp) },
+                    label = { Text("Farm Name", color = MutedText, fontSize = 13.sp) },
+                    placeholder = { Text("Enter farm name", color = MutedText.copy(alpha = 0.6f), fontSize = 13.sp) },
                     singleLine = true,
                     isError = errorMessage != null,
                     supportingText = {
                         if (errorMessage != null) {
                             Text(
                                 text = errorMessage,
-                                color = Danger,
+                                color = Color(0xFFC62828),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        focusedBorderColor = ForestGreen,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        errorBorderColor = Danger,
-                        focusedLabelColor = ForestGreen,
-                        cursorColor = ForestGreen,
-                        focusedContainerColor = Color(0xFF141A12),
-                        unfocusedContainerColor = Color(0xFF141A12)
+                        focusedTextColor = DeepBlack,
+                        unfocusedTextColor = DeepBlack,
+                        focusedBorderColor = LushGreen,
+                        unfocusedBorderColor = CardBorderColor,
+                        errorBorderColor = Color(0xFFC62828),
+                        focusedLabelColor = LushGreen,
+                        cursorColor = LushGreen
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 )
 
                 // Actions
@@ -269,9 +270,9 @@ fun RenameFarmDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, White.copy(alpha = 0.3f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = White)
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, CardBorderColor),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DeepBlack)
                     ) {
                         Text("Cancel", fontSize = 13.sp)
                     }
@@ -280,13 +281,10 @@ fun RenameFarmDialog(
 
                     Button(
                         onClick = onConfirm,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ForestGreen,
-                            contentColor = White
-                        )
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
                     ) {
-                        Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                     }
                 }
             }

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.tabs
+package com.maptanim.app.features.profile.tabs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,12 +23,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.NotificationItem
-import com.maptanim.app.features.profile.ProfileUiState
 import com.maptanim.app.features.profile.ProfileViewModel
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
+import com.maptanim.app.features.profile.model.ProfileUiState
 import kotlinx.coroutines.launch
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
+
+/**
+ * NotificationsTabContent — System bulletins, crop updates, and support messages in Daylight theme.
+ */
 @Composable
 fun NotificationsTabContent(
     uiState: ProfileUiState,
@@ -52,10 +60,10 @@ fun NotificationsTabContent(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Filter Chips for Admin & System Bulletins with horizontal scrolling
+        // Filter Chips with horizontal scrolling
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
@@ -77,10 +85,15 @@ fun NotificationsTabContent(
                     onClick = { selectedFilter = filterKey },
                     label = { Text(label, fontSize = 11.sp) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ForestGreen,
-                        selectedLabelColor = White,
-                        containerColor = Color(0xFF1E261A),
-                        labelColor = White.copy(alpha = 0.7f)
+                        selectedContainerColor = LushGreen,
+                        selectedLabelColor = Color.White,
+                        containerColor = LightSurface,
+                        labelColor = DeepBlack
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = if (isSelected) LushGreen else CardBorderColor
                     )
                 )
             }
@@ -93,15 +106,15 @@ fun NotificationsTabContent(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
-                        tint = White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(48.dp)
+                        tint = LushGreen,
+                        modifier = Modifier.size(44.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("No notifications found", color = White.copy(alpha = 0.5f), fontSize = 14.sp)
+                    Text("No notifications found", color = DeepBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Updates and alerts will appear here.", color = MutedText, fontSize = 12.sp)
                 }
             }
         } else {
@@ -132,12 +145,12 @@ fun NotificationsTabContent(
                 viewModel.dismissNotificationDetail()
             },
             title = {
-                Text(notif.title, fontWeight = FontWeight.Bold, color = White)
+                Text(notif.title, fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 16.sp)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(notif.message, color = White.copy(alpha = 0.85f), fontSize = 14.sp)
-                    Text("Time: ${notif.timestamp}", color = White.copy(alpha = 0.5f), fontSize = 11.sp)
+                    Text(notif.message, color = DeepBlack, fontSize = 13.sp)
+                    Text("Time: ${notif.timestamp}", color = MutedText, fontSize = 11.sp)
 
                     val isSystemUpdate = notif.type.uppercase().contains("SYSTEM") ||
                             notif.type.uppercase().contains("CROP") ||
@@ -147,8 +160,8 @@ fun NotificationsTabContent(
                     if (isSystemUpdate) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF2E7D32).copy(alpha = 0.2f),
-                            border = BorderStroke(1.dp, Color(0xFF43A047)),
+                            color = Color(0xFFE8F5E9),
+                            border = BorderStroke(1.dp, LushGreen),
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -156,12 +169,12 @@ fun NotificationsTabContent(
                                     text = "System Update Available",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
-                                    color = Color(0xFF81C784)
+                                    color = LushGreen
                                 )
                                 Text(
-                                    text = "I-download ang pinakabagong pananim at mga patakaran mula sa DA / Central Database nang walang bagong app update.",
+                                    text = "Download latest crop data and rules from Central Database without a full app update.",
                                     fontSize = 11.sp,
-                                    color = White.copy(alpha = 0.7f)
+                                    color = DeepBlack
                                 )
 
                                 Button(
@@ -170,16 +183,16 @@ fun NotificationsTabContent(
                                             isDownloadingUpdate = true
                                             try {
                                                 com.maptanim.app.data.repository.RepositoryProvider.cropRepository.refreshCrops()
-                                                updateDownloadedMessage = "Matagumpay na na-download ang bagong datos!"
+                                                updateDownloadedMessage = "Data update downloaded successfully!"
                                             } catch (e: Exception) {
-                                                updateDownloadedMessage = "Error sa pag-download: ${e.message}"
+                                                updateDownloadedMessage = "Error downloading data: ${e.message}"
                                             } finally {
                                                 isDownloadingUpdate = false
                                             }
                                         }
                                     },
                                     enabled = !isDownloadingUpdate,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                                 ) {
@@ -187,14 +200,14 @@ fun NotificationsTabContent(
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(16.dp),
                                             strokeWidth = 2.dp,
-                                            color = White
+                                            color = Color.White
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Dina-download ang datos...", fontSize = 12.sp, color = White)
+                                        Text("Downloading...", fontSize = 12.sp, color = Color.White)
                                     } else {
-                                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp), tint = White)
+                                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("I-download ang Bagong Datos (Sync)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = White)
+                                        Text("Sync / Download Data", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 }
 
@@ -202,7 +215,7 @@ fun NotificationsTabContent(
                                     Text(
                                         text = updateDownloadedMessage!!,
                                         fontSize = 11.sp,
-                                        color = Color(0xFF81C784),
+                                        color = LushGreen,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
@@ -217,17 +230,19 @@ fun NotificationsTabContent(
                         updateDownloadedMessage = null
                         viewModel.dismissNotificationDetail()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("OK", color = White)
+                    Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.deleteNotification(notif.id) }) {
-                    Text("Delete", color = Color(0xFFEF5350))
+                    Text("Delete", color = Color(0xFFC62828))
                 }
             },
-            containerColor = Color(0xFF1E261A)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
@@ -239,9 +254,9 @@ private fun NotificationCardItem(
     onDelete: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = if (notif.isRead) Color(0xFF1E261A) else Color(0xFF263321),
-        border = if (!notif.isRead) BorderStroke(1.dp, ForestGreen) else null,
+        shape = RoundedCornerShape(12.dp),
+        color = if (notif.isRead) Color.White else Color(0xFFF4F9F4),
+        border = BorderStroke(1.dp, if (!notif.isRead) LushGreen else CardBorderColor),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
@@ -263,17 +278,17 @@ private fun NotificationCardItem(
                             when {
                                 notif.type.uppercase().contains("AGRONOMIC") || notif.type.uppercase().contains("GUIDE") -> Color(0xFF00897B)
                                 notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Color(0xFF8E24AA)
-                                notif.type.uppercase().contains("CROP") -> Color(0xFF4CAF50)
-                                notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Color(0xFFFFA000)
-                                notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Color(0xFF1E88E5)
-                                else -> ForestGreen
+                                notif.type.uppercase().contains("CROP") -> LushGreen
+                                notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Color(0xFFE65100)
+                                notif.type.uppercase().contains("SYSTEM") || notif.type.uppercase().contains("ADMIN") -> Color(0xFF1565C0)
+                                else -> LushGreen
                             }
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = when {
-                            notif.type.uppercase().contains("AGRONOMIC") || notif.type.uppercase().contains("GUIDE") -> Icons.Default.MenuBook
+                            notif.type.uppercase().contains("AGRONOMIC") || notif.type.uppercase().contains("GUIDE") -> Icons.AutoMirrored.Filled.MenuBook
                             notif.type.uppercase().contains("SUPPORT") || notif.type.uppercase().contains("REPLY") -> Icons.Default.SupportAgent
                             notif.type.uppercase().contains("CROP") -> Icons.Default.Eco
                             notif.type.uppercase().contains("BUG") || notif.type.uppercase().contains("FIX") -> Icons.Default.Build
@@ -281,24 +296,24 @@ private fun NotificationCardItem(
                             else -> Icons.Default.Notifications
                         },
                         contentDescription = null,
-                        tint = White,
-                        modifier = Modifier.size(20.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column {
-                    Text(notif.title, fontWeight = FontWeight.Bold, color = White, fontSize = 14.sp)
+                    Text(notif.title, fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(notif.message, color = White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 2)
+                    Text(notif.message, color = MutedText, fontSize = 11.sp, maxLines = 2)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(notif.timestamp, color = White.copy(alpha = 0.4f), fontSize = 10.sp)
+                    Text(notif.timestamp, color = MutedText.copy(alpha = 0.7f), fontSize = 10.sp)
                 }
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFC62828), modifier = Modifier.size(16.dp))
             }
         }
     }

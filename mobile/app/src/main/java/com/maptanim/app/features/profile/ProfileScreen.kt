@@ -1,6 +1,5 @@
-﻿package com.maptanim.app.features.profile
+package com.maptanim.app.features.profile
 
-import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,17 +17,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.maptanim.app.features.profile.components.ChangeAvatarModal
+import com.maptanim.app.features.profile.components.AvatarPickerModal
 import com.maptanim.app.features.profile.components.ConfirmChoiceDialog
 import com.maptanim.app.features.profile.components.ViewAvatarDialog
 import com.maptanim.app.features.profile.modals.CreateFarmDialog
@@ -36,9 +32,17 @@ import com.maptanim.app.features.profile.modals.RenameFarmDialog
 import com.maptanim.app.features.profile.tabs.NotificationsTabContent
 import com.maptanim.app.features.profile.tabs.ProfileTabContent
 import com.maptanim.app.features.profile.tabs.SettingsTabContent
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
 
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
+
+/**
+ * ProfileScreen — User account settings, farms list, harvest records, and notifications.
+ * Strictly adheres to the Daylight High-Contrast Theme (Pure White background, Lush Green accents, Deep Black typography).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -55,7 +59,7 @@ fun ProfileScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF10160F)
+        color = Color.White
     ) {
         Column(
             modifier = Modifier
@@ -64,7 +68,8 @@ fun ProfileScreen(
         ) {
             // Header Bar (Back button + Profile / Settings Tabs)
             Surface(
-                color = Color(0xFF1C271E),
+                color = Color.White,
+                border = BorderStroke(1.dp, CardBorderColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -78,21 +83,21 @@ fun ProfileScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = White
+                            tint = DeepBlack
                         )
                     }
 
                     PrimaryTabRow(
                         selectedTabIndex = uiState.selectedTab.coerceIn(0, 1),
                         containerColor = Color.Transparent,
-                        contentColor = ForestGreen,
+                        contentColor = LushGreen,
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         indicator = {
                             TabRowDefaults.PrimaryIndicator(
                                 modifier = Modifier.tabIndicatorOffset(selectedTabIndex = uiState.selectedTab.coerceIn(0, 1)),
-                                color = ForestGreen,
+                                color = LushGreen,
                                 height = 3.dp
                             )
                         },
@@ -103,69 +108,109 @@ fun ProfileScreen(
                             onClick = { viewModel.selectTab(0) },
                             text = {
                                 Text(
-                                    "Profile",
-                                    color = if (uiState.selectedTab == 0) White else White.copy(alpha = 0.6f),
+                                    text = "Profile",
+                                    color = if (uiState.selectedTab == 0) DeepBlack else MutedText,
                                     fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 13.sp
                                 )
                             },
                             icon = {
                                 Icon(
-                                    Icons.Default.Person,
+                                    imageVector = Icons.Default.Person,
                                     contentDescription = null,
-                                    tint = if (uiState.selectedTab == 0) ForestGreen else White.copy(alpha = 0.6f),
+                                    tint = if (uiState.selectedTab == 0) LushGreen else MutedText,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                         )
+
                         Tab(
                             selected = uiState.selectedTab == 1,
                             onClick = { viewModel.selectTab(1) },
                             text = {
                                 Text(
-                                    "Settings",
-                                    color = if (uiState.selectedTab == 1) White else White.copy(alpha = 0.6f),
+                                    text = "Settings",
+                                    color = if (uiState.selectedTab == 1) DeepBlack else MutedText,
                                     fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 13.sp
                                 )
                             },
                             icon = {
                                 Icon(
-                                    Icons.Default.Settings,
+                                    imageVector = Icons.Default.Settings,
                                     contentDescription = null,
-                                    tint = if (uiState.selectedTab == 1) ForestGreen else White.copy(alpha = 0.6f),
+                                    tint = if (uiState.selectedTab == 1) LushGreen else MutedText,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                         )
                     }
+
+                    // Bell icon badge for notifications
+                    val unreadCount = uiState.notifications.count { !it.isRead }
+                    IconButton(
+                        onClick = { viewModel.selectTab(2) }
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    Badge(
+                                        containerColor = LushGreen,
+                                        contentColor = Color.White
+                                    ) {
+                                        Text("$unreadCount", fontSize = 9.sp)
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = if (uiState.selectedTab == 2) LushGreen else DeepBlack
+                            )
+                        }
+                    }
                 }
             }
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-
+            // Main Content Area
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 10.dp)
+                    .background(Color.White)
             ) {
-                // Toast / Snack notification message
+                // Success Toast Banner
                 uiState.successMessage?.let { msg ->
                     Surface(
-                        color = ForestGreen,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFE8F5E9),
+                        border = BorderStroke(1.dp, LushGreen),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(msg, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            IconButton(onClick = { viewModel.dismissSuccessMessage() }, modifier = Modifier.size(18.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = null, tint = White)
+                            Text(
+                                text = msg,
+                                color = LushGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = { viewModel.dismissSuccessMessage() },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = LushGreen,
+                                    modifier = Modifier.size(14.dp)
+                                )
                             }
                         }
                     }
@@ -179,7 +224,8 @@ fun ProfileScreen(
                 ) {
                     when (uiState.selectedTab) {
                         0 -> ProfileTabContent(uiState = uiState, viewModel = viewModel)
-                        else -> SettingsTabContent(uiState = uiState, viewModel = viewModel, navController = navController)
+                        1 -> SettingsTabContent(uiState = uiState, viewModel = viewModel, navController = navController)
+                        else -> NotificationsTabContent(uiState = uiState, viewModel = viewModel)
                     }
                 }
             }
@@ -196,7 +242,7 @@ fun ProfileScreen(
     }
 
     if (uiState.showAvatarPickerModal) {
-        ChangeAvatarModal(
+        AvatarPickerModal(
             availableAvatars = uiState.availableAvatars,
             currentSource = uiState.avatarSourceOption,
             onSelectSource = { viewModel.selectAvatarOption(it) },
@@ -211,15 +257,6 @@ fun ProfileScreen(
             message = "Are you sure you want to choose this avatar?",
             onConfirm = { viewModel.confirmAvatarChange() },
             onDismiss = { viewModel.cancelAvatarConfirm() }
-        )
-    }
-
-    if (uiState.showNicknameConfirmDialog) {
-        ConfirmChoiceDialog(
-            title = "Confirm Nickname Change",
-            message = "Are you sure you want to choose nickname '${uiState.nicknameInput.trim()}'?",
-            onConfirm = { viewModel.confirmNicknameChange() },
-            onDismiss = { viewModel.cancelNicknameConfirm() }
         )
     }
 
@@ -256,18 +293,18 @@ fun ProfileScreen(
 
     // ── Farm Operation Loading Modal ───────────────────────────────────────────
     if (uiState.isOperationInProgress) {
-        androidx.compose.ui.window.Dialog(
+        Dialog(
             onDismissRequest = {},
-            properties = androidx.compose.ui.window.DialogProperties(
+            properties = DialogProperties(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false
             )
         ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF1B2418),
-                border = BorderStroke(1.5.dp, ForestGreen.copy(alpha = 0.6f)),
-                shadowElevation = 12.dp
+                color = Color.White,
+                border = BorderStroke(1.dp, CardBorderColor),
+                shadowElevation = 8.dp
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
@@ -275,13 +312,13 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     CircularProgressIndicator(
-                        color = ForestGreen,
+                        color = LushGreen,
                         strokeWidth = 3.dp,
                         modifier = Modifier.size(28.dp)
                     )
                     Text(
                         text = uiState.operationProgressMessage ?: "Please wait...",
-                        color = White,
+                        color = DeepBlack,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )

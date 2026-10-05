@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.components
+package com.maptanim.app.features.profile.components
 
 import android.Manifest
 import android.content.Context
@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,89 +33,42 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.maptanim.app.domain.model.AvatarItem
 import com.maptanim.app.features.farm.renderer.loader.AssetLoader
-import com.maptanim.app.features.shared.avatar.ProfileAvatar
-import com.maptanim.app.features.profile.AvatarSourceOption
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
+import com.maptanim.app.features.profile.model.AvatarSourceOption
 import java.io.File
 import java.io.FileOutputStream
 
-@Composable
-fun ViewAvatarDialog(
-    avatarAssetPath: String,
-    onDismiss: () -> Unit,
-    onChangeAvatarClick: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1E261A),
-            tonalElevation = 8.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Profile Avatar",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = White
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = White)
-                    }
-                }
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
 
-                ProfileAvatar(
-                    avatarAssetPath = avatarAssetPath,
-                    size = 140.dp,
-                    borderWidth = 4.dp
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = White)
-                    ) {
-                        Text("Close")
-                    }
-                    Button(
-                        onClick = onChangeAvatarClick,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
-                    ) {
-                        Text("Change Avatar")
-                    }
-                }
-            }
-        }
-    }
-}
-
+/**
+ * AvatarPickerModal — Modal to pick from preset avatars, capture with camera, or pick from gallery.
+ * Converted strictly to the Daylight High-Contrast Theme (Pure White, Lush Green, Deep Black).
+ */
 @Composable
 fun ChangeAvatarModal(
+    availableAvatars: List<AvatarItem>,
+    currentSource: AvatarSourceOption,
+    onSelectSource: (AvatarSourceOption) -> Unit,
+    onSelectAvatar: (String) -> Unit,
+    onDismiss: () -> Unit
+) = AvatarPickerModal(availableAvatars, currentSource, onSelectSource, onSelectAvatar, onDismiss)
+
+@Composable
+fun AvatarPickerModal(
     availableAvatars: List<AvatarItem>,
     currentSource: AvatarSourceOption,
     onSelectSource: (AvatarSourceOption) -> Unit,
@@ -198,15 +152,16 @@ fun ChangeAvatarModal(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1E261A),
-            tonalElevation = 8.dp
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
+            tonalElevation = 6.dp
         ) {
             Column(
                 modifier = Modifier
                     .padding(20.dp)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -216,11 +171,19 @@ fun ChangeAvatarModal(
                     Text(
                         text = "Choose Avatar",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = White
+                        fontSize = 16.sp,
+                        color = DeepBlack
                     )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = White)
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = DeepBlack,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
 
@@ -252,20 +215,21 @@ fun ChangeAvatarModal(
                     )
                 }
 
-                Divider(color = White.copy(alpha = 0.15f))
+                HorizontalDivider(color = CardBorderColor)
 
                 when (currentSource) {
                     AvatarSourceOption.AVATAR_STORAGE -> {
                         Text(
-                            text = "Select from Avatar Storage:",
-                            fontSize = 14.sp,
-                            color = White.copy(alpha = 0.8f)
+                            text = "Select from Preset Avatars:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DeepBlack
                         )
 
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(3),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(220.dp)
@@ -278,16 +242,17 @@ fun ChangeAvatarModal(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF2A3424))
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(LightSurface)
+                                        .border(1.dp, CardBorderColor, RoundedCornerShape(10.dp))
                                         .clickable { onSelectAvatar(avatarItem.assetPath) }
                                         .padding(8.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(56.dp)
+                                            .size(54.dp)
                                             .clip(CircleShape)
-                                            .border(2.dp, ForestGreen, CircleShape),
+                                            .border(2.dp, LushGreen, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (bitmap != null) {
@@ -303,7 +268,7 @@ fun ChangeAvatarModal(
                                     Text(
                                         text = avatarItem.displayName,
                                         fontSize = 11.sp,
-                                        color = White,
+                                        color = DeepBlack,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -314,38 +279,38 @@ fun ChangeAvatarModal(
                     AvatarSourceOption.TAKE_PHOTO -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp)
+                                .padding(vertical = 12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(72.dp)
+                                    .size(64.dp)
                                     .clip(CircleShape)
-                                    .background(ForestGreen.copy(alpha = 0.2f)),
+                                    .background(LushGreen.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.CameraAlt,
                                     contentDescription = null,
-                                    tint = ForestGreen,
-                                    modifier = Modifier.size(36.dp)
+                                    tint = LushGreen,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     "Take a Photo with Camera",
-                                    color = White,
-                                    fontSize = 15.sp,
+                                    color = DeepBlack,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "Take a live photo using your phone camera to set as your profile avatar.",
-                                    color = White.copy(alpha = 0.6f),
-                                    fontSize = 12.sp,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    "Capture a live photo using your phone camera to set as your profile avatar.",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                             Button(
@@ -360,13 +325,13 @@ fun ChangeAvatarModal(
                                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                                colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().height(42.dp)
                             ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Open Camera & Capture", fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Open Camera & Capture", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -374,38 +339,38 @@ fun ChangeAvatarModal(
                     AvatarSourceOption.PHOTO_ALBUM -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp)
+                                .padding(vertical = 12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(72.dp)
+                                    .size(64.dp)
                                     .clip(CircleShape)
-                                    .background(ForestGreen.copy(alpha = 0.2f)),
+                                    .background(LushGreen.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.PhotoAlbum,
                                     contentDescription = null,
-                                    tint = ForestGreen,
-                                    modifier = Modifier.size(36.dp)
+                                    tint = LushGreen,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     "Select Photo from Album",
-                                    color = White,
-                                    fontSize = 15.sp,
+                                    color = DeepBlack,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     "Choose a photo from your gallery or album to set as your profile picture.",
-                                    color = White.copy(alpha = 0.6f),
-                                    fontSize = 12.sp,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                             Button(
@@ -427,13 +392,13 @@ fun ChangeAvatarModal(
                                         storagePermissionLauncher.launch(storagePermission)
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                                colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().height(42.dp)
                             ) {
-                                Icon(Icons.Default.PhotoAlbum, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Select from Album", fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.PhotoAlbum, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Select from Album", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -479,7 +444,7 @@ private fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap): Strin
 
 @Composable
 private fun SourceTabButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -487,8 +452,9 @@ private fun SourceTabButton(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        color = if (isSelected) ForestGreen else Color(0xFF2A3424),
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) LushGreen else LightSurface,
+        border = BorderStroke(1.dp, if (isSelected) LushGreen else CardBorderColor),
         modifier = modifier
     ) {
         Row(
@@ -499,44 +465,17 @@ private fun SourceTabButton(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = White,
-                modifier = Modifier.size(16.dp)
+                tint = if (isSelected) Color.White else DeepBlack,
+                modifier = Modifier.size(15.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = label,
                 fontSize = 11.sp,
-                color = White,
+                color = if (isSelected) Color.White else DeepBlack,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
         }
     }
 }
 
-@Composable
-fun ConfirmChoiceDialog(
-    title: String = "Confirmation",
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = title, fontWeight = FontWeight.Bold, color = White) },
-        text = { Text(text = message, color = White.copy(alpha = 0.9f)) },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen)
-            ) {
-                Text("Yes")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("No", color = White)
-            }
-        },
-        containerColor = Color(0xFF1E261A)
-    )
-}

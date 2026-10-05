@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.modals
+package com.maptanim.app.features.profile.modals
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -10,9 +10,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Comment
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,8 +36,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.features.profile.utils.formatActivityTime
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
+
+private val LushGreen = Color(0xFF2E7D32)
+private val DeepBlack = Color(0xFF111813)
+private val CardBorderColor = Color(0xFFE0E0E0)
+private val MutedText = Color(0xFF555555)
+private val LightSurface = Color(0xFFF9FAF8)
 
 enum class CommunityActivityFilter {
     ALL,
@@ -38,6 +49,9 @@ enum class CommunityActivityFilter {
     REACTED
 }
 
+/**
+ * FullCommunityActivityModal — Complete paginated forum activity history in Daylight theme.
+ */
 @Composable
 fun FullCommunityActivityModal(
     posts: List<CommunityPost>,
@@ -89,9 +103,9 @@ fun FullCommunityActivityModal(
         }
     }
 
-    val totalPages = (filteredPosts.size + itemsPerPage - 1) / itemsPerPage
+    val totalPages = (filteredPosts.size + itemsPerPage - 1).coerceAtLeast(1) / itemsPerPage
     val pageItems = remember(filteredPosts, currentPage) {
-        val safePage = currentPage.coerceIn(1, (totalPages).coerceAtLeast(1))
+        val safePage = currentPage.coerceIn(1, totalPages.coerceAtLeast(1))
         val startIndex = (safePage - 1) * itemsPerPage
         filteredPosts.drop(startIndex).take(itemsPerPage)
     }
@@ -104,9 +118,9 @@ fun FullCommunityActivityModal(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.88f)
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, ForestGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-            color = Color(0xFA121811)
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp)),
+            color = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -114,177 +128,190 @@ fun FullCommunityActivityModal(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Forum, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(22.dp))
+                        Icon(
+                            imageVector = Icons.Default.Forum,
+                            contentDescription = null,
+                            tint = LushGreen,
+                            modifier = Modifier.size(22.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedDateFilter != null) "💬 Forum Activity on $selectedDateFilter (${filteredPosts.size})" else "💬 Community Forum Activity (${filteredPosts.size})",
+                            text = if (selectedDateFilter != null) "Forum Activity on $selectedDateFilter (${filteredPosts.size})" else "Community Forum Activity (${filteredPosts.size})",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = White
+                            color = DeepBlack
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = White)
+                        Icon(Icons.Default.Close, contentDescription = "Close Modal", tint = DeepBlack)
                     }
                 }
 
-                // Filter Pills: All Activity vs My Posts vs Reacted
+                // Filter Chips (All, My Posts, Reacted)
                 Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1B2418))
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Surface(
-                        onClick = { activityFilter = CommunityActivityFilter.ALL; currentPage = 1 },
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (activityFilter == CommunityActivityFilter.ALL) ForestGreen else Color.Transparent
-                    ) {
-                        Text(
-                            text = "All (${posts.size})",
-                            fontSize = 11.sp,
-                            fontWeight = if (activityFilter == CommunityActivityFilter.ALL) FontWeight.Bold else FontWeight.Normal,
-                            color = if (activityFilter == CommunityActivityFilter.ALL) White else White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                    Surface(
-                        onClick = { activityFilter = CommunityActivityFilter.MY_POSTS; currentPage = 1 },
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (activityFilter == CommunityActivityFilter.MY_POSTS) ForestGreen else Color.Transparent
-                    ) {
-                        Text(
-                            text = "✍️ My Posts ($myPostsCount)",
-                            fontSize = 11.sp,
-                            fontWeight = if (activityFilter == CommunityActivityFilter.MY_POSTS) FontWeight.Bold else FontWeight.Normal,
-                            color = if (activityFilter == CommunityActivityFilter.MY_POSTS) White else White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                    Surface(
-                        onClick = { activityFilter = CommunityActivityFilter.REACTED; currentPage = 1 },
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (activityFilter == CommunityActivityFilter.REACTED) ForestGreen else Color.Transparent
-                    ) {
-                        Text(
-                            text = "❤️ Reacted ($reactedCount)",
-                            fontSize = 11.sp,
-                            fontWeight = if (activityFilter == CommunityActivityFilter.REACTED) FontWeight.Bold else FontWeight.Normal,
-                            color = if (activityFilter == CommunityActivityFilter.REACTED) White else White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
+                    FilterChipButton(
+                        label = "All (${posts.size})",
+                        isSelected = activityFilter == CommunityActivityFilter.ALL,
+                        onClick = {
+                            activityFilter = CommunityActivityFilter.ALL
+                            currentPage = 1
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChipButton(
+                        label = "My Posts ($myPostsCount)",
+                        isSelected = activityFilter == CommunityActivityFilter.MY_POSTS,
+                        onClick = {
+                            activityFilter = CommunityActivityFilter.MY_POSTS
+                            currentPage = 1
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChipButton(
+                        label = "Reacted ($reactedCount)",
+                        isSelected = activityFilter == CommunityActivityFilter.REACTED,
+                        onClick = {
+                            activityFilter = CommunityActivityFilter.REACTED
+                            currentPage = 1
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
-                // Search Bar with Date Selection Icon Button
+                // Search Bar with Date Filter Button
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF2A3424),
-                    border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth()
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor),
+                    modifier = Modifier.fillMaxWidth().height(38.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it; currentPage = 1 },
-                            singleLine = true,
-                            textStyle = TextStyle(color = White, fontSize = 12.sp),
-                            cursorBrush = SolidColor(ForestGreen),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text("Search forum activity by title, content, category...", color = White.copy(alpha = 0.45f), fontSize = 12.sp)
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = LushGreen,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isBlank()) {
+                                Text("Search topic, category, author...", color = MutedText, fontSize = 12.sp)
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = {
+                                    searchQuery = it
+                                    currentPage = 1
+                                },
+                                singleLine = true,
+                                textStyle = TextStyle(color = DeepBlack, fontSize = 12.sp),
+                                cursorBrush = SolidColor(LushGreen),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MutedText, modifier = Modifier.size(14.dp))
+                            }
+                        }
+
                         IconButton(
                             onClick = { showDatePickerModal = true },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = "Select Activity Date",
-                                tint = if (selectedDateFilter != null) ForestGreen else White.copy(alpha = 0.7f)
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Filter by Date",
+                                tint = if (selectedDateFilter != null) LushGreen else MutedText,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
 
-                // Date Filter Badge if Active
+                // Active Date Filter Badge
                 if (selectedDateFilter != null) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = ForestGreen.copy(alpha = 0.25f),
-                            border = BorderStroke(1.dp, ForestGreen)
+                            color = Color(0xFFE8F5E9),
+                            border = BorderStroke(1.dp, LushGreen)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .clickable { selectedDateFilter = null }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LushGreen, modifier = Modifier.size(12.dp))
                                 Text(
-                                    text = "📅 Activity Date: $selectedDateFilter ✖",
+                                    text = "Date: $selectedDateFilter",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = White
+                                    color = LushGreen
                                 )
                             }
                         }
-                        Text(
-                            text = "Showing forum activity on $selectedDateFilter",
-                            fontSize = 10.sp,
-                            color = White.copy(alpha = 0.6f)
-                        )
+
+                        TextButton(
+                            onClick = {
+                                selectedDateFilter = null
+                                currentPage = 1
+                            }
+                        ) {
+                            Text("Clear Date Filter", fontSize = 11.sp, color = LushGreen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (pageItems.isEmpty()) {
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = if (selectedDateFilter != null) "No forum activity found on $selectedDateFilter." else "No forum activity matches your current filter.",
-                                    color = White.copy(alpha = 0.6f),
-                                    fontSize = 13.sp
-                                )
-                            }
+                // List Items
+                if (filteredPosts.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Forum, contentDescription = null, tint = LushGreen, modifier = Modifier.size(36.dp))
+                            Text("No forum discussions found", color = DeepBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Try adjusting your filter or search query.", color = MutedText, fontSize = 12.sp)
                         }
-                    } else {
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(pageItems) { post ->
                             val isAuthored = isPostAuthoredByMe(post)
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF1B2317),
-                                border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.3f)),
+                                shape = RoundedCornerShape(10.dp),
+                                color = LightSurface,
+                                border = BorderStroke(1.dp, CardBorderColor),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -295,7 +322,7 @@ fun FullCommunityActivityModal(
                                             text = post.title,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,
-                                            color = White,
+                                            color = DeepBlack,
                                             modifier = Modifier.weight(1f, fill = false),
                                             maxLines = 1
                                         )
@@ -304,42 +331,46 @@ fun FullCommunityActivityModal(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            if (isAuthored) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    color = ForestGreen.copy(alpha = 0.22f)
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (isAuthored) Color(0xFFE8F5E9) else Color(0xFFFBE9E7),
+                                                border = BorderStroke(1.dp, if (isAuthored) LushGreen else Color(0xFFD32F2F))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                                                 ) {
-                                                    Text(
-                                                        text = "✍️ Your Post",
-                                                        fontSize = 9.sp,
-                                                        color = ForestGreen,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    Icon(
+                                                        imageVector = if (isAuthored) Icons.Default.Edit else Icons.Default.Favorite,
+                                                        contentDescription = null,
+                                                        tint = if (isAuthored) LushGreen else Color(0xFFD32F2F),
+                                                        modifier = Modifier.size(10.dp)
                                                     )
-                                                }
-                                            } else {
-                                                Surface(
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    color = Color(0xFFFF5252).copy(alpha = 0.18f)
-                                                ) {
                                                     Text(
-                                                        text = "❤️ Reacted",
+                                                        text = if (isAuthored) "Your Post" else "Reacted",
                                                         fontSize = 9.sp,
-                                                        color = Color(0xFFFF7272),
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                        color = if (isAuthored) LushGreen else Color(0xFFD32F2F),
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                 }
                                             }
                                             Text(
                                                 text = post.category,
                                                 fontSize = 10.sp,
-                                                color = ForestGreen.copy(alpha = 0.85f),
+                                                color = LushGreen,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                         }
                                     }
-                                    Text(post.content, fontSize = 11.sp, color = White.copy(alpha = 0.8f))
+
+                                    Text(
+                                        text = post.content,
+                                        fontSize = 11.sp,
+                                        color = DeepBlack,
+                                        maxLines = 2
+                                    )
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -349,13 +380,28 @@ fun FullCommunityActivityModal(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                            Text("❤️ ${post.likesCount}", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
-                                            Text("💬 ${post.commentsCount} comments", fontSize = 10.sp, color = White.copy(alpha = 0.6f))
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(11.dp))
+                                                Text("${post.likesCount}", fontSize = 10.sp, color = MutedText)
+                                            }
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = null, tint = LushGreen, modifier = Modifier.size(11.dp))
+                                                Text("${post.commentsCount}", fontSize = 10.sp, color = MutedText)
+                                            }
                                             if (!isAuthored && post.authorName.isNotBlank()) {
-                                                Text("• by ${post.authorName}", fontSize = 10.sp, color = White.copy(alpha = 0.5f))
+                                                Text("by ${post.authorName}", fontSize = 10.sp, color = MutedText)
                                             }
                                         }
-                                        Text("🕒 ${formatActivityTime(post.timestamp)}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = ForestGreen)
+
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Icon(Icons.Default.Schedule, contentDescription = null, tint = MutedText, modifier = Modifier.size(10.dp))
+                                            Text(
+                                                text = formatActivityTime(post.timestamp),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MutedText
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -363,6 +409,7 @@ fun FullCommunityActivityModal(
                     }
                 }
 
+                // Pagination Controls
                 if (totalPages > 1) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -372,17 +419,28 @@ fun FullCommunityActivityModal(
                         OutlinedButton(
                             onClick = { if (currentPage > 1) currentPage-- },
                             enabled = currentPage > 1,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("◄ Previous", fontSize = 11.sp, color = White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Previous", fontSize = 11.sp, color = DeepBlack)
                         }
-                        Text("Page $currentPage of $totalPages", fontSize = 12.sp, color = White, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Page $currentPage of $totalPages",
+                            fontSize = 12.sp,
+                            color = DeepBlack,
+                            fontWeight = FontWeight.Bold
+                        )
                         OutlinedButton(
                             onClick = { if (currentPage < totalPages) currentPage++ },
                             enabled = currentPage < totalPages,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            Text("Next ►", fontSize = 11.sp, color = White)
+                            Text("Next", fontSize = 11.sp, color = DeepBlack)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepBlack)
                         }
                     }
                 }
@@ -391,10 +449,33 @@ fun FullCommunityActivityModal(
     }
 
     if (showDatePickerModal) {
+        val availableDates = remember(posts) {
+            posts.map { it.timestamp.take(10) }.distinct().sortedDescending()
+        }
         DatePickerSelectionDialog(
+            availableDates = availableDates,
             selectedDate = selectedDateFilter,
-            onDateSelected = { selectedDateFilter = it; currentPage = 1 },
+            onSelectDate = {
+                selectedDateFilter = it
+                currentPage = 1
+                showDatePickerModal = false
+            },
             onDismiss = { showDatePickerModal = false }
         )
+    }
+}
+
+@Composable
+private fun FilterChipButton(label: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) LushGreen else LightSurface,
+        border = BorderStroke(1.dp, if (isSelected) LushGreen else CardBorderColor),
+        modifier = modifier
+    ) {
+        Box(modifier = Modifier.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) Color.White else DeepBlack)
+        }
     }
 }
