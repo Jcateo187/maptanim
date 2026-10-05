@@ -2,21 +2,23 @@ package com.maptanim.app.features.library.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.maptanim.app.domain.model.Crop
 import com.maptanim.app.features.library.components.CropCatalogGrid
 import com.maptanim.app.features.library.components.CropDetailView
-import com.maptanim.app.features.library.components.VegetableGuideProvider
 import com.maptanim.app.features.library.model.LibraryCategory
-import com.maptanim.app.features.library.viewmodel.VegetablesViewModel
+import com.maptanim.app.features.library.viewmodel.LibraryViewModel
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.navigation.Routes
+
+private val LushGreen = Color(0xFF2E7D32)
 
 /**
  * LibraryScreen — Main crop knowledge catalog & agronomic reference screen.
@@ -30,12 +32,13 @@ import com.maptanim.app.navigation.Routes
 fun LibraryScreen(
     navController: NavController,
     initialCropName: String? = null,
-    viewModel: VegetablesViewModel = viewModel()
+    viewModel: LibraryViewModel = viewModel()
 ) {
     val allCrops by viewModel.crops.collectAsState()
-    val context = LocalContext.current
+    val selectedCrop by viewModel.selectedCrop.collectAsState()
+    val selectedCropGuide by viewModel.selectedCropGuide.collectAsState()
+    val isLoadingGuide by viewModel.isLoadingGuide.collectAsState()
 
-    var selectedCrop by remember { mutableStateOf<Crop?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(LibraryCategory.ALL) }
 
@@ -47,7 +50,7 @@ fun LibraryScreen(
                 it.localName?.equals(initialCropName, ignoreCase = true) == true
             }
             if (matching != null) {
-                selectedCrop = matching
+                viewModel.selectCrop(matching)
             }
         }
     }
@@ -103,16 +106,24 @@ fun LibraryScreen(
                     onSearchQueryChange = { searchQuery = it },
                     selectedCategory = selectedCategory,
                     onSelectCategory = { selectedCategory = it },
-                    onSelectCrop = { selectedCrop = it }
+                    onSelectCrop = { viewModel.selectCrop(it) }
                 )
-            } else {
-                // ── 2. Deep Agronomic Detail View ────────────────────────────
-                val guide = remember(selectedCrop) {
-                    VegetableGuideProvider.getGuideForCrop(selectedCrop!!, context)
+            } else if (isLoadingGuide) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = LushGreen,
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 3.dp
+                    )
                 }
+            } else if (selectedCropGuide != null) {
+                // ── 2. Deep Agronomic Detail View ────────────────────────────
                 CropDetailView(
-                    guide = guide,
-                    onBack = { selectedCrop = null }
+                    guide = selectedCropGuide!!,
+                    onBack = { viewModel.selectCrop(null) }
                 )
             }
         }

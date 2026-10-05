@@ -1,11 +1,15 @@
-﻿package com.maptanim.app.features.farm.components
+package com.maptanim.app.features.farm.components
 
 import com.maptanim.app.data.datasource.StageDaysInfo
 import com.maptanim.app.domain.model.*
 import com.maptanim.app.dss.engine.CompanionAlert
 import com.maptanim.app.dss.engine.DssEngine
 import com.maptanim.app.dss.knowledgebase.CompanionEntry
-import com.maptanim.app.dss.knowledgebase.GrowingTip
+data class GrowingTip(
+    val icon: String = "",
+    val title: String = "",
+    val description: String = ""
+)
 
 enum class SeasonalityFilter(val label: String) {
     ALL("All"),

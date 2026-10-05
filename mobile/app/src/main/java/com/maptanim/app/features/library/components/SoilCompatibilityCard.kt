@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maptanim.app.features.library.model.SoilInfo
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)

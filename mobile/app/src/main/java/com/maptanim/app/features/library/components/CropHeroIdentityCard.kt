@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.maptanim.app.data.datasource.CropMetadataAssetDataSource
 import com.maptanim.app.domain.model.Crop
+import com.maptanim.app.features.library.model.*
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
