@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.maptanim.app.features.home.screen.MainBottomNavBar
+import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.features.farm.tabs.CheckUpTab
 import com.maptanim.app.features.farm.tabs.GuideTab
 import com.maptanim.app.features.farm.tabs.HarvestTab
@@ -117,7 +118,7 @@ fun FarmHubScreen(
                 Tab(
                     selected = uiState.selectedTopTab == TopTab.GUIDE,
                     onClick = { viewModel.selectTopTab(TopTab.GUIDE) },
-                    icon = { Icon(Icons.Default.MenuBook, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
                     text = {
                         Text(
                             text = "Guide",

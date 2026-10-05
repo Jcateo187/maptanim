@@ -1692,14 +1692,7 @@ private fun FarmInsightCard(
     }
 }
 
-// ─── 7. HomeScreen Alias (Full Compatibility) ────────────────────────────────
-@Composable
-fun HomeScreen(
-    navController: NavController,
-    homeViewModel: HomeViewModel = viewModel()
-) {
-    MainHomeScreen(navController = navController, homeViewModel = homeViewModel)
-}
+// ─── 7. Legacy Alias Removed (Delegated to modular HomeScreen.kt) ───────────
 
 // ─── 8. Bottom Navigation Bar (Home, Farm, Community, Vegetables, Profile) ───
 @Composable
