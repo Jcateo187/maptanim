@@ -32,7 +32,7 @@ enum class CropCategoryFilter(val label: String) {
 
 data class MonitoredPlant(
     val id: String,
-    val farmId: String = "farm-1",
+    val farmId: String = "",
     val cropId: String? = null,
     val cropName: String,
     val localName: String,

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.dialogs
+package com.maptanim.app.features.farm.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -73,8 +73,8 @@ import java.util.UUID
 @Composable
 fun HarvestDialog(
     plotId: String,
-    farmId: String = "farm-1",
-    farmName: String = "MapTanim Main Farm",
+    farmId: String = "",
+    farmName: String = "My Farm",
     plotLabel: String,
     cropName: String,
     cropVariety: String? = null,

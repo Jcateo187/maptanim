@@ -35,7 +35,7 @@ enum class DssTab(val label: String) {
 
 data class CropDssUiState(
     val plotId: String = "plot-1",
-    val farmId: String = "farm-1",
+    val farmId: String = "",
     val cropId: String? = null,
     val cropName: String = "Tomato",
     val plotLabel: String = "Bed #3",
@@ -96,7 +96,7 @@ class CropDssManagementViewModel(
         val variety = plant?.cropVariety ?: plot?.cropVariety ?: plotRender?.cropVariety ?: "Diamante Max F1"
         val soil = plant?.soilType ?: plot?.soilType ?: plotRender?.soilType ?: SoilType.LOAM
         val pId = plant?.id ?: plot?.id ?: plotRender?.id ?: "plot-1"
-        val fId = plant?.farmId ?: plot?.farmId ?: plotRender?.farmId ?: "farm-1"
+        val fId = plant?.farmId ?: plot?.farmId ?: plotRender?.farmId ?: ""
         val cId = plant?.cropId ?: plot?.cropId ?: plotRender?.cropId
 
         val rawDate = plant?.rawPlantedDate ?: plot?.plantedDate ?: plotRender?.plantedDate

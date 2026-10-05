@@ -16,6 +16,15 @@ interface FarmDao {
     @Query("SELECT * FROM farms WHERE id = :farmId")
     fun observeFarmById(farmId: String): Flow<FarmEntity?>
 
+    @Query("SELECT * FROM farms LIMIT 1")
+    fun getActiveFarm(): FarmEntity?
+
+    @Query("SELECT * FROM farms WHERE id = :farmId")
+    fun getFarmById(farmId: String): FarmEntity?
+
+    @Query("SELECT * FROM farms")
+    fun getAllFarms(): List<FarmEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsertFarm(farm: FarmEntity)
 

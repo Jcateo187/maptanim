@@ -42,12 +42,14 @@ class CropPlotRepositoryImpl(
     }
 
     override suspend fun savePlots(plots: List<CropPlot>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val farmId = plots.firstOrNull()?.farmId ?: "farm-1"
+        val resolvedFarmId = plots.firstOrNull()?.farmId
+            ?: RepositoryProvider.getDatabase()?.farmDao()?.getActiveFarm()?.id
+            ?: "farm-default"
         val plotIds = plots.map { it.id }
         if (plotIds.isNotEmpty()) {
-            cropPlotDao?.deletePlotsNotInList(farmId, plotIds)
+            cropPlotDao?.deletePlotsNotInList(resolvedFarmId, plotIds)
         } else {
-            cropPlotDao?.deletePlotsByFarmId(farmId)
+            cropPlotDao?.deletePlotsByFarmId(resolvedFarmId)
         }
         cropPlotDao?.upsertPlots(plots.map { it.toEntity() })
         
@@ -57,7 +59,7 @@ class CropPlotRepositoryImpl(
         }
 
         val current = inMemoryCache.value.toMutableMap()
-        current[farmId] = plots
+        current[resolvedFarmId] = plots
         inMemoryCache.value = current
     }
 
@@ -110,11 +112,15 @@ class CropPlotRepositoryImpl(
                 } catch (e: Exception) { 30 }
             } else { 30 }
 
+            val farmDao = RepositoryProvider.getDatabase()?.farmDao()
+            val activeFarm = farmDao?.getFarmById(farmId) ?: farmDao?.getActiveFarm()
+            val resolvedFarmName = activeFarm?.farmName ?: "My Farm"
+
             val harvestRecord = com.maptanim.app.domain.model.HarvestRecord(
                 id = java.util.UUID.randomUUID().toString(),
                 plotId = plot.id,
                 farmId = farmId,
-                farmName = "MapTanim Main Farm",
+                farmName = resolvedFarmName,
                 plotLabel = plotLabel,
                 cropName = cropName,
                 cropVariety = cropVariety,

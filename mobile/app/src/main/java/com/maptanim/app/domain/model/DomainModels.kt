@@ -143,7 +143,7 @@ data class HarvestRecord(
     val id: String,
     val plotId: String,
     val farmId: String,
-    val farmName: String = "MapTanim Main Farm",
+    val farmName: String = "My Farm",
     val plotLabel: String = "Plot 1",
     val cropName: String,
     val cropVariety: String? = null,

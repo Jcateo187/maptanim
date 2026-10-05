@@ -16,7 +16,7 @@ import com.maptanim.app.domain.model.*
 data class CropLogEntity(
     @PrimaryKey val id: String,
     @ColumnInfo(name = "crop_planting_id") val cropPlantingId: String,
-    @ColumnInfo(name = "farm_id") val farmId: String = "farm-1",
+    @ColumnInfo(name = "farm_id") val farmId: String = "",
     @ColumnInfo(name = "bed_id") val bedId: String = "",
     @ColumnInfo(name = "crop_id") val cropId: String? = null,
     @ColumnInfo(name = "crop_name") val cropName: String = "",

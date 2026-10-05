@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 data class CropLogRemoteDto(
     val id: String,
     @SerialName("crop_planting_id") val cropPlantingId: String,
-    @SerialName("farm_id") val farmId: String = "farm-1",
+    @SerialName("farm_id") val farmId: String = "",
     @SerialName("bed_id") val bedId: String? = null,
     @SerialName("crop_id") val cropId: String? = null,
     @SerialName("crop_name") val cropName: String = "",

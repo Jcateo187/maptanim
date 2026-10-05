@@ -22,7 +22,7 @@ import java.util.UUID
  * Unified UI State for the Farm Hub, combining Plan, Guide, CheckUp, and Harvest tabs.
  */
 data class FarmHubUiState(
-    val activeFarmId: String = "farm-1",
+    val activeFarmId: String = "",
     val farmName: String = "My Farm",
     val selectedTopTab: TopTab = TopTab.PLAN,
     val planState: FarmHubPlanState = FarmHubPlanState(),
@@ -68,9 +68,15 @@ class FarmHubViewModel(
     // ─── Farm Resolution & Data Observation ──────────────────────────────────
 
     private fun resolveActiveFarm() {
-        val user = SupabaseClient.client.auth.currentUserOrNull()
-        val farmId = user?.id?.takeIf { it.isNotBlank() } ?: "farm-1"
-        _uiState.update { it.copy(activeFarmId = farmId) }
+        viewModelScope.launch {
+            val user = SupabaseClient.client.auth.currentUserOrNull()
+            val localFarm = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                RepositoryProvider.getDatabase()?.farmDao()?.getActiveFarm()
+            }
+            val farmId = localFarm?.id ?: user?.id?.takeIf { it.isNotBlank() } ?: "farm-default"
+            val farmName = localFarm?.farmName ?: "My Farm"
+            _uiState.update { it.copy(activeFarmId = farmId, farmName = farmName) }
+        }
     }
 
     private fun observePlotsAndZones() {

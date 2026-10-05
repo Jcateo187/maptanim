@@ -10,7 +10,7 @@ data class HarvestEntity(
     @PrimaryKey val id: String,
     @ColumnInfo(name = "zone_id") val plotId: String,
     @ColumnInfo(name = "farm_id") val farmId: String,
-    @ColumnInfo(name = "farm_name") val farmName: String = "MapTanim Main Farm",
+    @ColumnInfo(name = "farm_name") val farmName: String = "My Farm",
     @ColumnInfo(name = "plot_label") val plotLabel: String = "Plot 1",
     @ColumnInfo(name = "crop_name") val cropName: String,
     @ColumnInfo(name = "crop_variety") val cropVariety: String? = null,

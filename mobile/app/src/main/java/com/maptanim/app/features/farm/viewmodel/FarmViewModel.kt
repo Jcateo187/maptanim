@@ -110,8 +110,8 @@ data class CropMonitorCardData(
 )
 
 data class FarmUiState(
-    val farmId: String = "farm-1",
-    val farmName: String = "SUNRISE FARM",
+    val farmId: String = "",
+    val farmName: String = "My Farm",
     val selectedTab: FarmTab = FarmTab.OVERVIEW,
     val cropsFilter: CropsFilter = CropsFilter.PLANTED,
     // Overview data
