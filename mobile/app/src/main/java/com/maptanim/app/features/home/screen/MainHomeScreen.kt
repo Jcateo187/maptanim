@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.home.screen
+package com.maptanim.app.features.home.screen
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
@@ -45,6 +45,7 @@ import com.maptanim.app.navigation.Routes
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
 import com.maptanim.app.features.shared.avatar.ProfileAvatar
 import com.maptanim.app.features.farm.dialogs.CropDssManagementDialog
+import com.maptanim.app.features.home.viewmodel.*
 import com.maptanim.app.ui.theme.*
 
 import androidx.compose.animation.core.animateDpAsState

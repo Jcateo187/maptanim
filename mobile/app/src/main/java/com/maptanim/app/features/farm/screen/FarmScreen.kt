@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.screen
+package com.maptanim.app.features.farm.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -57,6 +57,9 @@ import com.maptanim.app.domain.model.VegetableCategory
 import com.maptanim.app.navigation.Routes
 import com.maptanim.app.features.farm.dialogs.AddLogDialog
 import com.maptanim.app.features.farm.dialogs.CropDssManagementDialog
+import com.maptanim.app.features.farm.components.*
+import com.maptanim.app.features.farm.canvas.*
+import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 import android.content.res.Configuration

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.community.screen
+package com.maptanim.app.features.community.screen
 
 import android.app.Activity
 import androidx.compose.animation.core.animateDpAsState
@@ -53,6 +53,7 @@ import androidx.navigation.NavHostController
 import com.maptanim.app.core.preferences.CommunityPreferencesManager
 import com.maptanim.app.domain.model.CommunityComment
 import com.maptanim.app.domain.model.CommunityPost
+import com.maptanim.app.features.community.viewmodel.*
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 import kotlin.math.abs

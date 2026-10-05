@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.reports.screen
+package com.maptanim.app.features.reports.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.maptanim.app.features.reports.viewmodel.CategorySummary
+import com.maptanim.app.features.reports.viewmodel.ReportsUiState
+import com.maptanim.app.features.reports.viewmodel.ReportsViewModel
 import com.maptanim.app.ui.theme.ForestGreen
 import com.maptanim.app.ui.theme.White
 

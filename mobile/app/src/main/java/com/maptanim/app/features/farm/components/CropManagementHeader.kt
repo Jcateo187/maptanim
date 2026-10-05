@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.components
+package com.maptanim.app.features.farm.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.ManagementStage
-import com.maptanim.app.features.farm.dialogs.TopTab
+import com.maptanim.app.features.farm.viewmodel.TopTab
 import com.maptanim.app.ui.theme.White
 
 @Composable

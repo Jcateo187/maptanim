@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.dialogs
+package com.maptanim.app.features.farm.dialogs
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -28,7 +28,10 @@ import com.maptanim.app.features.farm.renderer.model.PlotRenderData
 import com.maptanim.app.features.farm.components.*
 import com.maptanim.app.features.farm.dialogs.*
 import com.maptanim.app.features.farm.tabs.guide.*
+import com.maptanim.app.features.farm.tabs.checkup.CropTimelineCard
+import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
 import com.maptanim.app.features.farm.components.MonitoredPlant
+import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.White
 import java.time.LocalDate
 import java.util.Locale

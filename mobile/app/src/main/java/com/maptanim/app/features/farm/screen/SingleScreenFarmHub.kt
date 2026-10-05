@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.screen
+package com.maptanim.app.features.farm.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -35,11 +35,11 @@ import com.maptanim.app.domain.model.*
 import com.maptanim.app.features.farm.renderer.canvas.TopDownCamera
 import com.maptanim.app.features.farm.renderer.canvas.TopDownFarmCanvas
 import com.maptanim.app.features.farm.renderer.canvas.TopDownProjection
-import com.maptanim.app.features.farm.dialogs.DssTab
-import com.maptanim.app.features.farm.dialogs.TopTab
+import com.maptanim.app.features.farm.canvas.CanvasLayer
+import com.maptanim.app.features.farm.viewmodel.DssTab
+import com.maptanim.app.features.farm.viewmodel.TopTab
 import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
-import com.maptanim.app.features.farm.viewmodel.EditUiState
-import com.maptanim.app.features.farm.viewmodel.EditViewModel
+import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.White
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit

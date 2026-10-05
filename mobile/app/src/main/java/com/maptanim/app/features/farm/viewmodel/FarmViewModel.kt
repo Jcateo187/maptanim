@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.viewmodel
+package com.maptanim.app.features.farm.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +12,7 @@ import com.maptanim.app.dss.engine.CompanionAlert
 import com.maptanim.app.dss.engine.DssEngine
 import com.maptanim.app.dss.engine.DssRule
 import com.maptanim.app.dss.engine.DssLogEvaluator
+import com.maptanim.app.features.farm.components.*
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.tabs.guide
+package com.maptanim.app.features.farm.tabs.guide
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.CropLog
 import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.dss.engine.DssLogEvaluator
-import com.maptanim.app.features.farm.dialogs.DssTab
-import com.maptanim.app.features.farm.dialogs.TopTab
+import com.maptanim.app.features.farm.viewmodel.DssTab
+import com.maptanim.app.features.farm.viewmodel.TopTab
 import com.maptanim.app.ui.theme.White
 
 @Composable
