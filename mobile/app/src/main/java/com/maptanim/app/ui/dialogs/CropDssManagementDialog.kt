@@ -28,6 +28,8 @@ import com.maptanim.app.renderer.model.PlotRenderData
 import com.maptanim.app.ui.dialogs.components.*
 import com.maptanim.app.ui.screens.farm.MonitoredPlant
 import com.maptanim.app.ui.theme.White
+import java.time.LocalDate
+import java.util.Locale
 
 /**
  * Phase 2 & 3: Refactored Crop Management Dialog.
@@ -144,8 +146,9 @@ fun CropDssManagementDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     when (uiState.selectedTopTab) {
-                        TopTab.OVERVIEW -> {
-                            // Crop Info Card with Settings Gear
+                        TopTab.PLAN -> {
+                            // ── TAB 1: PLAN & BED SETUP ───────────────────────
+                            // Bed & Planting Summary Card with Settings Gear
                             CropInfoCard(
                                 plotLabel = uiState.plotLabel,
                                 cropName = uiState.cropName,
@@ -158,6 +161,109 @@ fun CropDssManagementDialog(
                                 onOpenSettings = { dssViewModel.openSettings() }
                             )
 
+                            // Basketball Court Real-World Size Scale Card
+                            BasketballCourtScaleCard(
+                                widthM = uiState.widthM,
+                                heightM = uiState.heightM,
+                                cropName = uiState.cropName,
+                                plotLabel = uiState.plotLabel
+                            )
+
+                            // Soil & Agronomic Fit Card
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                                border = BorderStroke(1.dp, Color(0xFF2B3825)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "SOIL & COMPANION SUITABILITY",
+                                        color = Color(0xFFA5D6A7),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Bed Soil Type:", color = Color(0xFFA0B09A), fontSize = 12.sp)
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = Color(0xFF22331E),
+                                            border = BorderStroke(1.dp, Color(0xFF385532))
+                                        ) {
+                                            Text(
+                                                text = "${uiState.soilType.name.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase() }} Soil",
+                                                color = Color(0xFF81C784),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // Philippine Season Fit
+                                    val currentMonth = LocalDate.now().monthValue
+                                    val isWetSeason = currentMonth in 5..10
+                                    val seasonText = if (isWetSeason) "Wet Season (May to Oct)" else "Dry Season (Nov to Apr)"
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Philippine Season:", color = Color(0xFFA0B09A), fontSize = 12.sp)
+                                        Text(text = seasonText, color = White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+
+                                    HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp)
+
+                                    // Companion plant advice
+                                    val companions = when (uiState.cropName.lowercase(Locale.ROOT)) {
+                                        "tomato" -> "Basil, Marigold, Green Onion, Pechay"
+                                        "eggplant" -> "Beans (Sitaw), Marigold, Basil"
+                                        "pechay" -> "Tomato, Cucumber, Corn"
+                                        "cucumber" -> "Beans, Corn, Radish"
+                                        "chili", "pepper" -> "Basil, Onion, Tomato"
+                                        else -> "Basil, Marigold, Legumes"
+                                    }
+                                    val avoidCrops = when (uiState.cropName.lowercase(Locale.ROOT)) {
+                                        "tomato" -> "Corn (attracts fruit borer), Fennel, Potato"
+                                        "eggplant" -> "Fennel, Potato"
+                                        "pechay" -> "Strawberries"
+                                        else -> "Fennel"
+                                    }
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(text = "🌿 Beneficial Companions:", color = Color(0xFF81C784), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = companions, color = Color(0xFFC0CDC0), fontSize = 11.sp)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(text = "⚠️ Antagonists to Avoid:", color = Color(0xFFFFB74D), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = avoidCrops, color = Color(0xFFC0CDC0), fontSize = 11.sp)
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Button(
+                                        onClick = { dssViewModel.openSettings() },
+                                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF20351C)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFF385532))
+                                    ) {
+                                        Text("✏️ Edit Bed & Planting Settings", color = Color(0xFFA5D6A7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        TopTab.GUIDE -> {
+                            // ── TAB 2: STAGE GUIDE & TODAY'S TASKS ─────────────
                             // 6-Stage Linear Timeline with Action Buttons & Prev/Next Navigation
                             CropTimelineCard(
                                 currentStage = uiState.currentStage,
@@ -167,15 +273,11 @@ fun CropDssManagementDialog(
                                 onPreviousStage = { dssViewModel.requestPreviousStage() },
                                 onNextStage = { dssViewModel.requestNextStage() },
                                 onToggleExpand = { dssViewModel.toggleTimeline() },
-                                onRecordObservation = {
-                                    dssViewModel.openAddLog()
-                                },
-                                onHarvest = {
-                                    dssViewModel.openHarvest()
-                                }
+                                onRecordObservation = { dssViewModel.openAddLog() },
+                                onHarvest = { dssViewModel.openHarvest() }
                             )
 
-                            // Sub-tabs: TODAY'S TASKS and LOGS with auto-remove
+                            // Sub-tabs: TODAY'S TASKS and LOGS with auto-remove & 5/3 preview
                             DssOutputTabsSection(
                                 currentStage = uiState.currentStage,
                                 selectedDssTab = uiState.selectedDssTab,
@@ -183,10 +285,20 @@ fun CropDssManagementDialog(
                                 observedLogs = observedLogs,
                                 onSelectDssTab = { dssViewModel.selectDssTab(it) },
                                 onCheckDynamicTask = { dssViewModel.checkDynamicTask(it) },
-                                onSwitchToRecommendations = { dssViewModel.selectTopTab(TopTab.RECOMMENDATION) }
+                                onSwitchToRecommendations = { dssViewModel.selectTopTab(TopTab.CHECKUP) }
                             )
 
-                            // Dynamic Agronomic Guides & Recommendations generated at the bottom
+                            // Stage-by-Stage Guidance Accordions
+                            StageGuidanceSection(
+                                currentStage = uiState.currentStage,
+                                observedLogs = observedLogs,
+                                expandedSections = uiState.expandedStageAccordions,
+                                onToggleSection = { dssViewModel.toggleAccordion(it) }
+                            )
+                        }
+
+                        TopTab.CHECKUP -> {
+                            // ── TAB 3: CHECK-UP & OBSERVATION ──────────────────
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
@@ -203,8 +315,56 @@ fun CropDssManagementDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "AGRONOMIC GUIDES & RECOMMENDATIONS",
+                                            text = "🩺 FIELD SCOUTING & DIAGNOSIS",
                                             color = Color(0xFFA5D6A7),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                        Text(
+                                            text = "Stage ${uiState.currentStage.stageNumber}",
+                                            color = Color(0xFFA0B09A),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "Regularly inspect your crop for pests, nutrient hunger, or disease signs. Recording an observation automatically runs the DSS engine to generate corrective tasks.",
+                                        color = Color(0xFFC0CDC0),
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    )
+
+                                    Button(
+                                        onClick = { dssViewModel.openAddLog() },
+                                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("📝 Record Observation / Scouting", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // Dynamic Agronomic Guides & Recommendations generated from logs
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                                border = BorderStroke(1.dp, Color(0xFF2B3825)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "AGRONOMIC RECOMMENDATIONS",
+                                            color = White,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             letterSpacing = 0.5.sp
@@ -226,13 +386,23 @@ fun CropDssManagementDialog(
                                     }
 
                                     if (uiState.dynamicRecommendations.isEmpty()) {
-                                        Text(
-                                            text = "Record an observation above to generate tailored agronomic guides and crop-specific management recommendations for this stage.",
-                                            color = Color(0xFF8B9E8B),
-                                            fontSize = 12.sp,
-                                            lineHeight = 16.sp,
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(
+                                                text = "Standard IPM (Integrated Pest Management) Guidelines:",
+                                                color = Color(0xFF81C784),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = "1. Maintain 3–5 cm organic mulch around the root zone to conserve soil moisture and suppress weeds.\n\n" +
+                                                        "2. Practice early morning drip or base irrigation to minimize foliage moisture and reduce fungal spore germination.\n\n" +
+                                                        "3. Intercrop with beneficial companion plants (Basil, Marigold, or Green Onion) to deter pests naturally.\n\n" +
+                                                        "4. Inspect lower leaf surfaces twice weekly for early signs of mites, aphids, or thrips.",
+                                                color = Color(0xFFC0CDC0),
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
                                     } else {
                                         uiState.dynamicRecommendations.forEachIndexed { idx, rec ->
                                             Surface(
@@ -242,14 +412,12 @@ fun CropDssManagementDialog(
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Column(modifier = Modifier.padding(10.dp)) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Text(
-                                                            text = "💡 ${rec.title}",
-                                                            color = Color(0xFF81C784),
-                                                            fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    }
+                                                    Text(
+                                                        text = "💡 ${rec.title}",
+                                                        color = Color(0xFF81C784),
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
                                                         text = rec.content,
@@ -265,8 +433,15 @@ fun CropDssManagementDialog(
                             }
                         }
 
-                        TopTab.RECOMMENDATION -> {
-                            // Dedicated Recommendation Tab
+                        TopTab.HARVEST -> {
+                            // ── TAB 4: HARVEST & CROP ROTATION LOOP ────────────
+                            val dth = uiState.daysToHarvest.coerceAtLeast(1)
+                            val dp = uiState.daysPlanted
+                            val progress = (dp.toFloat() / dth.toFloat()).coerceIn(0f, 1f)
+                            val daysRemaining = (dth - dp).coerceAtLeast(0)
+                            val isReady = progress >= 0.90f
+
+                            // Readiness Gauge Card
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
@@ -274,36 +449,173 @@ fun CropDssManagementDialog(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "HARVEST READINESS EVALUATOR",
+                                            color = Color(0xFFA5D6A7),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = if (isReady) Color(0xFF1B5E20) else Color(0xFF332A15),
+                                            border = BorderStroke(1.dp, if (isReady) Color(0xFF4CAF50) else Color(0xFF5C4A1C))
+                                        ) {
+                                            Text(
+                                                text = if (isReady) "🌾 READY FOR PICKING" else "⏳ $daysRemaining DAYS LEFT",
+                                                color = if (isReady) Color(0xFFA5D6A7) else Color(0xFFFFD54F),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    LinearProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                        color = if (isReady) Color(0xFF4CAF50) else Color(0xFFFFD54F),
+                                        trackColor = Color(0xFF1C2819)
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = "Elapsed: $dp days", color = Color(0xFFA0B09A), fontSize = 11.sp)
+                                        Text(text = "${(progress * 100).toInt()}% Mature", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = "Target: $dth days", color = Color(0xFFA0B09A), fontSize = 11.sp)
+                                    }
+                                }
+                            }
+
+                            // Harvest Summary & Record Action Card
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                                border = BorderStroke(1.dp, Color(0xFF2B3825)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Text(
-                                        text = "AGRONOMIC RECOMMENDATIONS",
-                                        color = White,
-                                        fontSize = 13.sp,
+                                        text = "YIELD & PICKINGS SUMMARY",
+                                        color = Color(0xFFA5D6A7),
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     )
 
-                                    if (uiState.dynamicRecommendations.isEmpty()) {
-                                        Text(
-                                            text = "1. Maintain 3–5 cm organic mulch around the root zone to conserve soil moisture and suppress weeds.\n\n" +
-                                                    "2. Practice early morning drip or base irrigation to minimize foliage moisture and reduce fungal spore germination.\n\n" +
-                                                    "3. Intercrop with beneficial companion plants (Basil, Marigold, or Green Onion) to deter pests naturally.\n\n" +
-                                                    "4. Inspect lower leaf surfaces twice weekly for early signs of mites or thrips.",
-                                            color = Color(0xFFC0CDC0),
-                                            fontSize = 13.sp,
-                                            lineHeight = 18.sp
-                                        )
-                                    } else {
-                                        uiState.dynamicRecommendations.forEachIndexed { idx, rec ->
-                                            Text(
-                                                text = "${idx + 1}. ${rec.title}: ${rec.content}",
-                                                color = Color(0xFFC0CDC0),
-                                                fontSize = 13.sp,
-                                                lineHeight = 18.sp
-                                            )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF1A2617),
+                                            border = BorderStroke(1.dp, Color(0xFF2C3E27)),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(text = "Pickings Count", color = Color(0xFFA0B09A), fontSize = 10.sp)
+                                                Text(text = "${uiState.harvestCount} harvests", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                            }
                                         }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF1A2617),
+                                            border = BorderStroke(1.dp, Color(0xFF2C3E27)),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(text = "Total Yield Logged", color = Color(0xFFA0B09A), fontSize = 10.sp)
+                                                Text(text = "%.1f kg".format(Locale.ROOT, uiState.totalYieldKg), color = Color(0xFF81C784), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = { dssViewModel.openHarvest() },
+                                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("🌾 Record Harvest (Ongoing or Final)", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // Closed-Loop "What Next?" Crop Rotation Advisor Card
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
+                                border = BorderStroke(1.dp, Color(0xFF2B3825)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "🔄 CLOSED-LOOP CROP ROTATION ADVISOR",
+                                        color = Color(0xFFFFD54F),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+
+                                    val cropFamily = when (uiState.cropName.lowercase(Locale.ROOT)) {
+                                        "tomato", "eggplant", "chili", "pepper" -> "Solanaceae (Nightshade)"
+                                        "cucumber", "patola", "squash", "kalabasa" -> "Cucurbitaceae (Gourd/Melon)"
+                                        "pechay", "mustard", "cabbage", "radish" -> "Brassicaceae (Crucifer)"
+                                        "sitaw", "baguio beans", "mungbean" -> "Fabaceae (Legume)"
+                                        else -> "Vegetable"
+                                    }
+
+                                    val nextRotationRecommendation = when (uiState.cropName.lowercase(Locale.ROOT)) {
+                                        "tomato", "eggplant", "chili", "pepper" ->
+                                            "Do not follow with another Solanaceae. Rotate with 🫘 Legumes (Sitaw or Baguio Beans) to fix atmospheric nitrogen and starve bacterial wilt bacteria."
+                                        "cucumber", "squash" ->
+                                            "Follow with 🥬 Leafy Greens (Pechay or Lettuce) or Legumes to restore organic matter."
+                                        "sitaw", "beans" ->
+                                            "Your bed soil is now nitrogen-enriched! Follow with heavy feeders like 🍅 Tomato, 🍆 Eggplant, or 🌽 Sweet Corn."
+                                        else ->
+                                            "Rotate with nitrogen-fixing legumes or rest soil with a 2-week vermicompost cover."
+                                    }
+
+                                    Text(
+                                        text = "Current Crop Family: $cropFamily",
+                                        color = White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Text(
+                                        text = nextRotationRecommendation,
+                                        color = Color(0xFFC0CDC0),
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp
+                                    )
+
+                                    Button(
+                                        onClick = { dssViewModel.selectTopTab(TopTab.PLAN) },
+                                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22311C)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFF384F31))
+                                    ) {
+                                        Text("🌱 Plan Next Crop in Tab 1 →", color = Color(0xFFA5D6A7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -402,7 +714,10 @@ fun CropDssManagementDialog(
             onDismiss = { dssViewModel.closeHarvest() },
             onSubmitHarvest = { harvestRecord ->
                 dssViewModel.submitHarvest(harvestRecord)
-                onHarvest?.invoke(uiState.plotId)
+                if (harvestRecord.isFinalHarvest) {
+                    onHarvest?.invoke(uiState.plotId)
+                    onDismiss()
+                }
             }
         )
     }

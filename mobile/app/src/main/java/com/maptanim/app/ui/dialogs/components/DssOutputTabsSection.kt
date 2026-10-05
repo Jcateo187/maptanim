@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,16 +75,37 @@ fun DssOutputTabsSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            var showAllTasks by remember { mutableStateOf(false) }
+            var showAllLogs by remember { mutableStateOf(false) }
+
             when (selectedDssTab) {
                 DssTab.TASKS -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "TODAY'S TASKS (${dynamicTasks.size})",
-                            color = Color(0xFFA0B09A),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "TODAY'S TASKS (${dynamicTasks.size})",
+                                color = Color(0xFFA0B09A),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            if (dynamicTasks.size > 5) {
+                                Text(
+                                    text = if (showAllTasks) "Show 5" else "See All (${dynamicTasks.size})",
+                                    color = Color(0xFF81C784),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable { showAllTasks = !showAllTasks }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
 
                         if (dynamicTasks.isEmpty()) {
                             Text(
@@ -95,7 +116,8 @@ fun DssOutputTabsSection(
                             )
                         }
 
-                        dynamicTasks.forEach { task ->
+                        val visibleTasks = if (showAllTasks || dynamicTasks.size <= 5) dynamicTasks else dynamicTasks.take(5)
+                        visibleTasks.forEach { task ->
                             TaskRowItem(
                                 title = task.title,
                                 description = task.description,
@@ -104,7 +126,7 @@ fun DssOutputTabsSection(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "View More Recommendations →",
                             color = Color(0xFF81C784),
@@ -120,13 +142,31 @@ fun DssOutputTabsSection(
 
                 DssTab.LOGS -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "RECORDED LOG HISTORY (${observedLogs.size})",
-                            color = Color(0xFFA0B09A),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "RECORDED LOG HISTORY (${observedLogs.size})",
+                                color = Color(0xFFA0B09A),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            if (observedLogs.size > 3) {
+                                Text(
+                                    text = if (showAllLogs) "Show 3" else "See All (${observedLogs.size})",
+                                    color = Color(0xFF81C784),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable { showAllLogs = !showAllLogs }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
 
                         if (observedLogs.isEmpty()) {
                             Text(
@@ -136,7 +176,8 @@ fun DssOutputTabsSection(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         } else {
-                            observedLogs.forEach { log ->
+                            val visibleLogs = if (showAllLogs || observedLogs.size <= 3) observedLogs else observedLogs.take(3)
+                            visibleLogs.forEach { log ->
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = Color(0xFF192217),

@@ -19,8 +19,8 @@ object Routes {
     const val PROFILE = "profile"
     const val PROFILE_WITH_TAB = "profile?tab={tab}"
 
-    // Edit Mode, Settings & Notifications
-    const val EDIT = "edit"
+    // Edit Mode, Settings & Notifications (Edit unified into Farm Hub)
+    const val EDIT = "farms"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
     const val ABOUT = "about"

@@ -1040,6 +1040,40 @@ class FarmViewModel(
         }
     }
 
+    fun quickLogMaintenance(plotId: String, actionType: String) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
+            val now = ZonedDateTime.now().toString()
+            val (taskType: TaskType, verbEmoji: String) = when (actionType.lowercase()) {
+                "water" -> Pair(TaskType.WATER, "💧 Watered")
+                "weed" -> Pair(TaskType.WEED, "🌿 Weeded")
+                "fertilize" -> Pair(TaskType.FERTILIZE, "🧪 Fertilized")
+                else -> Pair(TaskType.OBSERVATION, "🛠 Maintained")
+            }
+
+            logFarmActivityUseCase(
+                Activity(
+                    id = UUID.randomUUID().toString(),
+                    plotId = plotId,
+                    farmId = plot.farmId,
+                    type = taskType,
+                    notes = "$verbEmoji ${plot.plotLabel}" + (if (!plot.cropName.isNullOrBlank()) " (${plot.cropName})" else ""),
+                    performedAt = now
+                )
+            )
+
+            // Auto-complete any matching pending task for this plot
+            val matchingTask = _uiState.value.todayTasks.firstOrNull {
+                it.plotId == plotId && it.taskType == taskType && !it.isCompleted
+            }
+            if (matchingTask != null) {
+                completeTask(matchingTask.id)
+            } else {
+                _uiState.update { it.copy(toastMessage = "$verbEmoji ${plot.plotLabel}! ✨") }
+            }
+        }
+    }
+
     fun submitCropLog(cropLog: CropLog) {
         viewModelScope.launch {
             val plot = _uiState.value.plots.firstOrNull { it.id == cropLog.cropPlantingId }
@@ -1143,33 +1177,19 @@ class FarmViewModel(
         }
     }
 
-    fun recordHarvest(plotId: String, yieldKg: Float = 0f, notes: String? = null) {
+    fun recordHarvest(plotId: String, yieldKg: Float = 0f, notes: String? = null, isFinalHarvest: Boolean = true) {
         viewModelScope.launch {
             val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
             val now = ZonedDateTime.now().toString()
 
-            plotRepository.recordHarvest(plotId, yieldKg, notes)
-            recordHarvestUseCase(
-                HarvestRecord(
-                    id = UUID.randomUUID().toString(),
-                    plotId = plotId,
-                    farmId = plot.farmId,
-                    farmName = _uiState.value.farmName,
-                    plotLabel = plot.plotLabel,
-                    cropName = plot.cropName ?: "Vegetable",
-                    cropVariety = plot.cropVariety,
-                    plantedDate = plot.plantedDate,
-                    harvestedAt = now,
-                    yieldKg = yieldKg,
-                    notes = notes
-                )
-            )
+            plotRepository.recordHarvest(plotId, yieldKg, notes, isFinalHarvest = isFinalHarvest)
 
             val cropName = plot.cropName ?: "Vegetable"
             val varietySuffix = if (!plot.cropVariety.isNullOrBlank()) " (${plot.cropVariety})" else ""
             val dateOnly = try { now.take(10) } catch (_: Exception) { java.time.LocalDate.now().toString() }
             val yieldText = if (yieldKg > 0) "$yieldKg kg" else "Harvest completed"
-            val activityNotes = "Harvested $yieldText of $cropName$varietySuffix from ${plot.plotLabel} on $dateOnly"
+            val pickTypeStr = if (isFinalHarvest) "Final harvest" else "Picking"
+            val activityNotes = "$pickTypeStr of $yieldText of $cropName$varietySuffix from ${plot.plotLabel} on $dateOnly"
 
             logFarmActivityUseCase(
                 Activity(
@@ -1185,9 +1205,112 @@ class FarmViewModel(
             _uiState.update {
                 it.copy(
                     selectedPlantForDetails = null,
-                    toastMessage = "Harvest recorded successfully! 🌾"
+                    toastMessage = if (isFinalHarvest) "Final harvest recorded! 🌾 Bed ready for rotation." else "Harvest pick recorded! 🌱 +$yieldKg kg"
                 )
             }
+        }
+    }
+
+    fun addNewBed(
+        customLabel: String? = null,
+        widthM: Float = 4.0f,
+        heightM: Float = 1.2f,
+        soilType: SoilType = SoilType.LOAM
+    ) {
+        viewModelScope.launch {
+            val farmId = _uiState.value.farmId
+            val existingPlots = _uiState.value.plots
+            val nextNumber = existingPlots.size + 1
+            val label = customLabel?.takeIf { it.isNotBlank() } ?: "Bed #$nextNumber"
+            val maxY = existingPlots.maxOfOrNull { it.posY + it.heightM } ?: 0f
+            val newPlot = CropPlot(
+                id = UUID.randomUUID().toString(),
+                farmId = farmId,
+                cropId = null,
+                cropName = null,
+                cropVariety = null,
+                plotLabel = label,
+                soilType = soilType,
+                posX = 2f,
+                posY = (maxY + 1.2f).coerceAtMost(28f),
+                widthM = widthM,
+                heightM = heightM,
+                createdAt = ZonedDateTime.now().toString(),
+                updatedAt = ZonedDateTime.now().toString()
+            )
+            plotRepository.upsertPlot(newPlot)
+            _uiState.update { it.copy(toastMessage = "Added $label (%.1fm × %.1fm)! 🟫".format(widthM, heightM)) }
+        }
+    }
+
+    fun deleteBed(plotId: String) {
+        viewModelScope.launch {
+            plotRepository.deletePlot(plotId)
+            _uiState.update { it.copy(toastMessage = "Bed removed. 🗑") }
+        }
+    }
+
+    fun assignCropToBed(plotId: String, cropName: String, variety: String? = null, method: String = "Direct Seed", isPlanted: Boolean = true) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
+            val now = LocalDate.now().toString()
+            val cropEntity = _uiState.value.crops.firstOrNull { it.name.equals(cropName, ignoreCase = true) }
+            val updated = plot.copy(
+                cropId = cropEntity?.id ?: cropName.lowercase(),
+                cropName = cropName,
+                cropVariety = variety ?: "Standard",
+                plantedDate = if (isPlanted) "${now}T00:00:00Z" else null,
+                currentStage = if (isPlanted) ManagementStage.PLANTING else ManagementStage.PREPARATION,
+                updatedAt = ZonedDateTime.now().toString()
+            )
+            plotRepository.upsertPlot(updated)
+            logFarmActivityUseCase(
+                Activity(
+                    id = UUID.randomUUID().toString(),
+                    plotId = plotId,
+                    farmId = plot.farmId,
+                    type = TaskType.OBSERVATION,
+                    notes = "Planted $cropName in ${plot.plotLabel} ($method) 🌱",
+                    performedAt = ZonedDateTime.now().toString()
+                )
+            )
+            _uiState.update { it.copy(toastMessage = "Assigned $cropName to ${plot.plotLabel}! 🌱") }
+        }
+    }
+
+    fun updateBedDimensions(plotId: String, widthM: Float, heightM: Float, soilType: SoilType) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
+            val updated = plot.copy(
+                widthM = widthM,
+                heightM = heightM,
+                soilType = soilType,
+                updatedAt = ZonedDateTime.now().toString()
+            )
+            plotRepository.upsertPlot(updated)
+            _uiState.update { it.copy(toastMessage = "Updated ${plot.plotLabel} size: ${widthM}m × ${heightM}m ✨") }
+        }
+    }
+
+    fun advancePlotStage(plotId: String, newStage: ManagementStage) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
+            val updated = plot.copy(
+                currentStage = newStage,
+                updatedAt = ZonedDateTime.now().toString()
+            )
+            plotRepository.upsertPlot(updated)
+            logFarmActivityUseCase(
+                Activity(
+                    id = UUID.randomUUID().toString(),
+                    plotId = plotId,
+                    farmId = plot.farmId,
+                    type = TaskType.OBSERVATION,
+                    notes = "Advanced ${plot.plotLabel} to ${newStage.label} 🌿",
+                    performedAt = ZonedDateTime.now().toString()
+                )
+            )
+            _uiState.update { it.copy(toastMessage = "Stage updated to ${newStage.label}! 🌿") }
         }
     }
 

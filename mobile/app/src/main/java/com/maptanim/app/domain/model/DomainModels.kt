@@ -33,7 +33,11 @@ data class CropPlot(
     val isActive: Boolean = true,
     val notes: String? = null,
     val createdAt: String = "",
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val currentStage: ManagementStage = ManagementStage.PREPARATION,
+    val harvestCount: Int = 0,
+    val totalYieldKg: Float = 0f,
+    val previousCropsHistory: List<String> = emptyList()
 )
 
 // ─── Crop (reference data from crops table) ────────────────────────────────
@@ -154,7 +158,8 @@ data class HarvestRecord(
     val quantity: Float = 0f,              // Numeric quantity harvested
     val unit: String = "kg",               // "kg", "pcs", "bundles", "sacks"
     val marketablePct: Float? = null,      // Optional: % marketable
-    val cropPlantingId: String? = null      // Links to crop_planting for lifecycle tracking
+    val cropPlantingId: String? = null,     // Links to crop_planting for lifecycle tracking
+    val isFinalHarvest: Boolean = true      // False for continuous multi-pick harvests (e.g. Tomato, Okra, Eggplant)
 )
 
 // ─── Activity (farmer manual log) ─────────────────────────────────────────

@@ -15,7 +15,6 @@ import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
 import com.maptanim.app.ui.screens.auth.LoginScreen
 import com.maptanim.app.ui.screens.auth.WelcomeScreen
 import com.maptanim.app.ui.screens.community.CommunityScreen
-import com.maptanim.app.ui.screens.edit.FarmEditorScreen
 import com.maptanim.app.ui.screens.farm.FarmScreen
 import com.maptanim.app.ui.screens.home.MainHomeScreen
 import com.maptanim.app.ui.screens.loading.LoadingScreen
@@ -71,7 +70,7 @@ fun AppNavGraph() {
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }
         ) {
-            FarmEditorScreen(navController)
+            FarmScreen(navController = navController)
         }
 
         composable(

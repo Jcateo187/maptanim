@@ -2,6 +2,7 @@ package com.maptanim.app.ui.components.editcomponents.croptray
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -169,6 +170,7 @@ fun CropTray(
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var activeSearchQuery by remember { mutableStateOf("") }
+    var isTrayCollapsed by remember { mutableStateOf(false) }
 
     var isSearchFocused by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
@@ -211,6 +213,60 @@ fun CropTray(
     } else {
         val trayHeight = if (activeTrayTab == TrayTab.BED) 130.dp else 215.dp
         modifier.fillMaxWidth().height(trayHeight)
+    }
+
+    if (isTrayCollapsed) {
+        val collapsedModifier = if (isLandscape) {
+            modifier.fillMaxHeight().width(36.dp)
+        } else {
+            modifier.fillMaxWidth().height(36.dp)
+        }
+        val collapsedShape = if (isLandscape) {
+            RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+        } else {
+            RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+        }
+        Surface(
+            shape = collapsedShape,
+            color = Color(0xF21C2B1A),
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, Color(0xFF4C6B42)),
+            modifier = collapsedModifier.clickable { isTrayCollapsed = false }
+        ) {
+            if (isLandscape) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "<", color = Color(0xFF81C784), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "TRAY", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(text = "<", color = Color(0xFF81C784), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Tap to expand Beds & Crops Tray", color = Color(0xFFA5D6A7), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Text(
+                        text = "✕",
+                        color = Color(0xFFA0B09A),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onClose() }.padding(horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+        return
     }
 
     Surface(
@@ -321,6 +377,21 @@ fun CropTray(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
+                        }
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFFE8F5E9),
+                        border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                        modifier = Modifier.clickable { isTrayCollapsed = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(text = "<", color = Color(0xFF2E7D32), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Hide", color = Color(0xFF2E7D32), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     IconButton(

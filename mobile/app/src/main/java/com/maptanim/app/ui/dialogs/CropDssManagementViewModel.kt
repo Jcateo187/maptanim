@@ -22,8 +22,10 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 enum class TopTab(val label: String) {
-    OVERVIEW("Overview"),
-    RECOMMENDATION("Recommendation")
+    PLAN("🌱 Plan"),
+    GUIDE("📖 Guide"),
+    CHECKUP("🩺 Check"),
+    HARVEST("🌾 Harvest")
 }
 
 enum class DssTab(val label: String) {
@@ -41,13 +43,18 @@ data class CropDssUiState(
     val soilType: SoilType = SoilType.LOAM,
     val plantingMethod: String = "Transplanting",
     val growingApproach: String = "Organic",
+    val widthM: Float = 1.2f,
+    val heightM: Float = 4.0f,
     val daysToHarvest: Int = 75,
     val daysPlanted: Int = 0,
     val plantedDateStr: String = LocalDate.now().toString(),
     val isPlanted: Boolean = true,
     val currentStage: ManagementStage = ManagementStage.PREPARATION,
-    val selectedTopTab: TopTab = TopTab.OVERVIEW,
+    val selectedTopTab: TopTab = TopTab.GUIDE,
     val selectedDssTab: DssTab = DssTab.TASKS,
+    val harvestCount: Int = 0,
+    val totalYieldKg: Float = 0f,
+    val previousCropsHistory: List<String> = emptyList(),
     val stageNotificationText: String? = null,
     val pendingStageTransition: ManagementStage? = null,
     val isStageTransitionManual: Boolean = false,
@@ -94,18 +101,25 @@ class CropDssManagementViewModel(
 
         val rawDate = plant?.rawPlantedDate ?: plot?.plantedDate ?: plotRender?.plantedDate
         val planted = plant != null || plot?.plantedDate != null || plotRender?.plantedDate != null
+        val wM = plot?.widthM ?: plotRender?.widthM ?: 1.2f
+        val hM = plot?.heightM ?: plotRender?.heightM ?: 4.0f
 
         val (daysPlanted, stage) = if (planted && !rawDate.isNullOrBlank()) {
             val dateOnly = rawDate.take(10)
             val pDate = try { LocalDate.parse(dateOnly) } catch (_: Exception) { LocalDate.now() }
             val days = ChronoUnit.DAYS.between(pDate, LocalDate.now()).toInt().coerceAtLeast(0)
-            val stg = when {
-                days < 10 -> ManagementStage.PREPARATION
-                days < 25 -> ManagementStage.PLANTING
-                days < 45 -> ManagementStage.EARLY_GROWTH
-                days < 65 -> ManagementStage.VEGETATIVE_GROWTH
-                days < 80 -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
-                else -> ManagementStage.HARVEST
+            val stg = if (plot?.currentStage != null && plot.currentStage != ManagementStage.PREPARATION) {
+                plot.currentStage
+            } else {
+                val dth = (plant?.daysToHarvest ?: 60).coerceAtLeast(20)
+                val progress = (days.toFloat() / dth.toFloat()).coerceIn(0f, 1f)
+                when {
+                    progress < 0.15f -> ManagementStage.PLANTING
+                    progress < 0.35f -> ManagementStage.EARLY_GROWTH
+                    progress < 0.65f -> ManagementStage.VEGETATIVE_GROWTH
+                    progress < 0.90f -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+                    else -> ManagementStage.HARVEST
+                }
             }
             Pair(days, stg)
         } else {
@@ -123,19 +137,42 @@ class CropDssManagementViewModel(
                 soilType = soil,
                 plantingMethod = initialPlantingMethod,
                 growingApproach = initialGrowingApproach,
+                widthM = wM,
+                heightM = hM,
                 daysPlanted = daysPlanted,
                 plantedDateStr = rawDate?.take(10) ?: LocalDate.now().toString(),
                 isPlanted = planted,
-                currentStage = stage
+                currentStage = stage,
+                harvestCount = plot?.harvestCount ?: 0,
+                totalYieldKg = plot?.totalYieldKg ?: 0f,
+                previousCropsHistory = plot?.previousCropsHistory ?: emptyList(),
+                selectedTopTab = if (planted) TopTab.GUIDE else TopTab.PLAN
             )
         }
 
-        // Phase 3: Fetch dynamic daysToHarvest from Crop repository instead of hardcoded 75
+        // Fetch dynamic daysToHarvest from Crop repository and adjust proportional stage if needed
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 cropRepository.observeCropByName(cName).collect { crop ->
                     if (crop != null && crop.daysToHarvest > 0) {
-                        _uiState.update { it.copy(daysToHarvest = crop.daysToHarvest) }
+                        _uiState.update { current ->
+                            val updatedStage = if (plot?.currentStage == null || plot.currentStage == ManagementStage.PREPARATION) {
+                                val progress = (current.daysPlanted.toFloat() / crop.daysToHarvest.toFloat()).coerceIn(0f, 1f)
+                                when {
+                                    progress < 0.15f -> ManagementStage.PLANTING
+                                    progress < 0.35f -> ManagementStage.EARLY_GROWTH
+                                    progress < 0.65f -> ManagementStage.VEGETATIVE_GROWTH
+                                    progress < 0.90f -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+                                    else -> ManagementStage.HARVEST
+                                }
+                            } else {
+                                current.currentStage
+                            }
+                            current.copy(
+                                daysToHarvest = crop.daysToHarvest,
+                                currentStage = updatedStage
+                            )
+                        }
                     }
                 }
             } catch (_: Exception) {}
@@ -189,6 +226,8 @@ class CropDssManagementViewModel(
             it.copy(expandedStageAccordions = updated)
         }
     }
+
+    fun toggleStageAccordion(section: String) = toggleAccordion(section)
 
     fun openSettings() {
         _uiState.update { it.copy(isSettingsOpen = true) }
@@ -344,6 +383,16 @@ class CropDssManagementViewModel(
     fun confirmStageTransition() {
         val target = _uiState.value.pendingStageTransition ?: return
         val isAdvance = target.stageNumber > _uiState.value.currentStage.stageNumber
+        val plotId = _uiState.value.plotId
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                cropPlotRepository.observePlot(plotId).firstOrNull()?.let { plot ->
+                    cropPlotRepository.upsertPlot(plot.copy(currentStage = target, updatedAt = ZonedDateTime.now().toString()))
+                }
+            } catch (_: Exception) {}
+        }
+
         _uiState.update {
             it.copy(
                 currentStage = target,
@@ -382,12 +431,13 @@ class CropDssManagementViewModel(
                 // 1. Persist HarvestRecord in HarvestRepository
                 harvestRepository.recordHarvest(harvestRecord)
 
-                // 2. Update Crop Plot record
+                // 2. Update Crop Plot record (handles continuous picking vs final bed clearing)
                 val yieldVal = if (harvestRecord.yieldKg > 0f) harvestRecord.yieldKg else harvestRecord.quantity
                 cropPlotRepository.recordHarvest(
                     plotId = harvestRecord.plotId,
                     yieldKg = yieldVal,
-                    notes = harvestRecord.notes
+                    notes = harvestRecord.notes,
+                    isFinalHarvest = harvestRecord.isFinalHarvest
                 )
 
                 // 3. Log Activity History with Bed Number, Date, Crop, Variety and Yield
@@ -395,7 +445,8 @@ class CropDssManagementViewModel(
                 val dateOnly = try { nowStr.take(10) } catch (_: Exception) { LocalDate.now().toString() }
                 val varietySuffix = if (!harvestRecord.cropVariety.isNullOrBlank()) " (${harvestRecord.cropVariety})" else ""
                 val qtyStr = "${harvestRecord.quantity} ${harvestRecord.unit}"
-                val notesText = "Harvested $qtyStr of ${harvestRecord.cropName}$varietySuffix from ${harvestRecord.plotLabel} on $dateOnly"
+                val notesText = (if (harvestRecord.isFinalHarvest) "Final harvest: " else "Harvest picking: ") +
+                        "$qtyStr of ${harvestRecord.cropName}$varietySuffix from ${harvestRecord.plotLabel} on $dateOnly"
 
                 val activity = Activity(
                     id = UUID.randomUUID().toString(),
@@ -407,20 +458,33 @@ class CropDssManagementViewModel(
                 )
                 activityRepository.logActivity(activity)
 
-                // 4. Complete any pending HARVEST tasks for this plot
-                try {
-                    val tasks = taskRepository.observeHarvestReady(harvestRecord.farmId).firstOrNull() ?: emptyList()
-                    tasks.filter { it.plotId == harvestRecord.plotId && !it.isCompleted }.forEach { t ->
-                        taskRepository.completeTask(t.id, nowStr)
-                    }
-                } catch (_: Exception) {}
+                // 4. Complete any pending HARVEST tasks for this plot if final harvest
+                if (harvestRecord.isFinalHarvest) {
+                    try {
+                        val tasks = taskRepository.observeHarvestReady(harvestRecord.farmId).firstOrNull() ?: emptyList()
+                        tasks.filter { it.plotId == harvestRecord.plotId && !it.isCompleted }.forEach { t ->
+                            taskRepository.completeTask(t.id, nowStr)
+                        }
+                    } catch (_: Exception) {}
+                }
 
                 // 5. Update DSS UI state
+                val statusText = if (harvestRecord.isFinalHarvest) {
+                    "Final harvest recorded: $qtyStr from ${harvestRecord.plotLabel}! Bed cleared for next cycle."
+                } else {
+                    "Harvest picking recorded: $qtyStr from ${harvestRecord.plotLabel}! Plant active for subsequent pickings."
+                }
+
                 _uiState.update {
                     it.copy(
                         isHarvestOpen = false,
-                        currentStage = ManagementStage.HARVEST,
-                        stageNotificationText = "Harvest recorded: $qtyStr from ${harvestRecord.plotLabel}! Logged to Activity History."
+                        currentStage = if (harvestRecord.isFinalHarvest) ManagementStage.PREPARATION else ManagementStage.HARVEST,
+                        isPlanted = if (harvestRecord.isFinalHarvest) false else it.isPlanted,
+                        cropName = if (harvestRecord.isFinalHarvest) "Unplanted Bed" else it.cropName,
+                        harvestCount = it.harvestCount + 1,
+                        totalYieldKg = it.totalYieldKg + yieldVal,
+                        previousCropsHistory = if (harvestRecord.isFinalHarvest) (it.previousCropsHistory + harvestRecord.cropName).distinct() else it.previousCropsHistory,
+                        stageNotificationText = statusText
                     )
                 }
             } catch (e: Exception) {

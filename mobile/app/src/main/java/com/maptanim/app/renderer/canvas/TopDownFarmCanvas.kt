@@ -130,10 +130,10 @@ object TopDownProjection {
 // Design Tokens
 // ═══════════════════════════════════════════════════════════════════════════════
 
-internal val CanvasBg         = Color(0xFF2C302E) // Slate gray background
-internal val GridDotColor     = Color(0xFF454B46) // Subtle gray dot grid
+internal val CanvasBg         = Color(0xFF1B221A) // Dark agricultural soil background
+internal val GridDotColor     = Color(0xFF384535) // Subtle gray-green dot grid
 internal val FarmBorderColor  = Color(0xFF4CAF50) // Crisp green farm boundary
-internal val FarmInnerBg      = Color(0xFF222623) // Farm surface inside boundary
+internal val FarmInnerBg      = Color(0xFF1B221A) // Seamless farm surface inside boundary
 internal val BedFill          = Color(0xFF8D6E63) // Brown garden bed
 internal val BedBorder        = Color(0xFF5D4037)
 internal val PlantedBedFill   = Color(0xFF6D4C41)
@@ -171,12 +171,14 @@ fun TopDownFarmCanvas(
     hoverWorldPos: Offset? = null,
     isValidPlacement: Boolean = true,
     isDraggingCrop: Boolean = false,
+    showBoundary: Boolean = false,
+    initialZoom: Float = 0.5f,
     onCameraChanged: (TopDownCamera) -> Unit = {}
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
 
-    var camera by remember { mutableStateOf(TopDownCamera()) }
+    var camera by remember { mutableStateOf(TopDownCamera(zoom = initialZoom)) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var hasAnimated by remember { mutableStateOf(false) }
 
@@ -197,17 +199,21 @@ fun TopDownFarmCanvas(
     val leftPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
     val rightPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
 
-    // Entrance animation — fit farm on layout or orientation change
+    // Entrance: Start at initialZoom (default 0.5f = zoom 5) centered on beds with NO visible canvas edge
     LaunchedEffect(canvasSize, isLandscape) {
         if (canvasSize.width > 0 && canvasSize.height > 0) {
-            val fitCam = TopDownProjection.fitCamera(
-                farmW = 45f, farmH = 45f,
-                screenW = canvasSize.width.toFloat(), screenH = canvasSize.height.toFloat(),
-                topPadding = topPaddingPx, bottomPadding = bottomPaddingPx,
-                leftPadding = leftPaddingPx, rightPadding = rightPaddingPx
-            )
-            camera = fitCam
-            onCameraChanged(fitCam)
+            val targetZoom = initialZoom.coerceIn(0.2f, 3.5f)
+            val centerX = if (uiState.plots.isNotEmpty()) {
+                (uiState.plots.minOf { it.posX } + uiState.plots.maxOf { it.posX + it.widthM }) / 2f
+            } else 22.5f
+            val centerY = if (uiState.plots.isNotEmpty()) {
+                (uiState.plots.minOf { it.posY } + uiState.plots.maxOf { it.posY + it.heightM }) / 2f
+            } else 22.5f
+            val panX = canvasSize.width / 2f - centerX * TopDownProjection.PPM * targetZoom
+            val panY = canvasSize.height / 2f - centerY * TopDownProjection.PPM * targetZoom
+            val initCam = TopDownCamera(panX = panX, panY = panY, zoom = targetZoom)
+            camera = initCam
+            onCameraChanged(initCam)
             hasAnimated = true
         }
     }
@@ -447,7 +453,7 @@ fun TopDownFarmCanvas(
         }
 
         // ── Farm Boundary (45m × 45m) ──────────────────────────────────
-        drawFarmBoundary(camera)
+        drawFarmBoundary(camera, showBoundary)
 
         // ── Plot Beds & Crops ──────────────────────────────────────────
         for (plot in currentPlots) {
@@ -518,17 +524,16 @@ private fun DrawScope.drawDotGrid(camera: TopDownCamera) {
     while (gx <= worldBounds.right) {
         var gy = startY
         while (gy <= worldBounds.bottom) {
-            if (gx in 0f..45f && gy in 0f..45f) {
-                val screen = TopDownProjection.worldToScreen(gx, gy, camera)
-                drawCircle(GridDotColor, dotRadius, screen)
-            }
+            val screen = TopDownProjection.worldToScreen(gx, gy, camera)
+            drawCircle(GridDotColor, dotRadius, screen)
             gy += gridStep
         }
         gx += gridStep
     }
 }
 
-private fun DrawScope.drawFarmBoundary(camera: TopDownCamera) {
+private fun DrawScope.drawFarmBoundary(camera: TopDownCamera, showBoundary: Boolean = false) {
+    if (!showBoundary) return
     val tl = TopDownProjection.worldToScreen(0f, 0f, camera)
     val farmSize = Size(
         TopDownProjection.worldSizeToScreen(45f, camera),

@@ -82,7 +82,7 @@ class CropPlotRepositoryImpl(
         inMemoryCache.value = current
     }
 
-    override suspend fun recordHarvest(plotId: String, yieldKg: Float?, notes: String?) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    override suspend fun recordHarvest(plotId: String, yieldKg: Float?, notes: String?, isFinalHarvest: Boolean) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val currentList = inMemoryCache.value.values.flatten()
         val plot = currentList.firstOrNull { it.id == plotId }
             ?: cropPlotDao?.observePlotById(plotId)?.firstOrNull()?.toDomain()
@@ -93,6 +93,7 @@ class CropPlotRepositoryImpl(
             val plantedDate = plot.plantedDate
             val plotLabel = plot.plotLabel
             val farmId = plot.farmId
+            val currentYield = yieldKg ?: 0f
 
             // Calculate total growing duration (days or sim seconds)
             val isSim = cropName.lowercase().contains("ampalaya") || cropVariety?.contains("10s", ignoreCase = true) == true
@@ -120,9 +121,10 @@ class CropPlotRepositoryImpl(
                 plantedDate = plantedDate,
                 harvestedAt = java.time.ZonedDateTime.now().toString(),
                 growingDurationDays = growingDurationDays,
-                yieldKg = yieldKg ?: 0f,
+                yieldKg = currentYield,
                 qualityRating = 5,
-                notes = notes
+                notes = notes,
+                isFinalHarvest = isFinalHarvest
             )
 
             // Save complete harvest record under farm history
@@ -132,15 +134,32 @@ class CropPlotRepositoryImpl(
                 e.printStackTrace()
             }
 
-            // Remove crop from active monitoring list & clear plot for next cycle
-            val clearedPlot = plot.copy(
-                cropName = null,
-                cropId = null,
-                cropVariety = null,
-                plantedDate = null,
-                updatedAt = java.time.ZonedDateTime.now().toString()
-            )
-            upsertPlot(clearedPlot)
+            val nowStr = java.time.ZonedDateTime.now().toString()
+            if (isFinalHarvest) {
+                // Final harvest: remove crop from active bed, save to rotation history
+                val updatedHistory = (plot.previousCropsHistory + cropName).distinct()
+                val clearedPlot = plot.copy(
+                    cropName = null,
+                    cropId = null,
+                    cropVariety = null,
+                    plantedDate = null,
+                    currentStage = com.maptanim.app.domain.model.ManagementStage.PREPARATION,
+                    harvestCount = plot.harvestCount + 1,
+                    totalYieldKg = plot.totalYieldKg + currentYield,
+                    previousCropsHistory = updatedHistory,
+                    updatedAt = nowStr
+                )
+                upsertPlot(clearedPlot)
+            } else {
+                // Continuous multi-pick: keep crop active, increment harvest count and total yield
+                val continuousPlot = plot.copy(
+                    currentStage = com.maptanim.app.domain.model.ManagementStage.HARVEST,
+                    harvestCount = plot.harvestCount + 1,
+                    totalYieldKg = plot.totalYieldKg + currentYield,
+                    updatedAt = nowStr
+                )
+                upsertPlot(continuousPlot)
+            }
         }
     }
 

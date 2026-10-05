@@ -67,6 +67,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +98,7 @@ fun FarmScreen(
                 farmName = uiState.farmName,
                 isLoading = uiState.isLoading,
                 onBack = { navController.popBackStack() },
-                onGardenLayoutClick = { navController.navigate(Routes.EDIT) }
+                onGardenLayoutClick = { viewModel.selectTab(FarmTab.OVERVIEW) }
             )
 
             // ── CLEAN TAB NAVIGATION ──────────────────────────────────────────
@@ -133,13 +134,23 @@ fun FarmScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (uiState.selectedTab) {
                     FarmTab.OVERVIEW -> {
-                        FarmOverviewTab(
+                        SingleScreenFarmHub(
                             uiState = uiState,
-                            onEditFarm = { navController.navigate(Routes.EDIT) },
+                            onAddNewBed = { viewModel.addNewBed() },
+                            onAddNewBedWithDetails = { label, w, h, soil -> viewModel.addNewBed(label, w, h, soil) },
+                            onDeleteBed = { viewModel.deleteBed(it) },
+                            onAssignCrop = { plotId, cropName, variety, method, isPlanted ->
+                                viewModel.assignCropToBed(plotId, cropName, variety, method, isPlanted)
+                            },
                             onCompleteTask = { viewModel.completeTask(it) },
-                            onOpenPlantDetails = { viewModel.openCropDetails(it) },
-                            onOpenPlotDetails = { viewModel.openPlotDetails(it) },
-                            onViewActivities = { viewModel.selectTab(FarmTab.ACTIVITY) }
+                            onQuickMaintain = { plotId, action -> viewModel.quickLogMaintenance(plotId, action) },
+                            onRecordHarvest = { plotId, yieldKg, notes, isFinal ->
+                                viewModel.recordHarvest(plotId, yieldKg, notes, isFinal)
+                            },
+                            onAdvanceStage = { plotId, stage -> viewModel.advancePlotStage(plotId, stage) },
+                            onLogObservationTask = { plotId, taskTitle ->
+                                viewModel.quickLogMaintenance(plotId, "weed")
+                            }
                         )
                     }
                     FarmTab.MONITORING -> {
@@ -211,9 +222,9 @@ fun FarmScreen(
         }
     }
 
-    // ── MODALS ────────────────────────────────────────────────────────────────
+    // ── MODALS (For secondary tabs only; Overview uses SingleScreenFarmHub directly) ──
     // 1. Crop DSS Management Dialog
-    if (uiState.selectedPlantForDetails != null || uiState.selectedPlotForDetails != null) {
+    if (uiState.selectedTab != FarmTab.OVERVIEW && (uiState.selectedPlantForDetails != null || uiState.selectedPlotForDetails != null)) {
         CropDssManagementDialog(
             plant = uiState.selectedPlantForDetails,
             plot = uiState.selectedPlotForDetails,
@@ -228,8 +239,8 @@ fun FarmScreen(
             onStartPlanting = { plotId ->
                 viewModel.startPlantingNow(plotId)
             },
-            onHarvest = { plotId ->
-                viewModel.recordHarvest(plotId)
+            onHarvest = {
+                viewModel.closeCropDetails()
             }
         )
     }
@@ -241,20 +252,23 @@ fun FarmScreen(
         if (targetPlot != null) {
             val monitoredPlant = uiState.plantedPlants.firstOrNull { it.id == targetPlot.id || it.plotLabel == targetPlot.plotLabel }
             val rawDate = targetPlot.plantedDate ?: monitoredPlant?.rawPlantedDate
-            val stage = if (!rawDate.isNullOrBlank()) {
+            val stage = if (targetPlot.currentStage != ManagementStage.PREPARATION) {
+                targetPlot.currentStage
+            } else if (!rawDate.isNullOrBlank()) {
                 val dateOnly = rawDate.take(10)
                 val pDate = try { LocalDate.parse(dateOnly) } catch (_: Exception) { LocalDate.now() }
                 val days = java.time.temporal.ChronoUnit.DAYS.between(pDate, LocalDate.now()).toInt().coerceAtLeast(0)
+                val dth = (monitoredPlant?.daysToHarvest ?: 60).coerceAtLeast(20)
+                val progress = (days.toFloat() / dth.toFloat()).coerceIn(0f, 1f)
                 when {
-                    days < 10 -> ManagementStage.PREPARATION
-                    days < 25 -> ManagementStage.PLANTING
-                    days < 45 -> ManagementStage.EARLY_GROWTH
-                    days < 65 -> ManagementStage.VEGETATIVE_GROWTH
-                    days < 80 -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+                    progress < 0.15f -> ManagementStage.PLANTING
+                    progress < 0.35f -> ManagementStage.EARLY_GROWTH
+                    progress < 0.65f -> ManagementStage.VEGETATIVE_GROWTH
+                    progress < 0.90f -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
                     else -> ManagementStage.HARVEST
                 }
             } else {
-                ManagementStage.VEGETATIVE_GROWTH
+                ManagementStage.PREPARATION
             }
             AddLogDialog(
                 cropPlantingId = targetPlot.id,
@@ -456,7 +470,8 @@ private fun FarmOverviewTab(
     onCompleteTask: (String) -> Unit,
     onOpenPlantDetails: (MonitoredPlant) -> Unit,
     onOpenPlotDetails: (CropPlot) -> Unit,
-    onViewActivities: () -> Unit
+    onViewActivities: () -> Unit,
+    onQuickMaintain: (String, String) -> Unit = { _, _ -> }
 ) {
     if (uiState.isLoading) {
         Box(
@@ -571,7 +586,9 @@ private fun FarmOverviewTab(
             zones = uiState.cropZones,
             onOpenPlantDetails = onOpenPlantDetails,
             onOpenPlotDetails = onOpenPlotDetails,
-            plantedPlants = uiState.plantedPlants
+            plantedPlants = uiState.plantedPlants,
+            onEditFarm = onEditFarm,
+            onQuickMaintain = onQuickMaintain
         )
 
         HorizontalDivider(color = Color(0xFF222C1F), thickness = 1.dp, modifier = Modifier.padding(vertical = 2.dp))
@@ -1151,8 +1168,13 @@ private fun ActualFarmLayoutCard(
     zones: List<CropZone> = emptyList(),
     onOpenPlantDetails: (MonitoredPlant) -> Unit,
     onOpenPlotDetails: (CropPlot) -> Unit,
-    plantedPlants: List<MonitoredPlant>
+    plantedPlants: List<MonitoredPlant>,
+    onEditFarm: () -> Unit = {},
+    onQuickMaintain: (plotId: String, actionType: String) -> Unit = { _, _ -> }
 ) {
+    var selectedPlot by remember { mutableStateOf<CropPlot?>(null) }
+    var isPanelCollapsed by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF141C12)),
@@ -1162,13 +1184,55 @@ private fun ActualFarmLayoutCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Header with layout stats & Add Bed button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "FARM LAYOUT CANVAS",
+                        color = White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "• Tap bed to manage",
+                        color = Color(0xFFA0B09A),
+                        fontSize = 10.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF202E1C),
+                    border = BorderStroke(1.dp, Color(0xFF384F31)),
+                    modifier = Modifier.clickable { onEditFarm() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(text = "＋", color = Color(0xFF81C784), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Add / Edit Beds", color = Color(0xFF81C784), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
             // ── Real 2D Top-Down Farm Layout Preview Canvas ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
+                    .height(230.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, Color(0xFF2B3825), RoundedCornerShape(8.dp))
             ) {
@@ -1176,15 +1240,201 @@ private fun ActualFarmLayoutCard(
                     plots = plots,
                     zones = zones,
                     onPlotClick = { plot ->
-                        val plant = plantedPlants.firstOrNull { it.id == plot.id }
-                        if (plant != null) {
-                            onOpenPlantDetails(plant)
-                        } else {
-                            onOpenPlotDetails(plot)
-                        }
+                        selectedPlot = plot
+                        isPanelCollapsed = false
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // ── Collapsed Floating Handle on Canvas (< handle) ──
+                if (selectedPlot != null && isPanelCollapsed) {
+                    val activePlot = selectedPlot!!
+                    val activePlant = plantedPlants.firstOrNull { it.id == activePlot.id }
+                    val cropDisplay = activePlant?.cropName ?: activePlot.cropName ?: "Unplanted"
+                    Surface(
+                        shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
+                        color = Color(0xF0182415),
+                        border = BorderStroke(1.dp, Color(0xFF4C6B42)),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .clickable { isPanelCollapsed = false }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "<",
+                                color = Color(0xFF81C784),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Column {
+                                Text(
+                                    text = activePlot.plotLabel.uppercase(),
+                                    color = Color(0xFF81C784),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = cropDisplay,
+                                    color = White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Interactive Bed Maintenance Panel (with < collapse handle) ──
+            if (selectedPlot != null && !isPanelCollapsed) {
+                val activePlot = selectedPlot!!
+                val activePlant = plantedPlants.firstOrNull { it.id == activePlot.id }
+                val cropDisplay = activePlant?.cropName ?: activePlot.cropName ?: "Unplanted Bed"
+                val bedArea = (activePlot.widthM * activePlot.heightM).coerceAtLeast(0.1f)
+                val fractionOfKey = (28.4f / bedArea).coerceAtLeast(1f).roundToInt()
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF192316),
+                    border = BorderStroke(1.dp, Color(0xFF33462D)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Title row with < collapse button and ✕ close
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // The < collapse handle button
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFF273822),
+                                    border = BorderStroke(1.dp, Color(0xFF4C6B42)),
+                                    modifier = Modifier.clickable { isPanelCollapsed = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(text = "<", color = Color(0xFF81C784), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = "Hide", color = Color(0xFFA0B09A), fontSize = 10.sp)
+                                    }
+                                }
+
+                                Text(
+                                    text = "${activePlot.plotLabel.uppercase()} • $cropDisplay",
+                                    color = White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "🏀 %.1fm×%.1fm (1/%d key)".format(activePlot.widthM, activePlot.heightM, fractionOfKey),
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Text(
+                                    text = "✕",
+                                    color = Color(0xFFA0B09A),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .clickable { selectedPlot = null }
+                                        .padding(horizontal = 4.dp)
+                                )
+                            }
+                        }
+
+                        // 1-Tap Quick Action Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Water
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF132A38),
+                                border = BorderStroke(1.dp, Color(0xFF265D7D)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onQuickMaintain(activePlot.id, "Water") }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "💧 Water", color = Color(0xFF80D8FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Weed
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF23331C),
+                                border = BorderStroke(1.dp, Color(0xFF486E38)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onQuickMaintain(activePlot.id, "Weed") }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "🌿 Weed", color = Color(0xFFA5D6A7), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Full Details / Guide
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF332918),
+                                border = BorderStroke(1.dp, Color(0xFF7A5C22)),
+                                modifier = Modifier
+                                    .weight(1.3f)
+                                    .clickable {
+                                        if (activePlant != null) {
+                                            onOpenPlantDetails(activePlant)
+                                        } else {
+                                            onOpenPlotDetails(activePlot)
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "⚙️ Full Guide →", color = Color(0xFFFFD54F), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -3172,11 +3422,13 @@ private fun FarmActivityTab(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         val filteredActivities = uiState.activityHistory.filter { item ->
             uiState.selectedActivityFilter == ActivityCategory.ALL || item.category == uiState.selectedActivityFilter
         }
+
+        var activityLimit by remember(uiState.selectedActivityFilter) { mutableIntStateOf(20) }
 
         if (filteredActivities.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -3187,12 +3439,68 @@ private fun FarmActivityTab(
                 )
             }
         } else {
+            val pagedActivities = filteredActivities.take(activityLimit)
+            val grouped = pagedActivities.groupBy { act ->
+                try {
+                    val dateOnly = act.timestamp.take(10)
+                    val actDate = LocalDate.parse(dateOnly)
+                    val today = LocalDate.now()
+                    when {
+                        actDate == today -> "Today"
+                        actDate == today.minusDays(1) -> "Yesterday"
+                        actDate.isAfter(today.minusDays(7)) -> "This Week"
+                        actDate.isAfter(today.minusDays(30)) -> "Earlier this Month"
+                        else -> "Earlier Seasons"
+                    }
+                } catch (_: Exception) {
+                    "Recent Activity"
+                }
+            }
+
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredActivities, key = { it.id }) { act ->
-                    ActivityHistoryCard(act = act)
+                grouped.forEach { (header, items) ->
+                    item(key = "header_$header") {
+                        Text(
+                            text = header.uppercase(),
+                            color = Color(0xFF81C784),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                        )
+                    }
+                    items(items, key = { it.id }) { act ->
+                        ActivityHistoryCard(act = act)
+                    }
+                }
+
+                if (filteredActivities.size > activityLimit) {
+                    item(key = "load_older_activities") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = { activityLimit += 20 },
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF2E7D32)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFF81C784)
+                                )
+                            ) {
+                                Text(
+                                    text = "Load Older Activities (+20 of ${filteredActivities.size - activityLimit} remaining)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

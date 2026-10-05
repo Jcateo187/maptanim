@@ -25,7 +25,8 @@ data class HarvestEntity(
     @ColumnInfo(name = "quantity", defaultValue = "0") val quantity: Float = 0f,
     @ColumnInfo(name = "unit", defaultValue = "kg") val unit: String = "kg",
     @ColumnInfo(name = "marketable_pct") val marketablePct: Float? = null,
-    @ColumnInfo(name = "crop_planting_id") val cropPlantingId: String? = null
+    @ColumnInfo(name = "crop_planting_id") val cropPlantingId: String? = null,
+    @ColumnInfo(name = "is_final_harvest", defaultValue = "1") val isFinalHarvest: Boolean = true
 )
 
 fun HarvestEntity.toDomain() = HarvestRecord(
@@ -46,7 +47,8 @@ fun HarvestEntity.toDomain() = HarvestRecord(
     quantity = quantity,
     unit = unit,
     marketablePct = marketablePct,
-    cropPlantingId = cropPlantingId
+    cropPlantingId = cropPlantingId,
+    isFinalHarvest = isFinalHarvest
 )
 
 fun HarvestRecord.toEntity() = HarvestEntity(
@@ -67,5 +69,6 @@ fun HarvestRecord.toEntity() = HarvestEntity(
     quantity = quantity,
     unit = unit,
     marketablePct = marketablePct,
-    cropPlantingId = cropPlantingId
+    cropPlantingId = cropPlantingId,
+    isFinalHarvest = isFinalHarvest
 )

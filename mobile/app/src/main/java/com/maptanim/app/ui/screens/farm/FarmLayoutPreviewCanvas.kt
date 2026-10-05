@@ -35,15 +35,24 @@ import com.maptanim.app.renderer.canvas.LabelBg
 import com.maptanim.app.renderer.canvas.PlantedBedFill
 import com.maptanim.app.renderer.canvas.cropColor
 
+enum class CanvasLayer {
+    CROPS,
+    RISK,
+    HARVEST
+}
+
 /**
  * FarmLayoutPreviewCanvas — 2D top-down preview of the actual farm layout.
  * Shows the whole canvas top-down with beds and crops with no cut or edge clipping.
  * Renders bed soil, child crop zones, and vector SVG crop icons.
+ * Supports interactive selection and CROPS, RISK, HARVEST layers.
  */
 @Composable
 fun FarmLayoutPreviewCanvas(
     plots: List<CropPlot>,
     zones: List<CropZone> = emptyList(),
+    selectedPlotId: String? = null,
+    layer: CanvasLayer = CanvasLayer.CROPS,
     onPlotClick: (CropPlot) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -377,6 +386,57 @@ fun FarmLayoutPreviewCanvas(
                         topLeft = Offset(labelX + 4f, labelY + 2f)
                     )
                 }
+            }
+
+            // Layer-Specific Overlays
+            if (layer == CanvasLayer.RISK) {
+                val isWetSeason = java.time.LocalDate.now().monthValue in 5..10
+                val cropLower = (plot.cropName ?: "").lowercase()
+                val isHighRisk = isWetSeason && (cropLower.contains("tomato") || cropLower.contains("eggplant") || cropLower.contains("chili"))
+                val riskColor = if (isHighRisk) Color(0xFFE53935) else if (!isPlanted) Color(0xFFFFA000) else Color(0xFF43A047)
+                drawRoundRect(
+                    color = riskColor,
+                    topLeft = tl,
+                    size = bedSize,
+                    cornerRadius = cornerR,
+                    style = Stroke(width = 2.5f)
+                )
+            } else if (layer == CanvasLayer.HARVEST && isPlanted) {
+                val pDateStr = plot.plantedDate?.take(10)
+                val daysPlanted = if (!pDateStr.isNullOrBlank()) {
+                    try {
+                        val pDate = java.time.LocalDate.parse(pDateStr)
+                        java.time.temporal.ChronoUnit.DAYS.between(pDate, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
+                    } catch (_: Exception) { 0 }
+                } else 0
+                val dth = 60
+                val left = dth - daysPlanted
+                val badgeText = if (left <= 0) "READY 🌾" else "${left}d"
+                val badgeBg = if (left <= 0) Color(0xFF2E7D32) else if (left <= 7) Color(0xFFFFA000) else Color(0xFF1976D2)
+
+                val badgeMeasured = textMeasurer.measure(
+                    text = badgeText,
+                    style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                )
+                val bw = badgeMeasured.size.width.toFloat() + 8f
+                val bh = badgeMeasured.size.height.toFloat() + 4f
+                val bx = tl.x + bedW - bw - 4f
+                val by = tl.y + bedH - bh - 4f
+                if (bw < bedW && bh < bedH) {
+                    drawRoundRect(badgeBg, Offset(bx, by), Size(bw, bh), CornerRadius(3f))
+                    drawText(badgeMeasured, topLeft = Offset(bx + 4f, by + 2f))
+                }
+            }
+
+            // Selection Highlight Outline
+            if (plot.id == selectedPlotId) {
+                drawRoundRect(
+                    color = Color(0xFF81C784),
+                    topLeft = tl,
+                    size = bedSize,
+                    cornerRadius = cornerR,
+                    style = Stroke(width = 3f)
+                )
             }
         }
     }

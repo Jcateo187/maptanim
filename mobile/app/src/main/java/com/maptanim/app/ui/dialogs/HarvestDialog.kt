@@ -103,6 +103,14 @@ fun HarvestDialog(
     var notes by remember { mutableStateOf("") }
     var validationError by remember { mutableStateOf<String?>(null) }
 
+    val isMultiPickCrop = remember(cropName) {
+        val lower = cropName.lowercase()
+        lower.contains("tomato") || lower.contains("eggplant") || lower.contains("okra") ||
+        lower.contains("chili") || lower.contains("pepper") || lower.contains("cucumber") ||
+        lower.contains("sitaw") || lower.contains("bean") || lower.contains("kangkong") || lower.contains("ampalaya")
+    }
+    var isFinalHarvest by remember { mutableStateOf(!isMultiPickCrop) }
+
     val daysSincePlanting = remember(plantedDate) {
         if (!plantedDate.isNullOrBlank()) {
             try {
@@ -461,6 +469,61 @@ fun HarvestDialog(
                                     )
                                 }
 
+                                // Harvest Type Selector: Ongoing / Partial vs Final Harvest
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Harvest Type & Cycle Action", fontSize = 12.sp, color = Color(0xFFB0C8AA), fontWeight = FontWeight.SemiBold)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            onClick = { isFinalHarvest = false },
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (!isFinalHarvest) Color(0xFF1E3A24) else Color(0xFF141C12),
+                                            border = BorderStroke(1.dp, if (!isFinalHarvest) Color(0xFF4CAF50) else Color(0xFF2B3825)),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(
+                                                    text = "🌱 Partial / Ongoing",
+                                                    color = if (!isFinalHarvest) Color(0xFF81C784) else White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Keep plant active for subsequent pickings",
+                                                    color = Color(0xFFA0B09A),
+                                                    fontSize = 10.sp,
+                                                    lineHeight = 13.sp
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            onClick = { isFinalHarvest = true },
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isFinalHarvest) Color(0xFF3E2714) else Color(0xFF141C12),
+                                            border = BorderStroke(1.dp, if (isFinalHarvest) Color(0xFFFFA000) else Color(0xFF2B3825)),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(
+                                                    text = "🌾 Final Harvest",
+                                                    color = if (isFinalHarvest) Color(0xFFFFB74D) else White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Clear bed and proceed to crop rotation",
+                                                    color = Color(0xFFA0B09A),
+                                                    fontSize = 10.sp,
+                                                    lineHeight = 13.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
                                 // Harvest Notes
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text("Notes (Optional)", fontSize = 12.sp, color = Color(0xFFB0C8AA))
@@ -571,21 +634,22 @@ fun HarvestDialog(
                                         quantity = qty,
                                         unit = selectedUnit,
                                         marketablePct = marketablePct,
-                                        cropPlantingId = cropPlantingId
+                                        cropPlantingId = cropPlantingId,
+                                        isFinalHarvest = isFinalHarvest
                                     )
 
                                     onSubmitHarvest(record)
                                 },
                                 modifier = Modifier.weight(2f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFFFA000)
+                                    containerColor = if (isFinalHarvest) Color(0xFFFFA000) else Color(0xFF2E7D32)
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text(
-                                    "Record Harvest Yield",
-                                    color = Color.Black,
-                                    fontSize = 13.sp,
+                                    text = if (isFinalHarvest) "Record Final Harvest 🌾" else "Record Picking (Keep Plant) 🌱",
+                                    color = if (isFinalHarvest) Color.Black else White,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
