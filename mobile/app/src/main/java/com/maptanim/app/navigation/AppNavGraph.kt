@@ -15,7 +15,7 @@ import com.maptanim.app.features.auth.screen.ForgotPasswordScreen
 import com.maptanim.app.features.auth.screen.LoginScreen
 import com.maptanim.app.features.auth.screen.WelcomeScreen
 import com.maptanim.app.features.community.screen.CommunityScreen
-import com.maptanim.app.features.farm.screen.FarmScreen
+import com.maptanim.app.features.farm.screen.FarmHubScreen
 import com.maptanim.app.features.home.screen.MainHomeScreen
 import com.maptanim.app.features.splash.screen.LoadingScreen
 import com.maptanim.app.features.profile.ProfileScreen
@@ -129,7 +129,7 @@ fun AppNavGraph() {
                 )
             }
         ) {
-            FarmScreen(navController = navController)
+            FarmHubScreen(navController = navController)
         }
 
         composable(
