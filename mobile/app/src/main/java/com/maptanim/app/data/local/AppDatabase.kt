@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
         CropPestDiseaseGuideEntity::class,
         CropLogEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "maptanim_db"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                         super.onCreate(db)
