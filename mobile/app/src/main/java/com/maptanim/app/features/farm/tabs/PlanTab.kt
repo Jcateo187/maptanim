@@ -61,86 +61,39 @@ fun PlanTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── 0A. Beginner "Start Here" Card if no beds exist ─────────────────
-        if (state.rawPlots.isEmpty()) {
+        val activePlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
+            ?: state.rawPlots.firstOrNull()
+
+        // ── 1. PRIMARY ACTION: Bed Editor & Crop Assignment ─────────────────
+        if (activePlot != null) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F8E9),
-                    border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "STEP 2: DESIGN & ADD YOUR FIRST BED",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = LushGreen,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = "Your farm is ready on the 2D canvas. Tap below to place Bed #1, select your vegetable, and see the exact plant capacity and crop spacing.",
-                            fontSize = 12.sp,
-                            color = DeepBlack,
-                            lineHeight = 16.sp
-                        )
-                        Button(
-                            onClick = onAddNewBed,
-                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("＋ Add Bed #1 to Canvas", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                BedEditorCard(
+                    plot = activePlot,
+                    environment = state.farmEnvironment,
+                    onResize = { w, h -> onResizeBed(activePlot.id, w, h) },
+                    onAssignCrop = { id, name -> onAssignCrop(activePlot.id, id, name) },
+                    onNavigateToGuide = onNavigateToGuide
+                )
             }
         }
 
-        // ── 0B. Place Suitability & Alternative Methods Card ─────────────────
+        // ── 2. Place Suitability & Climate Alignment Card ────────────────────
         item {
-            val selectedPlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
-                ?: state.rawPlots.firstOrNull()
             CropPlaceSuitabilityCard(
-                cropName = selectedPlot?.cropName,
+                cropName = activePlot?.cropName,
                 environment = state.farmEnvironment,
                 onOpenSetupDialog = onOpenSetupDialog
             )
         }
 
-        // ── 1. Basketball Court Physical Scale Card ──────────────────────────
+        // ── 3. Basketball Court Physical Scale Benchmark ─────────────────────
         item {
-            val selectedPlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
-                ?: state.rawPlots.firstOrNull()
             BasketballCourtScaleCard(
-                widthM = selectedPlot?.widthM ?: 2.0f,
-                heightM = selectedPlot?.heightM ?: 4.0f,
-                cropName = selectedPlot?.cropName ?: "Vegetable Bed",
-                plotLabel = selectedPlot?.plotLabel ?: "Bed #1"
+                widthM = activePlot?.widthM ?: 2.0f,
+                heightM = activePlot?.heightM ?: 4.0f,
+                cropName = activePlot?.cropName ?: "Vegetable Bed",
+                plotLabel = activePlot?.plotLabel ?: "Bed #1"
             )
-        }
-
-        // ── 1B. Bed Resizing & Crop Assignment (Active Bed Controls) ─────────
-        if (state.selectedPlotId != null) {
-            val activePlot = state.rawPlots.firstOrNull { it.id == state.selectedPlotId }
-            if (activePlot != null) {
-                item {
-                    BedEditorCard(
-                        plot = activePlot,
-                        environment = state.farmEnvironment,
-                        onResize = { w, h -> onResizeBed(activePlot.id, w, h) },
-                        onAssignCrop = { id, name -> onAssignCrop(activePlot.id, id, name) },
-                        onNavigateToGuide = onNavigateToGuide
-                    )
-                }
-            }
         }
 
         // ── 2. Canvas Edit History (Undo/Redo) ──────────────────────────────
@@ -202,6 +155,24 @@ fun PlanTab(
                     letterSpacing = 1.sp,
                     color = Color(0xFF555555)
                 )
+                TextButton(
+                    onClick = onAddNewBed,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Bed",
+                        tint = LushGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Add Bed",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LushGreen
+                    )
+                }
             }
         }
 
@@ -218,25 +189,35 @@ fun PlanTab(
                             .fillMaxWidth()
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Yard,
                             contentDescription = null,
                             tint = LushGreen,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                         Text(
-                            text = "No Garden Beds Planned",
+                            text = "No Garden Beds Planned Yet",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = DeepBlack
                         )
                         Text(
-                            text = "Tap 'Add Bed' above to start planning your vegetable layout.",
+                            text = "Create your first garden bed to select crops, check soil suitability, and generate your daily care guide.",
                             fontSize = 12.sp,
                             color = Color(0xFF666666)
                         )
+                        Button(
+                            onClick = onAddNewBed,
+                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Create Bed & Pick Crop", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
             }

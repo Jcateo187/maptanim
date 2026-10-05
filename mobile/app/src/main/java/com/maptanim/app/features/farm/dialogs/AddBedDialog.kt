@@ -2,6 +2,8 @@ package com.maptanim.app.features.farm.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,12 +31,14 @@ private val LightSurface = Color(0xFFF9FAF8)
 @Composable
 fun AddBedDialog(
     existingCount: Int,
+    defaultSoil: SoilType = SoilType.LOAM,
     onDismiss: () -> Unit,
-    onConfirm: (label: String, widthM: Float, heightM: Float, soilType: SoilType) -> Unit
+    onConfirm: (label: String, widthM: Float, heightM: Float, soilType: SoilType, cropName: String?) -> Unit
 ) {
     var label by remember { mutableStateOf("Bed #${existingCount + 1}") }
     var selectedPresetIndex by remember { mutableIntStateOf(0) }
-    var selectedSoil by remember { mutableStateOf(SoilType.LOAM) }
+    var selectedSoil by remember { mutableStateOf(defaultSoil) }
+    var selectedCropName by remember { mutableStateOf<String?>(null) }
 
     val presets = remember {
         listOf(
@@ -140,12 +144,61 @@ fun AddBedDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    SoilType.values().forEach { soil ->
+                    SoilType.entries.forEach { soil ->
                         val isSel = soil == selectedSoil
                         FilterChip(
                             selected = isSel,
                             onClick = { selectedSoil = soil },
                             label = { Text(soil.name, fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = LushGreen,
+                                selectedLabelColor = Color.White,
+                                containerColor = Color.White,
+                                labelColor = DeepBlack
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSel,
+                                borderColor = if (isSel) LushGreen else CardBorderColor
+                            )
+                        )
+                    }
+                }
+
+                // Plant Vegetable Crop
+                Text(
+                    text = "PLANT VEGETABLE CROP (OPTIONAL)",
+                    color = Color(0xFF555555),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = if (selectedCropName != null) "Selected: $selectedCropName" else "Tap a crop to plant now, or leave empty to decide later:",
+                    fontSize = 10.sp,
+                    fontWeight = if (selectedCropName != null) FontWeight.Bold else FontWeight.Normal,
+                    color = if (selectedCropName != null) LushGreen else Color(0xFF757575)
+                )
+                val cropOptions = listOf(
+                    null to "Leave Empty",
+                    "Tomato" to "Tomato",
+                    "Eggplant" to "Eggplant",
+                    "Sitaw" to "Sitaw",
+                    "Chili" to "Chili",
+                    "Okra" to "Okra",
+                    "Pechay" to "Pechay",
+                    "Lettuce" to "Lettuce",
+                    "Kangkong" to "Kangkong",
+                    "Cucumber" to "Cucumber",
+                    "Sweet Corn" to "Sweet Corn"
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(cropOptions) { (cropVal, cropLabel) ->
+                        val isSel = selectedCropName == cropVal
+                        FilterChip(
+                            selected = isSel,
+                            onClick = { selectedCropName = cropVal },
+                            label = { Text(cropLabel, fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = LushGreen,
                                 selectedLabelColor = Color.White,
@@ -166,7 +219,7 @@ fun AddBedDialog(
             Button(
                 onClick = {
                     val (w, h) = presets[selectedPresetIndex].second
-                    onConfirm(label.ifBlank { "Bed #${existingCount + 1}" }, w, h, selectedSoil)
+                    onConfirm(label.ifBlank { "Bed #${existingCount + 1}" }, w, h, selectedSoil, selectedCropName)
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = LushGreen,

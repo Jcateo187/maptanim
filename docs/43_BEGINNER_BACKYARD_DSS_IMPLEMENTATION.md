@@ -433,3 +433,32 @@ data class PlantZoneEntity(
    * Completing Tomato triggers Sitaw (Yardlong Bean) as the top recommendation with plain-language explanation: *"Legume restores nitrogen depleted by previous heavy-feeding tomato"*.
 6. **Zero Static Mock Data**:
    * All tasks, recommendations, and bed geometries persist in the Room SQLite database and sync with Supabase. No hardcoded mock lists exist in production builds.
+
+---
+
+## 6. Real-World Case Study: Murcia Volcanic Soil & ₱0 Budget Integration
+
+### 6.1 The Murcia Farmer Profile
+* **Location**: Murcia, Negros Occidental (Highland/Midland slope > 200m elevation).
+* **Soil Profile**: Dark brown volcanic clay-loam (Guimbalaon series), high moisture retention, acidic (pH 5.0–5.5) from surrounding sugarcane culture.
+* **Weather**: Wet/Rainy season, natural slope (no stagnant flood pooling).
+* **Space**: 3 Half-Courts of Basketball ($\approx 630\text{ m}^2$).
+* **Seeds**: Unlabelled repacked local market seeds.
+* **Budget**: ₱0 (Strict reliance on available backyard/household items).
+
+### 6.2 Post-Account Creation DSS Onboarding (6 Dropdown Inputs)
+Immediately following account creation, the user calibrates the DSS through 6 dropdowns:
+1. `Agro-Zone`: Highland / Slope (>500m) vs Lowland Flat (0-500m).
+2. `Current Weather`: Rainy / Wet vs Hot / Dry.
+3. `Ground Soil Texture`: Dark Brown Volcanic vs Heavy Clay vs Sandy vs Loam.
+4. `Backyard Area`: 3 Half-Courts (~630m²) vs 1 Full Court (420m²) vs Half Court (210m²) vs Small Plot (50m²).
+5. `Observed Site Risks`: Free-range Chickens, Natural Slope (No Flood), Water Pooling, Partial Shade, Wind.
+6. `Available ₱0 Materials`: Wood Ash (Abo), Eggshells, Rice Straw/Grass Mulch, Bamboo Stakes, Kitchen Chili & Garlic.
+
+### 6.3 Zero-Budget Case-by-Case Resolution Rules
+* **Flopping Stems**: Bamboo stakes + figure-8 cloth strip ties + sucker pruning (*tanggal suhi*).
+* **Chicken & Animal Scratching**: Thorny branch barriers (Bougainvillea/Citrus) on bed edges or bamboo stick cages.
+* **Rain-Splash Leaf Rot**: Dried rice straw (*dayami*) or dried grass mulch to prevent mud splash.
+* **Blossom-End Rot**: Toasted crushed eggshells + wood ash (*abo*) around root zone for Calcium and Potassium.
+* **Chewing Worms**: Morning handpicking (6 AM) + crushed chili-garlic-dishwashing soap spray (*pampalayas*).
+* **Harvest Technique**: Multi-pick twist-and-snap for Tomato/Sitaw/Eggplant over 60 days (NEVER pull the plant).

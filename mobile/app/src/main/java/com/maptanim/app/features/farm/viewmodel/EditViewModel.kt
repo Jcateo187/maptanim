@@ -53,6 +53,90 @@ class EditViewModel(
     private var activeFarmId: String = "farm-1"
 
     private var farmLayoutJob: kotlinx.coroutines.Job? = null
+    private var autoSaveJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Debounced background auto-save (Canva/Miro style).
+     * Automatically persists plots, crop zones, and re-evaluates DSS
+     * whenever the user performs any canvas action.
+     */
+    fun triggerAutoSave(debounceMs: Long = 0L) {
+        _uiState.update { it.copy(hasUnsavedChanges = true) }
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            if (debounceMs > 0L) {
+                kotlinx.coroutines.delay(debounceMs)
+            }
+            autoPersistLayout()
+        }
+    }
+
+    suspend fun autoPersistLayout() {
+        _uiState.update { it.copy(isSaving = true, saveErrorMessage = null) }
+        try {
+            val currentPlots = _uiState.value.editedPlots
+            val currentZones = _uiState.value.cropZones
+
+            // Ensure beds have accurate crop labels and notes based on zones
+            val syncedPlots = currentPlots.map { plot ->
+                val zonesInBed = currentZones.filter {
+                    it.plotId == plot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true)
+                }
+                if (zonesInBed.isNotEmpty()) {
+                    val cropNames = zonesInBed.mapNotNull { it.cropName }.distinct()
+                    val primaryName = if (cropNames.size == 1) cropNames.first() else "Bed"
+                    val primaryId = if (cropNames.size == 1) (zonesInBed.first().cropId ?: primaryName.lowercase()) else "bed"
+                    plot.copy(
+                        farmId = activeFarmId,
+                        cropName = primaryName,
+                        cropId = primaryId,
+                        plantedDate = plot.plantedDate ?: java.time.LocalDate.now().toString(),
+                        notes = "Crops: " + cropNames.joinToString(", ")
+                    )
+                } else {
+                    plot.copy(farmId = activeFarmId)
+                }
+            }
+
+            cropPlotRepository.savePlots(syncedPlots)
+
+            val domainZones = currentZones.filter {
+                !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true)
+            }.map { zoneData ->
+                com.maptanim.app.domain.model.CropZone(
+                    id = zoneData.id,
+                    plotId = zoneData.plotId,
+                    cropName = zoneData.cropName,
+                    cropId = zoneData.cropName?.lowercase(),
+                    offsetX = zoneData.offsetX,
+                    offsetY = zoneData.offsetY,
+                    widthM = zoneData.widthM,
+                    heightM = zoneData.heightM,
+                    spacingM = zoneData.spacingM,
+                    createdAt = Instant.now().toString(),
+                    updatedAt = Instant.now().toString()
+                )
+            }
+            cropZoneRepository.saveZones(domainZones)
+
+            try {
+                runDssEvaluationUseCase(activeFarmId)
+            } catch (_: Exception) {}
+
+            _uiState.update { it.copy(
+                isSaving = false,
+                hasUnsavedChanges = false,
+                isSaveSuccessful = true,
+                editedPlots = syncedPlots,
+                plots = syncedPlots.map { p -> p.toRenderData() }
+            ) }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(
+                isSaving = false,
+                saveErrorMessage = "Auto-save error: ${e.localizedMessage}"
+            ) }
+        }
+    }
 
     init {
         resolveActiveFarmId()
@@ -288,7 +372,13 @@ class EditViewModel(
     }
 
     fun onPlotDragEnd(plotId: String, isValidPlacement: Boolean = true) {
-        plotDragStartPos.remove(plotId)
+        val startPos = plotDragStartPos.remove(plotId)
+        val currentPlot = _uiState.value.editedPlots.firstOrNull { it.id == plotId }
+        val hasMoved = startPos != null && currentPlot != null &&
+            (abs(startPos.x - currentPlot.posX) > 0.05f || abs(startPos.y - currentPlot.posY) > 0.05f)
+        if (hasMoved) {
+            triggerAutoSave(debounceMs = 0L)
+        }
     }
 
     fun movePlot(plotId: String, worldDelta: Offset) {
@@ -344,7 +434,17 @@ class EditViewModel(
     }
 
     fun onHandleDragEnd() {
+        val initial = initialPlotForResize
         initialPlotForResize = null
+        if (initial != null) {
+            val current = _uiState.value.editedPlots.firstOrNull { it.id == initial.id }
+            val hasChanged = current != null &&
+                (abs(initial.widthM - current.widthM) > 0.05f || abs(initial.heightM - current.heightM) > 0.05f ||
+                 abs(initial.posX - current.posX) > 0.05f || abs(initial.posY - current.posY) > 0.05f)
+            if (hasChanged) {
+                triggerAutoSave(debounceMs = 0L)
+            }
+        }
     }
 
     fun resizePlotByHandle(plotId: String, handle: com.maptanim.app.features.farm.renderer.gesture.HandleType, totalWorldDelta: Offset) {
@@ -490,6 +590,7 @@ class EditViewModel(
             }
         }
         initialZoneForResize = null
+        triggerAutoSave()
     }
 
     fun resizeCropZoneByHandle(
@@ -587,7 +688,13 @@ class EditViewModel(
     }
 
     fun onCropZoneDragEnd(zoneId: String) {
-        zoneDragStartOffset.remove(zoneId)
+        val start = zoneDragStartOffset.remove(zoneId)
+        val currentZone = _uiState.value.cropZones.firstOrNull { it.id == zoneId }
+        val hasMoved = start != null && currentZone != null &&
+            (abs(start.x - currentZone.offsetX) > 0.05f || abs(start.y - currentZone.offsetY) > 0.05f)
+        if (hasMoved) {
+            triggerAutoSave(debounceMs = 0L)
+        }
     }
 
     fun moveCropZone(zoneId: String, worldDelta: Offset) {
@@ -750,6 +857,7 @@ class EditViewModel(
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        triggerAutoSave()
         return true
     }
 
@@ -859,6 +967,7 @@ class EditViewModel(
                 dropFeedbackMessage = null
             )
         }
+        triggerAutoSave()
         return true
     }
 
@@ -922,6 +1031,7 @@ class EditViewModel(
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        triggerAutoSave()
         return true
     }
 
@@ -938,6 +1048,7 @@ class EditViewModel(
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        triggerAutoSave()
     }
 
     fun addPlot(atWorldX: Float, atWorldY: Float, farmId: String = activeFarmId) {
@@ -968,6 +1079,7 @@ class EditViewModel(
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        triggerAutoSave()
     }
 
     fun duplicatePlot(plotId: String) {
@@ -1011,6 +1123,7 @@ class EditViewModel(
         redoStack.clear()
         val updatedPlots = currentPlots.map { if (it.id == plotId) updatedPlot else it }
         updatePlotsState(updatedPlots)
+        triggerAutoSave()
     }
 
     fun bringPlotToFront(plotId: String) {
@@ -1129,6 +1242,7 @@ class EditViewModel(
         }
         redoStack.addLast(action)
         updatePlotsState(currentPlots)
+        triggerAutoSave()
     }
 
     fun redo() {
@@ -1204,6 +1318,7 @@ class EditViewModel(
         }
         undoStack.addLast(action)
         updatePlotsState(currentPlots)
+        triggerAutoSave()
     }
 
     fun toggleGrid() {

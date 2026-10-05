@@ -44,6 +44,10 @@ fun HomeScreen(
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        homeViewModel.refreshCalibration()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -125,6 +129,15 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
+            // ── 0. Initial DSS Observation & Availability Setup Callout ──────
+            if (!uiState.isFarmCalibrated) {
+                item {
+                    DssOnboardingSetupCard(
+                        onStartCalibration = { navController.navigate(Routes.FARM) }
+                    )
+                }
+            }
+
             // ── 1. Quick Shortcuts Bar ───────────────────────────────────────
             item {
                 QuickActionsBar(onNavigate = { navController.navigate(it) })

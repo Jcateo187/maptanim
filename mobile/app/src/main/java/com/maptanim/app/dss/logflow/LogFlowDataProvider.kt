@@ -206,22 +206,23 @@ object LogFlowDataProvider {
                 ),
                 LogFlowChoice(
                     key = "B",
-                    label = "Weak / Abnormal",
+                    label = "Weak / Stressed",
                     checkboxes = listOf(
+                        "Stem rot at soil line ('Hulas' / Damping-off)",
+                        "Leggy / skinny thread stem (stretching for sun)",
                         "Yellowing observed",
                         "Wilting visible",
-                        "Poor development",
                         "Stunted growth"
                     )
                 ),
                 LogFlowChoice(
                     key = "C",
-                    label = "Pest Damage",
+                    label = "Damage / Physical Loss",
                     checkboxes = listOf(
-                        "Holes in leaves",
-                        "Insects visible",
-                        "Leaf damage",
-                        "Stem damage"
+                        "Pulled up / missing plant (accidental or family member)",
+                        "Chicken / animal scratch damage (soil disturbed)",
+                        "Cutworm severed stem at ground level",
+                        "Insects / chewing damage on leaves"
                     )
                 )
             )
@@ -242,22 +243,23 @@ object LogFlowDataProvider {
                 ),
                 LogFlowChoice(
                     key = "B",
-                    label = "Needs Care",
+                    label = "Needs Support / Care",
                     checkboxes = listOf(
-                        "Nutrient deficiency signs",
-                        "Slow growth",
-                        "Needs staking/support",
-                        "Needs pruning"
+                        "Stem flopping in mud (needs bamboo staking)",
+                        "Overcrowded clump (needs thinning)",
+                        "Yellow lower leaves (nitrogen/water check)",
+                        "Weed invasion competing for space",
+                        "Slow growth / nutrient deficiency"
                     )
                 ),
                 LogFlowChoice(
                     key = "C",
-                    label = "Problem Visible",
+                    label = "Pest / Disease Problem",
                     checkboxes = listOf(
-                        "Disease symptoms",
-                        "Pest infestation",
-                        "Physical damage",
-                        "Water stress"
+                        "Chewing caterpillars / hornworms",
+                        "Sucking pests / aphids / leaf curl",
+                        "Rain-splash mud leaf spot",
+                        "Physical branch break / animal damage"
                     )
                 )
             )
@@ -278,22 +280,22 @@ object LogFlowDataProvider {
                 ),
                 LogFlowChoice(
                     key = "B",
-                    label = "Flower Problem",
+                    label = "Flower / Growth Problem",
                     checkboxes = listOf(
-                        "Flowers dropping",
-                        "Poor flower development",
-                        "Low flower count",
-                        "Pollination issues"
+                        "Blossom drop ('Laglag-bulaklak')",
+                        "Excessive suckers ('suhi') with no flowers",
+                        "Lack of pollination during heavy rains",
+                        "Poor flower development"
                     )
                 ),
                 LogFlowChoice(
                     key = "C",
-                    label = "Fruit or Pest Problem",
+                    label = "Fruit Damage / Wilt",
                     checkboxes = listOf(
-                        "Fruit damage",
-                        "Pest on fruit",
-                        "Fruit rot/disease",
-                        "Abnormal fruit development"
+                        "Blossom-End Rot (black sunken fruit bottom)",
+                        "Fruit cracking after heavy downpour",
+                        "Fruit borer / worm burrowing",
+                        "Bacterial wilt (sudden daytime collapse)"
                     )
                 )
             )

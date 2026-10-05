@@ -23,6 +23,10 @@ import com.maptanim.app.domain.model.AgroZone
 import com.maptanim.app.domain.model.FarmEnvironment
 import com.maptanim.app.domain.model.SiteConstraint
 import com.maptanim.app.domain.model.SoilType
+import com.maptanim.app.features.farm.components.BackyardScalePresetChips
+import com.maptanim.app.features.farm.components.FarmBoundariesScaleSection
+import com.maptanim.app.features.farm.components.SeasonDropdownSelector
+import com.maptanim.app.features.farm.components.ZeroBudgetMaterialsSelector
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
@@ -47,9 +51,8 @@ fun FarmSetupDialog(
     var widthM by remember { mutableFloatStateOf(initialEnvironment.widthM) }
     var heightM by remember { mutableFloatStateOf(initialEnvironment.heightM) }
     var selectedConstraints by remember { mutableStateOf(initialEnvironment.constraints.toMutableSet()) }
-
-    val areaSqM = widthM * heightM
-    val basketballPct = (areaSqM / 420.0f) * 100f
+    var selectedSeason by remember { mutableStateOf(initialEnvironment.season) }
+    var selectedMaterials by remember { mutableStateOf(initialEnvironment.availableMaterials.toMutableSet()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -178,6 +181,12 @@ fun FarmSetupDialog(
                         }
                     }
 
+                    // 2B. Current Weather / Season
+                    SeasonDropdownSelector(
+                        selectedSeason = selectedSeason,
+                        onSelectSeason = { selectedSeason = it }
+                    )
+
                     // 3. Base Soil Type
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
@@ -230,122 +239,23 @@ fun FarmSetupDialog(
                         }
                     }
 
-                    // 4. Physical Dimensions & Basketball Court Calibration
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        color = LightSurface,
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "FARM BOUNDARIES & SCALE",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DeepBlack
-                                )
-                                Text(
-                                    text = "Court: 28m x 15m (420 m²)",
-                                    fontSize = 9.sp,
-                                    color = Color(0xFF666666)
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Width Stepper
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "WIDTH", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF666666))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = { widthM = (widthM - 1f).coerceAtLeast(3f) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(Icons.Default.Remove, contentDescription = "Decrease Width", tint = LushGreen)
-                                        }
-                                        Text(
-                                            text = "${widthM.toInt()}m",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = DeepBlack
-                                        )
-                                        IconButton(
-                                            onClick = { widthM = (widthM + 1f).coerceAtMost(40f) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(Icons.Default.Add, contentDescription = "Increase Width", tint = LushGreen)
-                                        }
-                                    }
-                                }
-
-                                // Height Stepper
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "LENGTH", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF666666))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = { heightM = (heightM - 1f).coerceAtLeast(3f) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(Icons.Default.Remove, contentDescription = "Decrease Length", tint = LushGreen)
-                                        }
-                                        Text(
-                                            text = "${heightM.toInt()}m",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = DeepBlack
-                                        )
-                                        IconButton(
-                                            onClick = { heightM = (heightM + 1f).coerceAtMost(40f) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(Icons.Default.Add, contentDescription = "Increase Length", tint = LushGreen)
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Basketball benchmark calculation pill
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, CardBorderColor)
-                            ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    Text(
-                                        text = "Total Area: ${String.format("%.1f", areaSqM)} m² (${String.format("%.1f", basketballPct)}% of FIBA Court)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        color = LushGreen
-                                    )
-                                    Text(
-                                        text = when {
-                                            basketballPct < 2.0f -> "Takes up less than the free-throw key (compact corner)."
-                                            basketballPct < 10.0f -> "About 10% of a court (standard backyard garden patch)."
-                                            basketballPct < 25.0f -> "About one-quarter of a basketball court."
-                                            basketballPct < 55.0f -> "Takes up roughly half-court."
-                                            else -> "Covers more than a full basketball court."
-                                        },
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF555555)
-                                    )
-                                }
-                            }
+                    // 3B. Backyard Scale Presets (Basketball Benchmark)
+                    BackyardScalePresetChips(
+                        currentWidth = widthM,
+                        currentHeight = heightM,
+                        onSelectPreset = { w, h ->
+                            widthM = w
+                            heightM = h
                         }
-                    }
+                    )
+
+                    // 4. Physical Dimensions & Basketball Court Calibration
+                    FarmBoundariesScaleSection(
+                        widthM = widthM,
+                        heightM = heightM,
+                        onWidthChange = { widthM = it },
+                        onHeightChange = { heightM = it }
+                    )
 
                     // 5. Site Challenge Flags
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -396,6 +306,18 @@ fun FarmSetupDialog(
                             }
                         }
                     }
+
+                    // 6. Available Zero-Budget Household Materials
+                    ZeroBudgetMaterialsSelector(
+                        selectedMaterials = selectedMaterials,
+                        onToggleMaterial = { material ->
+                            if (material in selectedMaterials) {
+                                selectedMaterials.remove(material)
+                            } else {
+                                selectedMaterials.add(material)
+                            }
+                        }
+                    )
                 }
 
                 // ── Footer Action Buttons ────────────────────────────────────
@@ -421,7 +343,9 @@ fun FarmSetupDialog(
                                 defaultSoil = selectedSoil,
                                 widthM = widthM,
                                 heightM = heightM,
-                                constraints = selectedConstraints
+                                constraints = selectedConstraints,
+                                season = selectedSeason,
+                                availableMaterials = selectedMaterials
                             )
                             onConfirm(farmName.ifBlank { "My Farm" }, newEnv)
                         },

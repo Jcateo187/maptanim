@@ -37,7 +37,7 @@ import com.maptanim.app.features.farm.renderer.canvas.TopDownFarmCanvas
 import com.maptanim.app.features.farm.renderer.canvas.TopDownProjection
 import com.maptanim.app.features.farm.canvas.CanvasLayer
 import com.maptanim.app.features.farm.viewmodel.DssTab
-import com.maptanim.app.features.farm.viewmodel.TopTab
+import com.maptanim.app.features.farm.dialogs.YardMeasurementGuideDialog
 import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
 import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.White
@@ -390,9 +390,13 @@ private fun CanvasSection(
 ) {
     val activePlot = plots.firstOrNull { it.id == selectedPlotId }
     var liveCamera by remember { mutableStateOf(TopDownCamera(zoom = 0.5f)) }
+    var yardWidthM by remember { mutableFloatStateOf(15f) }
+    var yardHeightM by remember { mutableFloatStateOf(10f) }
+    var showYardRulers by remember { mutableStateOf(true) }
+    var showYardGuideDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
-        // Toolbar: Add Bed + Season Badge + Layer Selector
+        // Toolbar: Add Bed + Season Badge + Yard Guide Button + Layer Selector
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -430,6 +434,27 @@ private fun CanvasSection(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                     )
+                }
+
+                Surface(
+                    onClick = { showYardGuideDialog = true },
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFF1E281C),
+                    border = BorderStroke(1.dp, Color(0xFF385532))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(text = "📐", fontSize = 10.sp)
+                        Text(
+                            text = "${if (yardWidthM % 1f == 0f) yardWidthM.toInt() else String.format("%.1f", yardWidthM)}m × ${if (yardHeightM % 1f == 0f) yardHeightM.toInt() else String.format("%.1f", yardHeightM)}m",
+                            color = Color(0xFFC8E6C9),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -469,7 +494,10 @@ private fun CanvasSection(
                 modifier = Modifier.fillMaxSize(),
                 uiState = editUiState,
                 editViewModel = editViewModel,
-                showBoundary = false,
+                showYardRulers = showYardRulers,
+                showBoundary = true,
+                yardWidthM = yardWidthM,
+                yardHeightM = yardHeightM,
                 initialZoom = 0.5f,
                 onCameraChanged = { liveCamera = it }
             )
@@ -521,10 +549,10 @@ private fun CanvasSection(
                         val targetZoom = 0.5f
                         val centerX = if (plots.isNotEmpty()) {
                             (plots.minOf { it.posX } + plots.maxOf { it.posX + it.widthM }) / 2f
-                        } else 22.5f
+                        } else yardWidthM / 2f
                         val centerY = if (plots.isNotEmpty()) {
                             (plots.minOf { it.posY } + plots.maxOf { it.posY + it.heightM }) / 2f
-                        } else 22.5f
+                        } else yardHeightM / 2f
                         val panX = 400f - centerX * TopDownProjection.PPM * targetZoom
                         val panY = 300f - centerY * TopDownProjection.PPM * targetZoom
                         liveCamera = TopDownCamera(panX = panX, panY = panY, zoom = targetZoom)
@@ -594,11 +622,11 @@ private fun CanvasSection(
                             }
 
                             val areaSqM = activePlot.widthM * activePlot.heightM
-                            val keyFrac = (28.4f / areaSqM.coerceAtLeast(0.1f)).toInt().coerceAtLeast(1)
                             Text(
-                                text = "🏀 %.1fm×%.1fm (%.1fm² • 1/%d key)".format(activePlot.widthM, activePlot.heightM, areaSqM, keyFrac),
-                                color = Color(0xFFFFD54F),
-                                fontSize = 10.sp
+                                text = "📐 %.1fm × %.1fm (%.1f m²)".format(activePlot.widthM, activePlot.heightM, areaSqM),
+                                color = Color(0xFFC8E6C9),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
 
@@ -681,6 +709,20 @@ private fun CanvasSection(
                     }
                 }
             }
+        }
+
+        if (showYardGuideDialog) {
+            YardMeasurementGuideDialog(
+                currentWidthM = yardWidthM,
+                currentHeightM = yardHeightM,
+                showRulers = showYardRulers,
+                onApplyDimensions = { w, h, rulers ->
+                    yardWidthM = w
+                    yardHeightM = h
+                    showYardRulers = rulers
+                },
+                onDismiss = { showYardGuideDialog = false }
+            )
         }
     }
 }

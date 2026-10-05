@@ -1,54 +1,125 @@
 package com.maptanim.app.features.farm.canvas
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.features.farm.components.CanvasSmartGuidanceHud
+import com.maptanim.app.features.farm.components.CanvasTopToolbar
 import com.maptanim.app.features.farm.components.EditBottomLayout
+import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import com.maptanim.app.features.farm.renderer.canvas.TopDownCamera
 import com.maptanim.app.features.farm.renderer.canvas.TopDownFarmCanvas
 import com.maptanim.app.features.farm.renderer.canvas.TopDownProjection
+import com.maptanim.app.features.farm.tabs.plan.CropTray
 import com.maptanim.app.features.farm.viewmodel.EditUiState
 import com.maptanim.app.features.farm.viewmodel.EditViewModel
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
 private val BasketballOrange = Color(0xFFE65100)
+private val CardBorderColor = Color(0xFFE0E0E0)
 
 /**
- * FarmCanvasView — Interactive 2D Top-Down Farm Viewport.
- * Wraps TopDownFarmCanvas (full multi-touch gestures, 8-point resize handles,
- * drag-and-drop crop placement, pinch-to-zoom) and integrates the toolbar
- * (Add Bed, Duplicate, Resize, Rotate, Delete, Basketball Court Benchmark, Zoom, Expand).
+ * FarmCanvasView — Interactive 2D Top-Down Farm Viewport with visual CropTray.
+ * Features:
+ * 1. TopDownFarmCanvas with multi-touch gestures, 8-point handles, and multi-crop support.
+ * 2. Visual CropTray with drag-and-drop & tap-to-plant directly into beds.
+ * 3. Contextual Bed Action Card showing all planted crops with 1-tap Daily Guide CTA.
+ * 4. Responsive floating toolbar for Add Bed, Crops Tray, Zoom, Scale, and Layers.
  */
 @Composable
 fun FarmCanvasView(
     editUiState: EditUiState,
     editViewModel: EditViewModel,
     canvasLayer: CanvasLayer,
-    showCourtScale: Boolean,
+    showYardRulers: Boolean = true,
+    yardWidthM: Float = 15f,
+    yardHeightM: Float = 10f,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
-    onToggleCourtScale: () -> Unit,
+    onOpenYardGuide: () -> Unit,
     onSelectLayer: (CanvasLayer) -> Unit,
     onRequestAddBed: () -> Unit,
     onDeletePlot: (String) -> Unit,
+    onOpenInspect: () -> Unit = {},
+    onOpenTimeline: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var liveCamera by remember { mutableStateOf(TopDownCamera(zoom = 0.5f)) }
     val selectedPlot = editUiState.plots.firstOrNull { it.id == editUiState.selectedPlotId }
+
+    // ── CropTray & Drag-and-Drop State ───────────────────────────────────────
+    var isCropTrayVisible by remember { mutableStateOf(false) }
+    var activeCropName by remember { mutableStateOf("") }
+    var activeCropId by remember { mutableStateOf("") }
+
+    var isDraggingCrop by remember { mutableStateOf(false) }
+    var dragCropName by remember { mutableStateOf("Tomato") }
+    var dragCropId by remember { mutableStateOf("tomato") }
+    var dragCropImageUrl by remember { mutableStateOf<String?>(null) }
+    var dragTouchPos by remember { mutableStateOf(Offset.Zero) }
+
+    // Hover position: convert screen drag position → world coordinate
+    val hoverWorldPos = remember(isDraggingCrop, dragTouchPos, liveCamera, dragCropId, dragCropName) {
+        if (isDraggingCrop) {
+            val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
+            val w = if (isBedDrag) 2.0f else 1.0f
+            val h = 1.0f
+            val rawWorld = TopDownProjection.screenToWorld(dragTouchPos.x, dragTouchPos.y, liveCamera)
+            val centered = Offset(rawWorld.x - w / 2f, rawWorld.y - h / 2f)
+            val snapped = TopDownProjection.snapToGrid(centered)
+            Offset(snapped.x.coerceIn(0f, 45.0f - w), snapped.y.coerceIn(0f, 45.0f - h))
+        } else null
+    }
+
+    val isValidPlacement = remember(isDraggingCrop, dragCropId, dragCropName, hoverWorldPos, editUiState.plots) {
+        if (isDraggingCrop && hoverWorldPos != null) {
+            val hx = hoverWorldPos.x; val hy = hoverWorldPos.y
+            val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
+            val w = if (isBedDrag) 2.0f else 1.0f
+            val h = 1.0f
+            val inBounds = hx >= 0f && hy >= 0f && (hx + w) <= 45.0f && (hy + h) <= 45.0f
+
+            if (!isBedDrag) {
+                val cropCenterX = hx + w / 2f
+                val cropCenterY = hy + h / 2f
+                val existingBed = editUiState.plots.firstOrNull { plot ->
+                    cropCenterX >= plot.posX && cropCenterX < (plot.posX + plot.widthM) &&
+                    cropCenterY >= plot.posY && cropCenterY < (plot.posY + plot.heightM)
+                }
+                inBounds && existingBed != null
+            } else {
+                val overlaps = editUiState.plots.any { plot ->
+                    hx < (plot.posX + plot.widthM) && (hx + w) > plot.posX &&
+                    hy < (plot.posY + plot.heightM) && (hy + h) > plot.posY
+                }
+                inBounds && !overlaps
+            }
+        } else true
+    }
 
     Box(
         modifier = modifier
@@ -60,224 +131,203 @@ fun FarmCanvasView(
             modifier = Modifier.fillMaxSize(),
             uiState = editUiState,
             editViewModel = editViewModel,
-            showBoundary = showCourtScale,
+            activeCropName = activeCropName,
+            activeCropId = activeCropId,
+            hoverWorldPos = hoverWorldPos,
+            isValidPlacement = isValidPlacement,
+            isDraggingCrop = isDraggingCrop,
+            dragCropName = dragCropName,
+            showYardRulers = showYardRulers,
+            yardWidthM = yardWidthM,
+            yardHeightM = yardHeightM,
             initialZoom = 0.5f,
             onCameraChanged = { liveCamera = it }
         )
 
         // ── 2. Top Canvas Floating Toolbar ──────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left Group: Add Bed + Layer Selector
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Surface(
-                    onClick = onRequestAddBed,
-                    shape = RoundedCornerShape(6.dp),
-                    color = LushGreen,
-                    border = BorderStroke(1.dp, Color(0xFF4CAF50))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Add Bed",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+        CanvasTopToolbar(
+            isCropTrayVisible = isCropTrayVisible,
+            onToggleCropTray = { isCropTrayVisible = !isCropTrayVisible },
+            onRequestAddBed = onRequestAddBed,
+            isSaving = editUiState.isSaving,
+            showYardRulers = showYardRulers,
+            onOpenYardGuide = onOpenYardGuide,
+            onZoomIn = {
+                val newZoom = (liveCamera.zoom * 1.3f).coerceIn(0.2f, 3.5f)
+                liveCamera = liveCamera.copy(zoom = newZoom)
+            },
+            onZoomOut = {
+                val newZoom = (liveCamera.zoom * 0.75f).coerceIn(0.2f, 3.5f)
+                liveCamera = liveCamera.copy(zoom = newZoom)
+            },
+            isExpanded = isExpanded,
+            onToggleExpand = onToggleExpand,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
 
-                // Layer Selector: Crops / Risk / Harvest
+        // ── Drop Feedback Toast Banner ──────────────────────────────────────
+        editUiState.dropFeedbackMessage?.let { msg ->
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 50.dp, start = 16.dp, end = 16.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xF2212121),
+                border = BorderStroke(1.dp, Color(0xFFFFB300))
+            ) {
                 Row(
-                    modifier = Modifier
-                        .background(Color(0xD910160F), RoundedCornerShape(8.dp))
-                        .padding(2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    CanvasLayer.values().forEach { layer ->
-                        val isSel = layer == canvasLayer
-                        Surface(
-                            onClick = { onSelectLayer(layer) },
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (isSel) Color(0xFF2E7D32) else Color.Transparent
-                        ) {
-                            Text(
-                                text = layer.name.lowercase().replaceFirstChar { it.uppercase() },
-                                color = if (isSel) Color.White else Color(0xFFA0B09A),
-                                fontSize = 10.sp,
-                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Right Group: Basketball Scale + Zoom + Maximize Canvas
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Basketball Court Benchmark Toggle
-                Surface(
-                    onClick = onToggleCourtScale,
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (showCourtScale) BasketballOrange else Color(0xD91E281C),
-                    border = BorderStroke(1.dp, if (showCourtScale) BasketballOrange else Color(0xFF385532))
-                ) {
+                    Text(text = msg, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     Icon(
-                        imageVector = Icons.Default.SportsBasketball,
-                        contentDescription = "Basketball Court Scale",
-                        tint = Color.White,
-                        modifier = Modifier.padding(5.dp).size(15.dp)
-                    )
-                }
-
-                // Zoom Controls
-                Surface(
-                    onClick = {
-                        val newZoom = (liveCamera.zoom * 1.3f).coerceIn(0.2f, 3.5f)
-                        liveCamera = liveCamera.copy(zoom = newZoom)
-                    },
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xD91E281C),
-                    border = BorderStroke(1.dp, Color(0xFF385532))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Zoom In",
-                        tint = Color.White,
-                        modifier = Modifier.padding(5.dp).size(14.dp)
-                    )
-                }
-                Surface(
-                    onClick = {
-                        val newZoom = (liveCamera.zoom * 0.75f).coerceIn(0.2f, 3.5f)
-                        liveCamera = liveCamera.copy(zoom = newZoom)
-                    },
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xD91E281C),
-                    border = BorderStroke(1.dp, Color(0xFF385532))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Zoom Out",
-                        tint = Color.White,
-                        modifier = Modifier.padding(5.dp).size(14.dp)
-                    )
-                }
-                Surface(
-                    onClick = {
-                        val targetZoom = 0.5f
-                        val plots = editUiState.plots
-                        val centerX = if (plots.isNotEmpty()) {
-                            (plots.minOf { it.posX } + plots.maxOf { it.posX + it.widthM }) / 2f
-                        } else 22.5f
-                        val centerY = if (plots.isNotEmpty()) {
-                            (plots.minOf { it.posY } + plots.maxOf { it.posY + it.heightM }) / 2f
-                        } else 22.5f
-                        val panX = 400f - centerX * TopDownProjection.PPM * targetZoom
-                        val panY = 300f - centerY * TopDownProjection.PPM * targetZoom
-                        liveCamera = TopDownCamera(panX = panX, panY = panY, zoom = targetZoom)
-                    },
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xD91E281C),
-                    border = BorderStroke(1.dp, Color(0xFF385532))
-                ) {
-                    Text(
-                        text = "5×",
-                        color = Color(0xFF81C784),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                    )
-                }
-
-                // Maximize / Minimize Canvas Button
-                Surface(
-                    onClick = onToggleExpand,
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isExpanded) LushGreen else Color(0xD91E281C),
-                    border = BorderStroke(1.dp, if (isExpanded) LushGreen else Color(0xFF385532))
-                ) {
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.CloseFullscreen else Icons.Default.OpenInFull,
-                        contentDescription = if (isExpanded) "Minimize Canvas" else "Expand Canvas",
-                        tint = Color.White,
-                        modifier = Modifier.padding(5.dp).size(15.dp)
+                        Icons.Default.Close,
+                        contentDescription = "Dismiss",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
         }
 
-        // ── 3. Bottom Contextual Action Bar for Selected Bed ────────────────
-        if (editUiState.selectedPlotId != null || editUiState.selectedZoneId != null) {
-            Column(
+        // ── 2b. Smart Agricultural Guidance HUD (Canva/Miro Contextual Assistant) ────
+        CanvasSmartGuidanceHud(
+            plots = editUiState.plots,
+            cropZones = editUiState.cropZones,
+            selectedPlotId = editUiState.selectedPlotId,
+            isDraggingCrop = isDraggingCrop,
+            dragCropName = dragCropName,
+            onOpenAddBed = onRequestAddBed,
+            onOpenCropTray = { isCropTrayVisible = true },
+            onOpenGuide = onNavigateToGuide,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = if (editUiState.dropFeedbackMessage != null) 84.dp else 48.dp, start = 10.dp, end = 10.dp)
+        )
+
+        // ── 3. Bottom Contextual Action Card for Selected Bed ───────────────
+        if (selectedPlot != null && !isDraggingCrop) {
+            ActiveBedCard(
+                plot = selectedPlot,
+                cropZones = editUiState.cropZones,
+                uiState = editUiState,
+                editViewModel = editViewModel,
+                isCropTrayVisible = isCropTrayVisible,
+                onOpenCropTray = { isCropTrayVisible = true },
+                onOpenInspect = onOpenInspect,
+                onOpenTimeline = onOpenTimeline,
+                onNavigateToGuide = onNavigateToGuide,
+                onDeletePlot = onDeletePlot,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        // ── 4. The Visual CropTray (Bottom Panel) ───────────────────────────
+        if (isCropTrayVisible) {
+            CropTray(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                selectedCropName = activeCropName,
+                availableCrops = editUiState.availableCrops,
+                isSyncing = editUiState.isSyncingCrops,
+                onSyncRequested = { editViewModel.refreshCropsFromRemote() },
+                onCropSelected = { newCropName, newCropId ->
+                    if (activeCropName.equals(newCropName, ignoreCase = true)) {
+                        activeCropName = ""; activeCropId = ""
+                        editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.SELECT_MOVE)
+                    } else {
+                        activeCropName = newCropName; activeCropId = newCropId
+                        editViewModel.selectTool(com.maptanim.app.domain.model.EditTool.ADD_PLANT)
+                    }
+                },
+                onCropDragStart = { cropName, cropId, imageUrl, startOffset ->
+                    isDraggingCrop = true
+                    dragCropName = cropName; dragCropId = cropId
+                    dragCropImageUrl = imageUrl; dragTouchPos = startOffset
+                },
+                onCropDragging = { currentOffset -> dragTouchPos = currentOffset },
+                onCropDragEnd = { dropOffset ->
+                    if (isDraggingCrop) {
+                        val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
+                        val bedW = 2.0f
+                        val bedH = 1.0f
+                        val dropWorld = TopDownProjection.screenToWorld(dropOffset.x, dropOffset.y, liveCamera)
+
+                        isDraggingCrop = false
+
+                        if (isBedDrag) {
+                            val centered = Offset(dropWorld.x - bedW / 2f, dropWorld.y - bedH / 2f)
+                            val snapped = TopDownProjection.snapToGrid(centered)
+                            val safeX = snapped.x.coerceIn(0f, 45.0f - bedW)
+                            val safeY = snapped.y.coerceIn(0f, 45.0f - bedH)
+                            val canDrop = safeX >= 0f && safeY >= 0f && (safeX + bedW) <= 45.0f && (safeY + bedH) <= 45.0f &&
+                                    !editUiState.plots.any { plot ->
+                                        safeX < (plot.posX + plot.widthM) && (safeX + bedW) > plot.posX &&
+                                        safeY < (plot.posY + plot.heightM) && (safeY + bedH) > plot.posY
+                                    }
+                            if (canDrop) {
+                                editViewModel.addDirectPlantingPlot(safeX, safeY, "Bed", "bed", initialW = bedW, initialH = bedH)
+                            } else {
+                                editViewModel.reportInvalidDropLocation("Hindi maaaring maglagay ng kama dito: May nakaharang.")
+                            }
+                        } else {
+                            val targetBed = editUiState.plots.firstOrNull { plot ->
+                                dropWorld.x >= plot.posX && dropWorld.x <= (plot.posX + plot.widthM) &&
+                                dropWorld.y >= plot.posY && dropWorld.y <= (plot.posY + plot.heightM)
+                            }
+                            if (targetBed != null) {
+                                editViewModel.plantCropInBed(targetBed.id, dragCropName, dragCropId, dropWorld.x, dropWorld.y)
+                            } else {
+                                editViewModel.reportInvalidDropLocation("I-drop ang pananim sa loob ng isang Garden Bed.")
+                            }
+                        }
+                    }
+                },
+                onClose = { isCropTrayVisible = false }
+            )
+        }
+
+        // ── 5. Floating Drag Preview Bubble ──────────────────────────────────
+        if (isDraggingCrop) {
+            val isBedDrag = dragCropId.startsWith("bed", ignoreCase = true) || dragCropName.contains("Bed", ignoreCase = true)
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val halfSizePx = with(density) { 36.dp.roundToPx() }
+
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .offset {
+                        IntOffset(
+                            x = dragTouchPos.x.toInt() - halfSizePx,
+                            y = dragTouchPos.y.toInt() - halfSizePx
+                        )
+                    }
+                    .size(72.dp)
+                    .shadow(10.dp, CircleShape)
+                    .background(Color(0xFF1A1F16).copy(alpha = 0.92f), CircleShape)
+                    .border(2.dp, if (isValidPlacement) Color(0xFF4CAF50) else Color(0xFFF44336), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                // Real-World Basketball Scale Pill
-                if (selectedPlot != null) {
-                    val areaSqm = selectedPlot.widthM * selectedPlot.heightM
-                    val courtPct = (areaSqm / 420.0f) * 100f
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xE6111813),
-                        border = BorderStroke(1.dp, Color(0xFFFFB300)),
-                        modifier = Modifier.padding(bottom = 4.dp)
+                if (isBedDrag) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF6D4C41))
+                            .border(1.5.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "SCALE: ${selectedPlot.plotLabel} (${String.format("%.1f", selectedPlot.widthM)}m × ${String.format("%.1f", selectedPlot.heightM)}m = ${String.format("%.1f", areaSqm)}m²) • ${String.format("%.2f", courtPct)}% of Basketball Court",
-                            color = Color(0xFFFFD54F),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        Text("Bed", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                } else {
+                    Canvas(modifier = Modifier.size(46.dp)) {
+                        CropSvgRenderer.drawCropSvg(
+                            drawScope = this,
+                            cropName = dragCropName,
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            sizePx = size.width * 0.85f
                         )
                     }
                 }
-
-                // Toolbar: Duplicate, Resize (Handles), Rotate, Delete
-                EditBottomLayout(
-                    uiState = editUiState,
-                    onDuplicateClick = {
-                        val plotId = editUiState.selectedPlotId
-                        if (plotId != null) editViewModel.duplicatePlot(plotId)
-                    },
-                    onResizeClick = {
-                        editViewModel.toggleResizeMode()
-                    },
-                    onRotateClick = {
-                        val plotId = editUiState.selectedPlotId
-                        if (plotId != null) editViewModel.rotatePlot(plotId)
-                    },
-                    onDeleteClick = {
-                        val plotId = editUiState.selectedPlotId
-                        if (plotId != null) {
-                            editViewModel.deletePlot(plotId)
-                            onDeletePlot(plotId)
-                        }
-                    },
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
             }
         }
     }

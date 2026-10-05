@@ -24,6 +24,7 @@ data class HomeUiState(
     val todayTasks: List<FarmTask> = emptyList(),
     val farmSummary: FarmSummary = FarmSummary(),
     val plots: List<PlotRenderData> = emptyList(),
+    val isFarmCalibrated: Boolean = true,
     val notificationCount: Int = 0,
     val systemUpdateAvailable: Boolean = false,
     val systemUpdateTitle: String? = null,
@@ -166,6 +167,8 @@ class HomeViewModel(
         farmDataJob = viewModelScope.launch {
             val today = LocalDate.now().toString()
             val farmerId = currentFarmerId ?: "guest"
+            val isCalibrated = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().isFarmCalibrated(farmId)
+            _uiState.update { it.copy(isFarmCalibrated = isCalibrated) }
 
             // One-time cleanup: delete old hardcoded demo plots that were previously seeded
             val oldPlotIds = listOf("plot-1", "plot-2", "plot-3", "plot-4")
@@ -347,5 +350,11 @@ class HomeViewModel(
             }
             activeFarmId?.let { loadFarmData(it) }
         }
+    }
+
+    fun refreshCalibration() {
+        val farmId = activeFarmId ?: return
+        val isCalibrated = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().isFarmCalibrated(farmId)
+        _uiState.update { it.copy(isFarmCalibrated = isCalibrated) }
     }
 }

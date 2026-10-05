@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.renderer.canvas
+package com.maptanim.app.features.farm.renderer.canvas
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maptanim.app.domain.model.CompanionRelation
 import com.maptanim.app.domain.model.EditTool
+import com.maptanim.app.dss.knowledgebase.CompanionDataProvider
 import com.maptanim.app.features.farm.renderer.gesture.HandleType
 import com.maptanim.app.features.farm.renderer.model.CropZoneRenderData
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
@@ -171,10 +173,15 @@ fun TopDownFarmCanvas(
     hoverWorldPos: Offset? = null,
     isValidPlacement: Boolean = true,
     isDraggingCrop: Boolean = false,
+    dragCropName: String = "",
+    showYardRulers: Boolean = true,
     showBoundary: Boolean = false,
+    yardWidthM: Float = 15f,
+    yardHeightM: Float = 10f,
     initialZoom: Float = 0.5f,
     onCameraChanged: (TopDownCamera) -> Unit = {}
 ) {
+    val effectiveShowRulers = showYardRulers || showBoundary
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
 
@@ -205,10 +212,10 @@ fun TopDownFarmCanvas(
             val targetZoom = initialZoom.coerceIn(0.2f, 3.5f)
             val centerX = if (uiState.plots.isNotEmpty()) {
                 (uiState.plots.minOf { it.posX } + uiState.plots.maxOf { it.posX + it.widthM }) / 2f
-            } else 22.5f
+            } else yardWidthM / 2f
             val centerY = if (uiState.plots.isNotEmpty()) {
                 (uiState.plots.minOf { it.posY } + uiState.plots.maxOf { it.posY + it.heightM }) / 2f
-            } else 22.5f
+            } else yardHeightM / 2f
             val panX = canvasSize.width / 2f - centerX * TopDownProjection.PPM * targetZoom
             val panY = canvasSize.height / 2f - centerY * TopDownProjection.PPM * targetZoom
             val initCam = TopDownCamera(panX = panX, panY = panY, zoom = targetZoom)
@@ -452,8 +459,8 @@ fun TopDownFarmCanvas(
             drawDotGrid(camera)
         }
 
-        // ── Farm Boundary (45m × 45m) ──────────────────────────────────
-        drawFarmBoundary(camera, showBoundary)
+        // ── Yard Boundary & Metric Rulers ──────────────────────────────
+        drawYardPerimeterAndRulers(camera, yardWidthM, yardHeightM, effectiveShowRulers, textMeasurer)
 
         // ── Plot Beds & Crops ──────────────────────────────────────────
         for (plot in currentPlots) {
@@ -462,6 +469,8 @@ fun TopDownFarmCanvas(
                 cropZones = uiState.cropZones,
                 selectedZoneId = currentSelectedZoneId,
                 isSelected = (plot.id == currentSelectedPlotId && currentSelectedZoneId == null),
+                isDraggingCrop = isDraggingCrop,
+                dragCropName = dragCropName,
                 camera = camera,
                 textMeasurer = textMeasurer
             )
@@ -532,31 +541,154 @@ private fun DrawScope.drawDotGrid(camera: TopDownCamera) {
     }
 }
 
-private fun DrawScope.drawFarmBoundary(camera: TopDownCamera, showBoundary: Boolean = false) {
-    if (!showBoundary) return
+private fun DrawScope.drawYardPerimeterAndRulers(
+    camera: TopDownCamera,
+    yardWidthM: Float = 15f,
+    yardHeightM: Float = 10f,
+    showRulers: Boolean = true,
+    textMeasurer: TextMeasurer
+) {
     val tl = TopDownProjection.worldToScreen(0f, 0f, camera)
-    val farmSize = Size(
-        TopDownProjection.worldSizeToScreen(45f, camera),
-        TopDownProjection.worldSizeToScreen(45f, camera)
-    )
-    // Distinct plot surface inside the farm box
+    val yardScreenW = TopDownProjection.worldSizeToScreen(yardWidthM, camera)
+    val yardScreenH = TopDownProjection.worldSizeToScreen(yardHeightM, camera)
+    val yardSize = Size(yardScreenW, yardScreenH)
+
+    // Distinct backyard ground surface
     drawRoundRect(
         color = FarmInnerBg,
         topLeft = tl,
-        size = farmSize,
-        cornerRadius = CornerRadius(4f)
+        size = yardSize,
+        cornerRadius = CornerRadius(6f)
     )
-    // Green boundary stroke
+    // Perimeter fence boundary stroke
     drawRoundRect(
-        color = FarmBorderColor.copy(alpha = 0.6f),
+        color = FarmBorderColor.copy(alpha = 0.8f),
         topLeft = tl,
-        size = farmSize,
-        cornerRadius = CornerRadius(4f),
+        size = yardSize,
+        cornerRadius = CornerRadius(6f),
         style = Stroke(
-            width = 2.5f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+            width = (2f * camera.zoom).coerceIn(1.5f, 3f),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
         )
     )
+
+    // Dimension badge on Top-Left corner: "📐 YARD GUIDE: 15m × 10m • 150m²"
+    // Pinned safely inside visible canvas so it cannot hide behind top or left toolbar
+    if (yardScreenW > 80f) {
+        val badgeText = "📐 YARD GUIDE: ${if (yardWidthM % 1f == 0f) yardWidthM.toInt() else String.format("%.1f", yardWidthM)}m × ${if (yardHeightM % 1f == 0f) yardHeightM.toInt() else String.format("%.1f", yardHeightM)}m • ${(yardWidthM * yardHeightM).toInt()}m²"
+        val badgeStyle = TextStyle(
+            fontSize = (9f * camera.zoom).coerceIn(8f, 11f).sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFC8E6C9)
+        )
+        val measured = textMeasurer.measure(badgeText, badgeStyle, maxLines = 1)
+        val bW = measured.size.width.toFloat() + 14f
+        val bH = measured.size.height.toFloat() + 6f
+        val badgeX = maxOf(tl.x + 8f, 12f)
+        val badgeY = maxOf(tl.y + 8f, 8f)
+        drawRoundRect(
+            color = Color(0xEE111813),
+            topLeft = Offset(badgeX, badgeY),
+            size = Size(bW, bH),
+            cornerRadius = CornerRadius(6f)
+        )
+        drawRoundRect(
+            color = Color(0xFF4CAF50).copy(alpha = 0.8f),
+            topLeft = Offset(badgeX, badgeY),
+            size = Size(bW, bH),
+            cornerRadius = CornerRadius(6f),
+            style = Stroke(width = 1f)
+        )
+        drawText(measured, topLeft = Offset(badgeX + 7f, badgeY + 3f))
+    }
+
+    // Dynamic Metric Rulers along Top and Left axes — Placed safely so numbers NEVER hide in top toolbar or side edges
+    if (showRulers && camera.zoom >= 0.22f) {
+        val rulerColor = Color(0xFF81C784).copy(alpha = 0.85f)
+        val textStyle = TextStyle(
+            fontSize = (8.5f * camera.zoom).coerceIn(7.5f, 10.5f).sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFE8F5E9)
+        )
+
+        // Safe clamped anchor Y so top ruler numbers remain visible even if user pans down
+        val safeAnchorY = maxOf(tl.y, 6f)
+
+        // Top Axis Ticks (Horizontal: X)
+        var x = 0f
+        val step = if (camera.zoom > 0.8f) 1f else 5f
+        while (x <= yardWidthM) {
+            val sx = TopDownProjection.worldToScreen(x, 0f, camera).x
+            val isMajor = (x.toInt() % 5 == 0)
+            val tickH = if (isMajor) 10f else 5f
+
+            // Draw tick mark crossing the perimeter line
+            drawLine(
+                color = rulerColor,
+                start = Offset(sx, safeAnchorY - 2f),
+                end = Offset(sx, safeAnchorY + tickH),
+                strokeWidth = if (isMajor) 2f else 1f
+            )
+
+            // Safe Number Placement: Placed with dark pill background anchored within visible viewport
+            if (isMajor && sx < tl.x + yardScreenW - 12f && sx > 16f) {
+                val label = "${x.toInt()}m"
+                val mLabel = textMeasurer.measure(label, textStyle, maxLines = 1)
+                val pillW = mLabel.size.width.toFloat() + 6f
+                val pillH = mLabel.size.height.toFloat() + 2f
+                val pillX = sx - pillW / 2f
+                val pillY = safeAnchorY + tickH + 2f
+
+                drawRoundRect(
+                    color = Color(0xD9111813),
+                    topLeft = Offset(pillX, pillY),
+                    size = Size(pillW, pillH),
+                    cornerRadius = CornerRadius(3f)
+                )
+                drawText(mLabel, topLeft = Offset(pillX + 3f, pillY + 1f))
+            }
+            x += step
+        }
+
+        // Safe clamped anchor X so left ruler numbers remain visible even if user pans right
+        val safeAnchorX = maxOf(tl.x, 6f)
+
+        // Left Axis Ticks (Vertical: Y)
+        var y = 0f
+        val yStep = if (camera.zoom > 0.8f) 1f else 5f
+        while (y <= yardHeightM) {
+            val sy = TopDownProjection.worldToScreen(0f, y, camera).y
+            val isMajor = (y.toInt() % 5 == 0)
+            val tickW = if (isMajor) 10f else 5f
+
+            // Draw tick crossing the line
+            drawLine(
+                color = rulerColor,
+                start = Offset(safeAnchorX - 2f, sy),
+                end = Offset(safeAnchorX + tickW, sy),
+                strokeWidth = if (isMajor) 2f else 1f
+            )
+
+            // Safe Number Placement: Placed with dark pill background anchored within visible viewport
+            if (isMajor && sy < tl.y + yardScreenH - 12f && sy > 16f) {
+                val label = "${y.toInt()}m"
+                val mLabel = textMeasurer.measure(label, textStyle, maxLines = 1)
+                val pillW = mLabel.size.width.toFloat() + 6f
+                val pillH = mLabel.size.height.toFloat() + 2f
+                val pillX = safeAnchorX + tickW + 2f
+                val pillY = sy - pillH / 2f
+
+                drawRoundRect(
+                    color = Color(0xD9111813),
+                    topLeft = Offset(pillX, pillY),
+                    size = Size(pillW, pillH),
+                    cornerRadius = CornerRadius(3f)
+                )
+                drawText(mLabel, topLeft = Offset(pillX + 3f, pillY + 1f))
+            }
+            y += yStep
+        }
+    }
 }
 
 private fun DrawScope.drawHoverTile(
@@ -580,6 +712,8 @@ private fun DrawScope.drawPlotBed(
     cropZones: List<CropZoneRenderData>,
     selectedZoneId: String?,
     isSelected: Boolean,
+    isDraggingCrop: Boolean = false,
+    dragCropName: String = "",
     camera: TopDownCamera,
     textMeasurer: TextMeasurer
 ) {
@@ -600,7 +734,7 @@ private fun DrawScope.drawPlotBed(
 
     if (isBed) {
         if (bedCrops.isEmpty()) {
-            // Plain brown bed — no crops
+            // Plain brown bed — empty bed ready for planting
             drawRoundRect(BedFill, tl, bedSize, cornerR)
             drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
             // Subtle horizontal furrow lines
@@ -615,10 +749,118 @@ private fun DrawScope.drawPlotBed(
                     strokeWidth = 0.8f
                 )
             }
+
+            // Visual Guidance Cue: "+ Empty Bed" or "+ Drop Crop"
+            if (bedW > 35f && bedH > 20f) {
+                val cueText = if (isDraggingCrop && dragCropName.isNotBlank() && !dragCropName.contains("Bed", ignoreCase = true)) {
+                    "+ Drop $dragCropName"
+                } else {
+                    "+ Empty Bed"
+                }
+                val cueStyle = TextStyle(
+                    fontSize = (9f * camera.zoom).coerceIn(6f, 11f).sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFA5D6A7)
+                )
+                val cueMeasured = textMeasurer.measure(cueText, cueStyle, maxLines = 1)
+                val cueX = tl.x + (bedW - cueMeasured.size.width) / 2f
+                val cueY = tl.y + (bedH - cueMeasured.size.height) / 2f
+                drawRoundRect(
+                    Color(0xD91E281C),
+                    Offset(cueX - 4f, cueY - 2f),
+                    Size(cueMeasured.size.width.toFloat() + 8f, cueMeasured.size.height.toFloat() + 4f),
+                    CornerRadius(4f)
+                )
+                drawText(cueMeasured, topLeft = Offset(cueX, cueY))
+            }
+
+            // Welcoming dashed green highlight when dragging a crop over the canvas
+            if (isDraggingCrop && dragCropName.isNotBlank() && !dragCropName.contains("Bed", ignoreCase = true)) {
+                drawRoundRect(
+                    Color(0xFF81C784),
+                    Offset(tl.x - 1f, tl.y - 1f),
+                    Size(bedW + 2f, bedH + 2f),
+                    cornerR,
+                    style = Stroke(
+                        width = (1.8f * camera.zoom).coerceIn(1.5f, 3f),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
+                    )
+                )
+            }
         } else {
             // Planted bed — dark brown base with crop zones
             drawRoundRect(PlantedBedFill, tl, bedSize, cornerR)
             drawRoundRect(BedBorder, tl, bedSize, cornerR, style = Stroke(1.5f * camera.zoom.coerceIn(0.5f, 2f)))
+
+            // Live Companion Planting Visual Guidance during drag
+            if (isDraggingCrop && dragCropName.isNotBlank() && !dragCropName.contains("Bed", ignoreCase = true)) {
+                val companionStatuses = bedCrops.mapNotNull { zone ->
+                    zone.cropName?.let { cName ->
+                        try {
+                            CompanionDataProvider.getRelationship(dragCropName, cName)?.relationship
+                        } catch (_: Exception) { null }
+                    }
+                }
+                val hasBeneficial = companionStatuses.any { it == CompanionRelation.BENEFICIAL }
+                val hasAntagonist = companionStatuses.any { it == CompanionRelation.ANTAGONIST }
+
+                if (hasBeneficial) {
+                    // Glowing emerald companion border
+                    drawRoundRect(
+                        Color(0xFF4CAF50),
+                        Offset(tl.x - 2f, tl.y - 2f),
+                        Size(bedW + 4f, bedH + 4f),
+                        cornerR,
+                        style = Stroke(width = (2.5f * camera.zoom).coerceIn(2f, 4f))
+                    )
+                    if (bedW > 40f) {
+                        val boostStyle = TextStyle(
+                            fontSize = (8.5f * camera.zoom).coerceIn(6f, 10f).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE8F5E9)
+                        )
+                        val boostMeasured = textMeasurer.measure("Boost!", boostStyle, maxLines = 1)
+                        val bX = tl.x + bedW - boostMeasured.size.width - 6f
+                        val bY = tl.y + 3f
+                        drawRoundRect(
+                            Color(0xEE2E7D32),
+                            Offset(bX - 3f, bY - 1f),
+                            Size(boostMeasured.size.width.toFloat() + 6f, boostMeasured.size.height.toFloat() + 2f),
+                            CornerRadius(3f)
+                        )
+                        drawText(boostMeasured, topLeft = Offset(bX, bY))
+                    }
+                } else if (hasAntagonist) {
+                    // Amber warning border for incompatible companion
+                    drawRoundRect(
+                        Color(0xFFFFB300),
+                        Offset(tl.x - 2f, tl.y - 2f),
+                        Size(bedW + 4f, bedH + 4f),
+                        cornerR,
+                        style = Stroke(
+                            width = (2f * camera.zoom).coerceIn(1.5f, 3f),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
+                        )
+                    )
+                    if (bedW > 40f) {
+                        val warnStyle = TextStyle(
+                            fontSize = (8.5f * camera.zoom).coerceIn(6f, 10f).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFF8E1)
+                        )
+                        val warnMeasured = textMeasurer.measure("Conflict!", warnStyle, maxLines = 1)
+                        val wX = tl.x + bedW - warnMeasured.size.width - 6f
+                        val wY = tl.y + 3f
+                        drawRoundRect(
+                            Color(0xEEFF8F00),
+                            Offset(wX - 3f, wY - 1f),
+                            Size(warnMeasured.size.width.toFloat() + 6f, warnMeasured.size.height.toFloat() + 2f),
+                            CornerRadius(3f)
+                        )
+                        drawText(warnMeasured, topLeft = Offset(wX, wY))
+                    }
+                }
+            }
 
             val iconRadius = (4f * camera.zoom).coerceIn(2.5f, 10f)
             bedCrops.forEach { zone ->
@@ -969,16 +1211,15 @@ private fun handleTap(
         if (isBed) {
             editViewModel.addDirectPlantingPlot(tx.coerceIn(0f, 44f), ty.coerceIn(0f, 44f), "Bed", "bed")
         } else {
-            // Crops can only be placed on existing beds
+            // Crops can be placed on any garden bed
             val targetBed = plots.firstOrNull { plot ->
                 tx >= plot.posX && tx < (plot.posX + plot.widthM) &&
-                ty >= plot.posY && ty < (plot.posY + plot.heightM) &&
-                (plot.cropName == "Bed" || plot.cropId == "bed")
+                ty >= plot.posY && ty < (plot.posY + plot.heightM)
             }
             if (targetBed != null) {
                 editViewModel.plantCropInBed(targetBed.id, activeCropName, activeCropId, tx, ty)
             } else {
-                editViewModel.reportInvalidDropLocation("⚠️ Hindi wasto ang lokasyon: Paki-lagay ang pananim sa loob ng isang Garden Bed.")
+                editViewModel.reportInvalidDropLocation("⚠️ Paki-lagay o i-tap ang pananim sa loob ng isang Garden Bed.")
             }
         }
     } else if (hitCrop != null) {

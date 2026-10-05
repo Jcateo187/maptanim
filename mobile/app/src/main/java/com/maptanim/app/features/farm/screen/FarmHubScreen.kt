@@ -21,15 +21,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.features.farm.canvas.FarmCanvasView
+import com.maptanim.app.features.farm.components.FarmDrawerDragBar
 import com.maptanim.app.features.farm.components.InterconnectedWorkflowHeader
+import com.maptanim.app.features.farm.components.SheetExpandState
 import com.maptanim.app.features.farm.components.WorkflowStep
+import com.maptanim.app.domain.model.ManagementStage
+import com.maptanim.app.features.farm.components.UnifiedBedSummaryDossier
 import com.maptanim.app.features.farm.dialogs.AddBedDialog
+import com.maptanim.app.features.farm.dialogs.AddLogDialog
+import com.maptanim.app.features.farm.dialogs.BedTimelineDialog
 import com.maptanim.app.features.farm.dialogs.FarmSetupDialog
 import com.maptanim.app.features.farm.dialogs.HarvestRecordDialog
-import com.maptanim.app.features.farm.tabs.CheckUpTab
-import com.maptanim.app.features.farm.tabs.GuideTab
-import com.maptanim.app.features.farm.tabs.HarvestTab
-import com.maptanim.app.features.farm.tabs.PlanTab
+import com.maptanim.app.features.farm.dialogs.YardMeasurementGuideDialog
 import com.maptanim.app.features.farm.viewmodel.EditViewModel
 import com.maptanim.app.features.farm.viewmodel.FarmHubViewModel
 import com.maptanim.app.features.farm.viewmodel.TopTab
@@ -59,15 +62,22 @@ fun FarmHubScreen(
     val editUiState by editViewModel.uiState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    var sheetState by remember { mutableStateOf(SheetExpandState.HALF) }
+    var sheetState by remember { mutableStateOf(SheetExpandState.HIDDEN) }
     var showAddBedDialog by remember { mutableStateOf(false) }
     var showHarvestDialog by remember { mutableStateOf(false) }
+    var showYardGuideDialog by remember { mutableStateOf(false) }
+    var showTimelineDialog by remember { mutableStateOf(false) }
+    var showAddLogDialog by remember { mutableStateOf(false) }
+    var yardWidthM by remember { mutableFloatStateOf(15f) }
+    var yardHeightM by remember { mutableFloatStateOf(10f) }
+    var showYardRulers by remember { mutableStateOf(true) }
 
     val animatedWeight by animateFloatAsState(
         targetValue = when (sheetState) {
-            SheetExpandState.PEEK -> 0.16f
-            SheetExpandState.HALF -> 0.52f
-            SheetExpandState.FULL -> 0.88f
+            SheetExpandState.HIDDEN -> 0.0f
+            SheetExpandState.PEEK -> 0.14f
+            SheetExpandState.HALF -> 0.60f
+            SheetExpandState.FULL -> 0.94f
         },
         label = "sheetWeight"
     )
@@ -156,240 +166,89 @@ fun FarmHubScreen(
                     editUiState = editUiState,
                     editViewModel = editViewModel,
                     canvasLayer = uiState.planState.canvasLayer,
-                    showCourtScale = uiState.planState.showBasketballScale,
-                    isExpanded = sheetState == SheetExpandState.PEEK,
+                    showYardRulers = showYardRulers,
+                    yardWidthM = yardWidthM,
+                    yardHeightM = yardHeightM,
+                    isExpanded = sheetState == SheetExpandState.HIDDEN,
                     onToggleExpand = {
-                        sheetState = if (sheetState == SheetExpandState.PEEK) SheetExpandState.HALF else SheetExpandState.PEEK
+                        sheetState = if (sheetState == SheetExpandState.HIDDEN) SheetExpandState.HALF else SheetExpandState.HIDDEN
                     },
-                    onToggleCourtScale = { viewModel.toggleBasketballScale() },
+                    onOpenYardGuide = { showYardGuideDialog = true },
+                    onOpenInspect = { showAddLogDialog = true },
+                    onOpenTimeline = { showTimelineDialog = true },
                     onSelectLayer = { viewModel.setCanvasLayer(it) },
                     onRequestAddBed = { showAddBedDialog = true },
                     onDeletePlot = { viewModel.deletePlot(it) },
+                    onNavigateToGuide = {
+                        sheetState = SheetExpandState.HALF
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
 
-            // ── 2. Drag Handle & Expand/Collapse Button Bar ──────────────────
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        sheetState = when (sheetState) {
-                            SheetExpandState.PEEK -> SheetExpandState.HALF
-                            SheetExpandState.HALF -> SheetExpandState.PEEK
-                            SheetExpandState.FULL -> SheetExpandState.HALF
-                        }
-                    },
-                color = Color.White
-            ) {
-                Row(
+            // ── 2. Drag Handle & Expand/Collapse Control Bar ──────────────────
+            FarmDrawerDragBar(
+                sheetState = sheetState,
+                onSetState = { sheetState = it }
+            )
+
+            // ── 3. Bottom Zone: Unified Case Dossier Summary Form ────────────
+            if (sheetState != SheetExpandState.HIDDEN) {
+                Box(
                     modifier = Modifier
+                        .weight(animatedWeight.coerceAtLeast(0.12f))
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(36.dp)
-                            .height(4.dp)
-                            .background(Color(0xFFBDBDBD), RoundedCornerShape(2.dp))
-                    )
-                    Row(
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (sheetState == SheetExpandState.PEEK) Icons.Default.VerticalAlignBottom else Icons.Default.VerticalAlignTop,
-                            contentDescription = null,
-                            tint = LushGreen,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = if (sheetState == SheetExpandState.PEEK) "Show Form" else "Expand Canvas",
-                            color = LushGreen,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-            }
+                    val activeRenderPlot = editUiState.plots.firstOrNull { it.id == editUiState.selectedPlotId }
+                        ?: editUiState.plots.firstOrNull()
 
-            // ── 3. Bottom Zone: Expandable Workspace Tabs ────────────────────
-            Box(
-                modifier = Modifier
-                    .weight(animatedWeight.coerceAtLeast(0.12f))
-                    .fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // ── Active Bed & Workflow Interconnected Header ──────────
-                    InterconnectedWorkflowHeader(
-                        activePlot = uiState.activePlot,
-                        allPlots = uiState.planState.rawPlots,
-                        currentTab = uiState.selectedTopTab,
-                        environment = uiState.farmEnvironment,
-                        onSelectPlot = { plotId ->
-                            viewModel.selectPlot(plotId)
-                            editViewModel.selectPlot(plotId)
+                    UnifiedBedSummaryDossier(
+                        selectedPlot = activeRenderPlot,
+                        allPlots = editUiState.plots,
+                        cropZones = editUiState.cropZones,
+                        onOpenCropTray = {
+                            sheetState = SheetExpandState.HIDDEN
                         },
-                        onAddNewBed = { showAddBedDialog = true },
-                        onSelectStep = { step ->
-                            when (step) {
-                                WorkflowStep.FARM_SETUP -> viewModel.openFarmSetupDialog()
-                                WorkflowStep.BED_PLANNING -> viewModel.selectTopTab(TopTab.PLAN)
-                                WorkflowStep.DAILY_GUIDE -> viewModel.selectTopTab(TopTab.GUIDE)
-                                WorkflowStep.CHECKUP -> viewModel.selectTopTab(TopTab.CHECKUP)
-                                WorkflowStep.HARVEST -> viewModel.selectTopTab(TopTab.HARVEST)
-                            }
-                        },
-                        onOpenSetupDialog = { viewModel.openFarmSetupDialog() }
+                        onOpenInspect = { showAddLogDialog = true },
+                        onOpenHarvestModal = { showHarvestDialog = true },
+                        onHideDrawer = { sheetState = SheetExpandState.HIDDEN },
+                        modifier = Modifier.fillMaxSize()
                     )
-
-                    TabRow(
-                        selectedTabIndex = uiState.selectedTopTab.ordinal,
-                        containerColor = Color.White,
-                        contentColor = LushGreen,
-                        divider = { HorizontalDivider(color = CardBorderColor) }
-                    ) {
-                        Tab(
-                            selected = uiState.selectedTopTab == TopTab.PLAN,
-                            onClick = { viewModel.selectTopTab(TopTab.PLAN) },
-                            icon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null) },
-                            text = {
-                                Text(
-                                    text = "Plan",
-                                    fontWeight = if (uiState.selectedTopTab == TopTab.PLAN) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (uiState.selectedTopTab == TopTab.PLAN) LushGreen else DeepBlack
-                                )
-                            }
-                        )
-                        Tab(
-                            selected = uiState.selectedTopTab == TopTab.GUIDE,
-                            onClick = { viewModel.selectTopTab(TopTab.GUIDE) },
-                            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
-                            text = {
-                                Text(
-                                    text = "Guide",
-                                    fontWeight = if (uiState.selectedTopTab == TopTab.GUIDE) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (uiState.selectedTopTab == TopTab.GUIDE) LushGreen else DeepBlack
-                                )
-                            }
-                        )
-                        Tab(
-                            selected = uiState.selectedTopTab == TopTab.CHECKUP,
-                            onClick = { viewModel.selectTopTab(TopTab.CHECKUP) },
-                            icon = { Icon(Icons.Default.Healing, contentDescription = null) },
-                            text = {
-                                Text(
-                                    text = "Check",
-                                    fontWeight = if (uiState.selectedTopTab == TopTab.CHECKUP) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (uiState.selectedTopTab == TopTab.CHECKUP) LushGreen else DeepBlack
-                                )
-                            }
-                        )
-                        Tab(
-                            selected = uiState.selectedTopTab == TopTab.HARVEST,
-                            onClick = { viewModel.selectTopTab(TopTab.HARVEST) },
-                            icon = { Icon(Icons.Default.Agriculture, contentDescription = null) },
-                            text = {
-                                Text(
-                                    text = "Harvest",
-                                    fontWeight = if (uiState.selectedTopTab == TopTab.HARVEST) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (uiState.selectedTopTab == TopTab.HARVEST) LushGreen else DeepBlack
-                                )
-                            }
-                        )
-                    }
-
-                    Box(modifier = Modifier.weight(1f)) {
-                        when (uiState.selectedTopTab) {
-                            TopTab.PLAN -> {
-                                PlanTab(
-                                    state = uiState.planState,
-                                    onSelectPlot = {
-                                        viewModel.selectPlot(it)
-                                        editViewModel.selectPlot(it)
-                                    },
-                                    onAddNewBed = { showAddBedDialog = true },
-                                    onDeleteBed = {
-                                        viewModel.deletePlot(it)
-                                        editViewModel.deletePlot(it)
-                                    },
-                                    onResizeBed = { id, w, h ->
-                                        viewModel.resizePlot(id, w, h)
-                                        editViewModel.resizePlot(id, w, h)
-                                    },
-                                    onAssignCrop = { id, cId, cName ->
-                                        viewModel.assignCropToPlot(id, cId, cName)
-                                    },
-                                    onSetCanvasLayer = { viewModel.setCanvasLayer(it) },
-                                    onSetTool = {
-                                        viewModel.setEditTool(it)
-                                        editViewModel.selectTool(it)
-                                    },
-                                    onUndo = {
-                                        viewModel.undo()
-                                        editViewModel.undo()
-                                    },
-                                    onRedo = {
-                                        viewModel.redo()
-                                    },
-                                    onOpenSetupDialog = {
-                                        viewModel.openFarmSetupDialog()
-                                    },
-                                    onNavigateToGuide = {
-                                        viewModel.selectTopTab(TopTab.GUIDE)
-                                    }
-                                )
-                            }
-                            TopTab.GUIDE -> {
-                                GuideTab(
-                                    state = uiState.guideState,
-                                    activePlot = uiState.activePlot,
-                                    onSelectDssTab = { viewModel.selectDssTab(it) },
-                                    onCompleteTask = { viewModel.completeTask(it) },
-                                    onNavigateToPlan = { viewModel.selectTopTab(TopTab.PLAN) },
-                                    onNavigateToCheckUp = { viewModel.selectTopTab(TopTab.CHECKUP) },
-                                    onNavigateToHarvest = { viewModel.selectTopTab(TopTab.HARVEST) }
-                                )
-                            }
-                            TopTab.CHECKUP -> {
-                                CheckUpTab(
-                                    state = uiState.checkUpState,
-                                    activePlot = uiState.activePlot,
-                                    onOpenAddLog = { viewModel.setAddLogOpen(true) },
-                                    onNavigateToGuide = { viewModel.selectTopTab(TopTab.GUIDE) },
-                                    onNavigateToHarvest = { viewModel.selectTopTab(TopTab.HARVEST) }
-                                )
-                            }
-                            TopTab.HARVEST -> {
-                                HarvestTab(
-                                    state = uiState.harvestState,
-                                    activePlot = uiState.activePlot,
-                                    onOpenHarvestModal = { showHarvestDialog = true },
-                                    onNavigateToPlan = { viewModel.selectTopTab(TopTab.PLAN) }
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
+    }
+
+    // ── Real-World Yard Measurement Guide Dialog ─────────────────────────────
+    if (showYardGuideDialog) {
+        YardMeasurementGuideDialog(
+            currentWidthM = yardWidthM,
+            currentHeightM = yardHeightM,
+            showRulers = showYardRulers,
+            onApplyDimensions = { w, h, showR ->
+                yardWidthM = w
+                yardHeightM = h
+                showYardRulers = showR
+                showYardGuideDialog = false
+            },
+            onDismiss = { showYardGuideDialog = false }
+        )
     }
 
     // ── Add Bed Preset Dialog ────────────────────────────────────────────────
     if (showAddBedDialog) {
         AddBedDialog(
             existingCount = uiState.planState.rawPlots.size,
+            defaultSoil = uiState.farmEnvironment.defaultSoil,
             onDismiss = { showAddBedDialog = false },
-            onConfirm = { label, widthM, heightM, soilType ->
+            onConfirm = { label, widthM, heightM, soilType, cropName ->
                 showAddBedDialog = false
-                viewModel.addPlot(null, widthM, heightM, soilType)
+                viewModel.addPlot(cropName, widthM, heightM, soilType)
                 editViewModel.addDirectPlantingPlot(
                     atWorldX = 2f,
                     atWorldY = (uiState.planState.rawPlots.size * 4.5f) + 1f,
-                    cropName = "Bed",
-                    cropId = "bed",
+                    cropName = cropName ?: "Bed",
+                    cropId = cropName?.lowercase() ?: "bed",
                     initialW = widthM,
                     initialH = heightM
                 )
@@ -426,6 +285,41 @@ fun FarmHubScreen(
                 viewModel.updateFarmSetup(name, env)
             },
             onDismiss = { viewModel.closeFarmSetupDialog() }
+        )
+    }
+
+    // ── Direct Bed Harvest Timeline & Calendar Modal ─────────────────────────
+    if (showTimelineDialog) {
+        val selectedRenderPlot = editUiState.plots.firstOrNull { it.id == editUiState.selectedPlotId }
+            ?: editUiState.plots.firstOrNull()
+        if (selectedRenderPlot != null) {
+            BedTimelineDialog(
+                plot = selectedRenderPlot,
+                cropZones = editUiState.cropZones,
+                onDismiss = { showTimelineDialog = false }
+            )
+        }
+    }
+
+    // ── Direct Field Observation / Crop Inspection Dialog ────────────────────
+    if (showAddLogDialog) {
+        val selectedPlot = uiState.activePlot ?: uiState.planState.rawPlots.firstOrNull { it.id == editUiState.selectedPlotId }
+        val targetCropName = selectedPlot?.cropName ?: "Vegetable"
+        val targetCropVariety = selectedPlot?.cropVariety ?: "Standard Variety"
+        AddLogDialog(
+            cropPlantingId = selectedPlot?.id ?: "",
+            bedId = selectedPlot?.plotLabel ?: "Bed",
+            cropId = selectedPlot?.cropId,
+            varietyId = selectedPlot?.cropVariety,
+            cropName = targetCropName,
+            varietyName = targetCropVariety,
+            currentStage = ManagementStage.VEGETATIVE_GROWTH,
+            plantingMethod = "Transplanting",
+            onDismiss = { showAddLogDialog = false },
+            onSubmitLog = { cropLog ->
+                viewModel.submitCropLog(cropLog)
+                showAddLogDialog = false
+            }
         )
     }
 }

@@ -373,6 +373,80 @@ fun InterconnectedWorkflowHeader(
                     }
                 }
             }
+        } else {
+            // ── Dynamic "Where To Go Next" Guidance Banner ───────────────────
+            val hasCrop = activePlot != null && !activePlot.cropName.isNullOrBlank() && !activePlot.cropName.equals("Bed", ignoreCase = true)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFFF8FBF8),
+                border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.35f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (!hasCrop) "NEXT STEP: ASSIGN CROP"
+                                else when (currentStep) {
+                                    WorkflowStep.BED_PLANNING -> "NEXT STEP: DAILY CARE"
+                                    WorkflowStep.DAILY_GUIDE -> "NEXT STEP: CHECK CROP HEALTH"
+                                    WorkflowStep.CHECKUP -> "NEXT STEP: RECORD HARVEST"
+                                    WorkflowStep.HARVEST -> "NEXT STEP: PLAN NEXT ROTATION"
+                                    else -> "CURRENT ACTION"
+                                },
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = if (!hasCrop) "Bed #${activePlot?.plotLabel ?: "1"} needs a crop in Plan."
+                                else when (currentStep) {
+                                    WorkflowStep.BED_PLANNING -> "${activePlot?.cropName} ready. View daily tasks in Guide."
+                                    WorkflowStep.DAILY_GUIDE -> "Any leaf spots or pests? Run DSS checkup."
+                                    WorkflowStep.CHECKUP -> "Check ripe fruit yield in Harvest."
+                                    WorkflowStep.HARVEST -> "Rotate bed with nitrogen-restoring crop."
+                                    else -> "Follow DSS recommended tasks."
+                                },
+                            fontSize = 11.sp,
+                            color = DeepBlack,
+                            maxLines = 1
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            if (!hasCrop) onSelectStep(WorkflowStep.BED_PLANNING)
+                            else when (currentStep) {
+                                WorkflowStep.BED_PLANNING -> onSelectStep(WorkflowStep.DAILY_GUIDE)
+                                WorkflowStep.DAILY_GUIDE -> onSelectStep(WorkflowStep.CHECKUP)
+                                WorkflowStep.CHECKUP -> onSelectStep(WorkflowStep.HARVEST)
+                                WorkflowStep.HARVEST -> onSelectStep(WorkflowStep.BED_PLANNING)
+                                else -> onSelectStep(WorkflowStep.BED_PLANNING)
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (!hasCrop) "Pick Crop →"
+                                else when (currentStep) {
+                                    WorkflowStep.BED_PLANNING -> "To Guide →"
+                                    WorkflowStep.DAILY_GUIDE -> "To Checkup →"
+                                    WorkflowStep.CHECKUP -> "To Harvest →"
+                                    WorkflowStep.HARVEST -> "To Plan →"
+                                    else -> "Go →"
+                                },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LushGreen
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -18,7 +18,9 @@ enum class SiteConstraint(val code: String, val label: String, val description: 
     FLOODING("fl", "Flooding / Poor Drainage", "Prone to water pooling during tropical downpours; requires elevated beds."),
     WIND_EXPOSURE("wi", "Strong Wind Exposure", "Open or gusty site; tall and trellised plants require sturdy staking."),
     SHADY("sh", "Shady (< 5 hrs sun)", "Limited direct sunlight; fruiting crops need full sun or reflective mulch."),
-    WATER_SCARCITY("nw", "Water Scarcity", "Limited tap or well water access; requires heavy mulching or drip bottles.");
+    WATER_SCARCITY("nw", "Water Scarcity", "Limited tap or well water access; requires heavy mulching or drip bottles."),
+    CHICKENS_ANIMALS("an", "Chickens & Stray Animals", "Free-range chickens or dogs present; requires thorny branch barriers or stick cages."),
+    SLOPING_WELL_DRAINED("sl", "Sloping / No Stagnant Flood", "Natural slope with good runoff; reduced root-rot risk.");
 
     companion object {
         fun fromCode(code: String?): SiteConstraint? =
@@ -31,7 +33,10 @@ data class FarmEnvironment(
     val defaultSoil: SoilType = SoilType.LOAM,
     val widthM: Float = 10f,
     val heightM: Float = 8f,
-    val constraints: Set<SiteConstraint> = emptySet()
+    val constraints: Set<SiteConstraint> = emptySet(),
+    val season: String = "Wet / Rainy Season",
+    val availableMaterials: Set<String> = emptySet(),
+    val locationName: String = ""
 ) {
     val areaSqM: Float get() = widthM * heightM
     val basketballCourtPct: Float get() = (areaSqM / 420.0f) * 100f

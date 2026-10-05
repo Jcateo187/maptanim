@@ -268,6 +268,49 @@ class PlaceBasedCropEvaluator {
             challenges.add("Limited irrigation water requires strict conservation measures.")
         }
 
+        if (SiteConstraint.CHICKENS_ANIMALS in constraints) {
+            score -= 10
+            challenges.add("Free-range chickens or stray animals can scratch and uproot young seedlings.")
+            methods.add(
+                AlternativeMethod(
+                    title = "Thorny Branch Perimeter Barrier & Stick Cages",
+                    challengeDescription = "Chickens scratch topsoil for grubs, destroying tender root systems within minutes.",
+                    stepByStepRemediation = listOf(
+                        "Line the outer perimeter of your bed with cut thorny branches (Bougainvillea or Citrus).",
+                        "Drive 4 bamboo sticks around each young plant and wrap with recycled netting or rice sack cloth up to 40 cm height.",
+                        "Ensure soil is covered with mulch so bare dirt is not exposed to foraging birds."
+                    ),
+                    materialList = listOf("Cut thorny branches (Bougainvillea/Calamansi)", "Bamboo sticks", "Discarded netting/rice sacks"),
+                    agronomicRationale = "Fowl possess sensitive foot pads and avoid stepping on thorny or physically obstructed surfaces.",
+                    expectedOutcome = "Protects seedling root zones completely without purchasing commercial wire fencing."
+                )
+            )
+        }
+
+        if (SiteConstraint.SLOPING_WELL_DRAINED in constraints) {
+            positives.add("Natural ground slope ensures rapid surface runoff, drastically lowering waterlogged root rot risk.")
+        }
+
+        if (environment.season.contains("Rainy", ignoreCase = true) || environment.season.contains("Wet", ignoreCase = true)) {
+            if (cleanName in listOf("tomato", "kamatis")) {
+                challenges.add("Rainy conditions splash soil pathogens onto foliage and promote fungal leaf spot.")
+                methods.add(
+                    AlternativeMethod(
+                        title = "Dried Straw Splash Mulch & Lower Leaf Elevation",
+                        challengeDescription = "Raindrop impacts splash fungal microbes from wet mud onto lower leaves, initiating blight.",
+                        stepByStepRemediation = listOf(
+                            "Spread a 5 cm thick blanket of dried rice straw (dayami) or dried leaves over the entire bed surface.",
+                            "Prune off all bottom leaves touching the ground or within 15 cm of the soil surface.",
+                            "Stake the plant upright with a bamboo pole and tie loosely in a figure-8 knot to keep foliage elevated."
+                        ),
+                        materialList = listOf("Dried rice straw or dried grass mulch", "Bamboo stake (1.5m)", "Soft cloth strips"),
+                        agronomicRationale = "Straw mulch absorbs falling raindrops, neutralizing soil-to-leaf splash inoculations.",
+                        expectedOutcome = "Prevents soil-borne fungal leaf spot and keeps stems dry and elevated."
+                    )
+                )
+            }
+        }
+
         val clampedScore = score.coerceIn(15, 100)
         val tier = when {
             clampedScore >= 80 -> SuitabilityTier.OPTIMAL

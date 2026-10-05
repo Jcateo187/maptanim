@@ -40,6 +40,225 @@ The DSS powers two primary user-facing systems:
 
 ---
 
+## 📌 Strategic Objectives & Defined Scope
+
+### Core Philosophy
+MapTanim's Decision Support System is **not a passive encyclopedia** and **not an abstract drawing tool**. It is a **context-aware diagnostic and agronomic decision engine** that evaluates the farmer's raw observations (e.g. Murcia, elevation, dark volcanic soil, wet season, unlabelled market seeds, ₱0 budget) and delivers **immediate, zero-cost, locally available actions**.
+
+### Strategic Objectives
+1. **OBJ-1: Context-Grounding Without Jargon**: Translate raw backyard observations (e.g., *"dark brown soil"*, *"rainy season"*, *"plants flopping over"*, *"chickens scratching"*) into agro-ecological parameters without expecting the user to know scientific terminology.
+2. **OBJ-2: ₱0 Budget & Local Resource Equity**: Deliver solutions using **only household and backyard items** (wood ash, crushed eggshells, chili-garlic-soap spray, bamboo stakes, dried leaf mulch, thorn branch barriers). No requirement for commercial chemical pesticides or expensive tools.
+3. **OBJ-3: Lifecycle-Progressive Guidance**: Deliver the right advice at the right time. A user at Day 3 needs soil prep instructions, not harvesting advice. A user at Day 45 needs trellising and blossom-care, not seed germination tips.
+4. **OBJ-4: Multi-Factor Symptom Disambiguation**: Prevent misdiagnosis by isolating root causes through visual questions (e.g., Blossom-End Rot vs Fruitworm vs Sunscald; Overwatering vs Underwatering vs Nitrogen deficiency).
+5. **OBJ-5: Mechanical & Physical Protection Guidance**: Recognize that biology is only half the battle; physical intrusion (chickens, dogs, family traffic, wind damage, sprawling vines) requires immediate physical solutions (staking, thorn barriers, figure-8 knots).
+6. **OBJ-6: Harvest Longevity & Crop Rotation Intelligence**: Clarify the "Pull vs. Pick" rule (Single-harvest Pechay vs. Multi-pick Tomato/Sitaw over 60 days) and automatically prescribe the next rotation crop to restore soil fertility naturally.
+
+### Defined Scope
+* **In-Scope**:
+  - 10 canonical Philippine backyard crops (Tomato, Eggplant, Pepper/Sili, Sitaw, Okra, Pechay, Lettuce, Kangkong, Cucumber, Sweet Corn).
+  - 7 continuous lifecycle phases (Pre-planting, Sowing, Seedling Care, Vegetative/Mechanical, Flowering/Pollination, Multi-Pick Harvest, Soil Succession).
+  - Multi-pillar diagnostic engine with zero-budget household remedies.
+  - Spatial scaling calibrated against real-world backyard yard measurements (step pacing guide: 1 step ≈ 0.85m, Courtyard 6m×4m, Backyard 12m×8m, Spacious 18m×12m, with customizable metric boundaries).
+* **Out-of-Scope**:
+  - Commercial synthetic agrochemical regimens requiring licensed applicator certifications.
+  - Industrial monoculture machinery (tractors, combine harvesters).
+  - IoT sensor hardware dependencies (electronic soil moisture probes, automated solenoid valves).
+
+---
+
+## 📌 Complete Agricultural Cycle: Case-to-Case Problem Breakdown
+
+```mermaid
+flowchart TD
+    subgraph S1["Phase 1: Pre-Planting & Site Realities"]
+        P1["Heavy, rock-hard or sticky clay soil (volcanic/sugarcane)"]
+        P2["Unknown repacked market seeds (no variety label, no expiry)"]
+        P3["Obstacles: coconut tree shade, no garden hose, water pressure issues"]
+    end
+
+    subgraph S2["Phase 2: Germination & Early Seedling"]
+        P4["Burying tiny seeds too deep (3–5cm instead of 1cm) -> seeds rot"]
+        P5["Chickens, cats, and household members digging or pulling seedlings"]
+        P6["Damping-Off ('Hulas'): stem rots at soil line from excess moisture"]
+        P7["'Leggy' seedlings: skinny, weak thread-stems stretching for sunlight"]
+    end
+
+    subgraph S3["Phase 3: Vegetative Growth & Nutrition"]
+        P8["Overcrowding: 20 seedlings in one clump; fear of thinning them out"]
+        P9["Fertilizer burn: dumping raw chicken manure directly onto roots"]
+        P10["Yellow leaves: Is it overwatering, lack of nitrogen, or normal shedding?"]
+        P11["Weed invasion competing for root space and water"]
+    end
+
+    subgraph S4["Phase 4: Structure, Flowering & Fruit Set"]
+        P12["Stem flopping over in the mud; soft watery body unable to hold weight"]
+        P13["Trellising confusion: what to use, how to tie without strangling stem"]
+        P14["Blossom Drop ('Laglag-Bulaklak'): flowers dry up and fall without fruiting"]
+        P15["Lack of pollination during rainy days when bees are absent"]
+        P16["Excessive 'Suhi' (suckers): bush of leaves with zero fruit"]
+    end
+
+    subgraph S5["Phase 5: Pests, Pathogens & Physical Damage"]
+        P17["Chewing pests: green hornworms, fruitworms burrowing into tomatoes"]
+        P18["Sucking pests: aphids/whiteflies under leaves causing curling and mosaic virus"]
+        P19["Rain-splash fungal leaf spot: raindrops splashing soil mud onto lower leaves"]
+        P20["Blossom-End Rot: black, sunken leathery bottoms on fruit (Calcium/water issue)"]
+        P21["Fruit cracking/splitting after a sudden heavy downpour"]
+        P22["Bacterial Wilt: plant looks fine at 8 AM, completely dead by 3 PM"]
+    end
+
+    subgraph S6["Phase 6: Harvesting & Multi-Cycle Management"]
+        P23["Timing: picking too early (acidic/green) vs too late (woody/rotted)"]
+        P24["Technique: pulling the entire plant vs continuous multi-picking"]
+        P25["Frequency: not knowing that picking stimulates MORE flowers"]
+        P26["Harvest Longevity: how many harvests before the plant is exhausted and the bed must be cleared?"]
+    end
+
+    subgraph S7["Phase 7: Post-Harvest & Soil Regeneration"]
+        P27["Soil exhaustion & nematode buildup from replanting the same crop"]
+        P28["Succession confusion: 'What vegetable should go into this bed next?'"]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
+```
+
+---
+
+## 📌 Post-Account Creation: Initial DSS Observation & Availability Setup
+
+Immediately after registration, the user defines their current local status through a guided DSS setup:
+
+1. **Location / Agro-Zone Dropdown**:
+   - `Highland / Mountain Slope (>500m, e.g. Murcia, Benguet, Bukidnon)`
+   - `Lowland Flatland (0–500m, e.g. Central Luzon, coastal plains)`
+2. **Current Weather / Season Dropdown**:
+   - `Rainy / Wet Season (Frequent downpours, high humidity)`
+   - `Dry / Hot Sunny Season (Intense heat, drought risk)`
+3. **Soil Appearance & Texture Dropdown**:
+   - `Dark Brown / Volcanic (High organic matter, heavy clay-loam, acidic)`
+   - `Heavy Clay Soil (Sticky mud when wet, rock-hard when dry)`
+   - `Sandy / Light Soil (Drains rapidly, dries quickly)`
+   - `Loam / Garden Soil (Crumbly, balanced moisture)`
+4. **Backyard Yard Dimensions & Boundary Guide (Real-World Metric Measurement)**:
+   - `Courtyard / Balcony Garden (6m × 4m • 24m²)`
+   - `Standard Backyard Plot (12m × 8m • 96m²)`
+   - `Spacious Backyard / Farmlet (18m × 12m • 216m²)`
+   - `Custom Exact Dimensions (Meters, with step-pacing guide: 1 step ≈ 0.85m)`
+5. **Local Site Observations & Risks (Multi-Select Chips)**:
+   - `Free-range Chickens / Stray Animals present`
+   - `Natural Slope (Good runoff / no water stagnation)`
+   - `Prone to Water Pooling / Flooding`
+   - `Partial Shade (< 5 hours direct sunlight)`
+   - `Strong Wind Exposure`
+6. **Available Zero-Budget Household Materials (Multi-Select Chips)**:
+   - `Wood Ash (Abo) from stove/charcoal`
+   - `Crushed Eggshells`
+   - `Dried Leaves / Rice Straw (Dayami) for mulch`
+   - `Bamboo Poles / Tree Branch Stakes`
+   - `Kitchen Chili & Garlic (for organic insect spray)`
+
+---
+
+## 📌 Complete Agricultural Cycle: Real-World Case Breakdown & Dynamic Engine
+
+### 1. Concrete Case: Beginner in Murcia (Flat Volcanic Soil, No Flooding, Kitchen Seeds, Zero Budget)
+
+| Step | Reality in the Field | MapTanim DSS Guidance & Real-Time Action |
+| :--- | :--- | :--- |
+| **1. Tool Acquisition** | User has no commercial farm tools (no spade, no hoe, no seedling trays). | **Zero-Budget Tool Substitutions:**<br>• Used plastic egg trays / paper cups / tin cans with punctured drainage holes = seedbox nursery.<br>• Old kitchen tablespoon = planting & transplanting trowel.<br>• Sharpened bamboo stick = dibber for hole depth and row marking.<br>• 1.5L Coke bottle with needle-punctured cap = gentle nursery water sprinkler. |
+| **2. Land Preparation** | Murcia sugarcane/volcanic soil is heavy clay-loam: sticky mud during rains, rock-hard when baked by sun. | **Soil Conditioning Protocol:**<br>• Dig and break up clods to 30cm depth.<br>• Blend in 3–5 kg/m² decomposed organic compost or carbonized rice hull (CRH) to open air pores.<br>• Dust wood ash (*abo*) lightly to neutralize volcanic acidity.<br>• Build raised garden beds (20–30cm elevated above ground level) to guarantee drainage even in flat terrains. |
+| **3. Planting Kitchen Seeds** | Seeds rescued from kitchen vegetables (tomatoes, bell peppers, squash) have unknown germination viability. | **Seed Rescue & Sowing Protocol:**<br>• **Paper Towel Test:** Wrap 10 seeds in a damp paper towel or cloth for 4 days. If $\ge 7$ sprout, viability is high.<br>• **Seed Depth Rule:** SOW SHALLOW ($< 1\text{cm}$ deep or twice the seed width). **Never bury 3–5cm deep**, which causes seed rot (*P4*).<br>• Water with fine mist so seeds are not dislodged. |
+| **4. Care & Maintenance** | Seedlings emerge; risk of leggy stems and overcrowding. | **Care Protocol:**<br>• **Morning Sunlight:** Minimum 6 hours direct sun to prevent spindly "leggy" stems (*P7*).<br>• **Root-Zone Watering:** Apply water at the base before 9:00 AM. Keep foliage dry to prevent rain-splash fungal infection (*P19*).<br>• **Organic Mulching:** Cover bare bed soil with dried rice straw (*dayami*) or dried leaves to conserve moisture and suppress weeds (*P11*). |
+| **5. Handling Unexpected Anomalies** | Household realities: brother pulled a plant, stray chickens scratched the bed, or stem rots at ground level. | **Immediate Recovery Steps:**<br>• **Brother pulled plant / accidental loss:** Inspect adjacent plant spacing. If gap $> 40\text{cm}$, transplant a companion (e.g., Pechay or Marigold) to fill the root niche.<br>• **Chicken / animal scratch damage:** Smooth disturbed soil around roots; erect protective bamboo stick spikes (*suksok*) around bed perimeter or drape scrap fish netting.<br>• **Rotten stem / 'Hulas' (Damping-off):** Immediately stop surface watering. Scrape away damp topsoil and dust dry wood ash (*abo*) around the collar line to desiccate fungal mycelium. |
+| **6. Harvest Longevity & Bed Clearance (P26)** | Confusion over how many harvests before a plant is finished and the bed must be cleared. | **Crop-Specific Picking Lifespans:**<br>• **Pechay / Mustard:** Single harvest (Day 25–35). Cut whole head at base; clear bed immediately.<br>• **Sitaw (Pole Beans):** 15–20 pickings over 45 days. Pick every 2–3 days while pencil-thick.<br>• **Tomato:** 6–8 pickings over 30–45 days. Harvest at breaker stage (pink blush).<br>• **Eggplant:** 20–30 pickings over 4–6 months.<br>• **Clearance Signal:** When leaves turn uniformly yellow, fruit size shrinks by 60%, or stems become woody/barren, pull entire root system, compost clean biomass, and prepare for crop succession. |
+| **7. Crop Succession & Rotation** | Soil is exhausted of specific nutrients; nematode eggs remain. | **Botanical Succession Rule:**<br>• **Solanaceae (Tomato/Eggplant/Pepper)** $\to$ followed by **Legume (Sitaw/Mongo)** to inject atmospheric nitrogen back into soil $\to$ followed by **Leafy Greens (Pechay/Lettuce)** $\to$ followed by **Root Crops (Radish/Carrot)**. |
+
+---
+
+### 2. Database-Driven DSS & Crop Library Architecture (Beyond Static Hardcoding)
+
+A major design goal of MapTanim is to **avoid static hardcoding** so that complex, multi-condition agricultural knowledge does not require app recompilation or app store releases. The system uses a **Database-Backed Hybrid Architecture**:
+
+```mermaid
+flowchart TD
+    subgraph Cloud["Supabase PostgreSQL Cloud"]
+        R1["dss_rules (JSONB Predicates & Action Trees)"]
+        R2["crop_profiles & varieties (Real-World Benchmarks)"]
+        R3["pest_disease_library (Symptoms, Vectors & Organic Remedies)"]
+        R4["field_anomalies (Farmer Crowdsourced / Unresolved Logs)"]
+    end
+
+    subgraph SyncLayer["Offline-First Sync Engine"]
+        S1["Local Room SQLite Cache"]
+        S2["Differential Sync on App Launch / Network Reconnect"]
+    end
+
+    subgraph Client["MapTanim Mobile DSS Engine"]
+        E1["Dynamic Condition Matcher (Evaluates 5+ Overlapping Criteria)"]
+        E2["BedAgronomicAdvisor (Stage Protocols & Cultural Practices)"]
+        E3["DssLogEvaluator (Real-Time Recovery & Emergency Interventions)"]
+        E4["Unified Bed Dossier & Canvas HUD (Zero-Latency Rendering)"]
+    end
+
+    Cloud -->|Differential Sync JSONB| S1
+    S1 --> E1
+    E1 --> E2
+    E1 --> E3
+    E2 --> E4
+    E3 --> E4
+    E3 -.->|Upload new field observations| R4
+```
+
+#### A. How Real Data is Checked (vs. Static Hardcoding)
+1. **Dynamic Predicate Storage (`dss_rules` table)**:
+   - Rules are stored as JSONB condition trees rather than rigid code branches.
+   - Example multi-condition database rule for a flat volcanic backyard with kitchen seeds:
+     ```json
+     {
+       "rule_id": "rule_murcia_volcanic_flat_kitchen_prep",
+       "conditions": {
+         "agro_zone": "MURCIA",
+         "topography": "FLAT",
+         "flood_risk": false,
+         "soil_texture": "VOLCANIC_CLAY",
+         "seed_source": "KITCHEN_REPACKED",
+         "stage": "PREPARATION"
+       },
+       "recommendation": {
+         "title": "Raised Bed & Paper-Towel Germination Protocol",
+         "actions": [
+           "Perform 4-day damp paper towel test for kitchen seeds before bed sowing.",
+           "Dig heavy clay-loam to 30cm depth; blend 3kg/m² organic compost or carbonized rice hull.",
+           "Dust 200g/m² wood ash (abo) to neutralize volcanic acidity.",
+           "Build raised beds (20–30cm) to guarantee aeration even in flat non-flooded terrain."
+         ],
+         "urgency": "HIGH",
+         "household_substitutions": ["egg_tray_nursery", "kitchen_spoon_trowel", "needle_punctured_bottle"]
+       }
+     }
+     ```
+2. **Dynamic Rule Matching in Mobile Engine**:
+   - The mobile engine loads cached rules into memory.
+   - When evaluating a bed or log, the engine matches the farmer's current environmental profile and observation flags against the rule conditions.
+   - Rules are scored by **specificity (number of matching predicates)**: a rule specifically matching Murcia + Flat + Volcanic Clay outranks a generic nationwide clay rule.
+
+#### B. Dynamic Crop Library Integration
+- Crop benchmarks (germination days, planting depth, picking lifespan, harvest frequency, yield estimates, companion affinities) live in the `crop_profiles` table.
+- When new crop varieties (e.g., *Murcia Sweet Corn* or *Bacolod Pole Sitao*) are cataloged, administrators add them to Supabase.
+- The mobile app automatically receives the new crop parameters on the next sync without needing a code update.
+
+#### C. Handling Multi-Condition Overload & Reporting Field Anomalies
+- **What happens when there are too many conditions?**
+  - If a situation matches multiple rules simultaneously (e.g. "Chicken Scratch" + "Stem Rot" + "Overcrowded Clump"), the DSS aggregates actions and sorts them by **Urgency/Priority**:
+    1. **Priority 2 (Emergency Quarantine/Survival):** Halt water & apply wood ash to stem rot; firm soil and erect bamboo spikes against chickens.
+    2. **Priority 1 (Cultural Care):** Thin overcrowded clumps down to 1 seedling per station.
+    3. **Priority 0 (Standard Routine):** Maintain base watering before 9:00 AM.
+- **Can farmers send new field anomalies back to the library?**
+  - YES. When a farmer encounters an unclassified symptom or unexpected household anomaly, the app logs the observation to the `field_anomalies` table in Supabase.
+  - Agricultural extension agents can review these logs, update or add new recovery rules in the database, and publish them immediately to all farmers in the area.
+
+---
+
 ## 🔹 Monitoring Lifecycle
 
 The crop lifecycle follows one continuous flow:

@@ -247,21 +247,60 @@ class DssLogEvaluator {
                         ))
                     }
                     "B" -> {
+                        val hasDampingOff = log.selectedCheckboxes.any { it.contains("Hulas", ignoreCase = true) || it.contains("Stem rot", ignoreCase = true) }
+                        val isLeggy = log.selectedCheckboxes.any { it.contains("Leggy", ignoreCase = true) }
+                        val content = when {
+                            hasDampingOff -> "Damping-off ('Hulas') fungal collar rot detected. Immediately halt overhead watering. Scrape damp topsoil away from stem collar and dust dry wood ash (abo) around base to dehydrate fungal mycelium. Expose to full morning sun."
+                            isLeggy -> "Seedlings are leggy from insufficient sunlight. Move immediately to 6+ hours direct morning sun. Mound a small ring of compost/garden soil 1cm up the stem to provide physical stabilization."
+                            else -> "Plant stress indicators detected ($conditionsText). Apply diluted organic compost tea or aged manure water around root drip-line. Inspect drainage to prevent waterlogging."
+                        }
                         recs.add(LogRecommendation(
                             id = "rec-care-${log.id}",
-                            title = "Agronomic Recovery Guide (${currentStage.label})",
-                            content = "Plant stress indicators detected ($conditionsText). Apply diluted organic seaweed extract or well-cured compost tea around the root drip-line. Inspect soil drainage to prevent anaerobic root conditions.",
+                            title = if (hasDampingOff) "Emergency Damping-Off ('Hulas') Protocol" else "Agronomic Recovery Guide (${currentStage.label})",
+                            content = content,
                             stage = currentStage,
-                            priority = 1
+                            priority = if (hasDampingOff) 2 else 1
                         ))
                     }
                     "C" -> {
+                        val isPulled = log.selectedCheckboxes.any { it.contains("Pulled", ignoreCase = true) || it.contains("missing", ignoreCase = true) }
+                        val isChicken = log.selectedCheckboxes.any { it.contains("Chicken", ignoreCase = true) || it.contains("animal", ignoreCase = true) }
+                        val isBlossomEndRot = log.selectedCheckboxes.any { it.contains("Blossom-End Rot", ignoreCase = true) }
+                        val isBacterialWilt = log.selectedCheckboxes.any { it.contains("Bacterial wilt", ignoreCase = true) }
+
+                        val (title, content, priority) = when {
+                            isPulled -> Triple(
+                                "Accidental Loss / Plant Pulled Recovery",
+                                "A plant was pulled or destroyed. Check spacing to neighboring crops. If gap > 30cm, transplant a fast-growing leafy companion (Pechay or Mustard) to utilize open root space and suppress weed takeover.",
+                                1
+                            )
+                            isChicken -> Triple(
+                                "Animal / Chicken Scratch Damage Barrier",
+                                "Roots and soil disturbed by stray animals. Gently firm loose soil back around root crown and water base lightly. Insert sharpened bamboo skewers/twigs (suksok) spaced 10cm apart around bed perimeter as a physical deterrent.",
+                                2
+                            )
+                            isBlossomEndRot -> Triple(
+                                "Blossom-End Rot (Calcium & Water Imbalance)",
+                                "Dark leathery sunken bottom is Blossom-End Rot caused by erratic watering blocking Calcium uptake. Apply steeped crushed eggshells in water/vinegar at soil base. Water regularly at base and apply rice straw mulch.",
+                                2
+                            )
+                            isBacterialWilt -> Triple(
+                                "Bacterial Wilt Quarantine Protocol",
+                                "Sudden daytime plant wilt is Ralstonia bacterial wilt. Dig out entire plant with root soil immediately and dispose away from garden (do not compost). Rotate this bed to Sitaw or Corn next cycle.",
+                                2
+                            )
+                            else -> Triple(
+                                "Pest & Foliar Management Guide",
+                                "Damage or pest detected ($conditionsText). Spray organic chili-garlic-soap extract or neem solution late afternoon. Handpick visible caterpillars and prune lowest mud-splashed leaves.",
+                                2
+                            )
+                        }
                         recs.add(LogRecommendation(
                             id = "rec-pest-${log.id}",
-                            title = "Pest & Foliar Management Guide",
-                            content = "Infestation or damage detected ($conditionsText). Spray organic neem oil solution (5ml/L) in late afternoon to avoid leaf scorch. Prune and dispose of heavily infested lower leaves.",
+                            title = title,
+                            content = content,
                             stage = currentStage,
-                            priority = 2
+                            priority = priority
                         ))
                     }
                 }

@@ -12,6 +12,7 @@ import com.maptanim.app.features.farm.renderer.model.CropZoneRenderData
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
 import com.maptanim.app.features.farm.renderer.model.toRenderData
 import com.maptanim.app.features.farm.viewmodel.state.*
+import com.maptanim.app.dss.engine.DssLogEvaluator
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,29 +20,8 @@ import java.time.LocalDate
 import java.util.UUID
 
 /**
- * Unified UI State for the Farm Hub, combining Plan, Guide, CheckUp, and Harvest tabs.
- */
-data class FarmHubUiState(
-    val activeFarmId: String = "",
-    val farmName: String = "My Farm",
-    val farmEnvironment: com.maptanim.app.domain.model.FarmEnvironment = com.maptanim.app.domain.model.FarmEnvironment(),
-    val showFarmSetupDialog: Boolean = false,
-    val selectedTopTab: TopTab = TopTab.PLAN,
-    val planState: FarmHubPlanState = FarmHubPlanState(),
-    val guideState: FarmHubGuideState = FarmHubGuideState(),
-    val checkUpState: FarmHubCheckUpState = FarmHubCheckUpState(),
-    val harvestState: FarmHubHarvestState = FarmHubHarvestState(),
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null
-) {
-    val activePlot: CropPlot?
-        get() = planState.rawPlots.firstOrNull { it.id == planState.selectedPlotId }
-            ?: planState.rawPlots.firstOrNull()
-}
-
-/**
  * FarmHubViewModel — Consolidated Hub ViewModel coordinating the 4 core agricultural pillars:
- * 1. PlanTab (spatial layout, bed sizing, basketball court reference)
+ * 1. PlanTab (spatial layout, bed sizing, yard measurements)
  * 2. GuideTab (agronomic rules, growth stages, daily care)
  * 3. CheckUpTab (observations, pest/disease logging, crop health)
  * 4. HarvestTab (readiness, yield records, post-harvest protocol)
@@ -49,11 +29,9 @@ data class FarmHubUiState(
 class FarmHubViewModel(
     private val cropPlotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,
     private val cropZoneRepository: CropZoneRepository = RepositoryProvider.cropZoneRepository,
-    private val cropRepository: CropRepository = RepositoryProvider.cropRepository,
     private val taskRepository: TaskRepository = RepositoryProvider.taskRepository,
     private val cropLogRepository: CropLogRepository = RepositoryProvider.cropLogRepository,
-    private val harvestRepository: HarvestRepository = RepositoryProvider.harvestRepository,
-    private val activityRepository: ActivityRepository = RepositoryProvider.activityRepository
+    private val harvestRepository: HarvestRepository = RepositoryProvider.harvestRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FarmHubUiState())
@@ -65,13 +43,10 @@ class FarmHubViewModel(
     init {
         resolveActiveFarm()
         observePlotsAndZones()
+        observeTasksAndDecisions()
     }
 
-    fun selectTopTab(tab: TopTab) {
-        _uiState.update { it.copy(selectedTopTab = tab) }
-    }
-
-    // ─── Farm Resolution & Data Observation ──────────────────────────────────
+    fun selectTopTab(tab: TopTab) = _uiState.update { it.copy(selectedTopTab = tab) }
 
     private fun resolveActiveFarm() {
         viewModelScope.launch {
@@ -81,34 +56,32 @@ class FarmHubViewModel(
             }
             val farmId = localFarm?.id ?: user?.id?.takeIf { it.isNotBlank() } ?: "farm-default"
             val farmName = localFarm?.farmName ?: "My Farm"
-            val env = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().getFarmEnvironment(farmId)
+            val prefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+            val env = prefs.getFarmEnvironment(farmId)
+            val isCalibrated = prefs.isFarmCalibrated(farmId)
+
             _uiState.update {
                 it.copy(
                     activeFarmId = farmId,
                     farmName = farmName,
                     farmEnvironment = env,
-                    planState = it.planState.copy(farmEnvironment = env, activeSoilType = env.defaultSoil)
+                    showFarmSetupDialog = !isCalibrated,
+                    planState = it.planState.copy(
+                        farmEnvironment = env,
+                        activeSoilType = env.defaultSoil,
+                        showFarmSetupDialog = !isCalibrated
+                    )
                 )
             }
         }
     }
 
-    fun openFarmSetupDialog() {
-        _uiState.update {
-            it.copy(
-                showFarmSetupDialog = true,
-                planState = it.planState.copy(showFarmSetupDialog = true)
-            )
-        }
+    fun openFarmSetupDialog() = _uiState.update {
+        it.copy(showFarmSetupDialog = true, planState = it.planState.copy(showFarmSetupDialog = true))
     }
 
-    fun closeFarmSetupDialog() {
-        _uiState.update {
-            it.copy(
-                showFarmSetupDialog = false,
-                planState = it.planState.copy(showFarmSetupDialog = false)
-            )
-        }
+    fun closeFarmSetupDialog() = _uiState.update {
+        it.copy(showFarmSetupDialog = false, planState = it.planState.copy(showFarmSetupDialog = false))
     }
 
     fun updateFarmSetup(name: String, environment: com.maptanim.app.domain.model.FarmEnvironment) {
@@ -145,23 +118,105 @@ class FarmHubViewModel(
             cropPlotRepository.observePlots(farmId).collect { plots ->
                 val plotRenderData = plots.map { it.toRenderData() }
                 _uiState.update { state ->
+                    val selectedPlot = plots.firstOrNull { it.id == state.planState.selectedPlotId }
+                        ?: plots.firstOrNull()
+                    val selectedPlotId = selectedPlot?.id
+                    val updatedGuide = computeGuideStateForPlot(selectedPlot, state.guideState)
+
                     state.copy(
                         planState = state.planState.copy(
                             rawPlots = plots,
                             plots = plotRenderData,
-                            selectedPlotId = state.planState.selectedPlotId ?: plots.firstOrNull()?.id
-                        )
+                            selectedPlotId = selectedPlotId
+                        ),
+                        guideState = updatedGuide
                     )
                 }
             }
         }
     }
 
+    private fun observeTasksAndDecisions() {
+        val farmId = _uiState.value.activeFarmId
+        viewModelScope.launch {
+            taskRepository.observeTodayTasks(farmId, LocalDate.now().toString()).collect { tasks ->
+                _uiState.update { state ->
+                    val dssTasks = tasks.map { farmTask ->
+                        DssLogEvaluator.GeneratedLogTask(
+                            id = farmTask.id,
+                            title = farmTask.title,
+                            description = farmTask.subLabel ?: "Agronomic care task",
+                            taskType = farmTask.taskType,
+                            dueDate = farmTask.dueDate,
+                            stage = ManagementStage.VEGETATIVE_GROWTH
+                        )
+                    }
+                    val currentTasks = if (dssTasks.isNotEmpty()) dssTasks else state.guideState.dynamicTasks
+                    state.copy(
+                        guideState = state.guideState.copy(dynamicTasks = currentTasks)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun computeGuideStateForPlot(plot: CropPlot?, currentGuide: FarmHubGuideState): FarmHubGuideState {
+        if (plot == null) return currentGuide
+        val hasCrops = !plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true)
+        val daysPlanted = try {
+            val dateStr = plot.plantedDate?.take(10)
+            if (dateStr != null) {
+                val planted = LocalDate.parse(dateStr)
+                java.time.temporal.ChronoUnit.DAYS.between(planted, LocalDate.now()).toInt().coerceAtLeast(0)
+            } else 0
+        } catch (_: Exception) { 0 }
+
+        val stage = when {
+            daysPlanted < 14 -> ManagementStage.PREPARATION
+            daysPlanted in 14..45 -> ManagementStage.VEGETATIVE_GROWTH
+            daysPlanted in 46..65 -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+            else -> ManagementStage.HARVEST
+        }
+
+        val defaultTasks = if (currentGuide.dynamicTasks.isEmpty() && hasCrops) {
+            listOf(
+                DssLogEvaluator.GeneratedLogTask(
+                    id = "task_water_${plot.id}",
+                    title = "Morning Deep Root Watering",
+                    description = "Apply 2.5L/m² at the base before 9:00 AM for ${plot.cropName}.",
+                    taskType = TaskType.WATER,
+                    dueDate = LocalDate.now().toString(),
+                    stage = stage
+                ),
+                DssLogEvaluator.GeneratedLogTask(
+                    id = "task_scout_${plot.id}",
+                    title = "Early Pest & Companion Check",
+                    description = "Inspect leaf undersides and verify companion plant spacing.",
+                    taskType = TaskType.OBSERVATION,
+                    dueDate = LocalDate.now().toString(),
+                    stage = stage
+                )
+            )
+        } else currentGuide.dynamicTasks
+
+        return currentGuide.copy(
+            currentStage = stage,
+            daysPlanted = daysPlanted,
+            daysToHarvest = 75,
+            dynamicTasks = defaultTasks
+        )
+    }
+
     // ─── Plan Tab Actions ───────────────────────────────────────────────────
 
     fun selectPlot(plotId: String?) {
         _uiState.update { state ->
-            state.copy(planState = state.planState.copy(selectedPlotId = plotId))
+            val selected = state.planState.rawPlots.firstOrNull { it.id == plotId }
+            val updatedGuide = computeGuideStateForPlot(selected, state.guideState)
+            state.copy(
+                planState = state.planState.copy(selectedPlotId = plotId),
+                guideState = updatedGuide
+            )
         }
     }
 
@@ -189,11 +244,7 @@ class FarmHubViewModel(
         }
     }
 
-    fun toggleBasketballScale() {
-        _uiState.update { state ->
-            state.copy(planState = state.planState.copy(showBasketballScale = !state.planState.showBasketballScale))
-        }
-    }
+    private var savePlotJob: kotlinx.coroutines.Job? = null
 
     fun movePlot(plotId: String, deltaX: Float, deltaY: Float) {
         val currentPlot = _uiState.value.planState.rawPlots.firstOrNull { it.id == plotId } ?: return
@@ -201,7 +252,19 @@ class FarmHubViewModel(
         val newY = (currentPlot.posY + deltaY).coerceIn(0.5f, 40f)
         val updated = currentPlot.copy(posX = newX, posY = newY)
 
-        viewModelScope.launch {
+        _uiState.update { state ->
+            val updatedPlots = state.planState.rawPlots.map { if (it.id == plotId) updated else it }
+            state.copy(
+                planState = state.planState.copy(
+                    rawPlots = updatedPlots,
+                    plots = updatedPlots.map { it.toRenderData() }
+                )
+            )
+        }
+
+        // Real-time immediate persistence on IO dispatcher
+        savePlotJob?.cancel()
+        savePlotJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             cropPlotRepository.upsertPlot(updated)
         }
     }
@@ -215,7 +278,19 @@ class FarmHubViewModel(
         undoStack.addLast(EditAction.ModifyPlot(currentPlot, updated))
         redoStack.clear()
 
-        viewModelScope.launch {
+        _uiState.update { state ->
+            val updatedPlots = state.planState.rawPlots.map { if (it.id == plotId) updated else it }
+            state.copy(
+                planState = state.planState.copy(
+                    rawPlots = updatedPlots,
+                    plots = updatedPlots.map { it.toRenderData() }
+                )
+            )
+        }
+
+        // Real-time immediate persistence on IO dispatcher
+        savePlotJob?.cancel()
+        savePlotJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             cropPlotRepository.upsertPlot(updated)
             updateUndoRedoState()
         }
@@ -357,6 +432,18 @@ class FarmHubViewModel(
     fun setAddLogOpen(isOpen: Boolean) {
         _uiState.update { state ->
             state.copy(checkUpState = state.checkUpState.copy(isAddLogOpen = isOpen))
+        }
+    }
+
+    fun submitCropLog(log: CropLog) {
+        viewModelScope.launch {
+            try {
+                cropLogRepository.insertLog(log)
+                _uiState.update { state ->
+                    val logs = state.checkUpState.observedLogs + log
+                    state.copy(checkUpState = state.checkUpState.copy(observedLogs = logs, isAddLogOpen = false))
+                }
+            } catch (_: Exception) {}
         }
     }
 

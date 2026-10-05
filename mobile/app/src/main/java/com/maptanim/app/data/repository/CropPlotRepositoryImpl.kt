@@ -53,9 +53,16 @@ class CropPlotRepositoryImpl(
         }
         cropPlotDao?.upsertPlots(plots.map { it.toEntity() })
         
-        // Sync to remote
-        plots.forEach { plot ->
-            remoteDataSource.upsertPlot(plot.toDto())
+        val cached = inMemoryCache.value[resolvedFarmId] ?: emptyList()
+        // Avoid network traffic: only push plots that were actually added or modified
+        val changedPlots = plots.filter { p ->
+            val prev = cached.firstOrNull { it.id == p.id }
+            prev == null || prev != p
+        }
+        changedPlots.forEach { plot ->
+            try {
+                remoteDataSource.upsertPlot(plot.toDto())
+            } catch (_: Exception) {}
         }
 
         val current = inMemoryCache.value.toMutableMap()

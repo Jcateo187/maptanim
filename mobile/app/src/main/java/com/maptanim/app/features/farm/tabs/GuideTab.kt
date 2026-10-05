@@ -7,8 +7,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.*
@@ -43,6 +45,7 @@ fun GuideTab(
     onNavigateToPlan: () -> Unit = {},
     onNavigateToCheckUp: () -> Unit = {},
     onNavigateToHarvest: () -> Unit = {},
+    onHideGuide: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -52,6 +55,66 @@ fun GuideTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── 0A. Back to 100% Canvas Header ───────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = onHideGuide,
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFF1F8E9),
+                    border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Canvas",
+                            tint = LushGreen,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Back to Map (100%)",
+                            color = LushGreen,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = onHideGuide,
+                    shape = RoundedCornerShape(8.dp),
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Hide Guide",
+                            tint = DeepBlack,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Hide",
+                            color = DeepBlack,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
         // ── 0. Active Bed Orientation Header ─────────────────────────────────
         item {
             Surface(

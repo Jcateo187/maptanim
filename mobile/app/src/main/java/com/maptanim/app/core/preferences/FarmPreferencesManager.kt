@@ -45,14 +45,26 @@ class FarmPreferencesManager(context: Context? = null) {
             com.maptanim.app.domain.model.SoilType.LOAM
         }
         val constraints = constraintsSet?.mapNotNull { com.maptanim.app.domain.model.SiteConstraint.fromCode(it) }?.toSet() ?: emptySet()
+        val season = prefs?.getString("farm_season_$farmId", "Wet / Rainy Season") ?: "Wet / Rainy Season"
+        val materials = prefs?.getStringSet("farm_materials_$farmId", null) ?: emptySet()
 
         return com.maptanim.app.domain.model.FarmEnvironment(
             zone = zone,
             defaultSoil = soil,
             widthM = width,
             heightM = height,
-            constraints = constraints
+            constraints = constraints,
+            season = season,
+            availableMaterials = materials
         )
+    }
+
+    fun isFarmCalibrated(farmId: String): Boolean {
+        return prefs?.getBoolean("farm_calibrated_$farmId", false) ?: false
+    }
+
+    fun setFarmCalibrated(farmId: String, calibrated: Boolean) {
+        prefs?.edit()?.putBoolean("farm_calibrated_$farmId", calibrated)?.apply()
     }
 
     fun saveFarmEnvironment(farmId: String, env: com.maptanim.app.domain.model.FarmEnvironment) {
@@ -62,6 +74,9 @@ class FarmPreferencesManager(context: Context? = null) {
             ?.putFloat("farm_w_$farmId", env.widthM)
             ?.putFloat("farm_h_$farmId", env.heightM)
             ?.putStringSet("farm_constraints_$farmId", env.constraints.map { it.code }.toSet())
+            ?.putString("farm_season_$farmId", env.season)
+            ?.putStringSet("farm_materials_$farmId", env.availableMaterials)
+            ?.putBoolean("farm_calibrated_$farmId", true)
             ?.apply()
     }
 
