@@ -8,39 +8,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-
-    primary = ForestGreen,
-    secondary = LeafGreen,
+    primary = GreenPrimary,
+    secondary = GreenLight,
     tertiary = Sunlight,
 
-    background = NightBlue,
-    surface = CardDark,
+    background = Color(0xFF111813),
+    surface = Color(0xFF1F2937),
 
     onPrimary = White,
     onSecondary = White,
-    onTertiary = TextDark,
+    onTertiary = BlackPrimary,
 
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
+    onBackground = White,
+    onSurface = White,
 
     error = Danger
 )
 
 private val LightColorScheme = lightColorScheme(
-
-    primary = ForestGreen,
-    secondary = LeafGreen,
+    primary = GreenPrimary,
+    secondary = GreenLight,
     tertiary = Sunlight,
 
-    background = Color(0xFFF7FAF7),
-    surface = CardLight,
+    background = White,
+    surface = CardBackground,
 
     onPrimary = White,
     onSecondary = White,
-    onTertiary = TextDark,
+    onTertiary = BlackPrimary,
 
-    onBackground = TextDark,
-    onSurface = TextDark,
+    onBackground = BlackPrimary,
+    onSurface = BlackPrimary,
 
     error = Danger
 )
@@ -50,7 +48,6 @@ fun MapTanimTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-
     val colorScheme = if (darkTheme) {
         DarkColorScheme
     } else {

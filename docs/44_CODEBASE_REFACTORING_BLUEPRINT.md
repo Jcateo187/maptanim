@@ -23,7 +23,7 @@
    - 7.1 The Single-Screen Farm Hub UX Architecture
    - 7.2 The 4 Unified Tabs Workflow Specification
    - 7.3 Real-World Scale Calibration: Basketball Court Overlay
-   - 7.4 Zero-Emoji Design Tokens & Agronomic Palette
+   - 7.4 Design Tokens & High-Contrast Daylight Palette (White, Green & Black)
    - 7.5 Mobile Small-Screen (320dpâ€“412dp) Touch Ergonomics
 8. [Database Schema and Relationships](#8-database-schema-and-relationships)
 9. [Mock and Hardcoded Data Audit](#9-mock-and-hardcoded-data-audit)
@@ -754,14 +754,81 @@ See section 1.5 for the full basketball court benchmark specification.
 
 > *"Your Bed A (3m × 1m = 3 m²) takes up 0.7% of a standard barangay basketball court."*
 
-### 7.4 Zero-Emoji Design Tokens & Agronomic Palette
+### 7.4 Design Tokens & High-Contrast Daylight Palette (White, Green & Black)
+
+> **Design Directive**: The application adopts a high-contrast **Daylight White, Lush Green, and Deep Black** visual system. This ensures maximum readability in direct outdoor Philippine sunlight for farmers in the field, while delivering a modern, clean, and premium agronomic aesthetic.
+
+#### 7.4.1 The 3-Color Structural Hierarchy
+
+| Color Role | Color Hex | Usage & Purpose |
+|---|---|---|
+| **White (Base & Canvas)** | `#FFFFFF` | **Primary Canvas, Screens & Cards**: Clean, bright, airy background for the whole application. Eliminates heavy dark-mode fatigue and mimics clean agricultural field blueprints. Surfaces use `#FFFFFF` with ultra-light neutral card tints (`#F9FAF9`). |
+| **Green (Action & Identity)** | `#2E7D32` (Primary)<br>`#1B5E20` (Dark)<br>`#E8F5E9` (Light Container) | **Buttons, Tabs, Crop Names & Highlights**: All primary interactive buttons (FAB, Save, Add Bed, Confirm), active navigation tabs, active Farm Hub tabs (`[Plan]`, `[Guide]`, `[Check-up]`, `[Harvest]`), crop catalog names, and positive agronomic badges. |
+| **Black (Structure & Text)** | `#111813` (Jet Black)<br>`#1F2937` (Charcoal)<br>`#374151` (Muted) | **Typography, Borders & Inactive States**: Ultra-sharp text contrast, card border outlines (`1dp` solid `#E5E7EB` / `#111813`), unselected tab icons/labels, table grid lines, and structural dividers. |
+
+#### 7.4.2 Component Color Role Matrix
+
+| UI Component | Background Color | Text / Foreground Color | Border / Stroke |
+|---|---|---|---|
+| **App Screen / Scaffold** | White (`#FFFFFF`) | Jet Black (`#111813`) | — |
+| **Primary Action Button** | Forest Green (`#2E7D32`) | Pure White (`#FFFFFF`) | None / subtle green elevation shadow |
+| **Active Tab (Nav / Hub)** | Light Green Pill (`#E8F5E9`) | Dark Green (`#1B5E20`) | Green indicator line (`#2E7D32`) |
+| **Inactive Tab** | Transparent | Charcoal / Muted Black (`#4B5563`) | None |
+| **Crop Name / Variety** | Transparent | Forest Green (`#2E7D32`) Bold | None |
+| **Bed Card / Plot Container** | Pure White (`#FFFFFF`) | Jet Black (`#111813`) | 1dp Crisp Border (`#E5E7EB`) |
+| **Canvas Viewport** | Crisp Grid White (`#FBFDFB`) | Black Grid Lines (`#E2E8F0`) | 1dp Outline (`#CBD5E1`) |
+| **Dialogs & Bottom Sheets**| Pure White (`#FFFFFF`) | Jet Black (`#111813`) | 1.5dp Rounded Border |
+| **Secondary Button** | Pure White (`#FFFFFF`) | Forest Green (`#2E7D32`) | 1dp Forest Green (`#2E7D32`) |
+
+#### 7.4.3 Production Design Tokens (`ui/theme/Color.kt`)
+
+```kotlin
+package com.maptanim.app.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// ======================================================
+// MAPTANIM HIGH-CONTRAST DAYLIGHT COLOR SYSTEM
+// Base: Pure White | Actions & Names: Lush Green | Text: Crisp Black
+// ======================================================
+
+// Green Palette (Buttons, Active Tabs, Crop Names, Highlights)
+val GreenPrimary     = Color(0xFF2E7D32) // Forest Green (Primary CTA, Active Tabs)
+val GreenDark        = Color(0xFF1B5E20) // Deep Forest Green (Pressed states, headers)
+val GreenLight       = Color(0xFF4CAF50) // Bright Leaf Green (Badges, healthy status)
+val GreenContainer   = Color(0xFFE8F5E9) // Light Green Pill (Active tab background, chips)
+val GreenBorder      = Color(0xFFA5D6A7) // Subtle green card borders
+val ForestGreen      = Color(0xFF2E7D32) // Standardized alias
+
+// White & Surface Palette (Screens, Cards, Canvas)
+val White            = Color(0xFFFFFFFF) // Pure White (Scaffold background, card fills)
+val SurfaceWhite     = Color(0xFFFAFAFA) // Subtle off-white for secondary cards
+val CanvasBackground = Color(0xFFF7FAF7) // Scaled garden grid background
+val CardBackground   = Color(0xFFFFFFFF) // White card surface
+
+// Black & Neutral Palette (Typography, Inactive Tabs, Borders)
+val BlackPrimary     = Color(0xFF111813) // Jet Black (Headlines, primary body, values)
+val BlackSecondary   = Color(0xFF374151) // Charcoal (Subtitles, captions, metadata)
+val BlackMuted       = Color(0xFF6B7280) // Muted Gray-Black (Timestamps, hints)
+val InactiveTabBlack = Color(0xFF4B5563) // Inactive tab icons and labels
+val BorderLight      = Color(0xFFE5E7EB) // 1dp neutral border line
+val BorderDark       = Color(0xFF111813) // Crisp high-contrast border
+
+// Agronomic Semantic Status (Zero-Emoji Indicators)
+val StatusWaterBlue  = Color(0xFF1976D2) // Irrigation task pin
+val StatusFertGreen  = Color(0xFF2E7D32) // Nutrition task pin
+val StatusHarvestGold= Color(0xFFF57F17) // Harvest readiness pin
+val StatusAlertRed   = Color(0xFFD32F2F) // Critical pest/disease alert
+```
+
+#### 7.4.4 Zero-Emoji Production Iconography
 
 | Category | Token Source | Example |
 |---|---|---|
-| **Crop Visuals** | SVG vectors from `assets/crops_svg/` via `CropSvgRenderer.kt` | Tomato = `tomato.svg` rendered on canvas |
+| **Crop Visuals** | SVG vectors from `assets/crops_svg/` via `CropSvgRenderer.kt` | Tomato = `tomato.svg` rendered on canvas with Green title text |
 | **Action Icons** | Material 3 Vector Icons (`Icons.Filled.*`, `Icons.Outlined.*`) | Water = `Icons.Filled.WaterDrop`, Fertilize = `Icons.Filled.Spa` |
 | **Status Badges** | Curated SVG vectors (water drop, fertilizer sack, pest silhouette) | No emojis in any dialog, tab, or list |
-| **Theme Colors** | `ui/theme/Color.kt` — Material 3 color scheme | Dark green = `#1B5E20`, Earth brown = `#5D4037` |
+
 
 ### 7.5 Mobile Small-Screen (320dp–412dp) Touch Ergonomics
 
