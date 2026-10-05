@@ -18,8 +18,8 @@ AS $$
     OR EXISTS (
       SELECT 1 FROM public.users
       WHERE id::text = (auth.uid())::text
-        AND role IN ('ADMIN', 'SUPER_ADMIN')
-        AND status = 'ACTIVE'
+        AND role::text IN ('ADMINISTRATOR', 'ADMIN', 'SUPER_ADMIN')
+        AND status::text = 'ACTIVE'
     )
   );
 $$;
@@ -212,8 +212,8 @@ CREATE POLICY "users_update_self_or_admin" ON public.users
         public.is_admin()
         OR (
             id::text = (auth.uid())::text
-            AND role = (SELECT u.role FROM public.users u WHERE u.id::text = (auth.uid())::text)
-            AND status = (SELECT u.status FROM public.users u WHERE u.id::text = (auth.uid())::text)
+            AND role::text = (SELECT u.role::text FROM public.users u WHERE u.id::text = (auth.uid())::text)
+            AND status::text = (SELECT u.status::text FROM public.users u WHERE u.id::text = (auth.uid())::text)
         )
     );
 
