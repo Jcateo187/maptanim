@@ -317,26 +317,22 @@ DROP POLICY IF EXISTS "harvest_records_all" ON public.harvest_records;
 
 CREATE POLICY "harvest_records_select" ON public.harvest_records
     FOR SELECT USING (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_insert" ON public.harvest_records
     FOR INSERT WITH CHECK (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_update" ON public.harvest_records
     FOR UPDATE USING (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_delete" ON public.harvest_records
     FOR DELETE USING (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
@@ -395,19 +391,18 @@ CREATE POLICY "crop_logs_delete" ON public.crop_logs
     );
 
 -- public.dss_evaluations & public.dss_decisions
+ALTER TABLE IF EXISTS public.dss_evaluations ADD COLUMN IF NOT EXISTS farmer_id TEXT;
 ALTER TABLE public.dss_evaluations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "dss_evaluations_all" ON public.dss_evaluations;
 
 CREATE POLICY "dss_evaluations_select" ON public.dss_evaluations
     FOR SELECT USING (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 CREATE POLICY "dss_evaluations_insert" ON public.dss_evaluations
     FOR INSERT WITH CHECK (
-        farmer_id::text = (auth.uid())::text
-        OR farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
         OR public.is_admin()
     );
 
