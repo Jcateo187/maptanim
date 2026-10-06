@@ -61,8 +61,23 @@ class CropPlotRepositoryImpl(
         }
         changedPlots.forEach { plot ->
             try {
-                remoteDataSource.upsertPlot(plot.toDto())
-            } catch (_: Exception) {}
+                val res = remoteDataSource.upsertPlot(plot.toDto())
+                if (res.isFailure) {
+                    RepositoryProvider.syncRepository.enqueueSyncItem(
+                        tableName = "crop_plots",
+                        recordId = plot.farmId,
+                        operation = "UPSERT",
+                        payload = plot.id
+                    )
+                }
+            } catch (_: Exception) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plot.farmId,
+                    operation = "UPSERT",
+                    payload = plot.id
+                )
+            }
         }
 
         val current = inMemoryCache.value.toMutableMap()
@@ -72,7 +87,24 @@ class CropPlotRepositoryImpl(
 
     override suspend fun deletePlot(plotId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.deletePlot(plotId)
-        remoteDataSource.deletePlot(plotId)
+        try {
+            val res = remoteDataSource.deletePlot(plotId)
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plotId,
+                    operation = "DELETE",
+                    payload = plotId
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "crop_plots",
+                recordId = plotId,
+                operation = "DELETE",
+                payload = plotId
+            )
+        }
 
         val current = inMemoryCache.value.toMutableMap()
         current.keys.forEach { farmId ->
@@ -83,7 +115,24 @@ class CropPlotRepositoryImpl(
 
     override suspend fun upsertPlot(plot: CropPlot) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.upsertPlot(plot.toEntity())
-        remoteDataSource.upsertPlot(plot.toDto())
+        try {
+            val res = remoteDataSource.upsertPlot(plot.toDto())
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plot.farmId,
+                    operation = "UPSERT",
+                    payload = plot.id
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "crop_plots",
+                recordId = plot.farmId,
+                operation = "UPSERT",
+                payload = plot.id
+            )
+        }
 
         val current = inMemoryCache.value.toMutableMap()
         val list = (current[plot.farmId] ?: emptyList()).filter { it.id != plot.id } + plot

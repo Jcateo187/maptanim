@@ -38,12 +38,47 @@ class FarmRepositoryImpl(
 
     override suspend fun upsertFarm(farm: Farm) = withContext(Dispatchers.IO) {
         farmDao?.upsertFarm(farm.toEntity())
-        remoteRepository.upsertFarm(farm.toDto())
+        try {
+            val res = remoteRepository.upsertFarm(farm.toDto())
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "farms",
+                    recordId = farm.id,
+                    operation = "UPSERT",
+                    payload = farm.id
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "farms",
+                recordId = farm.id,
+                operation = "UPSERT",
+                payload = farm.id
+            )
+        }
         farmsCache.value = farmsCache.value.filter { it.id != farm.id } + farm
     }
 
     override suspend fun deleteFarm(farmId: String) = withContext(Dispatchers.IO) {
         farmDao?.deleteFarm(farmId)
+        try {
+            val res = remoteRepository.deleteFarm(farmId)
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "farms",
+                    recordId = farmId,
+                    operation = "DELETE",
+                    payload = farmId
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "farms",
+                recordId = farmId,
+                operation = "DELETE",
+                payload = farmId
+            )
+        }
         farmsCache.value = farmsCache.value.filter { it.id != farmId }
     }
 

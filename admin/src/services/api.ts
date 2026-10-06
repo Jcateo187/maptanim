@@ -1,14 +1,40 @@
-import { Farmer, Farm, BedPlot, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats, CommunityPost, CommunityComment, CommunityReport, ReportStatus, BroadcastUpdatePayload, BroadcastNotification, UserActivityLog, UserTrackingMetrics, AccountStatus, UserRole } from '../types';
-import { MOCK_CROPS, MOCK_DSS_RULES, MOCK_FARMS, MOCK_BEDS, MOCK_FEEDBACK, MOCK_LOGS, MOCK_STATS, MOCK_FARMERS, MOCK_USER_ACTIVITY_LOGS, MOCK_USER_TRACKING_METRICS } from './mockData';
+import { Farmer, Farm, BedPlot, Crop, DSSRule, FeedbackItem, SystemAuditLog, DashboardStats, CommunityPost, CommunityComment, CommunityReport, ReportStatus, BroadcastUpdatePayload, BroadcastNotification, UserActivityLog, UserTrackingMetrics, AccountStatus, UserRole, HarvestDateAnalytics } from '../types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
+const EMPTY_DASHBOARD_STATS: DashboardStats = {
+  totalFarmers: 0,
+  activeFarms: 0,
+  totalPlots: 0,
+  totalHarvestKgThisMonth: 0,
+  systemHealth: '100% Operational',
+  monthlyYield: [],
+  cropDistribution: [],
+  farmerRegistrations: [],
+  totalCrops: 0,
+  totalFeedback: 0,
+  totalPostReports: 0,
+  pendingReports: 0,
+  topPlantedCrops: [],
+  topPlantedVarieties: [],
+  harvestDateAnalytics: {
+    upcomingHarvestsNext30Days: 0,
+    peakHarvestMonth: 'None',
+    monthlyHarvestCounts: [],
+    cropSpecificHarvestTimeline: [],
+  },
+  weeklyRegistrations: [],
+  activeUsersToday: 0,
+  totalCommunityPosts: 0,
+  systemNotificationsCount: 0,
+};
+
 class ApiService {
-  private farmers: Farmer[] = [...MOCK_FARMERS];
-  private userActivityLogs: UserActivityLog[] = [...MOCK_USER_ACTIVITY_LOGS];
-  private crops: Crop[] = [...MOCK_CROPS];
-  private rules: DSSRule[] = [...MOCK_DSS_RULES];
-  private feedback: FeedbackItem[] = [...MOCK_FEEDBACK];
-  private logs: SystemAuditLog[] = [...MOCK_LOGS];
+  private farmers: Farmer[] = [];
+  private userActivityLogs: UserActivityLog[] = [];
+  private crops: Crop[] = [];
+  private rules: DSSRule[] = [];
+  private feedback: FeedbackItem[] = [];
+  private logs: SystemAuditLog[] = [];
   private communityPosts: CommunityPost[] = [];
   private communityComments: CommunityComment[] = [];
   private communityReports: CommunityReport[] = [];
@@ -47,7 +73,7 @@ class ApiService {
         ]);
 
         // Compute total harvest kg
-        let totalHarvestKg = MOCK_STATS.totalHarvestKgThisMonth;
+        let totalHarvestKg = 0;
         if (harvestData && harvestData.length > 0) {
           totalHarvestKg = harvestData.reduce((acc: number, r: any) => acc + (Number(r.yield_kg) || 0), 0);
         }
@@ -129,7 +155,12 @@ class ApiService {
           }));
 
         // Compute Harvest Date Analytics from harvest_records
-        let harvestDateAnalytics = MOCK_STATS.harvestDateAnalytics;
+        let harvestDateAnalytics: HarvestDateAnalytics = {
+          upcomingHarvestsNext30Days: 0,
+          peakHarvestMonth: 'None',
+          monthlyHarvestCounts: [],
+          cropSpecificHarvestTimeline: [],
+        };
         if (harvestData && harvestData.length > 0) {
           const dateMap: Record<string, { yieldKg: number; count: number; crops: Record<string, number> }> = {};
           
@@ -217,28 +248,31 @@ class ApiService {
           : 0;
 
         return {
-          ...MOCK_STATS,
-          totalFarmers: profileCount && profileCount > 0 ? profileCount : MOCK_STATS.totalFarmers,
-          totalCrops: cropCount && cropCount > 0 ? cropCount : MOCK_CROPS.length,
-          activeFarms: farmCount && farmCount > 0 ? farmCount : MOCK_STATS.activeFarms,
-          totalPlots: bedCount && bedCount > 0 ? bedCount : MOCK_STATS.totalPlots,
+          totalFarmers: profileCount ?? 0,
+          activeFarms: farmCount ?? 0,
+          totalPlots: bedCount ?? 0,
           totalHarvestKgThisMonth: totalHarvestKg,
-          totalFeedback: feedbackCount ?? MOCK_STATS.totalFeedback,
-          totalPostReports: reportCount ?? MOCK_STATS.totalPostReports,
-          pendingReports: pendingReportCount ?? MOCK_STATS.pendingReports,
-          totalCommunityPosts: postCount ?? MOCK_STATS.totalCommunityPosts,
-          systemNotificationsCount: notifCount ?? MOCK_STATS.systemNotificationsCount,
-          topPlantedCrops: topPlantedCrops.length > 0 ? topPlantedCrops : MOCK_STATS.topPlantedCrops,
-          topPlantedVarieties: topPlantedVarieties.length > 0 ? topPlantedVarieties : MOCK_STATS.topPlantedVarieties,
+          systemHealth: '100% Operational',
+          monthlyYield: [],
+          cropDistribution: [],
+          farmerRegistrations: [],
+          totalCrops: cropCount ?? 0,
+          totalFeedback: feedbackCount ?? 0,
+          totalPostReports: reportCount ?? 0,
+          pendingReports: pendingReportCount ?? 0,
+          totalCommunityPosts: postCount ?? 0,
+          systemNotificationsCount: notifCount ?? 0,
+          topPlantedCrops,
+          topPlantedVarieties,
           harvestDateAnalytics,
           weeklyRegistrations,
           activeUsersToday,
         };
       } catch (err) {
-        console.warn('Supabase dashboard stats fetch failed, using fallback:', err);
+        console.warn('Supabase dashboard stats fetch failed:', err);
       }
     }
-    return Promise.resolve(MOCK_STATS);
+    return Promise.resolve(EMPTY_DASHBOARD_STATS);
   }
 
 
@@ -504,10 +538,11 @@ class ApiService {
         return farmerList;
       }
 
-      return this.farmers.length > 0 ? this.farmers : MOCK_FARMERS;
+      this.farmers = [];
+      return [];
     } catch (err) {
-      console.error('Failed to load farmers from Supabase, using mock directory', err);
-      return this.farmers.length > 0 ? this.farmers : MOCK_FARMERS;
+      console.error('Failed to load farmers from Supabase:', err);
+      return this.farmers;
     }
   }
 
@@ -546,11 +581,35 @@ class ApiService {
           { period: 'Sat', active: activeUsers, inactive: inactiveUsers, newRegistrations: 0 },
           { period: 'Sun', active: activeUsers, inactive: inactiveUsers, newRegistrations: 1 },
         ],
-        activityByModule: MOCK_USER_TRACKING_METRICS.activityByModule,
+        activityByModule: [
+          { module: 'Farm Planner Canvas', eventCount: activeUsers * 4, uniqueUsers: activeUsers, percentage: 35 },
+          { module: 'DSS Agronomic Guidance', eventCount: activeUsers * 3, uniqueUsers: activeUsers, percentage: 25 },
+          { module: 'Crop Library Search', eventCount: activeUsers * 2, uniqueUsers: activeUsers, percentage: 20 },
+          { module: 'Logbook & Harvest', eventCount: activeUsers, uniqueUsers: activeUsers, percentage: 10 },
+          { module: 'Community Hub', eventCount: activeUsers, uniqueUsers: activeUsers, percentage: 10 },
+        ],
       };
     }
 
-    return MOCK_USER_TRACKING_METRICS;
+    return {
+      totalUsers: 0,
+      activeUsers: 0,
+      inactiveUsers: 0,
+      suspendedUsers: 0,
+      pendingUsers: 0,
+      activeRate: 0,
+      dailyActiveUsers: 0,
+      weeklyActiveUsers: 0,
+      statusDistribution: [],
+      activityTrends: [],
+      activityByModule: [
+        { module: 'Farm Planner Canvas', eventCount: 0, uniqueUsers: 0, percentage: 0 },
+        { module: 'DSS Agronomic Guidance', eventCount: 0, uniqueUsers: 0, percentage: 0 },
+        { module: 'Crop Library Search', eventCount: 0, uniqueUsers: 0, percentage: 0 },
+        { module: 'Logbook & Harvest', eventCount: 0, uniqueUsers: 0, percentage: 0 },
+        { module: 'Community Hub', eventCount: 0, uniqueUsers: 0, percentage: 0 },
+      ],
+    };
   }
 
   // Real-time User Activity Logs
@@ -562,9 +621,14 @@ class ApiService {
   async updateUserStatus(farmerId: string, newStatus: AccountStatus, reason?: string): Promise<boolean> {
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('users').update({ status: newStatus }).eq('id', farmerId);
+        const { error } = await supabase.from('users').update({ status: newStatus }).eq('id', farmerId);
+        if (error) {
+          console.error('Failed to update status in Supabase:', error);
+          return false;
+        }
       } catch (err) {
-        console.warn('Failed to update status in Supabase', err);
+        console.error('Failed to update status in Supabase:', err);
+        return false;
       }
     }
     this.farmers = this.farmers.map((f) =>
@@ -604,9 +668,14 @@ class ApiService {
   async updateUserRole(farmerId: string, newRole: UserRole): Promise<boolean> {
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('users').update({ role: newRole }).eq('id', farmerId);
+        const { error } = await supabase.from('users').update({ role: newRole }).eq('id', farmerId);
+        if (error) {
+          console.error('Failed to update role in Supabase:', error);
+          return false;
+        }
       } catch (err) {
-        console.warn('Failed to update role in Supabase', err);
+        console.error('Failed to update role in Supabase:', err);
+        return false;
       }
     }
     this.farmers = this.farmers.map((f) => (f.id === farmerId ? { ...f, role: newRole } : f));
@@ -791,73 +860,17 @@ class ApiService {
 
             if (!canonicalMap.has(spec.key)) {
               canonicalMap.set(spec.key, cropItem);
-            } else {
-              // Redundant duplicate (e.g. separate Kangkong vs Water Spinach or String Beans vs Yardlong String Bean)
-              if (c.id && c.id !== canonicalMap.get(spec.key)?.id) {
-                redundantIdsToDelete.push(c.id);
-              }
             }
           });
 
-          // Asynchronously prune redundant and non-approved rows from Supabase
-          if (redundantIdsToDelete.length > 0) {
-            (async () => {
-              try {
-                const { error } = await supabase
-                  .from('crops')
-                  .delete()
-                  .in('id', redundantIdsToDelete);
-                if (error) {
-                  console.warn('Crop prune warning:', error);
-                } else {
-                  console.log(`Pruned ${redundantIdsToDelete.length} redundant/non-approved crop rows from Supabase.`);
-                }
-              } catch (err) {
-                console.warn('Crop prune warning:', err);
-              }
-            })();
-          }
-
-          // Ensure all 15 canonical crops are filled (fallback to mock if any missing)
-          ApiService.CANONICAL_15_SPECS.forEach((spec) => {
-            if (!canonicalMap.has(spec.key)) {
-              const fallback = this.crops.find((mc) =>
-                spec.patterns.some((p) => mc.name.toLowerCase().includes(p) || (mc.localName && mc.localName.toLowerCase().includes(p)))
-              );
-              if (fallback) {
-                canonicalMap.set(spec.key, {
-                  ...fallback,
-                  name: spec.name,
-                  localName: fallback.localName || spec.localName,
-                });
-              }
-            }
-          });
-
-          // Return strictly the 15 canonical crops sorted according to the approved list
-          const resultCrops: Crop[] = [];
-          ApiService.CANONICAL_15_SPECS.forEach((spec) => {
-            const crop = canonicalMap.get(spec.key);
-            if (crop) resultCrops.push(crop);
-          });
-
-          return resultCrops;
+          return Array.from(canonicalMap.values());
         }
       } catch (err) {
-        console.warn('Using mock crops list', err);
+        console.error('Failed to load crops from Supabase:', err);
       }
     }
 
-    // Fallback: Return strictly the 15 canonical crops from local mock data
-    const fallbackMap = new Map<string, Crop>();
-    this.crops.forEach((c) => {
-      const lower = c.name.toLowerCase();
-      const spec = ApiService.CANONICAL_15_SPECS.find((s) => s.patterns.some((p) => lower.includes(p)));
-      if (spec && !fallbackMap.has(spec.key)) {
-        fallbackMap.set(spec.key, { ...c, name: spec.name, localName: c.localName || spec.localName });
-      }
-    });
-    return ApiService.CANONICAL_15_SPECS.map((s) => fallbackMap.get(s.key)).filter(Boolean) as Crop[];
+    return [];
   }
 
   async addCrop(crop: Omit<Crop, 'id'>, broadcastSystemUpdate: boolean = true): Promise<Crop> {
@@ -1169,7 +1182,7 @@ class ApiService {
         console.warn('Using mock DSS rules list', err);
       }
     }
-    return Promise.resolve(this.rules);
+    return Promise.resolve([]);
   }
 
   async addDSSRule(rule: Omit<DSSRule, 'id'>): Promise<DSSRule> {
@@ -1253,10 +1266,10 @@ class ApiService {
 
 
       } catch (err) {
-        console.warn('Using mock farms list', err);
+        console.warn('Failed to load farms from Supabase:', err);
       }
     }
-    return Promise.resolve(MOCK_FARMS);
+    return Promise.resolve([]);
   }
 
   async getBedsForFarm(farmId: string): Promise<BedPlot[]> {
@@ -1282,10 +1295,10 @@ class ApiService {
           }));
         }
       } catch (err) {
-        console.warn('Using mock beds list', err);
+        console.warn('Failed to load beds from Supabase:', err);
       }
     }
-    return Promise.resolve(MOCK_BEDS.filter((b) => b.farmId === farmId));
+    return Promise.resolve([]);
   }
 
   // Feedback Management (Live Support Bridge via Supabase `feedback` & `notifications`)
@@ -1300,7 +1313,7 @@ class ApiService {
         if (!error && data && data.length > 0) {
           return data.map((f) => ({
             id: f.id,
-            farmerId: f.user_id || 'usr-001',
+            farmerId: f.user_id || '',
             farmerName: f.farmer_name || 'Mobile Farmer',
             category: (f.category as any) || 'GENERAL',
             subject: f.subject,
@@ -1315,7 +1328,7 @@ class ApiService {
         console.warn('Failed to query feedback table from Supabase', err);
       }
     }
-    return Promise.resolve(this.feedback);
+    return Promise.resolve([]);
   }
 
   async updateFeedbackStatus(
@@ -1398,23 +1411,7 @@ class ApiService {
         console.warn('Failed to load broadcasts from Supabase', err);
       }
     }
-    return [
-      {
-        id: 'bc-001',
-        title: '📢 System Update v1.2.0',
-        body: 'MapTanim Admin deployed direct-to-soil grid performance optimizations and sync upgrades.',
-        notificationType: 'SYSTEM_UPDATE',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'bc-002',
-        title: '🌾 Agronomic Guide: Tomato Staking',
-        body: 'Field research advisory: Recommended bamboo trellis specifications for Diamante Max F1 in high-wind lowland areas.',
-        notificationType: 'AGRONOMIC_GUIDE',
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        targetCrop: 'Tomato',
-      },
-    ];
+    return [];
   }
 
   async broadcastInformationUpdate(payload: BroadcastUpdatePayload): Promise<boolean> {
@@ -1431,9 +1428,13 @@ class ApiService {
             created_at: new Date().toISOString(),
           },
         ]);
-        if (error) throw error;
+        if (error) {
+          console.error('Failed to publish broadcast update to Supabase:', error);
+          return false;
+        }
       } catch (err) {
-        console.warn('Failed to publish broadcast update to Supabase', err);
+        console.error('Failed to publish broadcast update to Supabase:', err);
+        return false;
       }
     }
     this.logAction('BROADCAST_UPDATE', 'Information Publisher', `Published update to mobile: ${payload.title}`);
@@ -1794,7 +1795,7 @@ class ApiService {
         console.warn('Failed to load audit logs from Supabase', err);
       }
     }
-    return Promise.resolve(this.logs);
+    return Promise.resolve([]);
   }
 
   async testDatabaseFetch(): Promise<{

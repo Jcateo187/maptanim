@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.splash.viewmodel
+package com.maptanim.app.features.splash.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -6,6 +6,7 @@ import com.maptanim.app.data.api.AppInitializationController
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.repository.ProfileRepository
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,7 +77,25 @@ class LoadingViewModel : ViewModel() {
                 val session = SupabaseClient.client.auth.currentSessionOrNull()
                 val user = SupabaseClient.client.auth.currentUserOrNull()
 
-                if (session != null || user != null) {
+                val currentId = user?.id ?: session?.user?.id
+                var isSuspended = false
+                if (!currentId.isNullOrBlank()) {
+                    try {
+                        val userStatus = SupabaseClient.client
+                            .from("users")
+                            .select {
+                                filter { eq("id", currentId) }
+                            }
+                            .decodeSingleOrNull<com.maptanim.app.data.remote.dto.UserStatusDto>()
+                        if (userStatus?.status.equals("SUSPENDED", ignoreCase = true)) {
+                            isSuspended = true
+                            SupabaseClient.client.auth.signOut()
+                            com.maptanim.app.data.repository.RepositoryProvider.clearAllLocalCache()
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (!isSuspended && (session != null || user != null)) {
                     // Authenticated user exists locally - proceed offline to Home screen
                     LoadingDestination.Home
                 } else {

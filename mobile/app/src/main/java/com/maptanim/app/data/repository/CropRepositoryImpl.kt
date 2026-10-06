@@ -86,7 +86,7 @@ private fun CropDto.toDomain(): Crop {
         optimalPhMax = optimal_ph_max ?: 7.0f,
         idealSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
         suitableSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
-        toleratedSoils = listOf(SoilType.SANDY, SoilType.PEATY),
+        toleratedSoils = emptyList(),
         pestRiskSeason = if (season?.uppercase() == "DRY") listOf("DRY") else listOf("WET"),
         seasonality = listOf(season?.uppercase() ?: "YEAR_ROUND"),
         imageUrl = image_url,
@@ -95,9 +95,9 @@ private fun CropDto.toDomain(): Crop {
 }
 
 private fun parseSoilType(soil: String): SoilType? = try {
-    SoilType.valueOf(soil.uppercase())
+    SoilType.valueOf(soil.trim().uppercase())
 } catch (e: Exception) {
-    SoilType.LOAM
+    null
 }
 
 internal fun getCropsWithAssetMetadata(context: Context?): List<Crop> {

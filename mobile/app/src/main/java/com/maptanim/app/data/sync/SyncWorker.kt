@@ -2,14 +2,16 @@ package com.maptanim.app.data.sync
 
 import android.content.Context
 import androidx.work.*
-import com.maptanim.app.data.remote.SupabaseClient
-import com.maptanim.app.data.repository.CropPlotRepositoryImpl
-import com.maptanim.app.data.repository.FarmRepositoryImpl
-import com.maptanim.app.data.repository.RepositoryProvider
-import com.maptanim.app.data.repository.TaskRepositoryImpl
+import com.maptanim.app.data.remote.*
+import com.maptanim.app.data.remote.dto.CropPlotDto
+import com.maptanim.app.data.remote.dto.FarmDto
+import com.maptanim.app.data.remote.dto.HarvestRecordDto
+import com.maptanim.app.data.remote.dto.TaskDto
+import com.maptanim.app.data.repository.*
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
 
 /**
@@ -20,6 +22,8 @@ class SyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val syncRepo = RepositoryProvider.syncRepository
@@ -45,22 +49,46 @@ class SyncWorker(
             try {
                 when (item.tableName) {
                     "crop_plots" -> {
-                        val plotRepo = RepositoryProvider.cropPlotRepository as? CropPlotRepositoryImpl
-                        if (item.recordId.isNotBlank()) {
-                            // If recordId represents farmId, refresh remote plots
-                            plotRepo?.fetchFromRemote(item.recordId)
+                        val plotRemote = CropPlotRemoteDataSource()
+                        if (item.operation == "DELETE") {
+                            if (item.recordId.isNotBlank()) {
+                                plotRemote.deletePlot(item.recordId)
+                            }
+                        } else if (!item.payload.isNullOrBlank()) {
+                            val dto = json.decodeFromString(CropPlotDto.serializer(), item.payload)
+                            plotRemote.upsertPlot(dto)
                         }
                         syncRepo.markSynced(item.id)
                     }
                     "farms" -> {
+                        val farmRemote = FarmRemoteRepository()
+                        if (item.operation == "DELETE") {
+                            if (item.recordId.isNotBlank()) {
+                                farmRemote.deleteFarm(item.recordId)
+                            }
+                        } else if (!item.payload.isNullOrBlank()) {
+                            val dto = json.decodeFromString(FarmDto.serializer(), item.payload)
+                            farmRemote.upsertFarm(dto)
+                        }
                         val farmRepo = RepositoryProvider.farmRepository as? FarmRepositoryImpl
                         farmRepo?.fetchFromRemote(user.id)
                         syncRepo.markSynced(item.id)
                     }
                     "tasks" -> {
-                        val taskRepo = RepositoryProvider.taskRepository as? TaskRepositoryImpl
-                        if (item.recordId.isNotBlank()) {
-                            taskRepo?.fetchFromRemote(item.recordId)
+                        val taskRemote = TaskRemoteDataSource()
+                        if (item.operation == "UPDATE" && !item.payload.isNullOrBlank() && item.payload.contains("is_completed")) {
+                            taskRemote.completeTask(item.recordId, java.time.Instant.now().toString())
+                        } else if (!item.payload.isNullOrBlank()) {
+                            val dto = json.decodeFromString(TaskDto.serializer(), item.payload)
+                            taskRemote.upsertTasks(listOf(dto))
+                        }
+                        syncRepo.markSynced(item.id)
+                    }
+                    "harvest_records" -> {
+                        val harvestRemote = HarvestRemoteDataSource()
+                        if (!item.payload.isNullOrBlank()) {
+                            val dto = json.decodeFromString(HarvestRecordDto.serializer(), item.payload)
+                            harvestRemote.recordHarvest(dto)
                         }
                         syncRepo.markSynced(item.id)
                     }

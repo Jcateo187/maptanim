@@ -30,10 +30,26 @@ class HarvestRepositoryImpl(
     override suspend fun recordHarvest(record: HarvestRecord) {
         harvestDao.upsertHarvest(record.toEntity())
 
-        try {
-            remoteDataSource.recordHarvest(record.toDto())
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val dto = record.toDto()
+        val result = remoteDataSource.recordHarvest(dto)
+        if (result.isFailure) {
+            try {
+                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                val payload = json.encodeToString(HarvestRecordDto.serializer(), dto)
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "harvest_records",
+                    recordId = dto.id,
+                    operation = "INSERT",
+                    payload = payload
+                )
+            } catch (_: Exception) {}
+        }
+    }
+
+    suspend fun fetchFromRemote(farmId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val result = remoteDataSource.getHarvestsByFarm(farmId)
+        result.getOrNull()?.forEach { dto ->
+            harvestDao.upsertHarvest(dto.toEntity())
         }
     }
 }
@@ -54,3 +70,20 @@ private fun HarvestRecord.toDto() = HarvestRecordDto(
     qualityRating = qualityRating,
     notes = notes
 )
+
+private fun HarvestRecordDto.toEntity() = com.maptanim.app.data.local.entity.HarvestEntity(
+    id = id,
+    plotId = plotId ?: "",
+    farmId = farmId,
+    farmName = farmName ?: "My Farm",
+    plotLabel = plotLabel ?: "Plot 1",
+    cropName = cropName,
+    cropVariety = cropVariety,
+    plantedDate = plantedDate,
+    harvestedAt = harvestedAt ?: java.time.Instant.now().toString(),
+    growingDurationDays = growingDurationDays,
+    yieldKg = yieldKg,
+    qualityRating = qualityRating,
+    notes = notes
+)
+

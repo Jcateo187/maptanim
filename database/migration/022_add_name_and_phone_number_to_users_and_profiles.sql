@@ -1,2 +1,0 @@
--- Superseded by 022_clean_users_and_profiles_schema.sql
--- Please run 022_clean_users_and_profiles_schema.sql instead.

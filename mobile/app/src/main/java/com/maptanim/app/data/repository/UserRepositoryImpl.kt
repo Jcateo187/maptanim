@@ -107,6 +107,16 @@ class UserRepositoryImpl(
         try {
             val user = SupabaseClient.client.auth.currentUserOrNull()
             if (user != null) {
+                try {
+                    val userStatus = SupabaseClient.client.from("users").select {
+                        filter { eq("id", user.id) }
+                    }.decodeSingleOrNull<com.maptanim.app.data.remote.dto.UserStatusDto>()
+                    if (userStatus?.status.equals("SUSPENDED", ignoreCase = true)) {
+                        logout()
+                        return
+                    }
+                } catch (_: Exception) {}
+
                 val profile = try { profileRepository.getProfile(user.id) } catch (_: Exception) { null }
                 userProfileState.value = UserProfile(
                     id = profile?.id ?: user.id,
