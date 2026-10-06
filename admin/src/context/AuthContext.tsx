@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', session.user.id)
           .single();
 
-        if (dbUser && ['ADMIN', 'SUPER_ADMIN'].includes(dbUser.role) && dbUser.status !== 'SUSPENDED') {
+        if (dbUser && ['ADMINISTRATOR', 'ADMIN', 'SUPER_ADMIN'].includes(dbUser.role) && dbUser.status !== 'SUSPENDED') {
           const adminUser: AdminUser = {
             id: session.user.id,
             email: session.user.email || dbUser.email,
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             provider: 'SUPABASE_AUTH',
           };
           setUser(adminUser);
-        } else if (!dbUser) {
+        } else {
           // If public.users record isn't loaded or role is not admin, clear session
           setUser(null);
           localStorage.removeItem('maptanim_admin_session');
@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      if (!['ADMIN', 'SUPER_ADMIN'].includes(dbUser.role)) {
+      if (!['ADMINISTRATOR', 'ADMIN', 'SUPER_ADMIN'].includes(dbUser.role)) {
         await supabase.auth.signOut();
         return {
           success: false,

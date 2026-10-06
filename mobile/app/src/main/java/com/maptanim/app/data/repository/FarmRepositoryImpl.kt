@@ -47,12 +47,16 @@ class FarmRepositoryImpl(
         farmsCache.value = farmsCache.value.filter { it.id != farmId }
     }
 
-    suspend fun fetchFromRemote(farmerId: String) = withContext(Dispatchers.IO) {
+    suspend fun fetchFromRemote(farmerId: String): List<Farm> = withContext(Dispatchers.IO) {
         val result = remoteRepository.getFarmsForFarmer(farmerId)
-        result.getOrNull()?.let { dtos ->
+        val dtos = result.getOrNull()
+        if (dtos != null) {
             val farms = dtos.map { it.toDomain() }
             farmDao?.upsertFarms(farms.map { it.toEntity() })
             farmsCache.value = farms
+            farms
+        } else {
+            emptyList()
         }
     }
 }

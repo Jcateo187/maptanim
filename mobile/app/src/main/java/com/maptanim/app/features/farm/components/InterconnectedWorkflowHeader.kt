@@ -31,7 +31,7 @@ enum class WorkflowStep(
     val subtitle: String,
     val tab: TopTab?
 ) {
-    FARM_SETUP(1, "Farm Setup & Scale", "Agro-zone, base soil, Basketball Court scale", null),
+    FARM_SETUP(1, "Farm Setup & Scale", "Agro-zone, base soil, yard scale presets", null),
     BED_PLANNING(2, "Bed Planning & Capacity", "Bed sizing (sp × rg), microclimate fit", TopTab.PLAN),
     DAILY_GUIDE(3, "Daily Care & Dosing", "Phase 1 Soil Prep, Phase 2 Sowing, Phase 3 Care", TopTab.GUIDE),
     CHECKUP(4, "Field Health Check-Up", "Pest risks, symptoms & organic remedies", TopTab.CHECKUP),

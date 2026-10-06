@@ -38,7 +38,6 @@ import com.maptanim.app.features.farm.renderer.canvas.TopDownProjection
 import com.maptanim.app.features.farm.canvas.CanvasLayer
 import com.maptanim.app.features.farm.viewmodel.DssTab
 import com.maptanim.app.features.farm.dialogs.YardMeasurementGuideDialog
-import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
 import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.White
 import java.time.LocalDate
@@ -1114,7 +1113,7 @@ private fun WorkspacePanel(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 1: PLAN (Bed Setup + Basketball Scale + Crop Selection)
+// TAB 1: PLAN (Bed Setup + Crop Selection)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -1162,14 +1161,6 @@ private fun HubPlanTab(
                         )
                     }
                 }
-
-                // Basketball Court Real-World Scale Benchmark
-                BasketballCourtScaleCard(
-                    widthM = plot.widthM,
-                    heightM = plot.heightM,
-                    cropName = plot.cropName ?: "Vegetables",
-                    plotLabel = plot.plotLabel
-                )
 
                 // Method and Style Selectors
                 Row(

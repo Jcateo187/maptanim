@@ -19,7 +19,33 @@ import {
 } from 'recharts';
 import { apiService } from '../services/api';
 import { DashboardStats, FeedbackItem, CommunityReport, CommunityPost } from '../types';
-import { MOCK_STATS } from '../services/mockData';
+
+const INITIAL_DASHBOARD_STATS: DashboardStats = {
+  totalFarmers: 0,
+  activeFarms: 0,
+  totalPlots: 0,
+  totalHarvestKgThisMonth: 0,
+  systemHealth: '100% Operational',
+  monthlyYield: [],
+  cropDistribution: [],
+  farmerRegistrations: [],
+  totalCrops: 0,
+  totalFeedback: 0,
+  totalPostReports: 0,
+  pendingReports: 0,
+  topPlantedCrops: [],
+  topPlantedVarieties: [],
+  harvestDateAnalytics: {
+    upcomingHarvestsNext30Days: 0,
+    peakHarvestMonth: 'N/A',
+    monthlyHarvestCounts: [],
+    cropSpecificHarvestTimeline: [],
+  },
+  weeklyRegistrations: [],
+  activeUsersToday: 0,
+  totalCommunityPosts: 0,
+  systemNotificationsCount: 0,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stat Card
@@ -86,7 +112,7 @@ const statusBadge = (status: string) => {
 // Main Dashboard
 // ─────────────────────────────────────────────────────────────────────────────
 export const DashboardOverview: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats>(MOCK_STATS);
+  const [stats, setStats] = useState<DashboardStats>(INITIAL_DASHBOARD_STATS);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);

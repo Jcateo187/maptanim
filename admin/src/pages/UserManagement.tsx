@@ -1183,6 +1183,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
         title="Register New Smallholder or Field Officer"
         size="md"
       >
+        <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
           <div>
             <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
               Registered Email *

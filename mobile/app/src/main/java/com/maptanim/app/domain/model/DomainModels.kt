@@ -39,16 +39,18 @@ data class FarmEnvironment(
     val locationName: String = ""
 ) {
     val areaSqM: Float get() = widthM * heightM
-    val basketballCourtPct: Float get() = (areaSqM / 420.0f) * 100f
+    val stepPacingEstimate: String get() {
+        val stepsW = kotlin.math.round(widthM / 0.85f).toInt()
+        val stepsH = kotlin.math.round(heightM / 0.85f).toInt()
+        return "≈ $stepsW × $stepsH steps (1 step ≈ 0.85m)"
+    }
 
-    val basketballComparisonText: String get() {
-        val pct = basketballCourtPct
+    val yardPresetComparisonText: String get() {
         return when {
-            pct < 2.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (compact backyard corner)."
-            pct < 10.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (small backyard garden)."
-            pct < 25.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (medium backyard plot)."
-            pct < 55.0f -> "About ${String.format("%.1f", pct)}% of a standard basketball court (roughly half-court size)."
-            else -> "About ${String.format("%.1f", pct)}% of a standard basketball court (large backyard lot)."
+            areaSqM <= 24f -> "Compact Yard (6m × 4m preset / 24 m²)"
+            areaSqM <= 96f -> "Medium Backyard (12m × 8m preset / 96 m²)"
+            areaSqM <= 216f -> "Spacious Lot (18m × 12m preset / 216 m²)"
+            else -> "Expansive Rural Lot (${String.format("%.1f", areaSqM)} m²)"
         }
     }
 }

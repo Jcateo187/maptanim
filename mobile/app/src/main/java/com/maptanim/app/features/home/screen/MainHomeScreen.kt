@@ -13,6 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.CheckCircle
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.compose.material.icons.filled.Eco
@@ -1089,61 +1092,10 @@ private fun TodaysTasksCard(
     onTaskClick: ((FarmTask) -> Unit)? = null,
     onViewAllTasks: () -> Unit
 ) {
-    val displayTasks = remember(tasks, plots) {
-        if (tasks.isNotEmpty()) {
-            tasks.take(4)
-        } else {
-            val p1 = plots.getOrNull(0)?.plotLabel ?: "Bed #1"
-            val c1 = plots.getOrNull(0)?.cropName ?: "Tomato"
-            val p2 = plots.getOrNull(1)?.plotLabel ?: "Bed #2"
-            val c2 = plots.getOrNull(1)?.cropName ?: "Eggplant"
-            val p3 = plots.getOrNull(2)?.plotLabel ?: "Bed #3"
-            val c3 = plots.getOrNull(2)?.cropName ?: "Pechay"
-
-            listOf(
-                FarmTask(
-                    id = "default_task_1",
-                    farmId = "farm-1",
-                    plotId = plots.getOrNull(0)?.id ?: "plot-1",
-                    plotLabel = p1,
-                    cropName = c1,
-                    taskType = TaskType.WATER,
-                    title = "Morning Soil Moisture Check",
-                    subLabel = "Check root zone 5cm depth moisture",
-                    dueDate = LocalDate.now().toString(),
-                    isCompleted = false,
-                    completedAt = null
-                ),
-                FarmTask(
-                    id = "default_task_2",
-                    farmId = "farm-1",
-                    plotId = plots.getOrNull(1)?.id ?: "plot-2",
-                    plotLabel = p2,
-                    cropName = c2,
-                    taskType = TaskType.FERTILIZE,
-                    title = "Organic Vermicast Top-Dress",
-                    subLabel = "Apply 2 kg/m² compost",
-                    dueDate = LocalDate.now().toString(),
-                    isCompleted = false,
-                    completedAt = null
-                ),
-                FarmTask(
-                    id = "default_task_3",
-                    farmId = "farm-1",
-                    plotId = plots.getOrNull(2)?.id ?: "plot-3",
-                    plotLabel = p3,
-                    cropName = c3,
-                    taskType = TaskType.OBSERVATION,
-                    title = "Foliage & Pest Scouting",
-                    subLabel = "Inspect undersides for leafminers",
-                    dueDate = LocalDate.now().toString(),
-                    isCompleted = false,
-                    completedAt = null
-                )
-            )
-        }
-    }
-    val taskCount = if (tasks.isNotEmpty()) tasks.size else displayTasks.size
+    val pendingTasks = remember(tasks) { tasks.filter { !it.isCompleted } }
+    val displayTasks = remember(pendingTasks) { pendingTasks.take(4) }
+    var isExpanded by remember { mutableStateOf(pendingTasks.isNotEmpty()) }
+    val taskCount = pendingTasks.size
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1155,118 +1107,179 @@ private fun TodaysTasksCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "TODAY'S TASKS · $taskCount",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White.copy(alpha = 0.9f),
-                    letterSpacing = 0.5.sp
-                )
-                Text(
-                    text = "Area Specific",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MonitoringGreenLight
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            displayTasks.forEach { task ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onTaskClick?.invoke(task) ?: onToggleTask(task.id) }
-                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .border(1.8.dp, MonitoringGreenLight.copy(alpha = 0.8f), CircleShape)
-                            .clickable { onToggleTask(task.id) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (task.isCompleted) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(MonitoringGreenLight)
+                    Text(
+                        text = if (taskCount > 0) "TODAY'S TASKS · $taskCount" else "TODAY'S TASKS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = White.copy(alpha = 0.9f),
+                        letterSpacing = 0.5.sp
+                    )
+                    if (taskCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0x3381C784)
+                        ) {
+                            Text(
+                                text = "$taskCount Due",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MonitoringGreenLight,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0x3381C784))
-                            .border(0.8.dp, Color(0x6681C784), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = task.plotLabel ?: "Bed #1",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MonitoringGreenLight
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = task.title,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = White.copy(alpha = 0.92f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        val cropPart = task.cropName?.takeIf { it.isNotBlank() } ?: "Garden"
-                        val typePart = task.taskType.name.lowercase().replaceFirstChar { it.uppercase() }
-                        Text(
-                            text = "$cropPart • $typePart",
-                            fontSize = 10.sp,
-                            color = Color(0xFFA5D6A7),
-                            maxLines = 1
-                        )
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = if (isExpanded) "Hide" else "Show",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MonitoringGreenLight
+                    )
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = MonitoringGreenLight,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Surface(
-                    onClick = onViewAllTasks,
-                    color = Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(10.dp))
+                if (displayTasks.isEmpty()) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "VIEW ALL TASKS",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MonitoringGreenLight,
-                            letterSpacing = 0.5.sp
-                        )
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "View All Tasks",
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
                             tint = MonitoringGreenLight,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(18.dp)
                         )
+                        Text(
+                            text = "All care tasks completed today! Your beds are thriving.",
+                            fontSize = 12.sp,
+                            color = White.copy(alpha = 0.8f)
+                        )
+                    }
+                } else {
+                    displayTasks.forEach { task ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onTaskClick?.invoke(task) ?: onToggleTask(task.id) }
+                                .padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .border(1.8.dp, MonitoringGreenLight.copy(alpha = 0.8f), CircleShape)
+                                    .clickable { onToggleTask(task.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (task.isCompleted) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(MonitoringGreenLight)
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0x3381C784))
+                                    .border(0.8.dp, Color(0x6681C784), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = task.plotLabel ?: "Bed #1",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MonitoringGreenLight
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = task.title,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = White.copy(alpha = 0.92f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val cropPart = task.cropName?.takeIf { it.isNotBlank() } ?: "Garden"
+                                val typePart = task.taskType.name.lowercase().replaceFirstChar { it.uppercase() }
+                                Text(
+                                    text = "$cropPart • $typePart",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFA5D6A7),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Surface(
+                            onClick = onViewAllTasks,
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "VIEW ALL TASKS",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MonitoringGreenLight,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "View All Tasks",
+                                    tint = MonitoringGreenLight,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

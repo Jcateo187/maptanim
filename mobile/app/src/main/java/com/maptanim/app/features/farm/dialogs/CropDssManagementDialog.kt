@@ -29,7 +29,6 @@ import com.maptanim.app.features.farm.components.*
 import com.maptanim.app.features.farm.dialogs.*
 import com.maptanim.app.features.farm.tabs.guide.*
 import com.maptanim.app.features.farm.tabs.checkup.CropTimelineCard
-import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
 import com.maptanim.app.features.farm.components.MonitoredPlant
 import com.maptanim.app.features.farm.viewmodel.*
 import com.maptanim.app.ui.theme.White
@@ -164,14 +163,6 @@ fun CropDssManagementDialog(
                                 currentStage = uiState.currentStage,
                                 isPlanted = uiState.isPlanted,
                                 onOpenSettings = { dssViewModel.openSettings() }
-                            )
-
-                            // Basketball Court Real-World Size Scale Card
-                            BasketballCourtScaleCard(
-                                widthM = uiState.widthM,
-                                heightM = uiState.heightM,
-                                cropName = uiState.cropName,
-                                plotLabel = uiState.plotLabel
                             )
 
                             // Soil & Agronomic Fit Card

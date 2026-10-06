@@ -15,13 +15,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val LushGreen = Color(0xFF2E7D32)
-private val BasketballOrange = Color(0xFFE65100)
+private val MeasureOrange = Color(0xFFE65100)
 
 /**
  * CanvasTopToolbar — Sleek, responsive floating top toolbar for the farm canvas.
  * Designed to prevent horizontal overcrowding across mobile screen widths:
  * - Left Cluster: Garden Construction ([+ Bed], [Crops], Micro Auto-Save)
- * - Right Cluster: Viewport Tools (Compact Zoom Pill, Basketball Scale, Fullscreen)
+ * - Right Cluster: Viewport Tools (Compact Zoom Pill, Yard Guide, Fullscreen)
  */
 @Composable
 fun CanvasTopToolbar(

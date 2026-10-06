@@ -8,7 +8,7 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Crop, SoilType, SeasonType, CategoryType, PestGuide, SoilGuide } from '../types';
 import { apiService } from '../services/api';
-import { MOCK_PESTS, MOCK_SOILS } from '../services/mockData';
+import { STANDARD_PESTS_GUIDE, STANDARD_SOILS_GUIDE } from '../services/agronomicGuides';
 import { CropBreakdownModal } from '../components/crops/CropBreakdownModal';
 import { MobileCropBreakdownPreview } from '../components/crops/MobileCropBreakdownPreview';
 
@@ -35,8 +35,8 @@ const ALL_SOIL_OPTIONS: SoilType[] = ['LOAM', 'CLAY', 'SANDY', 'SILTY', 'PEATY',
 export const CropLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'CROPS' | 'PESTS' | 'SOILS'>('CROPS');
   const [crops, setCrops] = useState<Crop[]>([]);
-  const [pests] = useState<PestGuide[]>(MOCK_PESTS as PestGuide[]);
-  const [soils] = useState<SoilGuide[]>(MOCK_SOILS as SoilGuide[]);
+  const [pests] = useState<PestGuide[]>(STANDARD_PESTS_GUIDE);
+  const [soils] = useState<SoilGuide[]>(STANDARD_SOILS_GUIDE);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');

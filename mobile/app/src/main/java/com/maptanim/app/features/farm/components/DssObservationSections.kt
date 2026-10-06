@@ -105,7 +105,7 @@ fun SeasonDropdownSelector(
 }
 
 /**
- * BackyardScalePresetChips — Quick 1-tap presets based on familiar basketball court dimensions.
+ * BackyardScalePresetChips — Quick 1-tap presets for standard yard and patio dimensions.
  */
 @Composable
 fun BackyardScalePresetChips(
@@ -115,7 +115,7 @@ fun BackyardScalePresetChips(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = "BACKYARD SIZE PRESETS (BASKETBALL BENCHMARK)",
+            text = "BACKYARD SIZE PRESETS (METRIC CALIBRATION)",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.5.sp,

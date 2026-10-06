@@ -89,7 +89,7 @@ fun CropPlaceSuitabilityCard(
                         )
                     }
                     Text(
-                        text = "${String.format("%.1f", environment.areaSqM)} m² (${String.format("%.1f", environment.basketballCourtPct)}% Basketball Court)",
+                        text = "${String.format("%.1f", environment.areaSqM)} m² (${environment.stepPacingEstimate})",
                         fontSize = 10.sp,
                         color = Color(0xFF666666)
                     )

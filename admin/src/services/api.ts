@@ -1337,11 +1337,12 @@ class ApiService {
           })
           .eq('id', id);
 
-        // 2. Dispatch Live Supabase Notification to the mobile farmer
-        if (adminReply) {
+        // 2. Dispatch Live Supabase Notification to the mobile farmer (Never broadcast support replies globally)
+        const targetUserId = farmerId && farmerId !== 'usr-001' ? farmerId : null;
+        if (adminReply && targetUserId) {
           await supabase.from('notifications').insert([
             {
-              user_id: farmerId && farmerId !== 'usr-001' ? farmerId : null,
+              user_id: targetUserId,
               title: `Support Advisory: ${subject || 'Ticket Update'}`,
               body: adminReply,
               notification_type: 'SUPPORT_REPLY',
@@ -1349,6 +1350,8 @@ class ApiService {
               created_at: new Date().toISOString(),
             },
           ]);
+        } else if (adminReply && !targetUserId) {
+          console.warn('Skipping private support notification: no valid recipient user_id found (prevented global broadcast leak).');
         }
       } catch (err) {
         console.warn('Failed to update feedback status/reply in Supabase', err);

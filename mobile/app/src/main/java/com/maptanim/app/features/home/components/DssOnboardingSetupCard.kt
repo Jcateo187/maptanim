@@ -94,7 +94,7 @@ fun DssOnboardingSetupCard(
                     "Agro-Zone & Elevation (Highland / Lowland)",
                     "Weather / Season (Rainy / Dry)",
                     "Ground Soil Appearance & Slope",
-                    "Backyard Scale (Basketball Court Benchmark)",
+                    "Backyard Scale & Yard Dimensions (Step Pacing)",
                     "Available ₱0 Materials (Wood Ash, Eggshells, Mulch)"
                 ).forEach { param ->
                     Row(

@@ -46,7 +46,7 @@ private val CardBorderColor = Color(0xFFE0E0E0)
  * FarmHubScreen — Consolidated Farm Management Hub.
  * Features:
  * 1. Expandable 2D Top-Down Canvas Viewport (TopDownFarmCanvas multi-touch gestures,
- *    8-point handles, pan/zoom, Basketball Court Scale benchmark, toolbar actions).
+ *    8-point handles, pan/zoom, Yard Measurement Guide, toolbar actions).
  * 2. Expand/Minimize toggle button (minimizes the form below so canvas gets 84% height).
  * 3. 4 Modular Pillars: PlanTab, GuideTab, CheckUpTab, HarvestTab.
  *

@@ -38,7 +38,7 @@ import com.maptanim.app.features.farm.viewmodel.EditViewModel
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
-private val BasketballOrange = Color(0xFFE65100)
+private val MeasureOrange = Color(0xFFE65100)
 private val CardBorderColor = Color(0xFFE0E0E0)
 
 /**

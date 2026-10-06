@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.EditTool
-import com.maptanim.app.features.farm.canvas.BasketballCourtScaleCard
 import com.maptanim.app.features.farm.canvas.CanvasLayer
 import com.maptanim.app.features.farm.viewmodel.state.FarmHubPlanState
 
@@ -35,7 +34,7 @@ private val CardBorderColor = Color(0xFFE0E0E0)
 private val LightSurface = Color(0xFFF9FAF8)
 
 /**
- * PlanTab — Spatial layout planning, bed dimensions, zoning, and basketball court scale reference.
+ * PlanTab — Spatial layout planning, bed dimensions, zoning, and metric yard scale reference.
  * Adheres strictly to the Daylight High-Contrast Theme (Pure White background, Lush Green buttons, Deep Black text).
  */
 @Composable
@@ -83,16 +82,6 @@ fun PlanTab(
                 cropName = activePlot?.cropName,
                 environment = state.farmEnvironment,
                 onOpenSetupDialog = onOpenSetupDialog
-            )
-        }
-
-        // ── 3. Basketball Court Physical Scale Benchmark ─────────────────────
-        item {
-            BasketballCourtScaleCard(
-                widthM = activePlot?.widthM ?: 2.0f,
-                heightM = activePlot?.heightM ?: 4.0f,
-                cropName = activePlot?.cropName ?: "Vegetable Bed",
-                plotLabel = activePlot?.plotLabel ?: "Bed #1"
             )
         }
 

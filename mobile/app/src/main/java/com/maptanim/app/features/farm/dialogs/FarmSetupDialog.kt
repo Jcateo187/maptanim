@@ -35,7 +35,7 @@ private val LightSurface = Color(0xFFF9FAF8)
 
 /**
  * FarmSetupDialog — Configure farm name, agro-zone (Highland vs Lowland),
- * base soil type, physical dimensions with basketball court calibration, and site constraints.
+ * base soil type, physical dimensions with yard calibration, and site constraints.
  * Adheres strictly to Daylight High-Contrast Theme (Pure White, Lush Green, Deep Black, ZERO emojis).
  */
 @Composable
@@ -239,7 +239,7 @@ fun FarmSetupDialog(
                         }
                     }
 
-                    // 3B. Backyard Scale Presets (Basketball Benchmark)
+                    // 3B. Backyard Scale Presets (Metric Calibration)
                     BackyardScalePresetChips(
                         currentWidth = widthM,
                         currentHeight = heightM,
@@ -249,7 +249,7 @@ fun FarmSetupDialog(
                         }
                     )
 
-                    // 4. Physical Dimensions & Basketball Court Calibration
+                    // 4. Physical Dimensions & Yard Calibration
                     FarmBoundariesScaleSection(
                         widthM = widthM,
                         heightM = heightM,

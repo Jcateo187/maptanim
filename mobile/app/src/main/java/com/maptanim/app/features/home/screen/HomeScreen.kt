@@ -32,7 +32,6 @@ private val CardBorderColor = Color(0xFFE0E0E0)
  * 2. TodayTasksCard (daily care tasks with completion checks)
  * 3. FarmSummaryCard (4-quadrant metrics overview)
  * 4. FarmMiniMapCard (spatial garden overview)
- * 5. BasketballScaleCard (Barangay basketball court benchmark)
  *
  * Adheres strictly to the Daylight High-Contrast Theme (Pure White background, Lush Green buttons, Deep Black text).
  */
@@ -147,7 +146,7 @@ fun HomeScreen(
             item {
                 TodayTasksCard(
                     tasks = uiState.todayTasks,
-                    onCompleteTask = { /* Completed via TaskRepository */ }
+                    onCompleteTask = { taskId -> homeViewModel.completeTask(taskId) }
                 )
             }
 
@@ -162,11 +161,6 @@ fun HomeScreen(
                     plots = uiState.plots,
                     onOpenFarmHub = { navController.navigate(Routes.FARM) }
                 )
-            }
-
-            // ── 5. Barangay Basketball Court Scale Benchmark ─────────────────
-            item {
-                BasketballScaleCard(plots = uiState.plots)
             }
         }
     }

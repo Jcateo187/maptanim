@@ -11,6 +11,7 @@ class MapTanimApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         com.maptanim.app.data.repository.RepositoryProvider.initialize(this)
+        com.maptanim.app.data.sync.SyncWorker.enqueuePeriodic(this)
     }
 
     override fun newImageLoader(): ImageLoader {
