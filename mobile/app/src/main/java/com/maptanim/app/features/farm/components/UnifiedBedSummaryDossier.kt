@@ -46,12 +46,15 @@ fun UnifiedBedSummaryDossier(
     cropZones: List<CropZoneRenderData>,
     todayTasks: List<com.maptanim.app.dss.engine.DssLogEvaluator.GeneratedLogTask> = emptyList(),
     onCompleteTask: (String) -> Unit = {},
+    onUpdatePlantedDate: (plotId: String, newDateStr: String, stage: com.maptanim.app.domain.model.ManagementStage) -> Unit = { _, _, _ -> },
     onOpenCropTray: () -> Unit,
     onOpenInspect: () -> Unit,
     onOpenHarvestModal: () -> Unit,
     onHideDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showStagePicker by remember { mutableStateOf(false) }
+
     val zonesInSelectedBed = remember(cropZones, selectedPlot?.id) {
         if (selectedPlot == null) emptyList()
         else cropZones.filter {
@@ -65,12 +68,22 @@ fun UnifiedBedSummaryDossier(
 
     val primaryCrop = selectedCropNames.firstOrNull() ?: ""
 
+    val daysPlanted = remember(selectedPlot?.plantedDate) {
+        try {
+            val dateStr = selectedPlot?.plantedDate?.take(10)
+            if (!dateStr.isNullOrBlank()) {
+                val planted = java.time.LocalDate.parse(dateStr)
+                java.time.temporal.ChronoUnit.DAYS.between(planted, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
+            } else 25 // Default 25 days (vegetative) for existing active crops
+        } catch (_: Exception) { 25 }
+    }
+
     // Evidence-Based Agronomic Guidance (Grounded in Verified Growth Stage Standards)
-    val agronomicGuidance = remember(primaryCrop) {
+    val agronomicGuidance = remember(primaryCrop, daysPlanted) {
         if (primaryCrop.isNotBlank()) {
             BedAgronomicAdvisor.getStageGuidance(
                 cropName = primaryCrop,
-                daysPlanted = 20
+                daysPlanted = daysPlanted
             )
         } else null
     }
@@ -226,17 +239,37 @@ fun UnifiedBedSummaryDossier(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Eco, contentDescription = null, tint = LushGreen, modifier = Modifier.size(18.dp))
-                                Text(
-                                    text = "EVIDENCE-BASED CARE PROTOCOL (${agronomicGuidance.stageName.uppercase()})",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = LushGreen,
-                                    letterSpacing = 0.5.sp
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(Icons.Default.Eco, contentDescription = null, tint = LushGreen, modifier = Modifier.size(18.dp))
+                                    Text(
+                                        text = "EVIDENCE-BASED CARE PROTOCOL (${agronomicGuidance.stageName.uppercase()})",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LushGreen,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                                Surface(
+                                    onClick = { showStagePicker = true },
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = "Day $daysPlanted • Set Stage ✎",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LushGreen,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
                             }
                             Text(
                                 text = agronomicGuidance.managementProtocolTitle,
@@ -410,15 +443,80 @@ fun UnifiedBedSummaryDossier(
 
             // Harvest Timeline & Calendar Card
             item {
+                val plantedMillis = remember(daysPlanted) {
+                    System.currentTimeMillis() - (daysPlanted.toLong() * 24L * 60L * 60L * 1000L)
+                }
                 for (crop in selectedCropNames) {
                     CropHarvestTimelineCard(
                         cropName = crop,
-                        plantedDateMillis = System.currentTimeMillis() - (14L * 24 * 60 * 60 * 1000), // Default 14 days planted
+                        plantedDateMillis = plantedMillis,
                         plantCount = zonesInSelectedBed.count { it.cropName.equals(crop, ignoreCase = true) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
+    }
+
+    // ── Quick Real-Life Plant Stage Selector Dialog ──────────────────────────
+    if (showStagePicker && selectedPlot != null) {
+        AlertDialog(
+            onDismissRequest = { showStagePicker = false },
+            containerColor = Color.White,
+            title = {
+                Text(
+                    text = "Set Real-Life Plant Stage",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = DeepBlack
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Already growing this plant before using MapTanim? Select where it currently is in your garden:",
+                        fontSize = 11.5.sp,
+                        color = Color(0xFF555555),
+                        lineHeight = 15.sp
+                    )
+
+                    val stageOptions = listOf(
+                        Triple("🌱 Seedling Stage", 7, com.maptanim.app.domain.model.ManagementStage.EARLY_GROWTH),
+                        Triple("🌿 Vegetative Growth (Active Leaves)", 25, com.maptanim.app.domain.model.ManagementStage.VEGETATIVE_GROWTH),
+                        Triple("🌸 Flowering & Fruit Set", 50, com.maptanim.app.domain.model.ManagementStage.FLOWERING_FRUIT_DEVELOPMENT),
+                        Triple("🍅 Ripening & Active Harvest", 75, com.maptanim.app.domain.model.ManagementStage.HARVEST)
+                    )
+
+                    stageOptions.forEach { (title, days, stage) ->
+                        Surface(
+                            onClick = {
+                                val newDate = java.time.LocalDate.now().minusDays(days.toLong()).toString()
+                                onUpdatePlantedDate(selectedPlot.id, newDate, stage)
+                                showStagePicker = false
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = LightSurface,
+                            border = BorderStroke(1.dp, CardBorderColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                Text(text = "~$days days", fontSize = 10.sp, color = LushGreen)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showStagePicker = false }) {
+                    Text("Close", color = DeepBlack)
+                }
+            }
+        )
     }
 }

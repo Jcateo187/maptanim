@@ -209,6 +209,9 @@ fun FarmHubScreen(
                         cropZones = editUiState.cropZones,
                         todayTasks = uiState.guideState.dynamicTasks,
                         onCompleteTask = { taskId -> viewModel.completeTask(taskId) },
+                        onUpdatePlantedDate = { plotId, dateStr, stage ->
+                            viewModel.updatePlotPlantedDate(plotId, dateStr, stage)
+                        },
                         onOpenCropTray = {
                             sheetState = SheetExpandState.HIDDEN
                         },

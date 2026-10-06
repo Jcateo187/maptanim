@@ -317,6 +317,26 @@ class FarmHubViewModel(
         }
     }
 
+    fun updatePlotPlantedDate(plotId: String, dateStr: String, stage: ManagementStage? = null) {
+        viewModelScope.launch {
+            val plot = _uiState.value.planState.rawPlots.firstOrNull { it.id == plotId } ?: return@launch
+            val resolvedStage = stage ?: run {
+                val days = try {
+                    val p = LocalDate.parse(dateStr.take(10))
+                    java.time.temporal.ChronoUnit.DAYS.between(p, LocalDate.now()).toInt().coerceAtLeast(0)
+                } catch (_: Exception) { 0 }
+                when {
+                    days < 14 -> ManagementStage.PREPARATION
+                    days in 14..45 -> ManagementStage.VEGETATIVE_GROWTH
+                    days in 46..65 -> ManagementStage.FLOWERING_FRUIT_DEVELOPMENT
+                    else -> ManagementStage.HARVEST
+                }
+            }
+            val updated = plot.copy(plantedDate = dateStr, currentStage = resolvedStage)
+            cropPlotRepository.upsertPlot(updated)
+        }
+    }
+
     fun addPlot(
         cropName: String? = null,
         widthM: Float = 1.5f,
