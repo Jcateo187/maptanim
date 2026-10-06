@@ -25,9 +25,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.features.farm.components.BedFloatingActionRing
 import com.maptanim.app.features.farm.components.CanvasSmartGuidanceHud
 import com.maptanim.app.features.farm.components.CanvasTopToolbar
 import com.maptanim.app.features.farm.components.EditBottomLayout
+import com.maptanim.app.features.farm.dialogs.DirectionalBedSizingDialog
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import com.maptanim.app.features.farm.renderer.canvas.TopDownCamera
 import com.maptanim.app.features.farm.renderer.canvas.TopDownFarmCanvas
@@ -70,6 +72,7 @@ fun FarmCanvasView(
 ) {
     var liveCamera by remember { mutableStateOf(TopDownCamera(zoom = 0.5f)) }
     val selectedPlot = editUiState.plots.firstOrNull { it.id == editUiState.selectedPlotId }
+    var showDirectionalSizingDialog by remember { mutableStateOf(false) }
 
     // ── CropTray & Drag-and-Drop State ───────────────────────────────────────
     var isCropTrayVisible by remember { mutableStateOf(false) }
@@ -206,20 +209,37 @@ fun FarmCanvasView(
                 .padding(top = if (editUiState.dropFeedbackMessage != null) 84.dp else 48.dp, start = 10.dp, end = 10.dp)
         )
 
-        // ── 3. Bottom Contextual Action Card for Selected Bed ───────────────
-        if (selectedPlot != null && !isDraggingCrop) {
-            ActiveBedCard(
-                plot = selectedPlot,
-                cropZones = editUiState.cropZones,
-                uiState = editUiState,
-                editViewModel = editViewModel,
-                isCropTrayVisible = isCropTrayVisible,
+        // ── 3. Planter-Style Floating Circular Action Ring ──────────────────
+        if (selectedPlot != null && !isDraggingCrop && !isCropTrayVisible) {
+            val primaryCrop = remember(selectedPlot.id, editUiState.cropZones) {
+                editUiState.cropZones.firstOrNull {
+                    it.plotId == selectedPlot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true)
+                }?.cropName ?: selectedPlot.cropName
+            }
+
+            BedFloatingActionRing(
+                selectedPlot = selectedPlot,
+                primaryCropName = primaryCrop,
+                onOpenDossier = onNavigateToGuide,
                 onOpenCropTray = { isCropTrayVisible = true },
-                onOpenInspect = onOpenInspect,
-                onOpenTimeline = onOpenTimeline,
-                onNavigateToGuide = onNavigateToGuide,
-                onDeletePlot = onDeletePlot,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                onOpenSizingDialog = { showDirectionalSizingDialog = true },
+                onDeletePlot = { onDeletePlot(selectedPlot.id) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            )
+        }
+
+        if (showDirectionalSizingDialog && selectedPlot != null) {
+            DirectionalBedSizingDialog(
+                initialWidthM = selectedPlot.widthM,
+                initialHeightM = selectedPlot.heightM,
+                plotLabel = selectedPlot.plotLabel,
+                onApplyDimensions = { newW, newH ->
+                    editViewModel.setPlotDimensions(selectedPlot.id, newW, newH)
+                    showDirectionalSizingDialog = false
+                },
+                onDismiss = { showDirectionalSizingDialog = false }
             )
         }
 

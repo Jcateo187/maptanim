@@ -561,6 +561,21 @@ class EditViewModel(
         updatePlotsState(updatedPlots)
     }
 
+    /**
+     * Directional Bed Sizing: Updates bed dimensions with live recalculation and auto-persistence.
+     */
+    fun setPlotDimensions(plotId: String, newWidthM: Float, newHeightM: Float) {
+        val currentPlots = _uiState.value.editedPlots
+        val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val clampedW = newWidthM.coerceIn(0.6f, 15f)
+        val clampedH = newHeightM.coerceIn(0.6f, 15f)
+        val updated = currentPlots.map {
+            if (it.id == plotId) it.copy(widthM = clampedW, heightM = clampedH) else it
+        }
+        updatePlotsState(updated)
+        triggerAutoSave(0L)
+    }
+
     // ── Individual Crop Zone Drag & Resize (User rules 6, 7, 8, 9) ─────────
 
     private var initialZoneForResize: CropZoneRenderData? = null

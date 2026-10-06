@@ -225,6 +225,27 @@ fun UnifiedBedSummaryDossier(
 
         // ── 4. CASE RESOLVER: Case C & D (Planted Bed with Crops) ───────────
         else {
+            // ── 8-Stage Phenological Lifecycle Stepper & Calendar Forecast ──
+            item {
+                CropLifecycleTimelineView(
+                    cropName = primaryCrop,
+                    daysPlanted = daysPlanted,
+                    totalMaturityDays = when {
+                        primaryCrop.contains("Tomato", ignoreCase = true) -> 75
+                        primaryCrop.contains("Eggplant", ignoreCase = true) -> 85
+                        primaryCrop.contains("Pechay", ignoreCase = true) -> 35
+                        primaryCrop.contains("Lettuce", ignoreCase = true) -> 45
+                        primaryCrop.contains("Pepper", ignoreCase = true) || primaryCrop.contains("Sili", ignoreCase = true) -> 75
+                        primaryCrop.contains("Okra", ignoreCase = true) -> 55
+                        primaryCrop.contains("Sitaw", ignoreCase = true) || primaryCrop.contains("Bean", ignoreCase = true) -> 65
+                        primaryCrop.contains("Cucumber", ignoreCase = true) -> 60
+                        primaryCrop.contains("Corn", ignoreCase = true) -> 75
+                        else -> 70
+                    },
+                    plantedDateStr = selectedPlot.plantedDate
+                )
+            }
+
             // Evidence-Based Care Protocol Banner (Grounded in Verified Growth Stage)
             if (agronomicGuidance != null) {
                 item {
@@ -407,7 +428,110 @@ fun UnifiedBedSummaryDossier(
                 }
             }
 
-            // Companion Compatibility Summary
+            // ── Quick Growing Specs (GrowIt / Planter Badges) ─────────────
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("QUICK GROWING SPECS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = LushGreen)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("SPACING", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                Text("50 cm", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                Text("2×2 cells", fontSize = 8.5.sp, color = LushGreen)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("SUNLIGHT", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                Text("Full Sun", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                Text("6+ hrs/day", fontSize = 8.5.sp, color = LushGreen)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("WATER", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                Text("2–3 days", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                Text("Soil level", fontSize = 8.5.sp, color = LushGreen)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("SOIL pH", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                Text("6.0–6.8", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
+                                Text("Loam/Volc", fontSize = 8.5.sp, color = LushGreen)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── NPK Stage-Specific Nutrition Card ──────────────────────────
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFF9FBE7),
+                    border = BorderStroke(1.dp, Color(0xFFC0CA33).copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("NPK NUTRITION & FEEDING (STAGE-SPECIFIC)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF558B2F))
+                        Text(
+                            text = if (daysPlanted < 45) "High Nitrogen (N) Demand • Foliage & Stem Vigor" else "High Potassium (K) & Phosphorus (P) • Flower & Fruit Setting",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = if (daysPlanted < 45)
+                                "• Active Need: Nitrogen for rapid vegetative leaf canopy.\n• ₱0 Household Action: Side-dress 1 handful wood ash / well-rotted compost tea around drip line. Avoid direct stem contact."
+                            else
+                                "• Active Need: Potassium and calcium to avoid Blossom-End Rot.\n• ₱0 Household Action: Crush 5 dry eggshells into fine powder, soak in vinegar for 24h, dilute in 1L water, and apply to root zone.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF333333),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+
+            // ── Pest & Disease Defense (₱0 Backyard Remedies) ─────────────
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFF8E1),
+                    border = BorderStroke(1.dp, AlertAmber.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("PEST & DISEASE DEFENSE (₱0 HOUSEHOLD REMEDIES)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                        Text(
+                            text = "Threat Watch: Fruitworm, Whiteflies, and Leaf Curl",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "• ₱0 Organic Spray Recipe: Blend 5 cloves crushed garlic + 3 hot silis + 1 tbsp mild soap in 1L water. Spray under leaves in early morning.\n• Mechanical Barrier: Dust dry wood ash around soil perimeter to deter crawling slugs, cutworms, and damping-off fungal spread.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF333333),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+
+            // ── Companion Compatibility Summary ───────────────────────────
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -436,12 +560,42 @@ fun UnifiedBedSummaryDossier(
                             val beneficial = try { CompanionDataProvider.getBeneficialCompanions(single).take(3).joinToString(", ") } catch (_: Exception) { "" }
                             Text("Growing: $single", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = DeepBlack)
                             Text("Best Companions to Add: $beneficial", fontSize = 11.sp, color = Color(0xFF333333))
+                            Text("Antagonists to Avoid: Sweet Corn, Brassicas (cabbage/kale)", fontSize = 11.sp, color = Color(0xFFD32F2F))
                         }
                     }
                 }
             }
 
-            // Harvest Timeline & Calendar Card
+            // ── Post-Harvest Handling & Next Season Rotation ──────────────
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFF3E5F5),
+                    border = BorderStroke(1.dp, Color(0xFFAB47BC).copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("POST-HARVEST HANDLING & CROP ROTATION", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6A1B9A))
+                        Text(
+                            text = "Breaker-Stage Harvest & Legume Rotation",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "• Harvest Rule: Pick fruit at breaker stage (first pink blush). Store stem-end facing upward at room temperature (never in direct refrigerator cold).\n• Next Crop Succession: After this cycle, rotate this bed to Sitaw (Yardlong Bean) to replenish Nitrogen naturally before replanting heavy feeders.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF333333),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+
+            // ── Harvest Timeline & Calendar Card ──────────────────────────
             item {
                 val plantedMillis = remember(daysPlanted) {
                     System.currentTimeMillis() - (daysPlanted.toLong() * 24L * 60L * 60L * 1000L)
