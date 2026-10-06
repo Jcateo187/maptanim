@@ -17,8 +17,8 @@ android {
         applicationId = "com.maptanim.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.7"
+        versionCode = 5
+        versionName = "1.2.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,7 +31,7 @@ android {
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.7 Release Test Build - DSS matrix, beginner backyard mode, and SVG rendering improvements"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.8 Release Test Build - Master crop agronomic intelligence, calibrated vegetative stage care, and Supabase CLI database synchronization"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }
@@ -41,7 +41,7 @@ android {
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.7 Debug Test Build - DSS matrix, beginner backyard mode, and SVG rendering improvements"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.8 Debug Test Build - Master crop agronomic intelligence, calibrated vegetative stage care, and Supabase CLI database synchronization"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }
