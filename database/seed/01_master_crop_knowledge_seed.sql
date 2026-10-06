@@ -135,7 +135,7 @@ CREATE POLICY "crop_pest_disease_guides_read_all" ON public.crop_pest_disease_gu
 
 -- Ensure dss_rules table exists
 CREATE TABLE IF NOT EXISTS public.dss_rules (
-    id                          TEXT            PRIMARY KEY DEFAULT ('rule_' || substr(md5(random()::text || clock_timestamp()::text), 1, 10)),
+    id                          UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     crop_a                      VARCHAR(50)     NOT NULL,
     crop_b                      VARCHAR(50)     NOT NULL,
     relationship                VARCHAR(20)     NOT NULL,
@@ -2002,338 +2002,119 @@ INSERT INTO public.crop_pest_disease_guides (
     cultural_prevention = EXCLUDED.cultural_prevention;
 
 -- 7. DSS COMPANION & INTERCROPPING RULES -----------------------------------
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_1', 'Tomato', 'Lettuce', 'BENEFICIAL',
-    'Lettuce provides ground cover that retains soil moisture and suppresses weeds around tomato base. Tomato provides partial shade for heat-sensitive lettuce.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+-- Refresh companion matrix with complete 37 research-backed companion rules
+DELETE FROM public.dss_rules WHERE source LIKE '%DA-BPI%' OR source LIKE '%DA-BAR%' OR source LIKE '%Intercropping%';
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_2', 'Tomato', 'Carrot', 'BENEFICIAL',
-    'Carrot''s deep taproot loosens subsoil for tomato roots. Tomato''s foliage provides partial shade that benefits carrot root development.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Lettuce', 'BENEFICIAL', 'Lettuce provides ground cover that retains soil moisture and suppresses weeds around tomato base. Tomato provides partial shade for heat-sensitive lettuce.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_3', 'Tomato', 'Onion', 'BENEFICIAL',
-    'Onion''s sulfur compounds repel aphids and whiteflies that attack tomato. Strong onion scent masks tomato from pest detection.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Carrot', 'BENEFICIAL', 'Carrot''s deep taproot loosens subsoil for tomato roots. Tomato''s foliage provides partial shade that benefits carrot root development.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_4', 'Tomato', 'Eggplant', 'ANTAGONIST',
-    'Both are Solanaceae family members competing for identical nutrients and sharing the same pests (fruit borer, bacterial wilt) and diseases.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Onion', 'BENEFICIAL', 'Onion''s sulfur compounds repel aphids and whiteflies that attack tomato. Strong onion scent masks tomato from pest detection.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_5', 'Tomato', 'Cabbage', 'ANTAGONIST',
-    'Cabbage and tomato compete for similar nutrients. Cabbage can inhibit tomato growth through allelopathic root exudates.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Eggplant', 'ANTAGONIST', 'Both are Solanaceae family members competing for identical nutrients and sharing the same pests (fruit borer, bacterial wilt) and diseases.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_6', 'Tomato', 'Corn', 'ANTAGONIST',
-    'Both are heavy nitrogen feeders competing for the same soil nutrients. Corn''s tall canopy shades tomato excessively.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Cabbage', 'ANTAGONIST', 'Cabbage and tomato compete for similar nutrients. Cabbage can inhibit tomato growth through allelopathic root exudates.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_7', 'Eggplant', 'String Beans', 'BENEFICIAL',
-    'String beans fix atmospheric nitrogen into the soil, directly benefiting nitrogen-hungry eggplant. Beans'' climbing habit doesn''t shade eggplant.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Tomato', 'Corn', 'ANTAGONIST', 'Both are heavy nitrogen feeders competing for the same soil nutrients. Corn''s tall canopy shades tomato excessively.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_8', 'Eggplant', 'Cucumber', 'NEUTRAL',
-    'No significant positive or negative interaction. Can coexist if spacing is adequate, but no active synergy documented.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Eggplant', 'String Beans', 'BENEFICIAL', 'String beans fix atmospheric nitrogen into the soil, directly benefiting nitrogen-hungry eggplant. Beans'' climbing habit doesn''t shade eggplant.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_9', 'Eggplant', 'Onion', 'BENEFICIAL',
-    'Onion repels flea beetles and aphids that commonly attack eggplant foliage.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Eggplant', 'Cucumber', 'NEUTRAL', 'No significant positive or negative interaction. Can coexist if spacing is adequate, but no active synergy documented.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_10', 'Cucumber', 'Corn', 'BENEFICIAL',
-    'Classic Three Sisters principle - corn provides natural trellis for cucumber vines, cucumber provides ground cover reducing weed pressure.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Eggplant', 'Onion', 'BENEFICIAL', 'Onion repels flea beetles and aphids that commonly attack eggplant foliage.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_11', 'Cucumber', 'String Beans', 'BENEFICIAL',
-    'Beans fix nitrogen benefiting cucumber growth. Both can share a trellis system efficiently.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cucumber', 'Corn', 'BENEFICIAL', 'Classic Three Sisters principle - corn provides natural trellis for cucumber vines, cucumber provides ground cover reducing weed pressure.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_12', 'Cucumber', 'Lettuce', 'BENEFICIAL',
-    'Lettuce serves as living mulch under cucumber trellis, conserving soil moisture. Cucumber provides shade for heat-sensitive lettuce.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cucumber', 'String Beans', 'BENEFICIAL', 'Beans fix nitrogen benefiting cucumber growth. Both can share a trellis system efficiently.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_13', 'Cabbage', 'Onion', 'BENEFICIAL',
-    'Onion''s strong scent masks cabbage from diamondback moth and cabbage looper. Onion acts as a natural pest deterrent border.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cucumber', 'Lettuce', 'BENEFICIAL', 'Lettuce serves as living mulch under cucumber trellis, conserving soil moisture. Cucumber provides shade for heat-sensitive lettuce.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_14', 'Cabbage', 'String Beans', 'ANTAGONIST',
-    'String beans'' climbing habit can smother low-growing cabbage. Both compete for space and light in bed configurations.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cabbage', 'Onion', 'BENEFICIAL', 'Onion''s strong scent masks cabbage from diamondback moth and cabbage looper. Onion acts as a natural pest deterrent border.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_15', 'Cabbage', 'Lettuce', 'BENEFICIAL',
-    'Lettuce and cabbage have complementary root depths. Lettuce matures faster, freeing space as cabbage heads develop.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cabbage', 'String Beans', 'ANTAGONIST', 'String beans'' climbing habit can smother low-growing cabbage. Both compete for space and light in bed configurations.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_16', 'Onion', 'Carrot', 'BENEFICIAL',
-    'Classic beneficial pair - carrot fly is repelled by onion scent, onion fly is repelled by carrot foliage. Mutually protective.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Cabbage', 'Lettuce', 'BENEFICIAL', 'Lettuce and cabbage have complementary root depths. Lettuce matures faster, freeing space as cabbage heads develop.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_17', 'Onion', 'String Beans', 'ANTAGONIST',
-    'Onion''s sulfur root exudates inhibit nitrogen-fixing bacteria on bean roots, reducing bean productivity.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Onion', 'Carrot', 'BENEFICIAL', 'Classic beneficial pair - carrot fly is repelled by onion scent, onion fly is repelled by carrot foliage. Mutually protective.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_18', 'Onion', 'Pechay', 'BENEFICIAL',
-    'Onion repels flea beetles that damage pechay leaves. Pechay matures quickly before onion needs full bed space.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Onion', 'String Beans', 'ANTAGONIST', 'Onion''s sulfur root exudates inhibit nitrogen-fixing bacteria on bean roots, reducing bean productivity.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_19', 'Lettuce', 'Carrot', 'BENEFICIAL',
-    'Lettuce''s shallow roots and carrot''s deep roots share soil space efficiently without competition. Lettuce provides ground shade.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Onion', 'Pechay', 'BENEFICIAL', 'Onion repels flea beetles that damage pechay leaves. Pechay matures quickly before onion needs full bed space.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_20', 'Corn', 'Squash', 'BENEFICIAL',
-    'Three Sisters principle - squash''s large leaves shade the ground, conserving moisture and suppressing weeds around corn stalks.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Lettuce', 'Carrot', 'BENEFICIAL', 'Lettuce''s shallow roots and carrot''s deep roots share soil space efficiently without competition. Lettuce provides ground shade.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_21', 'Corn', 'Kangkong', 'NEUTRAL',
-    'No significant interaction documented. Can coexist in adjacent plots without mutual benefit or harm.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Corn', 'Squash', 'BENEFICIAL', 'Three Sisters principle - squash''s large leaves shade the ground, conserving moisture and suppressing weeds around corn stalks.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_22', 'Corn', 'String Beans', 'BENEFICIAL',
-    'Three Sisters principle - corn provides natural trellis for climbing beans, beans fix nitrogen for corn''s heavy demand.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Corn', 'Kangkong', 'NEUTRAL', 'No significant interaction documented. Can coexist in adjacent plots without mutual benefit or harm.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_23', 'Okra', 'Tomato', 'BENEFICIAL',
-    'Okra attracts beneficial insects (ladybugs, lacewings) that control aphids on adjacent tomato plants.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Corn', 'String Beans', 'BENEFICIAL', 'Three Sisters principle - corn provides natural trellis for climbing beans, beans fix nitrogen for corn''s heavy demand.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_24', 'Okra', 'Eggplant', 'NEUTRAL',
-    'Both are warm-season crops that coexist without significant interaction. Adequate spacing required.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Okra', 'Tomato', 'BENEFICIAL', 'Okra attracts beneficial insects (ladybugs, lacewings) that control aphids on adjacent tomato plants.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_25', 'Okra', 'Pechay', 'BENEFICIAL',
-    'Okra''s tall structure provides partial shade for heat-sensitive pechay during hot months.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Okra', 'Eggplant', 'NEUTRAL', 'Both are warm-season crops that coexist without significant interaction. Adequate spacing required.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_26', 'Squash', 'Okra', 'NEUTRAL',
-    'No significant interaction. Both are vigorous growers - ensure adequate spacing to prevent vine competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Okra', 'Pechay', 'BENEFICIAL', 'Okra''s tall structure provides partial shade for heat-sensitive pechay during hot months.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_27', 'Squash', 'String Beans', 'BENEFICIAL',
-    'Beans fix nitrogen for squash, squash ground cover suppresses weeds around bean trellis base.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Squash', 'Okra', 'NEUTRAL', 'No significant interaction. Both are vigorous growers - ensure adequate spacing to prevent vine competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_28', 'Chili Pepper', 'Carrot', 'BENEFICIAL',
-    'Carrot''s deep taproot improves soil aeration for chili''s shallow root system. Different root zones avoid competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Squash', 'String Beans', 'BENEFICIAL', 'Beans fix nitrogen for squash, squash ground cover suppresses weeds around bean trellis base.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_29', 'Chili Pepper', 'Eggplant', 'ANTAGONIST',
-    'Both are Solanaceae sharing identical disease vectors (bacterial wilt, anthracnose). Cross-infection risk is high.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Chili Pepper', 'Carrot', 'BENEFICIAL', 'Carrot''s deep taproot improves soil aeration for chili''s shallow root system. Different root zones avoid competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_30', 'Chili Pepper', 'Onion', 'BENEFICIAL',
-    'Onion repels aphids that transmit viral diseases to chili peppers.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Chili Pepper', 'Eggplant', 'ANTAGONIST', 'Both are Solanaceae sharing identical disease vectors (bacterial wilt, anthracnose). Cross-infection risk is high.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_31', 'Kangkong', 'Eggplant', 'BENEFICIAL',
-    'Kangkong serves as moisture-retaining ground cover under eggplant. Both thrive in moist conditions.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Chili Pepper', 'Onion', 'BENEFICIAL', 'Onion repels aphids that transmit viral diseases to chili peppers.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_32', 'Kangkong', 'Lettuce', 'NEUTRAL',
-    'Both are fast-growing leafy crops. No interaction - can share adjacent beds without issue.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Kangkong', 'Eggplant', 'BENEFICIAL', 'Kangkong serves as moisture-retaining ground cover under eggplant. Both thrive in moist conditions.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_33', 'Ampalaya', 'Corn', 'BENEFICIAL',
-    'Corn provides natural trellis support for ampalaya vines, reducing trellis material costs.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Kangkong', 'Lettuce', 'NEUTRAL', 'Both are fast-growing leafy crops. No interaction - can share adjacent beds without issue.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_34', 'Ampalaya', 'Onion', 'BENEFICIAL',
-    'Onion''s scent deters fruit flies and aphids that attack ampalaya vines and fruits.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Ampalaya', 'Corn', 'BENEFICIAL', 'Corn provides natural trellis support for ampalaya vines, reducing trellis material costs.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_35', 'Ampalaya', 'Squash', 'ANTAGONIST',
-    'Both are cucurbits sharing the same pests (fruit fly, downy mildew) and competing for identical vine space.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Ampalaya', 'Onion', 'BENEFICIAL', 'Onion''s scent deters fruit flies and aphids that attack ampalaya vines and fruits.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_36', 'Pechay', 'Carrot', 'BENEFICIAL',
-    'Pechay matures in 25-30 days, harvested before slow-growing carrot needs full bed space. Efficient succession planting.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Ampalaya', 'Squash', 'ANTAGONIST', 'Both are cucurbits sharing the same pests (fruit fly, downy mildew) and competing for identical vine space.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
-INSERT INTO public.dss_rules (
-    id, crop_a, crop_b, relationship, reason, source
-) VALUES (
-    'dss_rule_seed_37', 'Pechay', 'Lettuce', 'NEUTRAL',
-    'Similar growth habits and requirements. Can coexist but no synergistic benefit.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
-) ON CONFLICT (id) DO UPDATE SET
-    relationship = EXCLUDED.relationship,
-    reason = EXCLUDED.reason;
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Pechay', 'Carrot', 'BENEFICIAL', 'Pechay matures in 25-30 days, harvested before slow-growing carrot needs full bed space. Efficient succession planting.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
+
+INSERT INTO public.dss_rules (crop_a, crop_b, relationship, reason, source)
+VALUES ('Pechay', 'Lettuce', 'NEUTRAL', 'Similar growth habits and requirements. Can coexist but no synergistic benefit.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines');
 
 -- 8. STARTER OPERATIONAL SUBSTANCE (BACKYARD DEMO SUBSTANCE) ---------------
 -- Seed a realistic demonstration backyard farm and vegetative beds so Supabase
