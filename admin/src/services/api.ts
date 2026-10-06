@@ -1189,26 +1189,27 @@ class ApiService {
     let createdId = `dss-${Date.now().toString().slice(-4)}`;
 
     if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('dss_rules')
-          .insert([
-            {
-              crop_a: rule.cropA,
-              crop_b: rule.cropB,
-              relationship: rule.relationship,
-              reason: rule.reason,
-              source: rule.daReferenceDoc || 'MapTanim Field Research Dataset',
-            },
-          ])
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('dss_rules')
+        .insert([
+          {
+            crop_a: rule.cropA,
+            crop_b: rule.cropB,
+            relationship: rule.relationship,
+            reason: rule.reason,
+            source: rule.daReferenceDoc || 'MapTanim Field Research Dataset',
+          },
+        ])
+        .select()
+        .single();
 
-        if (!error && data) {
-          createdId = data.id;
-        }
-      } catch (err) {
-        console.warn('Failed to add DSS rule to Supabase', err);
+      if (error) {
+        console.error('Failed to add DSS rule to Supabase:', error);
+        throw error;
+      }
+
+      if (data) {
+        createdId = data.id;
       }
     }
 
@@ -1218,21 +1219,20 @@ class ApiService {
     };
     this.rules.unshift(newRule);
     this.logAction('CREATE_DSS_RULE', 'DSS Rule Engine', `Added rule pairing: ${rule.cropA} ↔ ${rule.cropB}`);
-    return Promise.resolve(newRule);
+    return newRule;
   }
 
   async deleteDSSRule(id: string): Promise<boolean> {
     if (isSupabaseConfigured) {
-      try {
-        const { error } = await supabase.from('dss_rules').delete().eq('id', id);
-        if (error) console.warn('Failed to delete DSS rule from Supabase', error);
-      } catch (err) {
-        console.warn('Failed to delete DSS rule from Supabase', err);
+      const { error } = await supabase.from('dss_rules').delete().eq('id', id);
+      if (error) {
+        console.error('Failed to delete DSS rule from Supabase:', error);
+        return false;
       }
     }
     this.rules = this.rules.filter((r) => r.id !== id);
     this.logAction('DELETE_DSS_RULE', 'DSS Rule Engine', `Removed rule ${id}`);
-    return Promise.resolve(true);
+    return true;
   }
 
   // Farm Inspector & Zone Management (Supabase Real-Time Farm Synchronization)

@@ -1,9 +1,11 @@
-﻿package com.maptanim.app.features.auth.viewmodel
+package com.maptanim.app.features.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maptanim.app.core.validation.AuthValidator
 import com.maptanim.backend.data.repository.AuthRepository
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,9 +94,34 @@ class AuthViewModel : ViewModel() {
             )
 
             result.onSuccess {
-                _uiState.value = AuthUiState(
-                    isSuccess = true
-                )
+                // Verify active user status against public.users table
+                val currentUserId = try { com.maptanim.app.data.remote.SupabaseClient.client.auth.currentUserOrNull()?.id } catch (_: Exception) { null }
+                var isSuspended = false
+                if (!currentUserId.isNullOrBlank()) {
+                    try {
+                        val statusDto = com.maptanim.app.data.remote.SupabaseClient.client
+                            .from("users")
+                            .select {
+                                filter { eq("id", currentUserId) }
+                            }
+                            .decodeSingleOrNull<com.maptanim.app.data.remote.dto.UserStatusDto>()
+                        if (statusDto?.status.equals("SUSPENDED", ignoreCase = true)) {
+                            isSuspended = true
+                            com.maptanim.app.data.remote.SupabaseClient.client.auth.signOut()
+                            com.maptanim.app.data.repository.RepositoryProvider.clearAllLocalCache()
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (isSuspended) {
+                    _uiState.value = AuthUiState(
+                        errorMessage = "This account has been suspended by an administrator."
+                    )
+                } else {
+                    _uiState.value = AuthUiState(
+                        isSuccess = true
+                    )
+                }
             }
 
             result.onFailure {
