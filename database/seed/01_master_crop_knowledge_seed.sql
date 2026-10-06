@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- MapTanim Versioned Migration 025: Master Crop Knowledge & DSS Substance
 -- Target: Supabase PostgreSQL (public schema)
 -- 
@@ -2121,6 +2121,13 @@ VALUES ('Pechay', 'Lettuce', 'NEUTRAL', 'Similar growth habits and requirements.
 -- operational tables (farms, crop_plots, crop_logs, tasks) have immediate substance.
 
 DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'crop_logs') THEN
+        ALTER TABLE public.crop_logs ALTER COLUMN selected_choice TYPE VARCHAR(50);
+    END IF;
+END $$;
+
+DO $$
 DECLARE
     v_demo_user_id UUID;
     v_demo_farm_id UUID := '00000000-0000-0000-0000-000000000001'::UUID;
@@ -2142,7 +2149,7 @@ BEGIN
             pos_x, pos_y, width_m, height_m, planted_date, notes
         ) VALUES (
             v_plot_1_id, v_demo_farm_id, 'Bed 1 - Tomato', 'Tomato', 'Diamante Max F1', 'LOAM',
-            0.5, 0.5, 2.0, 3.0, TO_CHAR(CURRENT_DATE - INTERVAL '25 days', 'YYYY-MM-DD'),
+            0.5, 0.5, 2.0, 3.0, (CURRENT_DATE - 25),
             'Real-world vegetative stage plant (Day 25). Staked with bamboo and mulched with rice straw.'
         ) ON CONFLICT (id) DO UPDATE SET crop_variety = EXCLUDED.crop_variety;
 
@@ -2152,7 +2159,7 @@ BEGIN
             pos_x, pos_y, width_m, height_m, planted_date, notes
         ) VALUES (
             v_plot_2_id, v_demo_farm_id, 'Bed 2 - Eggplant', 'Eggplant', 'Dumaguete Long Purple', 'CLAY',
-            3.0, 0.5, 2.0, 3.0, TO_CHAR(CURRENT_DATE - INTERVAL '30 days', 'YYYY-MM-DD'),
+            3.0, 0.5, 2.0, 3.0, (CURRENT_DATE - 30),
             'Vegetative vigor stage. Pruned bottom suckers up to first flower fork.'
         ) ON CONFLICT (id) DO UPDATE SET crop_variety = EXCLUDED.crop_variety;
 
@@ -2164,7 +2171,7 @@ BEGIN
             'log_demo_001', v_plot_1_id::text, v_demo_farm_id::text, 'Tomato', 'Diamante Max F1',
             'VEGETATIVE', 'VEGETATIVE_CARE', 'STAKING_TRELLIS', 'DONE',
             'Tied main stems to 1.5m bamboo stakes with dried banana fiber twine. Ground cleared of lower fallen leaves.',
-            CURRENT_DATE - INTERVAL '2 days'
+            (CURRENT_DATE - 2)
         ) ON CONFLICT (id) DO NOTHING;
 
         INSERT INTO public.crop_logs (
@@ -2172,9 +2179,9 @@ BEGIN
             current_stage, log_context, care_activity, selected_choice, notes, log_date
         ) VALUES (
             'log_demo_002', v_plot_1_id::text, v_demo_farm_id::text, 'Tomato', 'Diamante Max F1',
-            'VEGETATIVE', 'DAILY_CHECK', 'PEST_SCOUTING', 'ANOMALY_FOUND',
+            'VEGETATIVE', 'DAILY_CHECK', 'PEST_SCOUTING', 'ISSUE',
             'Spotted mild upward leaf curling on 2 lower leaves. Applied wood ash around base and chili-garlic spray.',
-            CURRENT_DATE - INTERVAL '1 days'
+            (CURRENT_DATE - 1)
         ) ON CONFLICT (id) DO NOTHING;
 
         -- 4. Today''s Care Chores (Real-world Vegetative Tasks)
