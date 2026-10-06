@@ -101,6 +101,8 @@ fun SingleScreenFarmHub(
     var showAddBedDialog by remember { mutableStateOf(false) }
     var plotPendingDelete by remember { mutableStateOf<CropPlot?>(null) }
     var previousPlotIds by remember { mutableStateOf(uiState.plots.map { it.id }.toSet()) }
+    var isHighRiskDismissed by remember { mutableStateOf(false) }
+    var isHarvestAlertDismissed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         editViewModel.refresh()
@@ -156,7 +158,7 @@ fun SingleScreenFarmHub(
     ) {
 
         // ── SMART ALERT BANNER ────────────────────────────────────────────────
-        if (highRiskPlot != null) {
+        if (highRiskPlot != null && !isHighRiskDismissed) {
             Surface(
                 color = Color(0xFF2D1B1B),
                 border = BorderStroke(1.dp, Color(0xFF5C2D2D)),
@@ -182,26 +184,37 @@ fun SingleScreenFarmHub(
                             maxLines = 1
                         )
                     }
-                    Surface(
-                        onClick = {
-                            selectedPlotId = highRiskPlot.id
-                            selectedTopTab = TopTab.PLAN
-                            sheetState = SheetExpandState.HALF
-                        },
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFFD32F2F)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Surface(
+                            onClick = {
+                                selectedPlotId = highRiskPlot.id
+                                selectedTopTab = TopTab.PLAN
+                                sheetState = SheetExpandState.HALF
+                            },
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFD32F2F)
+                        ) {
+                            Text(
+                                text = "Fix",
+                                color = White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                         Text(
-                            text = "Fix",
-                            color = White,
-                            fontSize = 11.sp,
+                            text = "✕",
+                            color = Color(0xFFFF8A80),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier
+                                .clickable { isHighRiskDismissed = true }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
-        } else if (readyHarvestPlot != null) {
+        } else if (readyHarvestPlot != null && !isHarvestAlertDismissed) {
             Surface(
                 color = Color(0xFF1B2E1D),
                 border = BorderStroke(1.dp, Color(0xFF385E3B)),
@@ -227,21 +240,32 @@ fun SingleScreenFarmHub(
                             maxLines = 1
                         )
                     }
-                    Surface(
-                        onClick = {
-                            selectedPlotId = readyHarvestPlot.id
-                            selectedTopTab = TopTab.HARVEST
-                            sheetState = SheetExpandState.HALF
-                        },
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFF2E7D32)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Surface(
+                            onClick = {
+                                selectedPlotId = readyHarvestPlot.id
+                                selectedTopTab = TopTab.HARVEST
+                                sheetState = SheetExpandState.HALF
+                            },
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFF2E7D32)
+                        ) {
+                            Text(
+                                text = "Pick",
+                                color = White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                         Text(
-                            text = "Pick",
-                            color = White,
-                            fontSize = 11.sp,
+                            text = "✕",
+                            color = Color(0xFFA5D6A7),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier
+                                .clickable { isHarvestAlertDismissed = true }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }

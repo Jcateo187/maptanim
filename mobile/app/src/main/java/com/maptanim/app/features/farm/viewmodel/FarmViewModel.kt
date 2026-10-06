@@ -1075,6 +1075,45 @@ class FarmViewModel(
         }
     }
 
+    fun addObservationTask(plotId: String, taskTitle: String) {
+        viewModelScope.launch {
+            val plot = _uiState.value.plots.firstOrNull { it.id == plotId } ?: return@launch
+            val farmId = plot.farmId
+            val today = LocalDate.now().toString()
+            val taskType = when {
+                taskTitle.contains("neem", ignoreCase = true) || taskTitle.contains("spray", ignoreCase = true) -> TaskType.APPLY_PESTICIDE
+                taskTitle.contains("soil", ignoreCase = true) || taskTitle.contains("drain", ignoreCase = true) || taskTitle.contains("bed", ignoreCase = true) -> TaskType.SOIL_AMENDMENT
+                taskTitle.contains("vermicast", ignoreCase = true) || taskTitle.contains("fpj", ignoreCase = true) || taskTitle.contains("fertiliz", ignoreCase = true) -> TaskType.FERTILIZE
+                else -> TaskType.OBSERVATION
+            }
+            val newTask = FarmTask(
+                id = "task_obs_${UUID.randomUUID()}",
+                farmId = farmId,
+                plotId = plotId,
+                plotLabel = plot.plotLabel,
+                cropName = plot.cropName ?: "Vegetable",
+                taskType = taskType,
+                title = taskTitle,
+                subLabel = "Action recommended from Scouting Diagnosis",
+                dueDate = today,
+                isCompleted = false,
+                completedAt = null
+            )
+            RepositoryProvider.taskRepository.upsertTasks(listOf(newTask))
+            logFarmActivityUseCase(
+                Activity(
+                    id = UUID.randomUUID().toString(),
+                    plotId = plotId,
+                    farmId = farmId,
+                    type = TaskType.OBSERVATION,
+                    notes = "Diagnosed issue on ${plot.plotLabel} (${plot.cropName}). Generated chore: $taskTitle",
+                    performedAt = ZonedDateTime.now().toString()
+                )
+            )
+            _uiState.update { it.copy(toastMessage = "Added chore: $taskTitle! 📋") }
+        }
+    }
+
     fun submitCropLog(cropLog: CropLog) {
         viewModelScope.launch {
             val plot = _uiState.value.plots.firstOrNull { it.id == cropLog.cropPlantingId }

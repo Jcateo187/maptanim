@@ -110,28 +110,6 @@ fun FarmScreen(
                 onTabSelected = { viewModel.selectTab(it) }
             )
 
-            // Toast banner
-            AnimatedVisibility(
-                visible = uiState.toastMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .background(Color(0xFF2E7D32), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = uiState.toastMessage ?: "",
-                        color = White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
 
             // ── TAB CONTENT ───────────────────────────────────────────────────
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -152,7 +130,7 @@ fun FarmScreen(
                             },
                             onAdvanceStage = { plotId, stage -> viewModel.advancePlotStage(plotId, stage) },
                             onLogObservationTask = { plotId, taskTitle ->
-                                viewModel.quickLogMaintenance(plotId, "weed")
+                                viewModel.addObservationTask(plotId, taskTitle)
                             }
                         )
                     }
@@ -219,6 +197,34 @@ fun FarmScreen(
                             uiState = uiState,
                             onFilterSelected = { viewModel.filterActivities(it) }
                         )
+                    }
+                }
+
+                // Non-intrusive floating toast overlay (does NOT push down canvas or tabs!)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 20.dp)
+                ) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = uiState.toastMessage != null,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF1B3B1B),
+                            border = BorderStroke(1.dp, Color(0xFF4CAF50)),
+                            shadowElevation = 6.dp
+                        ) {
+                            Text(
+                                text = uiState.toastMessage ?: "",
+                                color = White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
             }

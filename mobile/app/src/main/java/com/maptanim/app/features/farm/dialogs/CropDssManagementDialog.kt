@@ -66,6 +66,14 @@ fun CropDssManagementDialog(
 
     val uiState by dssViewModel.uiState.collectAsState()
 
+    // Auto-dismiss notification banner after 3 seconds so it never clutters the UI
+    LaunchedEffect(uiState.stageNotificationText) {
+        if (uiState.stageNotificationText != null) {
+            kotlinx.coroutines.delay(3000)
+            dssViewModel.dismissNotification()
+        }
+    }
+
     // Observe dynamic logs from Room database
     val observedLogs by remember(uiState.plotId) {
         try {
@@ -715,6 +723,19 @@ fun CropDssManagementDialog(
                     onDismiss()
                 }
             }
+        )
+    }
+
+    // Phase 3.5: Immediate Agronomic Diagnosis & Corrective Chores Result Modal
+    if (uiState.isDiagnosisResultOpen && uiState.latestDiagnosisResult != null) {
+        DiagnosisResultDialog(
+            plotLabel = uiState.plotLabel,
+            cropName = uiState.cropName,
+            cropVariety = uiState.cropVariety,
+            currentStage = uiState.currentStage,
+            result = uiState.latestDiagnosisResult!!,
+            onDismiss = { dssViewModel.closeDiagnosisResult() },
+            onViewChores = { dssViewModel.acceptDiagnosisAndGoToTasks() }
         )
     }
 }

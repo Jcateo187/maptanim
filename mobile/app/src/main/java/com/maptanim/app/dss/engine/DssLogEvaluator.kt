@@ -149,22 +149,78 @@ class DssLogEvaluator {
                     }
                     "B" -> {
                         // Stress / Needs care -> immediate corrective action today
+                        val hasDampingOff = log.selectedCheckboxes.any { it.contains("Hulas", ignoreCase = true) || it.contains("Stem rot", ignoreCase = true) }
+                        val isLeggy = log.selectedCheckboxes.any { it.contains("Leggy", ignoreCase = true) }
+                        val (taskTitle, taskDesc, taskType) = when {
+                            hasDampingOff -> Triple(
+                                "Dust Wood Ash for Damping-Off ('Hulas')",
+                                "Halt overhead watering, scrape damp topsoil away from collar, and dust dry wood ash (abo) around base.",
+                                TaskType.SOIL_AMENDMENT
+                            )
+                            isLeggy -> Triple(
+                                "Mound Soil & Move Leggy Seedlings to Sun",
+                                "Mound 1cm compost ring around stem and relocate seedlings to 6+ hours direct morning sun.",
+                                TaskType.SOIL_AMENDMENT
+                            )
+                            else -> Triple(
+                                "Corrective Care for ${log.cropName}",
+                                "Stress indicators noted ($conditionsText). Side-dress with compost or organic vermicast and check drainage today.",
+                                TaskType.FERTILIZE
+                            )
+                        }
                         tasks.add(GeneratedLogTask(
                             id = "task-care-${log.id}",
-                            title = "Corrective Care for ${log.cropName}",
-                            description = "Stress indicators noted ($conditionsText). Side-dress with compost or organic vermicast and check drainage today.",
-                            taskType = TaskType.FERTILIZE,
+                            title = taskTitle,
+                            description = taskDesc,
+                            taskType = taskType,
                             dueDate = todayStr,
                             stage = currentStage
                         ))
                     }
                     "C" -> {
                         // Pest / Damage -> urgent mitigation today
+                        val hasDampingOff = log.selectedCheckboxes.any { it.contains("Hulas", ignoreCase = true) || it.contains("Stem rot", ignoreCase = true) }
+                        val isChicken = log.selectedCheckboxes.any { it.contains("Chicken", ignoreCase = true) || it.contains("animal", ignoreCase = true) }
+                        val isPulled = log.selectedCheckboxes.any { it.contains("Pulled", ignoreCase = true) || it.contains("missing", ignoreCase = true) }
+                        val isBlossomEndRot = log.selectedCheckboxes.any { it.contains("Blossom-End Rot", ignoreCase = true) }
+                        val isBacterialWilt = log.selectedCheckboxes.any { it.contains("Bacterial wilt", ignoreCase = true) }
+                        val (taskTitle, taskDesc, taskType) = when {
+                            hasDampingOff -> Triple(
+                                "Dust Wood Ash for Damping-Off ('Hulas')",
+                                "Halt overhead watering, scrape damp topsoil away from collar, and dust dry wood ash (abo) around base.",
+                                TaskType.SOIL_AMENDMENT
+                            )
+                            isChicken -> Triple(
+                                "Install Bamboo Suksok Barrier (Chicken Scratch)",
+                                "Firm disturbed root crown, water lightly, and plant 10cm sharpened bamboo skewers (suksok) around perimeter.",
+                                TaskType.OBSERVATION
+                            )
+                            isPulled -> Triple(
+                                "Interplant Pechay in Open Spacing Gap",
+                                "Plant gap > 30cm detected. Transplant fast-growing Pechay/Mustard to utilize root zone and suppress weeds.",
+                                TaskType.SOIL_AMENDMENT
+                            )
+                            isBlossomEndRot -> Triple(
+                                "Apply Steeped Eggshell Vinegar for Blossom-End Rot",
+                                "Calcium uptake blocked. Drench root zone with steeped eggshell solution and mulch with rice straw.",
+                                TaskType.FERTILIZE
+                            )
+                            isBacterialWilt -> Triple(
+                                "Rogue & Quarantine Bacterial Wilt Plant",
+                                "Dig out entire wilted plant with root soil and dispose outside garden. Plan Legume rotation next cycle.",
+                                TaskType.PEST_ALERT
+                            )
+                            else -> Triple(
+                                "Apply Organic Spray for ${log.cropName}",
+                                "Pest/damage detected ($conditionsText). Spray organic chili-garlic-soap extract or neem solution late afternoon.",
+                                TaskType.APPLY_PESTICIDE
+                            )
+                        }
                         tasks.add(GeneratedLogTask(
                             id = "task-pest-${log.id}",
-                            title = "Pest & Damage Mitigation for ${log.cropName}",
-                            description = "Problem detected ($conditionsText). Apply organic neem solution (5ml/L) or handpick pests immediately today.",
-                            taskType = TaskType.PEST_ALERT,
+                            title = taskTitle,
+                            description = taskDesc,
+                            taskType = taskType,
                             dueDate = todayStr,
                             stage = currentStage
                         ))

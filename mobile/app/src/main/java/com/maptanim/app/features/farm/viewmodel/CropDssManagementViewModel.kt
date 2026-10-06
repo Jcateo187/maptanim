@@ -68,6 +68,8 @@ data class CropDssUiState(
     val isHarvestOpen: Boolean = false,
     val isTimelineExpanded: Boolean = true,
     val expandedStageAccordions: Set<String> = emptySet(),
+    val latestDiagnosisResult: DssLogEvaluator.LogEvaluationResult? = null,
+    val isDiagnosisResultOpen: Boolean = false,
     val isLoading: Boolean = false
 )
 
@@ -346,10 +348,26 @@ class CropDssManagementViewModel(
                     // Phase 3.4: Confirmation dialog if stage advance is suggested
                     pendingStageTransition = if (evalResult.stageAdvanced) evalResult.newStage else null,
                     isStageTransitionManual = false,
-                    stageNotificationText = if (!evalResult.stageAdvanced) "Observation submitted and evaluated for ${state.plotLabel}!" else null,
-                    isAddLogOpen = false
+                    stageNotificationText = null,
+                    isAddLogOpen = false,
+                    latestDiagnosisResult = evalResult,
+                    isDiagnosisResultOpen = true
                 )
             }
+        }
+    }
+
+    fun closeDiagnosisResult() {
+        _uiState.update { it.copy(isDiagnosisResultOpen = false) }
+    }
+
+    fun acceptDiagnosisAndGoToTasks() {
+        _uiState.update {
+            it.copy(
+                isDiagnosisResultOpen = false,
+                selectedTopTab = TopTab.GUIDE,
+                selectedDssTab = DssTab.TASKS
+            )
         }
     }
 
