@@ -2131,9 +2131,9 @@ BEGIN
     SELECT id INTO v_demo_user_id FROM public.users LIMIT 1;
     
     IF v_demo_user_id IS NOT NULL THEN
-        -- 1. Demo Farm
-        INSERT INTO public.farms (id, farmer_id, farm_name, location, total_area_sqm)
-        VALUES (v_demo_farm_id, v_demo_user_id, 'Murcia Demonstration Backyard Bed', 'Murcia, Negros Occidental', 50.0)
+        -- 1. Demo Farm (Aligned with migration 010/011 where location and total_area_sqm were dropped)
+        INSERT INTO public.farms (id, farmer_id, farm_name)
+        VALUES (v_demo_farm_id, v_demo_user_id, 'Murcia Demonstration Backyard Bed')
         ON CONFLICT (id) DO UPDATE SET farm_name = EXCLUDED.farm_name;
 
         -- 2. Bed 1: Vegetative Tomato (Calibrated to Day 25, NOT Day 0)
@@ -2142,7 +2142,7 @@ BEGIN
             pos_x, pos_y, width_m, height_m, planted_date, notes
         ) VALUES (
             v_plot_1_id, v_demo_farm_id, 'Bed 1 - Tomato', 'Tomato', 'Diamante Max F1', 'LOAM',
-            0.5, 0.5, 2.0, 3.0, CURRENT_DATE - INTERVAL '25 days',
+            0.5, 0.5, 2.0, 3.0, TO_CHAR(CURRENT_DATE - INTERVAL '25 days', 'YYYY-MM-DD'),
             'Real-world vegetative stage plant (Day 25). Staked with bamboo and mulched with rice straw.'
         ) ON CONFLICT (id) DO UPDATE SET crop_variety = EXCLUDED.crop_variety;
 
@@ -2152,7 +2152,7 @@ BEGIN
             pos_x, pos_y, width_m, height_m, planted_date, notes
         ) VALUES (
             v_plot_2_id, v_demo_farm_id, 'Bed 2 - Eggplant', 'Eggplant', 'Dumaguete Long Purple', 'CLAY',
-            3.0, 0.5, 2.0, 3.0, CURRENT_DATE - INTERVAL '30 days',
+            3.0, 0.5, 2.0, 3.0, TO_CHAR(CURRENT_DATE - INTERVAL '30 days', 'YYYY-MM-DD'),
             'Vegetative vigor stage. Pruned bottom suckers up to first flower fork.'
         ) ON CONFLICT (id) DO UPDATE SET crop_variety = EXCLUDED.crop_variety;
 
