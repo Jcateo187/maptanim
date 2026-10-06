@@ -24,9 +24,37 @@ AS $$
   );
 $$;
 
--- 2. Yard Dimensions on farms table (for real-world yard calibration sync)
+-- 2. Schema Alignment: Ensure required foreign keys, calibration columns and fields exist
 ALTER TABLE public.farms ADD COLUMN IF NOT EXISTS yard_width_m NUMERIC(6,2);
 ALTER TABLE public.farms ADD COLUMN IF NOT EXISTS yard_length_m NUMERIC(6,2);
+ALTER TABLE public.farms ADD COLUMN IF NOT EXISTS farmer_id TEXT;
+
+-- Align harvest_records: ensure farm_id exists (in case table was created with 001 which only had plot_id)
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS farm_id TEXT;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS plot_id TEXT;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS farm_name VARCHAR(100) DEFAULT 'MapTanim Main Farm';
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS plot_label VARCHAR(50) DEFAULT 'Plot 1';
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS crop_variety VARCHAR(100);
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS planted_date TEXT;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS harvested_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS harvested_date TEXT;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS growing_duration_days INT DEFAULT 0;
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS quality_grade VARCHAR(20) DEFAULT 'Grade A';
+ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS quality_rating INT DEFAULT 5;
+
+-- Align crop_plots, crop_zones, tasks
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS farm_id TEXT;
+ALTER TABLE public.crop_zones ADD COLUMN IF NOT EXISTS plot_id TEXT;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS farm_id TEXT;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS plot_id TEXT;
+
+-- Backfill farm_id from crop_plots if missing on existing harvest_records
+DO $$ BEGIN
+    UPDATE public.harvest_records hr
+    SET farm_id = p.farm_id::text
+    FROM public.crop_plots p
+    WHERE hr.plot_id::text = p.id::text AND (hr.farm_id IS NULL OR hr.farm_id = '');
+EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- 3. Formalize DSS tables into versioned migration flow
 DO $$ BEGIN
@@ -234,6 +262,11 @@ DROP POLICY IF EXISTS "farms_read_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_insert_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_update_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_delete_all" ON public.farms;
+DROP POLICY IF EXISTS "farmers_own_farms" ON public.farms;
+DROP POLICY IF EXISTS "farms_select_owner_or_admin" ON public.farms;
+DROP POLICY IF EXISTS "farms_insert_owner_or_admin" ON public.farms;
+DROP POLICY IF EXISTS "farms_update_owner_or_admin" ON public.farms;
+DROP POLICY IF EXISTS "farms_delete_owner_or_admin" ON public.farms;
 
 CREATE POLICY "farms_select_owner_or_admin" ON public.farms
     FOR SELECT USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
@@ -248,6 +281,11 @@ CREATE POLICY "farms_delete_owner_or_admin" ON public.farms
 ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_plots_all" ON public.crop_plots;
 DROP POLICY IF EXISTS "crop_plots_read_all" ON public.crop_plots;
+DROP POLICY IF EXISTS "farmers_own_crop_plots" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_select" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_insert" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_update" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_delete" ON public.crop_plots;
 
 CREATE POLICY "crop_plots_select" ON public.crop_plots
     FOR SELECT USING (
@@ -273,6 +311,10 @@ CREATE POLICY "crop_plots_delete" ON public.crop_plots
 -- public.crop_zones
 ALTER TABLE public.crop_zones ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_zones_all" ON public.crop_zones;
+DROP POLICY IF EXISTS "crop_zones_select" ON public.crop_zones;
+DROP POLICY IF EXISTS "crop_zones_insert" ON public.crop_zones;
+DROP POLICY IF EXISTS "crop_zones_update" ON public.crop_zones;
+DROP POLICY IF EXISTS "crop_zones_delete" ON public.crop_zones;
 
 CREATE POLICY "crop_zones_select" ON public.crop_zones
     FOR SELECT USING (
@@ -314,35 +356,61 @@ CREATE POLICY "crop_zones_delete" ON public.crop_zones
 -- public.harvest_records
 ALTER TABLE public.harvest_records ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "harvest_records_all" ON public.harvest_records;
+DROP POLICY IF EXISTS "farmers_own_harvest" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_select" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_insert" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_update" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_delete" ON public.harvest_records;
 
 CREATE POLICY "harvest_records_select" ON public.harvest_records
     FOR SELECT USING (
-        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        (farm_id IS NOT NULL AND farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text))
+        OR (plot_id IS NOT NULL AND plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
+        ))
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_insert" ON public.harvest_records
     FOR INSERT WITH CHECK (
-        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        (farm_id IS NOT NULL AND farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text))
+        OR (plot_id IS NOT NULL AND plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
+        ))
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_update" ON public.harvest_records
     FOR UPDATE USING (
-        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        (farm_id IS NOT NULL AND farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text))
+        OR (plot_id IS NOT NULL AND plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
+        ))
         OR public.is_admin()
     );
 CREATE POLICY "harvest_records_delete" ON public.harvest_records
     FOR DELETE USING (
-        farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text)
+        (farm_id IS NOT NULL AND farm_id::text IN (SELECT f.id::text FROM public.farms f WHERE f.farmer_id::text = (auth.uid())::text))
+        OR (plot_id IS NOT NULL AND plot_id::text IN (
+            SELECT p.id::text FROM public.crop_plots p
+            JOIN public.farms f ON p.farm_id::text = f.id::text
+            WHERE f.farmer_id::text = (auth.uid())::text
+        ))
         OR public.is_admin()
     );
 
 -- public.tasks
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tasks_all" ON public.tasks;
+DROP POLICY IF EXISTS "farmers_own_tasks" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_select" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_insert" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_update" ON public.tasks;
 DROP POLICY IF EXISTS "tasks_delete" ON public.tasks;
-DROP POLICY IF EXISTS "tasks_all" ON public.tasks;
 
 CREATE POLICY "tasks_select" ON public.tasks
     FOR SELECT USING (
@@ -368,6 +436,10 @@ CREATE POLICY "tasks_delete" ON public.tasks
 -- public.crop_logs
 ALTER TABLE public.crop_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_logs_all" ON public.crop_logs;
+DROP POLICY IF EXISTS "crop_logs_select" ON public.crop_logs;
+DROP POLICY IF EXISTS "crop_logs_insert" ON public.crop_logs;
+DROP POLICY IF EXISTS "crop_logs_update" ON public.crop_logs;
+DROP POLICY IF EXISTS "crop_logs_delete" ON public.crop_logs;
 
 CREATE POLICY "crop_logs_select" ON public.crop_logs
     FOR SELECT USING (
@@ -391,9 +463,12 @@ CREATE POLICY "crop_logs_delete" ON public.crop_logs
     );
 
 -- public.dss_evaluations & public.dss_decisions
+ALTER TABLE IF EXISTS public.dss_evaluations ADD COLUMN IF NOT EXISTS farm_id TEXT;
 ALTER TABLE IF EXISTS public.dss_evaluations ADD COLUMN IF NOT EXISTS farmer_id TEXT;
 ALTER TABLE public.dss_evaluations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "dss_evaluations_all" ON public.dss_evaluations;
+DROP POLICY IF EXISTS "dss_evaluations_select" ON public.dss_evaluations;
+DROP POLICY IF EXISTS "dss_evaluations_insert" ON public.dss_evaluations;
 
 CREATE POLICY "dss_evaluations_select" ON public.dss_evaluations
     FOR SELECT USING (
@@ -406,8 +481,12 @@ CREATE POLICY "dss_evaluations_insert" ON public.dss_evaluations
         OR public.is_admin()
     );
 
+ALTER TABLE IF EXISTS public.dss_decisions ADD COLUMN IF NOT EXISTS farm_id TEXT;
 ALTER TABLE public.dss_decisions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "dss_decisions_all" ON public.dss_decisions;
+DROP POLICY IF EXISTS "dss_decisions_select" ON public.dss_decisions;
+DROP POLICY IF EXISTS "dss_decisions_insert" ON public.dss_decisions;
+DROP POLICY IF EXISTS "dss_decisions_update" ON public.dss_decisions;
 
 CREATE POLICY "dss_decisions_select" ON public.dss_decisions
     FOR SELECT USING (
@@ -432,6 +511,9 @@ CREATE POLICY "dss_decisions_update" ON public.dss_decisions
 -- public.feedback
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "feedback_all" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_select" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_insert" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_update" ON public.feedback;
 
 CREATE POLICY "feedback_select" ON public.feedback
     FOR SELECT USING (user_id::text = (auth.uid())::text OR public.is_admin());
@@ -443,6 +525,10 @@ CREATE POLICY "feedback_update" ON public.feedback
 -- public.notifications
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "notifications_all" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_select" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_insert" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_update" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_delete" ON public.notifications;
 
 CREATE POLICY "notifications_select" ON public.notifications
     FOR SELECT USING (
@@ -466,6 +552,10 @@ DROP POLICY IF EXISTS "community_posts_select_all" ON public.community_posts;
 DROP POLICY IF EXISTS "community_posts_insert_all" ON public.community_posts;
 DROP POLICY IF EXISTS "community_posts_update_all" ON public.community_posts;
 DROP POLICY IF EXISTS "community_posts_delete_all" ON public.community_posts;
+DROP POLICY IF EXISTS "community_posts_select" ON public.community_posts;
+DROP POLICY IF EXISTS "community_posts_insert" ON public.community_posts;
+DROP POLICY IF EXISTS "community_posts_update" ON public.community_posts;
+DROP POLICY IF EXISTS "community_posts_delete" ON public.community_posts;
 
 CREATE POLICY "community_posts_select" ON public.community_posts
     FOR SELECT USING (true);
@@ -482,6 +572,10 @@ DROP POLICY IF EXISTS "community_comments_select_all" ON public.community_commen
 DROP POLICY IF EXISTS "community_comments_insert_all" ON public.community_comments;
 DROP POLICY IF EXISTS "community_comments_update_all" ON public.community_comments;
 DROP POLICY IF EXISTS "community_comments_delete_all" ON public.community_comments;
+DROP POLICY IF EXISTS "community_comments_select" ON public.community_comments;
+DROP POLICY IF EXISTS "community_comments_insert" ON public.community_comments;
+DROP POLICY IF EXISTS "community_comments_update" ON public.community_comments;
+DROP POLICY IF EXISTS "community_comments_delete" ON public.community_comments;
 
 CREATE POLICY "community_comments_select" ON public.community_comments
     FOR SELECT USING (true);
@@ -498,6 +592,10 @@ DROP POLICY IF EXISTS "community_reports_select_all" ON public.community_reports
 DROP POLICY IF EXISTS "community_reports_insert_all" ON public.community_reports;
 DROP POLICY IF EXISTS "community_reports_update_all" ON public.community_reports;
 DROP POLICY IF EXISTS "community_reports_delete_all" ON public.community_reports;
+DROP POLICY IF EXISTS "community_reports_select" ON public.community_reports;
+DROP POLICY IF EXISTS "community_reports_insert" ON public.community_reports;
+DROP POLICY IF EXISTS "community_reports_update" ON public.community_reports;
+DROP POLICY IF EXISTS "community_reports_delete" ON public.community_reports;
 
 CREATE POLICY "community_reports_select" ON public.community_reports
     FOR SELECT USING (public.is_admin());
