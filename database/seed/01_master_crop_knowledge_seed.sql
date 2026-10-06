@@ -19,7 +19,15 @@
 
 -- 1. TABLE DEFINITIONS AND RLS POLICIES ------------------------------------
 
-CREATE TABLE IF NOT EXISTS public.crop_yield_studies (
+-- Drop legacy or partial reference knowledge tables to guarantee exact column schema
+-- (e.g. converting soil_type from rigid enum to VARCHAR(50) so it supports all soil textures)
+DROP TABLE IF EXISTS public.crop_pest_disease_guides CASCADE;
+DROP TABLE IF EXISTS public.crop_soil_compatibilities CASCADE;
+DROP TABLE IF EXISTS public.crop_growth_stages CASCADE;
+DROP TABLE IF EXISTS public.crop_varieties CASCADE;
+DROP TABLE IF EXISTS public.crop_yield_studies CASCADE;
+
+CREATE TABLE public.crop_yield_studies (
     id                          TEXT            PRIMARY KEY,
     crop_name                   VARCHAR(100)    NOT NULL,
     variety_name                VARCHAR(100)    NOT NULL,
@@ -43,7 +51,7 @@ ALTER TABLE public.crop_yield_studies ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_yield_studies_read_all" ON public.crop_yield_studies;
 CREATE POLICY "crop_yield_studies_read_all" ON public.crop_yield_studies FOR SELECT USING (true);
 
-CREATE TABLE IF NOT EXISTS public.crop_varieties (
+CREATE TABLE public.crop_varieties (
     id                          TEXT            PRIMARY KEY,
     crop_name                   VARCHAR(100)    NOT NULL,
     variety_name                VARCHAR(100)    NOT NULL,
@@ -68,7 +76,7 @@ ALTER TABLE public.crop_varieties ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_varieties_read_all" ON public.crop_varieties;
 CREATE POLICY "crop_varieties_read_all" ON public.crop_varieties FOR SELECT USING (true);
 
-CREATE TABLE IF NOT EXISTS public.crop_growth_stages (
+CREATE TABLE public.crop_growth_stages (
     id                          TEXT            PRIMARY KEY,
     crop_name                   VARCHAR(100)    NOT NULL,
     stage_index                 INT             NOT NULL,
@@ -88,7 +96,7 @@ ALTER TABLE public.crop_growth_stages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_growth_stages_read_all" ON public.crop_growth_stages;
 CREATE POLICY "crop_growth_stages_read_all" ON public.crop_growth_stages FOR SELECT USING (true);
 
-CREATE TABLE IF NOT EXISTS public.crop_soil_compatibilities (
+CREATE TABLE public.crop_soil_compatibilities (
     id                          TEXT            PRIMARY KEY,
     crop_name                   VARCHAR(100)    NOT NULL,
     soil_type                   VARCHAR(50)     NOT NULL,
@@ -105,7 +113,7 @@ ALTER TABLE public.crop_soil_compatibilities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_soil_compatibilities_read_all" ON public.crop_soil_compatibilities;
 CREATE POLICY "crop_soil_compatibilities_read_all" ON public.crop_soil_compatibilities FOR SELECT USING (true);
 
-CREATE TABLE IF NOT EXISTS public.crop_pest_disease_guides (
+CREATE TABLE public.crop_pest_disease_guides (
     id                          TEXT            PRIMARY KEY,
     crop_name                   VARCHAR(100)    NOT NULL,
     pest_disease_name           VARCHAR(150)    NOT NULL,
@@ -147,9 +155,9 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_tomato_camiguin_2016', 'Tomato', 'Diamante Max F1', 'STUDY_TOMATO_CAMIGUIN_2016',
-    'Utilization of Indigenous Mulches on the Growth and Yield of Different Tomato Varieties in Catarman, Camiguin, Philippines', 'Catarman, Camiguin, Northern Mindanao', 'October 2015 â€“ February 2016', 'Open Field / Backyard Bed with Organic Mulch Blanket',
+    'Utilization of Indigenous Mulches on the Growth and Yield of Different Tomato Varieties in Catarman, Camiguin, Philippines', 'Catarman, Camiguin, Northern Mindanao', 'October 2015 - February 2016', 'Open Field / Backyard Bed with Organic Mulch Blanket',
     'Covering soil with a 2-inch layer of clean sawdust, dried rice straw, or dry grass (cogon) vs bare exposed soil.', 4.28, 5.08, 18.69,
-    'Covering soil around tomato plants with organic mulch keeps the root zone cool under tropical sun, suppresses weeds, and yields up to 25â€“35 firm tomatoes per plant.', 'Erecson Sipin Solis, Larry Dionio, Ruth Duran, Jeanny Dacup', 'Camiguin Polytechnic State College', 'Camiguin Agronomic Field Trial 2015â€“2016 (ResearchGate)'
+    'Covering soil around tomato plants with organic mulch keeps the root zone cool under tropical sun, suppresses weeds, and yields up to 25-35 firm tomatoes per plant.', 'Erecson Sipin Solis, Larry Dionio, Ruth Duran, Jeanny Dacup', 'Camiguin Polytechnic State College', 'Camiguin Agronomic Field Trial 2015-2016 (ResearchGate)'
 ) ON CONFLICT (id) DO UPDATE SET
     reported_yield_t_per_ha = EXCLUDED.reported_yield_t_per_ha,
     key_findings = EXCLUDED.key_findings;
@@ -160,7 +168,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_tomato_bacnotan_2025', 'Tomato', 'Off-Season Hybrid Cultivar', 'STUDY_TOMATO_BACNOTAN_2025',
-    'Yield and Growth Response of Off-Season Tomato to Trehalose Foliar Fertilizer under Protected Cultivation in Bacnotan, La Union', 'Bacnotan, La Union, Ilocos Region', '2024 â€“ 2025 Off-Season', 'Simple Protective Canopy / Backyard Rain Shelter',
+    'Yield and Growth Response of Off-Season Tomato to Trehalose Foliar Fertilizer under Protected Cultivation in Bacnotan, La Union', 'Bacnotan, La Union, Ilocos Region', '2024 - 2025 Off-Season', 'Simple Protective Canopy / Backyard Rain Shelter',
     'Natural trehalose plant sugar spray (or 1 tsp brown sugar per liter clean water) misted gently on tomato flowers 3 times during blooming.', NULL, 4.75, NULL,
     'Under hot or rainy backyard conditions, spraying a mild sugar-water solution on blossoms prevents flower drop, helping almost every tomato flower develop into a full, sweet fruit.', 'Agronomic Research Team, DMMMSU-NLUC', 'Don Mariano Marcos Memorial State University, Bacnotan, La Union', 'International Journal of Environment, Agriculture and Biotechnology (2025)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -173,9 +181,9 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_eggplant_uplb_2022', 'Eggplant', 'Dumaguete Long Purple', 'STUDY_EGGPLANT_UPLB_2022',
-    'Evaluation of Vermicompost Rates on Growth and Fruit Yield of Eggplant under Lowland Backyard Conditions', 'Los BaÃ±os, Laguna', 'November 2021 â€“ March 2022', 'Raised Bed with Vermicompost Soil Amendment',
+    'Evaluation of Vermicompost Rates on Growth and Fruit Yield of Eggplant under Lowland Backyard Conditions', 'Los Baños, Laguna', 'November 2021 - March 2022', 'Raised Bed with Vermicompost Soil Amendment',
     'Application of 1 kg vermicompost per square meter compared to unamended garden soil.', 12.5, 16.8, 34.4,
-    'Vermicompost significantly boosted lateral root development, extending the productive harvesting cycle to over 10 consecutive weekly pickings.', 'R. M. Hernandez, C. T. Santos', 'Institute of Plant Breeding, University of the Philippines Los BaÃ±os (UPLB)', 'Philippine Journal of Crop Science (Vol. 47, 2022)'
+    'Vermicompost significantly boosted lateral root development, extending the productive harvesting cycle to over 10 consecutive weekly pickings.', 'R. M. Hernandez, C. T. Santos', 'Institute of Plant Breeding, University of the Philippines Los Baños (UPLB)', 'Philippine Journal of Crop Science (Vol. 47, 2022)'
 ) ON CONFLICT (id) DO UPDATE SET
     reported_yield_t_per_ha = EXCLUDED.reported_yield_t_per_ha,
     key_findings = EXCLUDED.key_findings;
@@ -186,7 +194,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_chili_clsu_2023', 'Chili Pepper', 'Tingala F1 / Sili Labuyo', 'STUDY_CHILI_CLSU_2023',
-    'Influence of Carbonized Rice Hull and Organic Fertilizer on Pungency and Yield of Hot Chili', 'MuÃ±oz, Nueva Ecija, Central Luzon', 'January â€“ May 2023', 'Raised Beds with Carbonized Rice Hull (CRH) Mulch',
+    'Influence of Carbonized Rice Hull and Organic Fertilizer on Pungency and Yield of Hot Chili', 'Muñoz, Nueva Ecija, Central Luzon', 'January - May 2023', 'Raised Beds with Carbonized Rice Hull (CRH) Mulch',
     'Incorporating 20% by volume CRH into soil and applying weekly fermented plant juice.', 6.2, 8.4, 35.48,
     'CRH improved soil aeration and drainage, preventing phytophthora root rot during sudden afternoon rains and increasing cumulative pod yield by 35%.', 'A. V. Dela Cruz, M. B. Ramos', 'Central Luzon State University (CLSU)', 'CLSU Scientific Journal of Agriculture (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -199,8 +207,8 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_okra_cmu_2023', 'Okra', 'Smooth Green', 'STUDY_OKRA_CMU_2023',
-    'Spacing and Organic Mulching Effects on Pod Yield of Okra in Southern Lowlands', 'Musuan, Maramag, Bukidnon', 'September â€“ December 2023', 'Direct-Sown Garden Bed with Dried Banana Leaf Mulch',
-    'Plant spacing of 30 cm Ã— 50 cm with dried banana leaf mulch compared to bare soil.', 8.1, 10.9, 34.56,
+    'Spacing and Organic Mulching Effects on Pod Yield of Okra in Southern Lowlands', 'Musuan, Maramag, Bukidnon', 'September - December 2023', 'Direct-Sown Garden Bed with Dried Banana Leaf Mulch',
+    'Plant spacing of 30 cm × 50 cm with dried banana leaf mulch compared to bare soil.', 8.1, 10.9, 34.56,
     'Mulching maintained cool soil temperatures and prevented pods from becoming fibrous prematurely, increasing marketable tender pod harvest frequency.', 'G. E. Tan, S. K. Morales', 'Central Mindanao University (CMU)', 'CMU Journal of Science (Vol. 27, 2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     reported_yield_t_per_ha = EXCLUDED.reported_yield_t_per_ha,
@@ -212,7 +220,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_pechay_bsu_2024', 'Pechay', 'Black Behi', 'STUDY_PECHAY_BSU_2024',
-    'Comparative Performance of Pechay Applied with Different Organic Foliar Formulations in Backyard Beds', 'La Trinidad, Benguet', 'February â€“ March 2024', 'Smallholder Raised Box Beds',
+    'Comparative Performance of Pechay Applied with Different Organic Foliar Formulations in Backyard Beds', 'La Trinidad, Benguet', 'February - March 2024', 'Smallholder Raised Box Beds',
     'Bi-weekly foliar application of fermented seaweed and vermitea vs control.', 14.2, 19.5, 37.32,
     'Foliar organic nutrition accelerated leaf blade expansion and allowed harvesting at 28 days with broad, crisp, tender petioles.', 'L. P. Baguio, E. C. Alumit', 'Benguet State University (BSU)', 'BSU Research Bulletin (2024)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -225,8 +233,8 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_lettuce_uplb_2023', 'Lettuce', 'Green Towers Romaine', 'STUDY_LETTUCE_UPLB_2023',
-    'Shade Netting and Organic Media Optimization for Off-Season Tropical Lowland Lettuce', 'Los BaÃ±os, Laguna', 'May â€“ June 2023 (Hot Lowland Period)', 'Raised Beds with 40% Black Shade Netting',
-    'Growing under 40% shade net during 11:00 AM â€“ 2:00 PM with coconut coir dust mulch.', 7.5, 11.2, 49.33,
+    'Shade Netting and Organic Media Optimization for Off-Season Tropical Lowland Lettuce', 'Los Baños, Laguna', 'May - June 2023 (Hot Lowland Period)', 'Raised Beds with 40% Black Shade Netting',
+    'Growing under 40% shade net during 11:00 AM - 2:00 PM with coconut coir dust mulch.', 7.5, 11.2, 49.33,
     'Midday shade netting prevented thermal bolting and tipburn, allowing crisp Romaine heads to reach full 250g weight in lowland heat.', 'F. B. Navarro, T. D. Perez', 'College of Agriculture and Food Science, UPLB', 'Philippine Agricultural Scientist (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     reported_yield_t_per_ha = EXCLUDED.reported_yield_t_per_ha,
@@ -238,7 +246,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_kangkong_mmsu_2023', 'Kangkong', 'Upland Sparkle', 'STUDY_KANGKONG_MMSU_2023',
-    'Ratoon Regeneration and Shoot Yield of Upland Kangkong under Consecutive Organic Cuttings', 'Batac, Ilocos Norte', 'July â€“ October 2023', 'Furrow Bed with Frequent Irrigation',
+    'Ratoon Regeneration and Shoot Yield of Upland Kangkong under Consecutive Organic Cuttings', 'Batac, Ilocos Norte', 'July - October 2023', 'Furrow Bed with Frequent Irrigation',
     'Cutting shoots 5 cm above base every 14 days with application of compost tea after each cut.', 15.0, 22.8, 52.0,
     'Upland kangkong yielded 4 sequential cuttings over 60 days without loss of shoot tenderness when nourished with compost tea between harvests.', 'M. J. Agcaoili, R. V. Castro', 'Mariano Marcos State University (MMSU)', 'MMSU Agricultural Research Series (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -251,7 +259,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_cucumber_tau_2023', 'Cucumber', 'Poinsett 76', 'STUDY_CUCUMBER_TAU_2023',
-    'Vertical Bamboo Trellising vs Ground Crawling on Slicing Cucumber Yield and Fruit Quality', 'Camiling, Tarlac', 'October 2022 â€“ January 2023', 'A-Frame Bamboo Trellis with Rice Straw Mulch',
+    'Vertical Bamboo Trellising vs Ground Crawling on Slicing Cucumber Yield and Fruit Quality', 'Camiling, Tarlac', 'October 2022 - January 2023', 'A-Frame Bamboo Trellis with Rice Straw Mulch',
     'Training vines on a 1.8m A-frame bamboo trellis vs allowing vines to sprawl on ground.', 11.4, 18.2, 59.65,
     'Vertical trellising kept fruits clean, reduced fungal rot by 75%, and increased Grade-A straight marketable fruits by nearly 60%.', 'D. C. Pascual, J. R. Mendoza', 'Tarlac Agricultural University (TAU)', 'TAU Research Journal of Applied Agronomy (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -264,7 +272,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_sitaw_da_cviarc_2023', 'Yardlong Bean', 'Sandigan', 'STUDY_SITAW_DA_CVIARC_2023',
-    'Evaluation of Pole Yardlong Bean as Soil-Improving Rotation Crop Following Solanaceous Vegetables', 'Ilagan, Isabela, Cagayan Valley', 'May â€“ August 2023', 'Trellised Bed with Native Rhizobia Inoculation',
+    'Evaluation of Pole Yardlong Bean as Soil-Improving Rotation Crop Following Solanaceous Vegetables', 'Ilagan, Isabela, Cagayan Valley', 'May - August 2023', 'Trellised Bed with Native Rhizobia Inoculation',
     'Planting yardlong bean immediately after tomato harvest with organic compost dressing.', 9.2, 13.6, 47.83,
     'Yardlong bean produced high pod yields while fixing 85 kg N/ha into root nodules, dramatically improving soil fertility for subsequent crop cycles.', 'R. E. Guzman, V. P. Taguba', 'DA Cagayan Valley Integrated Agricultural Research Center (DA-CVIARC)', 'DA-BAR Research Output Series (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -277,7 +285,7 @@ INSERT INTO public.crop_yield_studies (
     yield_increase_percent, key_findings, authors, institution, publication_reference
 ) VALUES (
     'yield_study_corn_clsu_2024', 'Sweet Corn', 'Machu F1', 'STUDY_CORN_CLSU_2024',
-    'Block Planting Configuration and Organic Nitrogen Timing on Sweet Corn Ear Fill and Kernel Sweetness', 'MuÃ±oz, Nueva Ecija', 'December 2023 â€“ March 2024', '4-Row Grid Block Planting with Organic Manure Dressing',
+    'Block Planting Configuration and Organic Nitrogen Timing on Sweet Corn Ear Fill and Kernel Sweetness', 'Muñoz, Nueva Ecija', 'December 2023 - March 2024', '4-Row Grid Block Planting with Organic Manure Dressing',
     'Planting in 4-row square blocks for cross-pollination with side-dressing at knee-high and tasseling stages.', 8.5, 12.1, 42.35,
     'Block planting ensured 98% complete kernel fill on sweet corn ears compared to single row planting which suffered from patchy missing kernels.', 'K. L. Villanueva, P. S. Soriano', 'Central Luzon State University (CLSU)', 'CLSU Grain & Vegetable Research Quarterly (2024)'
 ) ON CONFLICT (id) DO UPDATE SET
@@ -321,7 +329,7 @@ INSERT INTO public.crop_varieties (
 ) VALUES (
     'var_eggplant_dumaguete_long_purple', 'Eggplant', 'Dumaguete Long Purple', 'Talong Dumaguete Long Purple', 'Bureau of Plant Industry (BPI) / Open Pollinated',
     80, 7, 18, 25, 20, 10, 2, 14,
-    ARRAY['YEAR_ROUND', 'DRY'], 'Tolerant to bacterial wilt and phomopsis blight.', 'Prolific open-pollinated variety producing slender, deep-purple cylindrical fruits 25â€“30 cm long.', 'DA-BPI Philippine Vegetable Production Guide: Eggplant (2023)'
+    ARRAY['YEAR_ROUND', 'DRY'], 'Tolerant to bacterial wilt and phomopsis blight.', 'Prolific open-pollinated variety producing slender, deep-purple cylindrical fruits 25-30 cm long.', 'DA-BPI Philippine Vegetable Production Guide: Eggplant (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     growth_duration_days = EXCLUDED.growth_duration_days,
     disease_resistance = EXCLUDED.disease_resistance,
@@ -377,7 +385,7 @@ INSERT INTO public.crop_varieties (
 ) VALUES (
     'var_okra_smooth_green', 'Okra', 'Smooth Green', 'Okra Makinis', 'Bureau of Plant Industry (BPI)',
     55, 4, 10, 18, 13, 10, 2, 10,
-    ARRAY['YEAR_ROUND', 'WET', 'DRY'], 'Resistant to yellow vein mosaic virus (YVMV).', 'Spineless, dark-green 5-ridged pods that stay tender up to 10â€“12 cm length.', 'DA-BPI Okra Technical Bulletin 2023'
+    ARRAY['YEAR_ROUND', 'WET', 'DRY'], 'Resistant to yellow vein mosaic virus (YVMV).', 'Spineless, dark-green 5-ridged pods that stay tender up to 10-12 cm length.', 'DA-BPI Okra Technical Bulletin 2023'
 ) ON CONFLICT (id) DO UPDATE SET
     growth_duration_days = EXCLUDED.growth_duration_days,
     disease_resistance = EXCLUDED.disease_resistance,
@@ -447,7 +455,7 @@ INSERT INTO public.crop_varieties (
 ) VALUES (
     'var_sitaw_sandigan', 'Yardlong Bean', 'Sandigan Light Green', 'Sitaw Sandigan', 'UPLB-IPB / NSIC Released',
     60, 4, 10, 20, 16, 10, 2, 12,
-    ARRAY['YEAR_ROUND', 'DRY', 'WET'], 'Resistant to bean rust and mosaic virus; naturally fixes atmospheric nitrogen.', 'Heavy-yielding pole legume with tender 55â€“65 cm long light-green pods. Key crop rotation anchor.', 'DA-BPI National Legume Production Standards 2024'
+    ARRAY['YEAR_ROUND', 'DRY', 'WET'], 'Resistant to bean rust and mosaic virus; naturally fixes atmospheric nitrogen.', 'Heavy-yielding pole legume with tender 55-65 cm long light-green pods. Key crop rotation anchor.', 'DA-BPI National Legume Production Standards 2024'
 ) ON CONFLICT (id) DO UPDATE SET
     growth_duration_days = EXCLUDED.growth_duration_days,
     disease_resistance = EXCLUDED.disease_resistance,
@@ -487,7 +495,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_tomato_1', 'Tomato', 1, 'SEEDLING / NURSERY', 6, 18,
-    'Gradually expose seedlings to gentle morning sunlight (2â€“3 hours).', 'Thin out weaker seedlings; keep strongest 1 per pot cell.', 'Water once daily early morning. Keep soil evenly moist but not waterlogged.',
+    'Gradually expose seedlings to gentle morning sunlight (2-3 hours).', 'Thin out weaker seedlings; keep strongest 1 per pot cell.', 'Water once daily early morning. Keep soil evenly moist but not waterlogged.',
     'Apply weak diluted vermitea or compost tea (1:5 dilution) on Day 12.', 'Leggy stretched stems from lack of sunlight; flea beetle chewing holes.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -526,7 +534,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_tomato_4', 'Tomato', 4, 'HARVEST & SUCCESSION', 55, 60,
-    'Harvest firm, color-turning pink/red fruits with hand shears in the morning.', 'Leave green stems intact; continuous harvest over 2â€“4 weeks.', 'Reduce watering slightly to concentrate sugar flavor in ripening fruits.',
+    'Harvest firm, color-turning pink/red fruits with hand shears in the morning.', 'Leave green stems intact; continuous harvest over 2-4 weeks.', 'Reduce watering slightly to concentrate sugar flavor in ripening fruits.',
     'No chemical inputs; light organic foliar mist if continuing harvest flushes.', 'Fruit cracking from sudden heavy rainfall; fruit rot from ground contact.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -552,7 +560,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_eggplant_1', 'Eggplant', 1, 'SEEDLING STAGE', 8, 25,
-    'Harden seedlings under full morning sun 5 days before transplanting.', 'Select stocky seedlings with 4â€“5 true leaves for bed planting.', 'Water in the morning; ensure pots drain cleanly.',
+    'Harden seedlings under full morning sun 5 days before transplanting.', 'Select stocky seedlings with 4-5 true leaves for bed planting.', 'Water in the morning; ensure pots drain cleanly.',
     'Apply diluted compost extract on Day 18 to strengthen root collar.', 'Flea beetles and aphid colonies on undersides of young leaves.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -565,7 +573,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_eggplant_2', 'Eggplant', 2, 'VEGETATIVE VIGOR', 26, 50,
-    'Transplant at 50 cm spacing; erect strong bamboo stake per plant.', 'Remove lower auxiliary shoots up to the first flower fork.', 'Deep watering every 2â€“3 days depending on tropical heat.',
+    'Transplant at 50 cm spacing; erect strong bamboo stake per plant.', 'Remove lower auxiliary shoots up to the first flower fork.', 'Deep watering every 2-3 days depending on tropical heat.',
     'Top-dress with decomposed chicken manure or vermicompost every 14 days.', 'Shoot and fruit borer (EFSB) larvae wilting growing branch tips.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -591,7 +599,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_eggplant_4', 'Eggplant', 4, 'HARVEST FLUSHES', 71, 80,
-    'Harvest glossy, firm purple fruits using pruning shears before seeds harden.', 'Clip fruit with 2 cm green calyx attached; harvests extend for 2â€“3 months.', 'Maintain moderate moisture to encourage continuous secondary flower buds.',
+    'Harvest glossy, firm purple fruits using pruning shears before seeds harden.', 'Clip fruit with 2 cm green calyx attached; harvests extend for 2-3 months.', 'Maintain moderate moisture to encourage continuous secondary flower buds.',
     'Apply top-dress compost after every second harvest flush.', 'Over-mature fruits turning dull brown and tough with hard bitter seeds.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -604,7 +612,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_chili_pepper_0', 'Chili Pepper', 0, 'SPROUT / GERMINATION', 1, 8,
-    'Sow seeds in seedling flats; place in bright, warm covered nursery.', 'Keep soil mix consistently damp; chili seeds require warm soil (28â€“32°C).', 'Gentle surface misting twice daily on hot sunny days.',
+    'Sow seeds in seedling flats; place in bright, warm covered nursery.', 'Keep soil mix consistently damp; chili seeds require warm soil (28-32°C).', 'Gentle surface misting twice daily on hot sunny days.',
     'None needed in initial seed cotyledon stage.', 'Ants carrying away sown chili seeds; fungal damping-off.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -656,7 +664,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_chili_pepper_4', 'Chili Pepper', 4, 'CONTINUOUS HARVEST', 63, 70,
-    'Pick mature green or ripe red chilis with pedicel stem attached.', 'Harvest every 3â€“4 days to stimulate prolific new flowering cycles.', 'Maintain soil moisture to sustain the perennial fruiting habit.',
+    'Pick mature green or ripe red chilis with pedicel stem attached.', 'Harvest every 3-4 days to stimulate prolific new flowering cycles.', 'Maintain soil moisture to sustain the perennial fruiting habit.',
     'Re-apply handful of compost monthly to fuel continuous production.', 'Fruit fly puncture marks causing internal soft decay.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -669,7 +677,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_okra_0', 'Okra', 0, 'SPROUT / GERMINATION', 1, 4,
-    'Direct-sow seeds 2 cm deep in moist raised bed; soak seeds overnight to soften coat.', 'Ensure warm loose garden soil; seedlings emerge rapidly within 3â€“4 days.', 'Water bed well after sowing; keep topsoil damp.',
+    'Direct-sow seeds 2 cm deep in moist raised bed; soak seeds overnight to soften coat.', 'Ensure warm loose garden soil; seedlings emerge rapidly within 3-4 days.', 'Water bed well after sowing; keep topsoil damp.',
     'No supplemental fertilizer required at sowing.', 'Seed rot if planted in heavy un-aerated clay without drainage.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -708,7 +716,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_okra_3', 'Okra', 3, 'FLOWERING & POD FORMATION', 33, 45,
-    'Watch for hibiscus-like yellow flowers; pods develop rapidly within 4â€“6 days of bloom.', 'Keep soil bed weed-free around the canopy perimeter.', 'Water regularly during active pod elongation to avoid fibrous pods.',
+    'Watch for hibiscus-like yellow flowers; pods develop rapidly within 4-6 days of bloom.', 'Keep soil bed weed-free around the canopy perimeter.', 'Water regularly during active pod elongation to avoid fibrous pods.',
     'Spray fermented plant juice (FPJ) to boost continuous bud development.', 'Pod borer puncturing young tender pods with dark frass.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -721,7 +729,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_okra_4', 'Okra', 4, 'RAPID RECURRENT HARVEST', 46, 55,
-    'Harvest every 2 days when pods are 8â€“10 cm long and snap crisply.', 'Wear gloves or long sleeves to avoid skin irritation from pod fuzz.', 'Continue regular watering to sustain the rapid fruiting cycle.',
+    'Harvest every 2 days when pods are 8-10 cm long and snap crisply.', 'Wear gloves or long sleeves to avoid skin irritation from pod fuzz.', 'Continue regular watering to sustain the rapid fruiting cycle.',
     'Apply vermicompost side-dress every 15 days of active harvest.', 'Pods become tough, woody, and unchewable if left on plant past 6 days.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -812,7 +820,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_lettuce_1', 'Lettuce', 1, 'NURSERY SEEDLING', 4, 12,
-    'Provide bright filtered light; avoid scorching midday tropical sun.', 'Prick out seedlings into 15â€“20 cm spacing in prepared garden bed.', 'Water daily early morning; ensure excellent soil porosity.',
+    'Provide bright filtered light; avoid scorching midday tropical sun.', 'Prick out seedlings into 15-20 cm spacing in prepared garden bed.', 'Water daily early morning; ensure excellent soil porosity.',
     'Diluted compost extract on Day 10 to encourage fibrous root expansion.', 'Damping-off; snail and slug grazing on baby tender leaves.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -825,7 +833,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_lettuce_2', 'Lettuce', 2, 'ROSETTE & FOLIAGE DEV', 13, 30,
-    'Provide shade netting (30â€“50% black net) during peak heat hours (11amâ€“2pm).', 'Mulch around heads to keep root zone cool in Philippine lowland climate.', 'Water twice daily (early morning and 4pm) during hot dry spells.',
+    'Provide shade netting (30-50% black net) during peak heat hours (11am-2pm).', 'Mulch around heads to keep root zone cool in Philippine lowland climate.', 'Water twice daily (early morning and 4pm) during hot dry spells.',
     'Side-dress with balanced organic vermicompost; avoid excess raw nitrogen.', 'Tipburn from high heat and calcium deficiency; aphid clusters in inner folds.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -916,7 +924,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_kangkong_4', 'Kangkong', 4, 'MULTI-CUT RECURRENT HARVEST', 25, 28,
-    'Cut stems 5 cm above soil surface, leaving 2â€“3 nodes for rapid regrowth.', 'Harvested shoots regrow into full harvestable stems every 14 days.', 'Water heavily immediately following cut harvest.',
+    'Cut stems 5 cm above soil surface, leaving 2-3 nodes for rapid regrowth.', 'Harvested shoots regrow into full harvestable stems every 14 days.', 'Water heavily immediately following cut harvest.',
     'Side-dress with handful of compost after every cutting to fuel next flush.', 'Stems become tough and fibrous if harvest is delayed past 30 days.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -981,7 +989,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_cucumber_4', 'Cucumber', 4, 'CONTINUOUS CRISP HARVEST', 48, 55,
-    'Harvest medium-sized (15â€“20 cm) green cucumbers before yellowing begins.', 'Use sharp pruners to clip fruit stems without tearing the delicate vine.', 'Water consistently to allow remaining smaller fruits to develop evenly.',
+    'Harvest medium-sized (15-20 cm) green cucumbers before yellowing begins.', 'Use sharp pruners to clip fruit stems without tearing the delicate vine.', 'Water consistently to allow remaining smaller fruits to develop evenly.',
     'Re-apply compost side-dress every 10 days of harvest.', 'Over-mature yellow fruits halting the vine from producing new flowers.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -1046,7 +1054,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_yardlong_bean_4', 'Yardlong Bean', 4, 'PROLIFIC POD HARVEST', 51, 60,
-    'Harvest tender, pencil-thick pods before seeds bulge visibly inside.', 'Pick pods every 2â€“3 days to prevent plant from shutting down new flowers.', 'Maintain moderate soil moisture throughout the 4â€“6 week harvest window.',
+    'Harvest tender, pencil-thick pods before seeds bulge visibly inside.', 'Pick pods every 2-3 days to prevent plant from shutting down new flowers.', 'Maintain moderate soil moisture throughout the 4-6 week harvest window.',
     'Incorporate nitrogen-rich plant residues back into soil after final harvest.', 'Tough, spongy, pale pods with swollen seeds if harvest is skipped.', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -1072,7 +1080,7 @@ INSERT INTO public.crop_growth_stages (
     nutrition_advice, critical_risks, source_citation
 ) VALUES (
     'stage_sweet_corn_1', 'Sweet Corn', 1, 'SEEDLING / KNEE-HIGH', 5, 15,
-    'Thin seedlings to 25 cm spacing; hoe weeds between rows.', 'Hill up soil around base to anchor emerging prop roots.', 'Water every 2â€“3 days; keep soil moist during early root development.',
+    'Thin seedlings to 25 cm spacing; hoe weeds between rows.', 'Hill up soil around base to anchor emerging prop roots.', 'Water every 2-3 days; keep soil moist during early root development.',
     'Apply nitrogen-rich compost or well-rotted chicken manure around plants.', 'Asian corn borer larvae entering young whorls (shot-hole symptoms).', 'DA-BPI Philippine Vegetable Production Standards & UPLB-IPB (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     primary_farmer_action = EXCLUDED.primary_farmer_action,
@@ -1123,7 +1131,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_tomato_loam', 'Tomato', 'Loam', 'OPTIMAL', 1.0,
+    'soil_tomato_loam', 'Tomato', 'LOAM', 'OPTIMAL', 1.0,
     'Ideal balance of drainage and moisture retention with high organic matter.', 'Mix in 1 part well-rotted compost per 3 parts soil.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1135,7 +1143,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_tomato_sandy_loam', 'Tomato', 'Sandy Loam', 'OPTIMAL', 0.95,
+    'soil_tomato_sandy_loam', 'Tomato', 'SANDY LOAM', 'OPTIMAL', 0.95,
     'Warms up quickly and drains freely, preventing root asphyxiation.', 'Incorporate 2 inches of compost to boost moisture holding capacity.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1147,7 +1155,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_tomato_clay_loam', 'Tomato', 'Clay Loam', 'SUITABLE', 0.85,
+    'soil_tomato_clay_loam', 'Tomato', 'CLAY LOAM', 'SUITABLE', 0.85,
     'Good nutrient reserves but requires careful watering to avoid compaction.', 'Add carbonized rice hull (CRH) to loosen soil structure.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1159,8 +1167,8 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_tomato_clay', 'Tomato', 'Clay', 'MARGINAL', 0.55,
-    'Heavy waterlogging promotes bacterial wilt and root asphyxiation.', 'Construct 20â€“30 cm raised beds and incorporate 40% organic mulch and CRH.', 'High risk of bacterial wilt and root rot during monsoon downpours.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
+    'soil_tomato_clay', 'Tomato', 'CLAY', 'MARGINAL', 0.55,
+    'Heavy waterlogging promotes bacterial wilt and root asphyxiation.', 'Construct 20-30 cm raised beds and incorporate 40% organic mulch and CRH.', 'High risk of bacterial wilt and root rot during monsoon downpours.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
     suitability_score = EXCLUDED.suitability_score,
@@ -1171,7 +1179,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_tomato_sand', 'Tomato', 'Sand', 'MARGINAL', 0.50,
+    'soil_tomato_sandy', 'Tomato', 'SANDY', 'MARGINAL', 0.50,
     'Excessive leaching drains water and soluble nutrients away before uptake.', 'Heavily incorporate compost and maintain thick organic mulch blanket.', 'Water stress and calcium deficiency causing blossom end rot.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1183,7 +1191,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_eggplant_loam', 'Eggplant', 'Loam', 'OPTIMAL', 1.0,
+    'soil_eggplant_loam', 'Eggplant', 'LOAM', 'OPTIMAL', 1.0,
     'Provides deep root penetration and steady nutrient availability.', 'Incorporate aged manure or vermicompost before transplanting.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1195,7 +1203,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_eggplant_sandy_loam', 'Eggplant', 'Sandy Loam', 'OPTIMAL', 0.90,
+    'soil_eggplant_sandy_loam', 'Eggplant', 'SANDY LOAM', 'OPTIMAL', 0.90,
     'Excellent aeration encourages extensive fibrous lateral roots.', 'Mulch with dried rice straw to maintain steady root temperature.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1207,7 +1215,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_eggplant_clay_loam', 'Eggplant', 'Clay Loam', 'OPTIMAL', 0.90,
+    'soil_eggplant_clay_loam', 'Eggplant', 'CLAY LOAM', 'OPTIMAL', 0.90,
     'Holds moisture well for prolonged fruit filling period.', 'Aerate surface with hand cultivator between crop cycles.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1219,7 +1227,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_eggplant_clay', 'Eggplant', 'Clay', 'MARGINAL', 0.60,
+    'soil_eggplant_clay', 'Eggplant', 'CLAY', 'MARGINAL', 0.60,
     'Dense soil restricts root expansion and holds excess stagnant water.', 'Plant on elevated mounds or raised beds with coarse organic amendments.', 'Susceptible to bacterial wilt in poorly drained wet clay.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1231,7 +1239,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_eggplant_sand', 'Eggplant', 'Sand', 'MARGINAL', 0.45,
+    'soil_eggplant_sandy', 'Eggplant', 'SANDY', 'MARGINAL', 0.45,
     'Dries out too rapidly; eggplant fruits become bitter and spongy under drought.', 'Add abundant organic matter and apply daily morning irrigation.', 'Nutrient deficiency and stunted fruiting flushes.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1243,7 +1251,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_chili_pepper_sandy_loam', 'Chili Pepper', 'Sandy Loam', 'OPTIMAL', 1.0,
+    'soil_chili_pepper_sandy_loam', 'Chili Pepper', 'SANDY LOAM', 'OPTIMAL', 1.0,
     'Perfect drainage and warmth; chili roots are sensitive to excess wetness.', 'Mix in balanced compost and wood ash for potassium.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1255,7 +1263,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_chili_pepper_loam', 'Chili Pepper', 'Loam', 'OPTIMAL', 0.95,
+    'soil_chili_pepper_loam', 'Chili Pepper', 'LOAM', 'OPTIMAL', 0.95,
     'Rich fertile loam supports prolonged perennial harvesting cycles.', 'Light compost top-dress before bed preparation.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1267,7 +1275,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_chili_pepper_clay_loam', 'Chili Pepper', 'Clay Loam', 'SUITABLE', 0.80,
+    'soil_chili_pepper_clay_loam', 'Chili Pepper', 'CLAY LOAM', 'SUITABLE', 0.80,
     'Acceptable if bed is elevated to prevent standing water.', 'Add carbonized rice hulls (CRH) to enhance infiltration.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1279,7 +1287,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_chili_pepper_clay', 'Chili Pepper', 'Clay', 'POOR', 0.35,
+    'soil_chili_pepper_clay', 'Chili Pepper', 'CLAY', 'POOR', 0.35,
     'Chili roots rapidly rot in standing soggy clay soil.', 'Must use 30 cm raised beds or containers with 50% porous potting mix.', 'Severe phytophthora root rot and sudden wilting after rain.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1291,7 +1299,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_chili_pepper_sand', 'Chili Pepper', 'Sand', 'SUITABLE', 0.70,
+    'soil_chili_pepper_sandy', 'Chili Pepper', 'SANDY', 'SUITABLE', 0.70,
     'Chilis tolerate lighter soils well if watered frequently.', 'Frequent light watering and regular organic fertilizer teas.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1303,7 +1311,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_okra_loam', 'Okra', 'Loam', 'OPTIMAL', 1.0,
+    'soil_okra_loam', 'Okra', 'LOAM', 'OPTIMAL', 1.0,
     'Supports deep vigorous taproot and rapid daily pod development.', 'General compost incorporation before direct sowing.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1315,7 +1323,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_okra_clay_loam', 'Okra', 'Clay Loam', 'OPTIMAL', 0.95,
+    'soil_okra_clay_loam', 'Okra', 'CLAY LOAM', 'OPTIMAL', 0.95,
     'Okra''s powerful taproot easily penetrates fertile heavier soils.', 'Loosen top 15 cm for easy seedling emergence.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1327,7 +1335,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_okra_clay', 'Okra', 'Clay', 'SUITABLE', 0.75,
+    'soil_okra_clay', 'Okra', 'CLAY', 'SUITABLE', 0.75,
     'Tolerates heavy soils better than most vegetables once rooted.', 'Plant on ridges to facilitate drainage during tropical storms.', 'Slow initial seedling emergence if surface crusts hard.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1339,7 +1347,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_okra_sandy_loam', 'Okra', 'Sandy Loam', 'OPTIMAL', 0.90,
+    'soil_okra_sandy_loam', 'Okra', 'SANDY LOAM', 'OPTIMAL', 0.90,
     'Enables quick early taproot elongation.', 'Apply mulch to maintain moisture in hot sunny periods.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1351,7 +1359,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_okra_sand', 'Okra', 'Sand', 'MARGINAL', 0.55,
+    'soil_okra_sandy', 'Okra', 'SANDY', 'MARGINAL', 0.55,
     'Requires more frequent watering to keep pods tender and crisp.', 'Heavy compost amendment and consistent irrigation.', 'Pods become fibrous and tough if moisture drops.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1363,7 +1371,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_pechay_loam', 'Pechay', 'Loam', 'OPTIMAL', 1.0,
+    'soil_pechay_loam', 'Pechay', 'LOAM', 'OPTIMAL', 1.0,
     'Moist, fertile loam produces succulent, crisp white petioles.', 'Mix 2 shovels of vermicompost per square meter.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1375,7 +1383,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_pechay_clay_loam', 'Pechay', 'Clay Loam', 'OPTIMAL', 0.90,
+    'soil_pechay_clay_loam', 'Pechay', 'CLAY LOAM', 'OPTIMAL', 0.90,
     'High moisture retention benefits rapid 30-day leafy growth.', 'Shallow hoeing to prevent surface crusting.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1387,7 +1395,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_pechay_sandy_loam', 'Pechay', 'Sandy Loam', 'SUITABLE', 0.85,
+    'soil_pechay_sandy_loam', 'Pechay', 'SANDY LOAM', 'SUITABLE', 0.85,
     'Excellent root development but requires daily watering.', 'Mulch with rice hulls to maintain continuous soil dampness.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1399,7 +1407,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_pechay_clay', 'Pechay', 'Clay', 'MARGINAL', 0.50,
+    'soil_pechay_clay', 'Pechay', 'CLAY', 'MARGINAL', 0.50,
     'Waterlogged clay induces soft rot bacteria during hot humid spells.', 'Build raised beds 20 cm high and mix in generous compost.', 'High risk of bacterial soft rot during wet monsoon season.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1411,7 +1419,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_pechay_sand', 'Pechay', 'Sand', 'POOR', 0.30,
+    'soil_pechay_sandy', 'Pechay', 'SANDY', 'POOR', 0.30,
     'Rapid drying causes pechay to bolt prematurely into flowers.', 'Heavily incorporate compost and provide shade during hot midday.', 'Premature bolting and tough, bitter leaves.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1423,7 +1431,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_lettuce_loam', 'Lettuce', 'Loam', 'OPTIMAL', 1.0,
+    'soil_lettuce_loam', 'Lettuce', 'LOAM', 'OPTIMAL', 1.0,
     'Rich in decomposed organic matter; retains consistent cool moisture.', 'Incorporate well-cured compost or worm castings.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1435,7 +1443,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_lettuce_sandy_loam', 'Lettuce', 'Sandy Loam', 'OPTIMAL', 0.90,
+    'soil_lettuce_sandy_loam', 'Lettuce', 'SANDY LOAM', 'OPTIMAL', 0.90,
     'Light texture allows delicate root systems to expand rapidly.', 'Add organic mulch layer to keep root zone cool under tropical heat.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1447,7 +1455,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_lettuce_clay_loam', 'Lettuce', 'Clay Loam', 'SUITABLE', 0.75,
+    'soil_lettuce_clay_loam', 'Lettuce', 'CLAY LOAM', 'SUITABLE', 0.75,
     'Acceptable if soil is loose, well-aerated, and drains cleanly.', 'Blend in carbonized rice hulls to prevent dense caking.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1459,7 +1467,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_lettuce_clay', 'Lettuce', 'Clay', 'POOR', 0.30,
+    'soil_lettuce_clay', 'Lettuce', 'CLAY', 'POOR', 0.30,
     'Dense waterlogged clay chokes shallow lettuce roots and induces rot.', 'Must be grown in raised garden boxes or loose container mixes.', 'Bottom rot (Rhizoctonia) and seedling suffocating.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1471,7 +1479,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_lettuce_sand', 'Lettuce', 'Sand', 'POOR', 0.35,
+    'soil_lettuce_sandy', 'Lettuce', 'SANDY', 'POOR', 0.35,
     'Cannot hold sufficient water; hot sand scorches shallow root fibers.', 'Add high levels of organic matter or grow under partial shade nets.', 'Severe tipburn and bitter milky sap.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1483,7 +1491,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_kangkong_clay_loam', 'Kangkong', 'Clay Loam', 'OPTIMAL', 1.0,
+    'soil_kangkong_clay_loam', 'Kangkong', 'CLAY LOAM', 'OPTIMAL', 1.0,
     'Excellent water holding capacity perfectly suits kangkong''s high water need.', 'Add organic manure to supply steady nitrogen.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1495,7 +1503,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_kangkong_clay', 'Kangkong', 'Clay', 'OPTIMAL', 0.95,
+    'soil_kangkong_clay', 'Kangkong', 'CLAY', 'OPTIMAL', 0.95,
     'Kangkong thrives exceptionally in wet, heavy, moisture-rich soils.', 'None needed; can tolerate heavy seasonal waterlogging.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1507,7 +1515,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_kangkong_loam', 'Kangkong', 'Loam', 'OPTIMAL', 0.95,
+    'soil_kangkong_loam', 'Kangkong', 'LOAM', 'OPTIMAL', 0.95,
     'Produces very tender, fast-growing succulent hollow stems.', 'Compost incorporation before furrow sowing.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1519,7 +1527,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_kangkong_sandy_loam', 'Kangkong', 'Sandy Loam', 'SUITABLE', 0.75,
+    'soil_kangkong_sandy_loam', 'Kangkong', 'SANDY LOAM', 'SUITABLE', 0.75,
     'Needs frequent watering to keep stems soft and tender.', 'Water twice daily during sunny periods to prevent fibrous stems.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1531,7 +1539,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_kangkong_sand', 'Kangkong', 'Sand', 'MARGINAL', 0.45,
+    'soil_kangkong_sandy', 'Kangkong', 'SANDY', 'MARGINAL', 0.45,
     'Dries out too rapidly for this semi-aquatic originated vegetable.', 'Incorporate plenty of compost and keep continuously hydrated.', 'Stems become tough, woody, and unmarketable.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1543,7 +1551,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_cucumber_loam', 'Cucumber', 'Loam', 'OPTIMAL', 1.0,
+    'soil_cucumber_loam', 'Cucumber', 'LOAM', 'OPTIMAL', 1.0,
     'Rich, loose soil allows vigorous vine roots to feed high water volume.', 'Incorporate 1 bucket compost per planting mound.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1555,7 +1563,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_cucumber_sandy_loam', 'Cucumber', 'Sandy Loam', 'OPTIMAL', 0.95,
+    'soil_cucumber_sandy_loam', 'Cucumber', 'SANDY LOAM', 'OPTIMAL', 0.95,
     'Warms fast in early season; ensures zero standing water around crown.', 'Mulch mounds with clean straw to protect shallow feeder roots.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1567,7 +1575,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_cucumber_clay_loam', 'Cucumber', 'Clay Loam', 'SUITABLE', 0.80,
+    'soil_cucumber_clay_loam', 'Cucumber', 'CLAY LOAM', 'SUITABLE', 0.80,
     'Plant on elevated hills to prevent crown rot at soil line.', 'Add CRH and dried organic matter to hills.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1579,7 +1587,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_cucumber_clay', 'Cucumber', 'Clay', 'POOR', 0.40,
+    'soil_cucumber_clay', 'Cucumber', 'CLAY', 'POOR', 0.40,
     'Heavy wet clay induces sudden wilt and root suffocating.', 'Plant exclusively on 30 cm mounds with trellis system.', 'Severe crown rot (Phytophthora) and bitter, misshapen fruits.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1591,7 +1599,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_cucumber_sand', 'Cucumber', 'Sand', 'MARGINAL', 0.50,
+    'soil_cucumber_sandy', 'Cucumber', 'SANDY', 'MARGINAL', 0.50,
     'Leaches nutrients quickly; cucumbers require continuous steady feeding.', 'Heavy compost incorporation and regular bi-weekly organic feeding.', 'Hollow centers and bitter fruit flavor from erratic moisture.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1603,7 +1611,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_yardlong_bean_loam', 'Yardlong Bean', 'Loam', 'OPTIMAL', 1.0,
+    'soil_yardlong_bean_loam', 'Yardlong Bean', 'LOAM', 'OPTIMAL', 1.0,
     'Fertile loam produces vigorous climbing vines and prolific pod flushes.', 'Light compost only; legumes fix their own nitrogen via root nodules.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1615,7 +1623,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_yardlong_bean_sandy_loam', 'Yardlong Bean', 'Sandy Loam', 'OPTIMAL', 0.95,
+    'soil_yardlong_bean_sandy_loam', 'Yardlong Bean', 'SANDY LOAM', 'OPTIMAL', 0.95,
     'Warm, light soil encourages rapid nodulation and deep root system.', 'Mulch base to protect nodule bacteria from excessive tropical sun heat.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1627,7 +1635,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_yardlong_bean_clay_loam', 'Yardlong Bean', 'Clay Loam', 'SUITABLE', 0.85,
+    'soil_yardlong_bean_clay_loam', 'Yardlong Bean', 'CLAY LOAM', 'SUITABLE', 0.85,
     'Good moisture retention supports prolonged harvest window.', 'Ensure surface drainage furrows between trellis rows.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1639,7 +1647,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_yardlong_bean_clay', 'Yardlong Bean', 'Clay', 'MARGINAL', 0.55,
+    'soil_yardlong_bean_clay', 'Yardlong Bean', 'CLAY', 'MARGINAL', 0.55,
     'Poor aeration inhibits nitrogen-fixing Rhizobium bacteria in nodules.', 'Build raised trellis beds; incorporate carbonized rice hulls.', 'Stunted nodulation and yellowing vine leaves in wet clay.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1651,7 +1659,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_yardlong_bean_sand', 'Yardlong Bean', 'Sand', 'SUITABLE', 0.70,
+    'soil_yardlong_bean_sandy', 'Yardlong Bean', 'SANDY', 'SUITABLE', 0.70,
     'Tolerates lighter soils better than leafy crops; deep taproot finds water.', 'Apply mulch and regular water during pod elongation.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1663,7 +1671,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_sweet_corn_loam', 'Sweet Corn', 'Loam', 'OPTIMAL', 1.0,
+    'soil_sweet_corn_loam', 'Sweet Corn', 'LOAM', 'OPTIMAL', 1.0,
     'Deep, rich, fertile soil satisfies corn''s heavy feeding requirements.', 'Incorporate generous decomposed manure or rich compost before planting.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1675,7 +1683,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_sweet_corn_clay_loam', 'Sweet Corn', 'Clay Loam', 'OPTIMAL', 0.90,
+    'soil_sweet_corn_clay_loam', 'Sweet Corn', 'CLAY LOAM', 'OPTIMAL', 0.90,
     'High nutrient holding capacity anchors prop roots firmly against wind lodging.', 'Cultivate between rows before corn reaches knee-high.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1687,7 +1695,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_sweet_corn_sandy_loam', 'Sweet Corn', 'Sandy Loam', 'SUITABLE', 0.80,
+    'soil_sweet_corn_sandy_loam', 'Sweet Corn', 'SANDY LOAM', 'SUITABLE', 0.80,
     'Warms fast but requires supplemental nitrogen side-dressing.', 'Side-dress with organic nitrogen on Day 25 and Day 45.', NULL, 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1699,7 +1707,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_sweet_corn_clay', 'Sweet Corn', 'Clay', 'MARGINAL', 0.55,
+    'soil_sweet_corn_clay', 'Sweet Corn', 'CLAY', 'MARGINAL', 0.55,
     'Heavy compaction hinders uniform germination and prop root development.', 'Deep tillage or raised beds; add organic matter to prevent crusting.', 'Uneven emergence and lodging during monsoon winds.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1711,7 +1719,7 @@ INSERT INTO public.crop_soil_compatibilities (
     id, crop_name, soil_type, suitability_rating, suitability_score,
     agronomic_rationale, amendment_action, alert_warning, source_citation
 ) VALUES (
-    'soil_sweet_corn_sand', 'Sweet Corn', 'Sand', 'POOR', 0.35,
+    'soil_sweet_corn_sandy', 'Sweet Corn', 'SANDY', 'POOR', 0.35,
     'Excessive leaching starves corn of high nitrogen and water needs.', 'Heavy continuous compost additions and frequent watering.', 'Small, poorly filled ears with missing kernel rows.', 'Bureau of Soils and Water Management (BSWM) & DA-BPI Soil Suitability Guidelines (2023)'
 ) ON CONFLICT (id) DO UPDATE SET
     suitability_rating = EXCLUDED.suitability_rating,
@@ -1974,7 +1982,7 @@ INSERT INTO public.crop_pest_disease_guides (
 ) VALUES (
     'pest_sweet_corn_asian_corn_borer', 'Sweet Corn', 'Asian Corn Borer', 'Uod sa Mais', 'Ostrinia furnacalis',
     'INSECT', 'YEAR_ROUND', 1, 'Pinholes and shot-holes in whorl leaves; sawdust-like frass on leaf axils; broken tassels and bore holes in stalks and ears.',
-    'Drop 5â€“10 granules of Bt powder into central leaf whorl or release Trichogramma evanescens cards.', 'Detassel 3 out of every 4 rows after pollen shed begins; destroy infested crop residue immediately after harvest.', 'Bureau of Plant Industry (DA-BPI) Integrated Pest Management Field Handbook (2023-2024)'
+    'Drop 5-10 granules of Bt powder into central leaf whorl or release Trichogramma evanescens cards.', 'Detassel 3 out of every 4 rows after pollen shed begins; destroy infested crop residue immediately after harvest.', 'Bureau of Plant Industry (DA-BPI) Integrated Pest Management Field Handbook (2023-2024)'
 ) ON CONFLICT (id) DO UPDATE SET
     symptoms = EXCLUDED.symptoms,
     organic_biocontrol = EXCLUDED.organic_biocontrol,
@@ -2079,7 +2087,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_10', 'Cucumber', 'Corn', 'BENEFICIAL',
-    'Classic Three Sisters principle â€” corn provides natural trellis for cucumber vines, cucumber provides ground cover reducing weed pressure.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Classic Three Sisters principle - corn provides natural trellis for cucumber vines, cucumber provides ground cover reducing weed pressure.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2133,7 +2141,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_16', 'Onion', 'Carrot', 'BENEFICIAL',
-    'Classic beneficial pair â€” carrot fly is repelled by onion scent, onion fly is repelled by carrot foliage. Mutually protective.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Classic beneficial pair - carrot fly is repelled by onion scent, onion fly is repelled by carrot foliage. Mutually protective.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2169,7 +2177,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_20', 'Corn', 'Squash', 'BENEFICIAL',
-    'Three Sisters principle â€” squash''s large leaves shade the ground, conserving moisture and suppressing weeds around corn stalks.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Three Sisters principle - squash''s large leaves shade the ground, conserving moisture and suppressing weeds around corn stalks.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2187,7 +2195,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_22', 'Corn', 'String Beans', 'BENEFICIAL',
-    'Three Sisters principle â€” corn provides natural trellis for climbing beans, beans fix nitrogen for corn''s heavy demand.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Three Sisters principle - corn provides natural trellis for climbing beans, beans fix nitrogen for corn''s heavy demand.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2223,7 +2231,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_26', 'Squash', 'Okra', 'NEUTRAL',
-    'No significant interaction. Both are vigorous growers â€” ensure adequate spacing to prevent vine competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'No significant interaction. Both are vigorous growers - ensure adequate spacing to prevent vine competition.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2277,7 +2285,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_32', 'Kangkong', 'Lettuce', 'NEUTRAL',
-    'Both are fast-growing leafy crops. No interaction â€” can share adjacent beds without issue.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Both are fast-growing leafy crops. No interaction - can share adjacent beds without issue.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
@@ -2313,7 +2321,7 @@ INSERT INTO public.dss_rules (
     id, crop_a, crop_b, relationship, reason, source
 ) VALUES (
     'dss_rule_seed_36', 'Pechay', 'Carrot', 'BENEFICIAL',
-    'Pechay matures in 25â€“30 days, harvested before slow-growing carrot needs full bed space. Efficient succession planting.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
+    'Pechay matures in 25-30 days, harvested before slow-growing carrot needs full bed space. Efficient succession planting.', 'DA-BPI Companion Bulletin 2026 / Philippine Intercropping Guidelines'
 ) ON CONFLICT (id) DO UPDATE SET
     relationship = EXCLUDED.relationship,
     reason = EXCLUDED.reason;
