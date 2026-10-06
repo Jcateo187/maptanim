@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.WaterDrop
@@ -113,8 +114,10 @@ fun CanvasSmartGuidanceHud(
         }
     }
 
+    var isDismissed by remember { mutableStateOf(false) }
+
     AnimatedVisibility(
-        visible = true,
+        visible = !isDismissed,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = modifier
@@ -128,7 +131,7 @@ fun CanvasSmartGuidanceHud(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -171,6 +174,18 @@ fun CanvasSmartGuidanceHud(
                         contentDescription = "Action",
                         tint = Color(0xFFA5D6A7),
                         modifier = Modifier.size(13.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { isDismissed = true },
+                    modifier = Modifier.size(22.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Hide HUD",
+                        tint = Color(0xFFA5D6A7),
+                        modifier = Modifier.size(12.dp)
                     )
                 }
             }

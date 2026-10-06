@@ -44,6 +44,8 @@ fun UnifiedBedSummaryDossier(
     selectedPlot: PlotRenderData?,
     allPlots: List<PlotRenderData>,
     cropZones: List<CropZoneRenderData>,
+    todayTasks: List<com.maptanim.app.dss.engine.DssLogEvaluator.GeneratedLogTask> = emptyList(),
+    onCompleteTask: (String) -> Unit = {},
     onOpenCropTray: () -> Unit,
     onOpenInspect: () -> Unit,
     onOpenHarvestModal: () -> Unit,
@@ -259,6 +261,81 @@ fun UnifiedBedSummaryDossier(
                                     color = Color(0xFF555555),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Active Daily Care & DSS Diagnosis Chores ────────────────────
+            if (todayTasks.isNotEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, CardBorderColor)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "TODAY'S CARE CHORES (${todayTasks.size})",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LushGreen,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = "Tap to Complete",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF777777)
+                                )
+                            }
+
+                            todayTasks.forEach { task ->
+                                Surface(
+                                    onClick = { onCompleteTask(task.id) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = LightSurface,
+                                    border = BorderStroke(0.8.dp, CardBorderColor),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.CheckCircle,
+                                            contentDescription = "Complete Chore",
+                                            tint = LushGreen,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = task.title,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = DeepBlack
+                                            )
+                                            if (task.description.isNotBlank()) {
+                                                Text(
+                                                    text = task.description,
+                                                    fontSize = 10.5.sp,
+                                                    color = Color(0xFF555555),
+                                                    lineHeight = 13.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

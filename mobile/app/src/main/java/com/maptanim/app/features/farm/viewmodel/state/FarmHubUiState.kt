@@ -18,7 +18,9 @@ data class FarmHubUiState(
     val checkUpState: FarmHubCheckUpState = FarmHubCheckUpState(),
     val harvestState: FarmHubHarvestState = FarmHubHarvestState(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val latestDiagnosisResult: com.maptanim.app.dss.engine.DssLogEvaluator.LogEvaluationResult? = null,
+    val isDiagnosisResultOpen: Boolean = false
 ) {
     val activePlot: CropPlot?
         get() = planState.rawPlots.firstOrNull { it.id == planState.selectedPlotId }

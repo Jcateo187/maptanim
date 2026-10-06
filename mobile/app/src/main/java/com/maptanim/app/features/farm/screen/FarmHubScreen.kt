@@ -30,6 +30,7 @@ import com.maptanim.app.features.farm.components.UnifiedBedSummaryDossier
 import com.maptanim.app.features.farm.dialogs.AddBedDialog
 import com.maptanim.app.features.farm.dialogs.AddLogDialog
 import com.maptanim.app.features.farm.dialogs.BedTimelineDialog
+import com.maptanim.app.features.farm.dialogs.DiagnosisResultDialog
 import com.maptanim.app.features.farm.dialogs.FarmSetupDialog
 import com.maptanim.app.features.farm.dialogs.HarvestRecordDialog
 import com.maptanim.app.features.farm.dialogs.YardMeasurementGuideDialog
@@ -206,6 +207,8 @@ fun FarmHubScreen(
                         selectedPlot = activeRenderPlot,
                         allPlots = editUiState.plots,
                         cropZones = editUiState.cropZones,
+                        todayTasks = uiState.guideState.dynamicTasks,
+                        onCompleteTask = { taskId -> viewModel.completeTask(taskId) },
                         onOpenCropTray = {
                             sheetState = SheetExpandState.HIDDEN
                         },
@@ -319,6 +322,25 @@ fun FarmHubScreen(
             onSubmitLog = { cropLog ->
                 viewModel.submitCropLog(cropLog)
                 showAddLogDialog = false
+            }
+        )
+    }
+
+    // ── Agronomic Diagnosis Result Modal ─────────────────────────────────────
+    if (uiState.isDiagnosisResultOpen && uiState.latestDiagnosisResult != null) {
+        val selectedPlot = uiState.activePlot ?: uiState.planState.rawPlots.firstOrNull { it.id == editUiState.selectedPlotId }
+        val targetCropName = selectedPlot?.cropName ?: "Vegetable"
+        val targetCropVariety = selectedPlot?.cropVariety ?: "Standard Variety"
+        DiagnosisResultDialog(
+            plotLabel = selectedPlot?.plotLabel ?: "Bed #1",
+            cropName = targetCropName,
+            cropVariety = targetCropVariety,
+            currentStage = selectedPlot?.currentStage ?: ManagementStage.VEGETATIVE_GROWTH,
+            result = uiState.latestDiagnosisResult!!,
+            onDismiss = { viewModel.closeDiagnosisResult() },
+            onViewChores = {
+                viewModel.closeDiagnosisResult()
+                sheetState = SheetExpandState.HALF
             }
         )
     }

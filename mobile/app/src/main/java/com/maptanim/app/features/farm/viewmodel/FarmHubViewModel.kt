@@ -14,9 +14,11 @@ import com.maptanim.app.features.farm.renderer.model.toRenderData
 import com.maptanim.app.features.farm.viewmodel.state.*
 import com.maptanim.app.dss.engine.DssLogEvaluator
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 
 /**
@@ -31,8 +33,11 @@ class FarmHubViewModel(
     private val cropZoneRepository: CropZoneRepository = RepositoryProvider.cropZoneRepository,
     private val taskRepository: TaskRepository = RepositoryProvider.taskRepository,
     private val cropLogRepository: CropLogRepository = RepositoryProvider.cropLogRepository,
-    private val harvestRepository: HarvestRepository = RepositoryProvider.harvestRepository
+    private val harvestRepository: HarvestRepository = RepositoryProvider.harvestRepository,
+    private val activityRepository: ActivityRepository = RepositoryProvider.activityRepository
 ) : ViewModel() {
+
+    private val logEvaluator = DssLogEvaluator()
 
     private val _uiState = MutableStateFlow(FarmHubUiState())
     val uiState: StateFlow<FarmHubUiState> = _uiState.asStateFlow()
@@ -436,15 +441,88 @@ class FarmHubViewModel(
     }
 
     fun submitCropLog(log: CropLog) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 cropLogRepository.insertLog(log)
+
+                val targetPlot = _uiState.value.planState.rawPlots.firstOrNull { it.id == log.cropPlantingId }
+                    ?: _uiState.value.activePlot
+                val farmId = _uiState.value.activeFarmId.ifBlank { targetPlot?.farmId ?: "farm-default" }
+                val plotId = targetPlot?.id ?: log.cropPlantingId.ifBlank { "plot-1" }
+                val plotLabel = targetPlot?.plotLabel ?: log.bedId.ifBlank { "Bed #1" }
+                val cropName = targetPlot?.cropName ?: log.cropName.ifBlank { "Vegetable" }
+                val cropVariety = targetPlot?.cropVariety ?: log.varietyName ?: "Standard"
+                val currentStage = targetPlot?.currentStage ?: log.currentStage
+
+                val previousLogs = try {
+                    cropLogRepository.getLogsForPlanting(plotId)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+
+                val evalResult = logEvaluator.evaluate(
+                    log = log,
+                    previousLogs = previousLogs,
+                    currentStage = currentStage,
+                    pendingTasks = emptyList(),
+                    plantingDate = targetPlot?.plantedDate,
+                    plantingMethod = "Transplanting",
+                    daysToHarvest = 75
+                )
+
+                // Persist generated tasks to TaskRepository
+                if (evalResult.newTasks.isNotEmpty()) {
+                    val farmTasks = evalResult.newTasks.map { genTask ->
+                        FarmTask(
+                            id = genTask.id,
+                            farmId = farmId,
+                            plotId = plotId,
+                            plotLabel = plotLabel,
+                            cropName = cropName,
+                            taskType = genTask.taskType,
+                            title = genTask.title,
+                            subLabel = genTask.description,
+                            dueDate = genTask.dueDate,
+                            isCompleted = false,
+                            completedAt = null
+                        )
+                    }
+                    taskRepository.upsertTasks(farmTasks)
+                }
+
+                // Log Activity History with Bed Number, Date, Crop, Variety, Stage, and Observation Details
+                try {
+                    val dateOnly = try { log.date.take(10) } catch (_: Exception) { LocalDate.now().toString() }
+                    val details = if (log.selectedCheckboxes.isNotEmpty()) " (${log.selectedCheckboxes.joinToString(", ")})" else ""
+                    val obsNotes = "Observation logged for $plotLabel • $cropName ($cropVariety): Stage ${log.currentStage.label}, Choice ${log.selectedChoice}$details on $dateOnly" +
+                            (if (!log.notes.isNullOrBlank()) " • ${log.notes}" else "")
+
+                    activityRepository.logActivity(
+                        Activity(
+                            id = UUID.randomUUID().toString(),
+                            plotId = plotId,
+                            farmId = farmId,
+                            type = TaskType.OBSERVATION,
+                            notes = obsNotes,
+                            performedAt = ZonedDateTime.now().toString()
+                        )
+                    )
+                } catch (_: Exception) {}
+
                 _uiState.update { state ->
                     val logs = state.checkUpState.observedLogs + log
-                    state.copy(checkUpState = state.checkUpState.copy(observedLogs = logs, isAddLogOpen = false))
+                    state.copy(
+                        checkUpState = state.checkUpState.copy(observedLogs = logs, isAddLogOpen = false),
+                        latestDiagnosisResult = evalResult,
+                        isDiagnosisResultOpen = true
+                    )
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    fun closeDiagnosisResult() {
+        _uiState.update { it.copy(isDiagnosisResultOpen = false) }
     }
 
     // ─── Harvest Tab Actions ────────────────────────────────────────────────
