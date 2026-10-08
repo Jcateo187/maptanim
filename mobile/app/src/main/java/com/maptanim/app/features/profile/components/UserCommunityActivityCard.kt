@@ -38,49 +38,59 @@ fun UserCommunityActivityCard(
     onSeeMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorderColor),
-        modifier = modifier.fillMaxWidth()
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
+        // Heading TOP OF CARD (outside of card)
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Forum,
-                        contentDescription = null,
-                        tint = LushGreen,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.Forum,
+                    contentDescription = null,
+                    tint = LushGreen,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Activity History",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = DeepBlack
+                )
+            }
+            if (userPosts.size > 3) {
+                TextButton(onClick = onSeeMoreClick) {
                     Text(
-                        text = "Community Forum Activity",
+                        text = "See More (${userPosts.size})",
+                        color = LushGreen,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = DeepBlack
+                        fontSize = 11.sp
                     )
-                }
-                if (userPosts.size > 3) {
-                    TextButton(onClick = onSeeMoreClick) {
-                        Text(
-                            text = "See More (${userPosts.size})",
-                            color = LushGreen,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
-                    }
                 }
             }
+        }
+
+        // The card itself containing the activity list
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
 
             if (userPosts.isEmpty()) {
                 Column(
@@ -91,7 +101,7 @@ fun UserCommunityActivityCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "No community forum activity yet.",
+                        text = "No activity history yet.",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = DeepBlack
@@ -104,24 +114,21 @@ fun UserCommunityActivityCard(
                     )
                 }
             } else {
-                val visiblePosts = userPosts.take(3)
-                visiblePosts.forEach { post ->
-                    val isAuthoredByMe = (post.authorId != null && post.authorId == userProfile.id) ||
-                            (userProfile.nickname.isNotBlank() && post.authorName.equals(userProfile.nickname, ignoreCase = true)) ||
-                            (userProfile.boundEmail != null && post.authorName.equals(userProfile.boundEmail.substringBefore('@'), ignoreCase = true)) ||
-                            post.authorName.equals("You", ignoreCase = true)
+                val visiblePosts = userPosts.take(4)
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    visiblePosts.forEachIndexed { index, post ->
+                        val isAuthoredByMe = (post.authorId != null && post.authorId == userProfile.id) ||
+                                (userProfile.nickname.isNotBlank() && post.authorName.equals(userProfile.nickname, ignoreCase = true)) ||
+                                (userProfile.boundEmail != null && post.authorName.equals(userProfile.boundEmail.substringBefore('@'), ignoreCase = true)) ||
+                                post.authorName.equals("You", ignoreCase = true)
 
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = LightSurface,
-                        border = BorderStroke(1.dp, CardBorderColor),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .padding(vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -131,7 +138,7 @@ fun UserCommunityActivityCard(
                                 Text(
                                     text = post.title,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     color = DeepBlack,
                                     modifier = Modifier.weight(1f, fill = false),
                                     maxLines = 1
@@ -145,7 +152,7 @@ fun UserCommunityActivityCard(
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
                                             color = Color(0xFFE8F5E9),
-                                            border = BorderStroke(1.dp, LushGreen)
+                                            border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.5f))
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
@@ -170,7 +177,7 @@ fun UserCommunityActivityCard(
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
                                             color = Color(0xFFFBE9E7),
-                                            border = BorderStroke(1.dp, Color(0xFFD32F2F))
+                                            border = BorderStroke(1.dp, Color(0xFFD32F2F).copy(alpha = 0.5f))
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
@@ -200,12 +207,14 @@ fun UserCommunityActivityCard(
                                     )
                                 }
                             }
+
                             Text(
                                 text = post.content,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 color = DeepBlack,
                                 maxLines = 2
                             )
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -277,9 +286,18 @@ fun UserCommunityActivityCard(
                                 }
                             }
                         }
+
+                        if (index < visiblePosts.lastIndex) {
+                            HorizontalDivider(
+                                color = CardBorderColor.copy(alpha = 0.7f),
+                                thickness = 0.8.dp
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+}
+

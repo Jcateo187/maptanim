@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.dialogs
+package com.maptanim.app.features.farm.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -42,7 +42,7 @@ fun CropSettingsDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Edit Crop Information",
+                    text = "Edit Vegetable Information",
                     color = White,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
@@ -51,7 +51,7 @@ fun CropSettingsDialog(
                 OutlinedTextField(
                     value = variety,
                     onValueChange = { variety = it },
-                    label = { Text("Crop Variety") },
+                    label = { Text("Vegetable Variety") },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = White,
                         unfocusedTextColor = Color(0xFFC0CDC0),
@@ -67,7 +67,7 @@ fun CropSettingsDialog(
                     label = { Text("Planting Date (YYYY-MM-DD)") },
                     supportingText = {
                         Text(
-                            text = "Changing date reschedules crop to Planned / Unplanted at Stage 1",
+                            text = "Changing date reschedules vegetable to Planned / Unplanted at Stage 1",
                             fontSize = 10.sp,
                             color = Color(0xFFA0B09A)
                         )

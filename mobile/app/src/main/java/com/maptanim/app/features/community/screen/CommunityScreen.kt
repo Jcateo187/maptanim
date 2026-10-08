@@ -1,27 +1,18 @@
 package com.maptanim.app.features.community.screen
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,18 +33,17 @@ private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
 private val CardBorderColor = Color(0xFFE0E0E0)
 private val MutedText = Color(0xFF555555)
-private val LightSurface = Color(0xFFF9FAF8)
 
 /**
- * CommunityScreen — Farmer peer-to-peer discussion forum and direct messaging hub.
- * Decomposed from a 2,361-line monolith into modular components:
- * 1. PostCard (clean feed card with like, reply count, and report)
- * 2. CreatePostSheet (post authoring form with validation)
- * 3. PostDetailView & CommentSection (discussion thread and comment replies)
- * 4. CommunityChatSection (farmer contact channels and message stream)
- * 5. CommunityReportDialog & AddFriendDialog (moderation & connection dialogs)
+ * CommunityScreen — Edge-to-edge community forum and direct messaging hub.
+ * Structured cleanly:
+ * 1. CommunityHeaderBar (Feed/Chat tabs, Search Bar + Search Button, All discussion / My Post filters, Create Post button)
+ * 2. Edge-to-edge full width forum feed (PostCard with dividers, not cards)
+ * 3. CreatePostSheet (Streamlined thoughts editor with 2-row hashtags)
+ * 4. PostDetailView (Edge-to-edge discussion thread with comments)
+ * 5. CommunityChatSection (Search bar + button, Add Friends horizontal row, Friend list, Dedicated Chat screen)
  *
- * Adheres strictly to the Daylight High-Contrast Theme (Pure White background, Lush Green buttons/tabs, Deep Black text).
+ * Adheres strictly to the Daylight High-Contrast Theme.
  */
 @Composable
 fun CommunityScreen(
@@ -117,50 +107,50 @@ fun CommunityScreen(
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(innerPadding)
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // ── Status Toast / Notice Banner ────────────────────────────
             val activeNotice = uiState.reportNotice ?: uiState.postNotice
             val isErrorNotice = uiState.reportNotice == null && uiState.postNoticeIsError
             activeNotice?.let { notice ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isErrorNotice) Color(0xFFFFEBEE) else Color(0xFFE8F5E9),
-                    border = BorderStroke(1.dp, if (isErrorNotice) Color(0xFFEF9A9A) else LushGreen.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isErrorNotice) Color(0xFFFFEBEE) else Color(0xFFE8F5E9),
+                        border = BorderStroke(1.dp, if (isErrorNotice) Color(0xFFEF9A9A) else LushGreen.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = if (isErrorNotice) Icons.Default.ReportProblem else Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = if (isErrorNotice) Color(0xFFC62828) else LushGreen,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = notice,
-                            color = if (isErrorNotice) Color(0xFFC62828) else LushGreen,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick = {
-                                if (uiState.reportNotice != null) viewModel.clearReportNotice()
-                                if (uiState.postNotice != null) viewModel.clearPostNotice()
-                            },
-                            modifier = Modifier.size(18.dp)
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Dismiss",
-                                tint = DeepBlack,
-                                modifier = Modifier.size(14.dp)
+                                imageVector = if (isErrorNotice) Icons.Default.ReportProblem else Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = if (isErrorNotice) Color(0xFFC62828) else LushGreen,
+                                modifier = Modifier.size(16.dp)
                             )
+                            Text(
+                                text = notice,
+                                color = if (isErrorNotice) Color(0xFFC62828) else LushGreen,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    if (uiState.reportNotice != null) viewModel.clearReportNotice()
+                                    if (uiState.postNotice != null) viewModel.clearPostNotice()
+                                },
+                                modifier = Modifier.size(18.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = DeepBlack,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -184,7 +174,7 @@ fun CommunityScreen(
                 )
             }
 
-            // ── Main Content Area ───────────────────────────────────────
+            // ── Main Content Area (Wide, Edge-to-Edge) ──────────────────
             if (activeMode == CommunityViewMode.FEED) {
                 when (feedSubMode) {
                     FeedSubMode.FEED_LIST -> {
@@ -205,9 +195,10 @@ fun CommunityScreen(
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                                contentPadding = PaddingValues(vertical = 4.dp)
+                                    .weight(1f)
+                                    .background(Color(0xFFF3F5F3)),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(bottom = 16.dp)
                             ) {
                                 items(displayPosts, key = { it.id }) { post ->
                                     PostCard(
@@ -236,8 +227,8 @@ fun CommunityScreen(
                             currentUserName = uiState.currentUserName,
                             isPublishing = uiState.isPublishingPost,
                             onCancel = { feedSubMode = FeedSubMode.FEED_LIST },
-                            onSubmit = { title, category, content, authorName ->
-                                viewModel.createPost(title, category, content, authorName) { success ->
+                            onSubmit = { title, category, content, authorName, imagePath ->
+                                viewModel.createPost(title, category, content, authorName, imagePath) { success ->
                                     if (success) {
                                         feedSubMode = FeedSubMode.FEED_LIST
                                     }
@@ -248,9 +239,13 @@ fun CommunityScreen(
 
                     FeedSubMode.POST_DETAIL -> {
                         uiState.selectedPost?.let { post ->
+                            val relatedPosts = remember(post, displayPosts) {
+                                displayPosts.filter { it.id != post.id }
+                            }
                             PostDetailView(
                                 post = post,
                                 comments = uiState.selectedPostComments,
+                                relatedPosts = relatedPosts,
                                 currentUserName = uiState.currentUserName,
                                 onBack = {
                                     viewModel.selectPost(null)
@@ -275,6 +270,9 @@ fun CommunityScreen(
                                         name = comment.authorName,
                                         content = comment.content
                                     )
+                                },
+                                onSelectRelatedPost = { related ->
+                                    viewModel.selectPost(related)
                                 }
                             )
                         } ?: run {
@@ -286,9 +284,12 @@ fun CommunityScreen(
                 // ── CHAT MODE ───────────────────────────────────────────
                 CommunityChatSection(
                     friends = uiState.friends,
+                    communityMembers = uiState.communityMembers,
+                    onAddFriend = { memberId -> viewModel.addFriend(memberId) },
                     currentUserName = uiState.currentUserName,
                     onOpenAddFriend = { showAddFriendDialog = true },
                     onReportUser = { target -> activeReportTarget = target },
+                    searchQuery = uiState.searchQuery,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -322,7 +323,7 @@ fun CommunityScreen(
             currentUserId = uiState.currentUserId,
             onDismiss = { showAddFriendDialog = false },
             onAddFriend = { memberId -> viewModel.addFriend(memberId) },
-            onSelectFriend = { /* Chat selected */ }
+            onSelectFriend = { /* Handled in Chat */ }
         )
     }
 }

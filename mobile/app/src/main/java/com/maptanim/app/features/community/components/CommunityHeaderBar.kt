@@ -33,7 +33,11 @@ private val MutedText = Color(0xFF555555)
 private val LightSurface = Color(0xFFF9FAF8)
 
 /**
- * CommunityHeaderBar — Top navigation bar with Feed/Chat mode switcher, All/Mine filter, search input, and create post action.
+ * CommunityHeaderBar — Forum-styled header:
+ * - Row 1: Feed and Chat tabs on the left, Search bar and Search button on the right.
+ * - Divider line separating the header.
+ * - Row 2 (Bottom of header in Feed mode): "All discussion" and "My Post" on left, "Create Post" on right.
+ * - Divider line separating header from the feed.
  */
 @Composable
 fun CommunityHeaderBar(
@@ -46,187 +50,248 @@ fun CommunityHeaderBar(
     onCreatePostClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    var isSearchFocused by remember { mutableStateOf(false) }
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .background(Color.White)
     ) {
-        // Feed vs Chat Mode Switcher
+        // ── TOP ROW: Feed, Chat mode switcher (left) + Search Bar & Search Button (right) ──
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(LightSurface)
-                .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp))
-                .padding(2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Surface(
-                onClick = { onModeChange(CommunityViewMode.FEED) },
-                shape = RoundedCornerShape(6.dp),
-                color = if (activeMode == CommunityViewMode.FEED) LushGreen else Color.Transparent
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DynamicFeed,
-                        contentDescription = null,
-                        tint = if (activeMode == CommunityViewMode.FEED) Color.White else MutedText,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Feed",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (activeMode == CommunityViewMode.FEED) Color.White else DeepBlack
-                    )
-                }
-            }
-
-            Surface(
-                onClick = { onModeChange(CommunityViewMode.CHAT) },
-                shape = RoundedCornerShape(6.dp),
-                color = if (activeMode == CommunityViewMode.CHAT) LushGreen else Color.Transparent
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = null,
-                        tint = if (activeMode == CommunityViewMode.CHAT) Color.White else MutedText,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Chat",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (activeMode == CommunityViewMode.CHAT) Color.White else DeepBlack
-                    )
-                }
-            }
-        }
-
-        // Feed Mode Controls: Filter + Search + Create
-        if (activeMode == CommunityViewMode.FEED) {
-            // All vs My Posts filter
+            // Mode Switcher: Feed / Chat
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(LightSurface)
-                    .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp))
-                    .padding(2.dp)
+                    .border(1.dp, CardBorderColor, RoundedCornerShape(10.dp))
+                    .padding(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    onClick = { onToggleShowOnlyMyPosts(false) },
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (!showOnlyMyPosts) LushGreen else Color.Transparent
+                    onClick = { onModeChange(CommunityViewMode.FEED) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (activeMode == CommunityViewMode.FEED) LushGreen else Color.Transparent
                 ) {
-                    Text(
-                        text = "All",
-                        fontSize = 11.sp,
-                        fontWeight = if (!showOnlyMyPosts) FontWeight.Bold else FontWeight.Normal,
-                        color = if (!showOnlyMyPosts) Color.White else DeepBlack,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DynamicFeed,
+                            contentDescription = "Feed",
+                            tint = if (activeMode == CommunityViewMode.FEED) Color.White else MutedText,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Feed",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (activeMode == CommunityViewMode.FEED) Color.White else DeepBlack
+                        )
+                    }
                 }
+
                 Surface(
-                    onClick = { onToggleShowOnlyMyPosts(true) },
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (showOnlyMyPosts) LushGreen else Color.Transparent
+                    onClick = { onModeChange(CommunityViewMode.CHAT) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (activeMode == CommunityViewMode.CHAT) LushGreen else Color.Transparent
                 ) {
-                    Text(
-                        text = "Mine",
-                        fontSize = 11.sp,
-                        fontWeight = if (showOnlyMyPosts) FontWeight.Bold else FontWeight.Normal,
-                        color = if (showOnlyMyPosts) Color.White else DeepBlack,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = "Chat",
+                            tint = if (activeMode == CommunityViewMode.CHAT) Color.White else MutedText,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Chat",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (activeMode == CommunityViewMode.CHAT) Color.White else DeepBlack
+                        )
+                    }
                 }
             }
 
-            // Search Bar
-            var isSearchFocused by remember { mutableStateOf(false) }
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(34.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = LightSurface,
-                border = BorderStroke(1.dp, if (isSearchFocused) LushGreen else CardBorderColor)
-            ) {
+            // In Feed mode: Search Bar and Search Button on right
+            if (activeMode == CommunityViewMode.FEED) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 8.dp),
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = LushGreen,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.CenterStart
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = LightSurface,
+                        border = BorderStroke(1.dp, if (isSearchFocused) LushGreen else CardBorderColor)
                     ) {
-                        if (searchQuery.isEmpty()) {
-                            Text(
-                                "Search topics...",
-                                color = MutedText,
-                                fontSize = 11.sp
-                            )
-                        }
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            singleLine = true,
-                            textStyle = TextStyle(color = DeepBlack, fontSize = 11.sp),
-                            cursorBrush = SolidColor(LushGreen),
+                        Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .onFocusChanged { isSearchFocused = it.isFocused }
-                        )
-                    }
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(
-                            onClick = { onSearchQueryChange("") },
-                            modifier = Modifier.size(18.dp)
+                                .fillMaxSize()
+                                .padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = MutedText,
-                                modifier = Modifier.size(13.dp)
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = if (isSearchFocused) LushGreen else MutedText,
+                                modifier = Modifier.size(15.dp)
                             )
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        text = "Search discussions...",
+                                        color = MutedText,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                BasicTextField(
+                                    value = searchQuery,
+                                    onValueChange = onSearchQueryChange,
+                                    singleLine = true,
+                                    textStyle = TextStyle(
+                                        color = DeepBlack,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    cursorBrush = SolidColor(LushGreen),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                            }
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { onSearchQueryChange("") },
+                                    modifier = Modifier.size(18.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear",
+                                        tint = MutedText,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
                         }
                     }
+
+                    // Search Button
+                    Button(
+                        onClick = { /* Search applied reactively */ },
+                        colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            text = "Search",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+
+        // Header Divider Line
+        HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
+
+        // ── BOTTOM OF HEADER (FEED MODE): All discussion, My Post (left) + Create Post (right) ──
+        if (activeMode == CommunityViewMode.FEED) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Filter Tabs: "All discussion" & "My Post"
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(LightSurface)
+                        .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        onClick = { onToggleShowOnlyMyPosts(false) },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (!showOnlyMyPosts) LushGreen else Color.Transparent
+                    ) {
+                        Text(
+                            text = "All discussion",
+                            fontSize = 11.sp,
+                            fontWeight = if (!showOnlyMyPosts) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (!showOnlyMyPosts) Color.White else DeepBlack,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                    Surface(
+                        onClick = { onToggleShowOnlyMyPosts(true) },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (showOnlyMyPosts) LushGreen else Color.Transparent
+                    ) {
+                        Text(
+                            text = "My Post",
+                            fontSize = 11.sp,
+                            fontWeight = if (showOnlyMyPosts) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (showOnlyMyPosts) Color.White else DeepBlack,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                // Create Post Button
+                Button(
+                    onClick = onCreatePostClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Create Post",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
 
-            // + Create Post Button
-            Button(
-                onClick = onCreatePostClick,
-                colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                modifier = Modifier.height(34.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create Post",
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+            // Divider Line below bottom of header
+            HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
         }
     }
 }

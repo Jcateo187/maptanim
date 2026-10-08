@@ -30,10 +30,21 @@ import com.maptanim.app.domain.model.EditTool
 import com.maptanim.app.dss.knowledgebase.CompanionDataProvider
 import com.maptanim.app.features.farm.renderer.gesture.HandleType
 import com.maptanim.app.features.farm.renderer.model.CropZoneRenderData
+import com.maptanim.app.features.farm.renderer.model.FOOT_IN_METERS
+import com.maptanim.app.features.farm.renderer.model.INCH_IN_METERS
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
+import com.maptanim.app.features.farm.renderer.model.SIX_INCHES_IN_METERS
+import com.maptanim.app.features.farm.renderer.model.YARD_IN_METERS
+import com.maptanim.app.features.farm.renderer.model.cropSinglePlantSpacingM
+import com.maptanim.app.features.farm.renderer.model.realLifeCropDiameterM
 import com.maptanim.app.features.farm.viewmodel.EditUiState
 import com.maptanim.app.features.farm.viewmodel.EditViewModel
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import com.maptanim.app.features.farm.companion.FarmCompanionManager
+import com.maptanim.app.features.farm.companion.NeighborStatus
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +73,7 @@ object TopDownProjection {
 
     fun worldSizeToScreen(meters: Float, camera: TopDownCamera): Float = meters * PPM * camera.zoom
 
-    fun snapToGrid(worldPos: Offset, snap: Float = 0.5f): Offset =
+    fun snapToGrid(worldPos: Offset, snap: Float = SIX_INCHES_IN_METERS): Offset =
         Offset(Math.round(worldPos.x / snap) * snap, Math.round(worldPos.y / snap) * snap)
 
     fun fitCamera(
@@ -87,17 +98,18 @@ object TopDownProjection {
     }
 
     /**
-     * Clamps camera pan and zoom so the 45m x 45m farm box NEVER goes outside the visible screen.
-     * Limits the height within the available viewport and guarantees compatibility with any device.
+     * Clamps camera pan and zoom so the garden grid is comfortably visible.
+     * Maximum zoom in allows zooming in to 10 inches (~0.254m).
+     * Maximum zoom out fits the grid with only a little gap around it.
      */
     fun clampCamera(
         camera: TopDownCamera,
-        farmW: Float = 45f,
-        farmH: Float = 45f,
+        farmW: Float = 10f,
+        farmH: Float = 8f,
         screenW: Float,
         screenH: Float,
-        topPadding: Float = 140f,
-        bottomPadding: Float = 180f,
+        topPadding: Float = 100f,
+        bottomPadding: Float = 140f,
         sidePadding: Float = 30f,
         leftPadding: Float = sidePadding,
         rightPadding: Float = sidePadding
@@ -106,23 +118,30 @@ object TopDownProjection {
 
         val availW = (screenW - leftPadding - rightPadding).coerceAtLeast(100f)
         val availH = (screenH - topPadding - bottomPadding).coerceAtLeast(100f)
-        val fitZoom = minOf(availW / (farmW * PPM), availH / (farmH * PPM)).coerceIn(0.15f, 3.5f)
-        val clampedZoom = camera.zoom.coerceIn(fitZoom, 3.5f)
+        val safeW = farmW.coerceAtLeast(1.0f)
+        val safeH = farmH.coerceAtLeast(1.0f)
 
-        val farmScreenW = farmW * PPM * clampedZoom
-        val farmScreenH = farmH * PPM * clampedZoom
+        // 2 inches in world meters: 2 * 0.0254m = 0.0508m (permits zooming deeply down to 1-inch box resolution)
+        val minVisibleM = 0.0508f
+        val fitZoom = minOf(availW / (safeW * PPM), availH / (safeH * PPM))
+        val minZoom = (fitZoom * 0.85f).coerceAtLeast(0.05f)
+        val maxZoom = (availW / (minVisibleM * PPM)).coerceAtLeast(fitZoom)
+        val clampedZoom = camera.zoom.coerceIn(minZoom, maxZoom)
 
-        val clampedPanX = if (farmScreenW <= availW) {
-            leftPadding + (availW - farmScreenW) / 2f
-        } else {
-            camera.panX.coerceIn(screenW - rightPadding - farmScreenW, leftPadding)
-        }
+        val farmScreenW = safeW * PPM * clampedZoom
+        val farmScreenH = safeH * PPM * clampedZoom
 
-        val clampedPanY = if (farmScreenH <= availH) {
-            topPadding + (availH - farmScreenH) / 2f
-        } else {
-            camera.panY.coerceIn((screenH - bottomPadding) - farmScreenH, topPadding)
-        }
+        // Only have a little comfortable gap to drag a grid in normal ways
+        val panGapX = (availW * 0.25f).coerceAtLeast(60f)
+        val panGapY = (availH * 0.25f).coerceAtLeast(60f)
+
+        val minPanX = screenW - rightPadding - farmScreenW - panGapX
+        val maxPanX = leftPadding + panGapX
+        val clampedPanX = camera.panX.coerceIn(minOf(minPanX, maxPanX), maxOf(minPanX, maxPanX))
+
+        val minPanY = (screenH - bottomPadding) - farmScreenH - panGapY
+        val maxPanY = topPadding + panGapY
+        val clampedPanY = camera.panY.coerceIn(minOf(minPanY, maxPanY), maxOf(minPanY, maxPanY))
 
         return TopDownCamera(panX = clampedPanX, panY = clampedPanY, zoom = clampedZoom)
     }
@@ -132,25 +151,28 @@ object TopDownProjection {
 // Design Tokens
 // ═══════════════════════════════════════════════════════════════════════════════
 
-internal val CanvasBg         = Color(0xFF1B221A) // Dark agricultural soil background
-internal val GridDotColor     = Color(0xFF384535) // Subtle gray-green dot grid
-internal val FarmBorderColor  = Color(0xFF4CAF50) // Crisp green farm boundary
-internal val FarmInnerBg      = Color(0xFF1B221A) // Seamless farm surface inside boundary
-internal val BedFill          = Color(0xFF8D6E63) // Brown garden bed
-internal val BedBorder        = Color(0xFF5D4037)
-internal val PlantedBedFill   = Color(0xFF6D4C41)
+internal val CanvasBg         = Color(0xFF261814) // Dark neutral background outside garden
+internal val FarmInnerBg      = Color(0xFF4E342E) // Rich brown agricultural soil for garden grid
+internal val GridSubBoxLineColor = Color(0x40FFFFFF) // Subtle white lines for small 6-inch crop boxes
+internal val GridBoxLineColor = Color(0x85FFFFFF)    // Clear white lines for 1-foot (12-inch) zones
+internal val GridMajorLineColor = Color(0xF5FFFFFF)  // Solid white major lines for 1-yard (36-inch) boundaries
+internal val GridDotColor     = Color(0x38D7CCC8) // Grid dot / indicator color
+internal val FarmBorderColor  = Color.White       // Crisp white farm perimeter
 internal val SelectionBlue    = Color(0xFF2979FF)
 internal val HandleFill       = Color.White
 internal val HandleStroke     = Color(0xFF1565C0)
 internal val ValidHover       = Color(0xFF4CAF50)
 internal val InvalidHover     = Color(0xFFF44336)
-internal val LabelBg          = Color(0xFF37474F)
+internal val LabelBg          = Color(0xFF3E2723)
+internal val BedFill          = Color(0xFF5D4037)
+internal val BedBorder        = Color(0xFF8D6E63)
+internal val PlantedBedFill   = Color(0xFF3E2723)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Gesture state tracking
 // ═══════════════════════════════════════════════════════════════════════════════
 
-private enum class DragMode { IDLE, PAN, MOVE_PLOT, MOVE_CROP, RESIZE_HANDLE }
+private enum class DragMode { IDLE, PAN, MOVE_CROP, RESIZE_HANDLE }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TopDownFarmCanvas — Professional 2D orthographic top-down farm canvas
@@ -170,18 +192,27 @@ fun TopDownFarmCanvas(
     editViewModel: EditViewModel,
     activeCropName: String = "",
     activeCropId: String = "",
+    activeVariety: String? = null,
+    activeCropDiameterM: Float? = null,
     hoverWorldPos: Offset? = null,
     isValidPlacement: Boolean = true,
     isDraggingCrop: Boolean = false,
     dragCropName: String = "",
     showYardRulers: Boolean = true,
+    showMeasurement: Boolean = true,
     showBoundary: Boolean = false,
-    yardWidthM: Float = 15f,
-    yardHeightM: Float = 10f,
+    yardWidthM: Float = 3.048f,
+    yardHeightM: Float = 2.4384f,
+    showCompanion: Boolean = false,
+    showVariety: Boolean = false,
+    showCropName: Boolean = true,
     initialZoom: Float = 0.5f,
-    onCameraChanged: (TopDownCamera) -> Unit = {}
+    onCameraChanged: (TopDownCamera) -> Unit = {},
+    onCropPlaced: () -> Unit = {},
+    onCropTapped: (CropZoneRenderData) -> Unit = {},
+    onTapOutsideCrop: () -> Unit = {}
 ) {
-    val effectiveShowRulers = showYardRulers || showBoundary
+    val effectiveShowRulers = (showYardRulers || showBoundary) && showMeasurement
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
 
@@ -194,7 +225,7 @@ fun TopDownFarmCanvas(
     var dragStartScreenPos by remember { mutableStateOf(Offset.Zero) }
     var dragAccumWorld by remember { mutableStateOf(Offset.Zero) }
     var activeHandle by remember { mutableStateOf<HandleType?>(null) }
-    var activeDragPlotId by remember { mutableStateOf<String?>(null) }
+    var activeDragCropId by remember { mutableStateOf<String?>(null) }
     var lastPointerCount by remember { mutableIntStateOf(0) }
     var lastPinchDist by remember { mutableFloatStateOf(0f) }
 
@@ -206,18 +237,19 @@ fun TopDownFarmCanvas(
     val leftPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
     val rightPaddingPx = with(density) { if (isLandscape) 20.dp.toPx() else 16.dp.toPx() }
 
-    // Entrance: Start at initialZoom (default 0.5f = zoom 5) centered on beds with NO visible canvas edge
-    LaunchedEffect(canvasSize, isLandscape) {
+    // Entrance: Center specifically on the garden grid with yardWidthM and yardHeightM
+    LaunchedEffect(canvasSize, yardWidthM, yardHeightM, isLandscape) {
         if (canvasSize.width > 0 && canvasSize.height > 0) {
-            val targetZoom = initialZoom.coerceIn(0.2f, 3.5f)
-            val centerX = if (uiState.plots.isNotEmpty()) {
-                (uiState.plots.minOf { it.posX } + uiState.plots.maxOf { it.posX + it.widthM }) / 2f
-            } else yardWidthM / 2f
-            val centerY = if (uiState.plots.isNotEmpty()) {
-                (uiState.plots.minOf { it.posY } + uiState.plots.maxOf { it.posY + it.heightM }) / 2f
-            } else yardHeightM / 2f
-            val panX = canvasSize.width / 2f - centerX * TopDownProjection.PPM * targetZoom
-            val panY = canvasSize.height / 2f - centerY * TopDownProjection.PPM * targetZoom
+            val safeW = yardWidthM.coerceAtLeast(1.0f)
+            val safeH = yardHeightM.coerceAtLeast(1.0f)
+            val availW = (canvasSize.width.toFloat() - leftPaddingPx - rightPaddingPx).coerceAtLeast(100f)
+            val availH = (canvasSize.height.toFloat() - topPaddingPx - bottomPaddingPx).coerceAtLeast(100f)
+            val fitZoom = minOf(availW / (safeW * TopDownProjection.PPM), availH / (safeH * TopDownProjection.PPM))
+            val targetZoom = fitZoom.coerceAtLeast(0.05f)
+            val farmScreenW = safeW * TopDownProjection.PPM * targetZoom
+            val farmScreenH = safeH * TopDownProjection.PPM * targetZoom
+            val panX = leftPaddingPx + (availW - farmScreenW) / 2f
+            val panY = topPaddingPx + (availH - farmScreenH) / 2f
             val initCam = TopDownCamera(panX = panX, panY = panY, zoom = targetZoom)
             camera = initCam
             onCameraChanged(initCam)
@@ -263,19 +295,16 @@ fun TopDownFarmCanvas(
                                     dragAccumWorld = Offset.Zero
                                     val world = TopDownProjection.screenToWorld(pos.x, pos.y, camera)
 
-                                    // Hit test: handle (crop or bed) → selected crop → selected bed → pan
-                                    val selectedPlot = currentPlots.firstOrNull { it.id == currentSelectedPlotId }
-                                    val selectedZone = currentCropZones.firstOrNull { it.id == currentSelectedZoneId }
+                                    // Hit test: handle → crop on grid (hold to drag) → pan
+                                    val activePlotId = currentSelectedPlotId ?: currentPlots.firstOrNull()?.id
+                                    val selectedZone = currentCropZones.firstOrNull { it.id == currentSelectedZoneId && (activePlotId == null || it.plotId == activePlotId) }
                                     val hitHandle = when {
-                                        currentIsResizeMode && selectedZone != null && selectedPlot != null ->
-                                            hitTestZoneHandle(world, selectedZone, selectedPlot, handleHitRadius)
-                                        currentIsResizeMode && selectedPlot != null && selectedZone == null ->
-                                            hitTestHandle(world, selectedPlot, handleHitRadius)
+                                        currentIsResizeMode && selectedZone != null ->
+                                            hitTestZoneHandle(world, selectedZone, handleHitRadius)
                                         else -> null
                                     }
 
-                                    val hitCrop = hitTestCropZone(world, currentCropZones, currentPlots)
-                                    val hitPlot = hitTestPlot(world, currentPlots)
+                                    val hitCrop = hitTestCropZone(world, currentCropZones, activePlotId)
 
                                     when {
                                         hitHandle != null -> {
@@ -283,19 +312,13 @@ fun TopDownFarmCanvas(
                                             activeHandle = hitHandle
                                             if (selectedZone != null) {
                                                 editViewModel.onZoneHandleDragStart(selectedZone.id)
-                                            } else if (selectedPlot != null) {
-                                                activeDragPlotId = currentSelectedPlotId
-                                                editViewModel.onHandleDragStart(currentSelectedPlotId!!)
                                             }
                                         }
-                                        hitCrop != null && hitCrop.id == currentSelectedZoneId -> {
+                                        hitCrop != null -> {
+                                            // Directly allow holding and dragging any crop on the grid!
                                             dragMode = DragMode.MOVE_CROP
+                                            activeDragCropId = hitCrop.id
                                             editViewModel.onCropZoneDragStart(hitCrop.id)
-                                        }
-                                        hitPlot != null && hitPlot.id == currentSelectedPlotId && currentSelectedZoneId == null -> {
-                                            dragMode = DragMode.MOVE_PLOT
-                                            activeDragPlotId = hitPlot.id
-                                            editViewModel.onPlotDragStart(hitPlot.id)
                                         }
                                         else -> {
                                             dragMode = DragMode.PAN
@@ -321,8 +344,13 @@ fun TopDownFarmCanvas(
                                         val factor = curDist / lastPinchDist
                                         val availW = (canvasSize.width.toFloat() - leftPaddingPx - rightPaddingPx).coerceAtLeast(100f)
                                         val availH = (canvasSize.height.toFloat() - topPaddingPx - bottomPaddingPx).coerceAtLeast(100f)
-                                        val fitZoom = minOf(availW / (45f * TopDownProjection.PPM), availH / (45f * TopDownProjection.PPM)).coerceIn(0.15f, 3.5f)
-                                        val targetZoom = (camera.zoom * factor).coerceIn(fitZoom, 3.5f)
+                                        val safeW = yardWidthM.coerceAtLeast(1.0f)
+                                        val safeH = yardHeightM.coerceAtLeast(1.0f)
+                                        val minVisibleM = 0.0508f
+                                        val fitZoom = minOf(availW / (safeW * TopDownProjection.PPM), availH / (safeH * TopDownProjection.PPM))
+                                        val minZoom = (fitZoom * 0.85f).coerceAtLeast(0.05f)
+                                        val maxZoom = (availW / (minVisibleM * TopDownProjection.PPM)).coerceAtLeast(fitZoom)
+                                        val targetZoom = (camera.zoom * factor).coerceIn(minZoom, maxZoom)
                                         val actualScale = if (camera.zoom > 0f) targetZoom / camera.zoom else 1f
 
                                         val center = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
@@ -330,7 +358,7 @@ fun TopDownFarmCanvas(
                                         val newPanY = center.y - (center.y - camera.panY) * actualScale
                                         val rawCam = camera.copy(panX = newPanX, panY = newPanY, zoom = targetZoom)
                                         camera = TopDownProjection.clampCamera(
-                                            rawCam, farmW = 45f, farmH = 45f,
+                                            rawCam, farmW = yardWidthM, farmH = yardHeightM,
                                             screenW = canvasSize.width.toFloat(), screenH = canvasSize.height.toFloat(),
                                             topPadding = topPaddingPx, bottomPadding = bottomPaddingPx,
                                             leftPadding = leftPaddingPx, rightPadding = rightPaddingPx
@@ -351,16 +379,9 @@ fun TopDownFarmCanvas(
                                         )
 
                                         when (dragMode) {
-                                            DragMode.MOVE_PLOT -> {
-                                                dragAccumWorld += incrementalWorldDelta
-                                                activeDragPlotId?.let { plotId ->
-                                                    editViewModel.movePlot(plotId, dragAccumWorld)
-                                                }
-                                                change.consume()
-                                            }
                                             DragMode.MOVE_CROP -> {
                                                 dragAccumWorld += incrementalWorldDelta
-                                                val zid = currentSelectedZoneId
+                                                val zid = activeDragCropId ?: currentSelectedZoneId
                                                 if (zid != null) {
                                                     editViewModel.moveCropZone(zid, dragAccumWorld)
                                                 }
@@ -370,13 +391,8 @@ fun TopDownFarmCanvas(
                                                 dragAccumWorld += incrementalWorldDelta
                                                 val h = activeHandle
                                                 val zid = currentSelectedZoneId
-                                                val pid = activeDragPlotId
-                                                if (h != null) {
-                                                    if (zid != null) {
-                                                        editViewModel.resizeCropZoneByHandle(zid, h, dragAccumWorld)
-                                                    } else if (pid != null) {
-                                                        editViewModel.resizePlotByHandle(pid, h, dragAccumWorld)
-                                                    }
+                                                if (h != null && zid != null) {
+                                                    editViewModel.resizeCropZoneByHandle(zid, h, dragAccumWorld)
                                                 }
                                                 change.consume()
                                             }
@@ -386,7 +402,7 @@ fun TopDownFarmCanvas(
                                                     panY = camera.panY + screenDelta.y
                                                 )
                                                 camera = TopDownProjection.clampCamera(
-                                                    rawCam, farmW = 45f, farmH = 45f,
+                                                    rawCam, farmW = yardWidthM, farmH = yardHeightM,
                                                     screenW = canvasSize.width.toFloat(), screenH = canvasSize.height.toFloat(),
                                                     topPadding = topPaddingPx, bottomPadding = bottomPaddingPx,
                                                     leftPadding = leftPaddingPx, rightPadding = rightPaddingPx
@@ -409,28 +425,37 @@ fun TopDownFarmCanvas(
                                         val worldPos = TopDownProjection.screenToWorld(
                                             dragStartScreenPos.x, dragStartScreenPos.y, camera
                                         )
-                                        val hitCrop = hitTestCropZone(worldPos, currentCropZones, currentPlots)
+                                        val activePlotId = currentSelectedPlotId ?: currentPlots.firstOrNull()?.id
+                                        val hitCrop = hitTestCropZone(worldPos, currentCropZones, activePlotId)
                                         val hitPlot = hitTestPlot(worldPos, currentPlots)
                                         handleTap(
-                                            worldPos, hitCrop, hitPlot, currentActiveTool,
-                                            activeCropName, activeCropId,
-                                            currentIsSnapEnabled, currentPlots, editViewModel
+                                            worldPos = worldPos,
+                                            hitCrop = hitCrop,
+                                            hitPlot = hitPlot,
+                                            activeTool = currentActiveTool,
+                                            activeCropName = activeCropName,
+                                            activeCropId = activeCropId,
+                                            activeVariety = activeVariety,
+                                            activeCropDiameterM = activeCropDiameterM,
+                                            isSnapEnabled = currentIsSnapEnabled,
+                                            plots = currentPlots,
+                                            currentSelectedPlotId = currentSelectedPlotId,
+                                            editViewModel = editViewModel,
+                                            onCropPlaced = onCropPlaced,
+                                            onCropTapped = onCropTapped,
+                                            onTapOutsideCrop = onTapOutsideCrop
                                         )
                                     }
 
                                     // Finalize drag
                                     when (dragMode) {
-                                        DragMode.MOVE_PLOT -> {
-                                            activeDragPlotId?.let { editViewModel.onPlotDragEnd(it) }
-                                        }
                                         DragMode.MOVE_CROP -> {
-                                            currentSelectedZoneId?.let { editViewModel.onCropZoneDragEnd(it) }
+                                            val zid = activeDragCropId ?: currentSelectedZoneId
+                                            zid?.let { editViewModel.onCropZoneDragEnd(it) }
                                         }
                                         DragMode.RESIZE_HANDLE -> {
                                             if (currentSelectedZoneId != null) {
                                                 editViewModel.onZoneHandleDragEnd()
-                                            } else {
-                                                editViewModel.onHandleDragEnd()
                                             }
                                         }
                                         else -> {}
@@ -438,7 +463,7 @@ fun TopDownFarmCanvas(
 
                                     dragMode = DragMode.IDLE
                                     activeHandle = null
-                                    activeDragPlotId = null
+                                    activeDragCropId = null
                                     dragAccumWorld = Offset.Zero
                                     lastPointerCount = 0
                                     lastPinchDist = 0f
@@ -451,62 +476,58 @@ fun TopDownFarmCanvas(
                 }
             }
     ) {
-        // ── Background ─────────────────────────────────────────────────
+        // ── 1. Outside Background ──────────────────────────────────────
         drawRect(CanvasBg, Offset.Zero, size)
 
-        // ── Dot Grid ───────────────────────────────────────────────────
-        if (currentIsGridEnabled) {
-            drawDotGrid(camera)
-        }
-
-        // ── Yard Boundary & Metric Rulers ──────────────────────────────
+        // ── 2. Centered Garden Grid with White Boxes & Yard Numbers ────
         drawYardPerimeterAndRulers(camera, yardWidthM, yardHeightM, effectiveShowRulers, textMeasurer)
 
-        // ── Plot Beds & Crops ──────────────────────────────────────────
-        for (plot in currentPlots) {
-            drawPlotBed(
-                plot = plot,
-                cropZones = uiState.cropZones,
-                selectedZoneId = currentSelectedZoneId,
-                isSelected = (plot.id == currentSelectedPlotId && currentSelectedZoneId == null),
-                isDraggingCrop = isDraggingCrop,
-                dragCropName = dragCropName,
+        // ── 3. Crops Planted Directly on Grid (No Bed) ─────────────────
+        val activePlotId = currentSelectedPlotId ?: currentPlots.firstOrNull()?.id
+        val gardenCrops = if (activePlotId != null) {
+            uiState.cropZones.filter {
+                it.plotId == activePlotId &&
+                !it.cropName.isNullOrBlank() &&
+                !it.cropName.equals("Bed", ignoreCase = true)
+            }
+        } else emptyList()
+
+        for (zone in gardenCrops) {
+            drawDirectCrop(
+                zone = zone,
+                allZones = gardenCrops,
+                isSelected = (zone.id == currentSelectedZoneId),
+                isResizeMode = currentIsResizeMode,
+                showCompanion = showCompanion,
+                showVariety = showVariety,
+                showMeasurement = showMeasurement,
+                showCropName = showCropName,
+                varietyName = currentPlots.firstOrNull { it.id == zone.plotId }?.cropVariety,
                 camera = camera,
                 textMeasurer = textMeasurer
             )
         }
 
-        // ── Selection Handles ──────────────────────────────────────────
-        val selectedZone = currentCropZones.firstOrNull { it.id == currentSelectedZoneId }
-        val selectedPlot = currentPlots.firstOrNull { it.id == currentSelectedPlotId }
-
-        if (selectedZone != null && selectedPlot != null) {
-            drawZoneSelectionBorder(selectedZone, selectedPlot, camera)
-            if (currentIsResizeMode) {
-                drawZoneResizeHandles(selectedZone, selectedPlot, camera)
-            }
-        } else if (selectedPlot != null) {
-            drawSelectionBorder(selectedPlot, camera)
-            if (currentIsResizeMode) {
-                drawResizeHandles(selectedPlot, camera)
-            }
-        }
-
-        // ── Drag Hover Tile Preview ────────────────────────────────────
+        // ── 4. Drag Hover Tile Preview ─────────────────────────────────
         if (isDraggingCrop && hoverWorldPos != null) {
-            val isBedDrag = activeCropId.startsWith("bed", ignoreCase = true) || activeCropName.contains("Bed", ignoreCase = true)
-            val hoverW = if (isBedDrag) 2.0f else 1.0f
-            val hoverH = 1.0f
-            drawHoverTile(hoverWorldPos, isValidPlacement, camera, hoverW, hoverH)
-            if (!isBedDrag && activeCropName.isNotBlank()) {
-                val htl = TopDownProjection.worldToScreen(hoverWorldPos.x, hoverWorldPos.y, camera)
-                val hsw = TopDownProjection.worldSizeToScreen(hoverW, camera)
-                val hsh = TopDownProjection.worldSizeToScreen(hoverH, camera)
+            val hoverDiam = realLifeCropDiameterM(activeCropName)
+            val dragAnalysis = FarmCompanionManager.analyzeDragHover(activeCropName, hoverWorldPos, gardenCrops)
+            drawHoverTile(
+                worldPos = hoverWorldPos,
+                isValid = isValidPlacement,
+                neighborStatus = dragAnalysis?.status ?: NeighborStatus.NEUTRAL,
+                camera = camera,
+                w = hoverDiam,
+                h = hoverDiam
+            )
+            if (activeCropName.isNotBlank()) {
+                val center = TopDownProjection.worldToScreen(hoverWorldPos.x + hoverDiam / 2f, hoverWorldPos.y + hoverDiam / 2f, camera)
+                val hoverSvgSize = TopDownProjection.worldSizeToScreen(hoverDiam, camera).coerceAtLeast(10f)
                 CropSvgRenderer.drawCropSvg(
                     drawScope = this,
                     cropName = activeCropName,
-                    center = Offset(htl.x + hsw / 2f, htl.y + hsh / 2f),
-                    sizePx = minOf(hsw, hsh) * 0.72f
+                    center = center,
+                    sizePx = hoverSvgSize
                 )
             }
         }
@@ -517,34 +538,11 @@ fun TopDownFarmCanvas(
 // Drawing helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-private fun DrawScope.drawDotGrid(camera: TopDownCamera) {
-    val worldBounds = visibleWorldBounds(camera)
-    val gridStep = when {
-        camera.zoom > 1.5f -> 0.5f
-        camera.zoom > 0.6f -> 1f
-        camera.zoom > 0.25f -> 2f
-        else -> 5f
-    }
-    val startX = (worldBounds.left / gridStep).toInt() * gridStep
-    val startY = (worldBounds.top / gridStep).toInt() * gridStep
-    val dotRadius = (1.2f * camera.zoom).coerceIn(0.5f, 2.5f)
-
-    var gx = startX
-    while (gx <= worldBounds.right) {
-        var gy = startY
-        while (gy <= worldBounds.bottom) {
-            val screen = TopDownProjection.worldToScreen(gx, gy, camera)
-            drawCircle(GridDotColor, dotRadius, screen)
-            gy += gridStep
-        }
-        gx += gridStep
-    }
-}
 
 private fun DrawScope.drawYardPerimeterAndRulers(
     camera: TopDownCamera,
-    yardWidthM: Float = 15f,
-    yardHeightM: Float = 10f,
+    yardWidthM: Float = 3.048f,
+    yardHeightM: Float = 2.4384f,
     showRulers: Boolean = true,
     textMeasurer: TextMeasurer
 ) {
@@ -553,147 +551,374 @@ private fun DrawScope.drawYardPerimeterAndRulers(
     val yardScreenH = TopDownProjection.worldSizeToScreen(yardHeightM, camera)
     val yardSize = Size(yardScreenW, yardScreenH)
 
-    // Distinct backyard ground surface
+    // 1. Brown agricultural soil ground surface of the centered garden grid
     drawRoundRect(
         color = FarmInnerBg,
         topLeft = tl,
         size = yardSize,
-        cornerRadius = CornerRadius(6f)
+        cornerRadius = CornerRadius(4f)
     )
-    // Perimeter fence boundary stroke
+
+    // Metric & inch screen measurements
+    val pixelPerInch = TopDownProjection.worldSizeToScreen(INCH_IN_METERS, camera)
+    val pixelPer6Inch = pixelPerInch * 6f
+    val pixelPerFoot = pixelPerInch * 12f
+
+    // ── Level-of-Detail Line Alphas (smooth fading for boxes & lines) ──
+    // 1-Inch lines: fade in smoothly between 10px and 26px per inch
+    val inchLineAlpha = ((pixelPerInch - 10f) / 16f).coerceIn(0f, 1f) * 0.28f
+
+    // 6-Inch lines: fade in smoothly between 12px and 24px per 6-inch
+    val sixInchLineAlpha = ((pixelPer6Inch - 12f) / 12f).coerceIn(0f, 1f) * 0.45f
+
+    // 1-Foot lines: visible once foot is > 15px
+    val footLineAlpha = ((pixelPerFoot - 15f) / 15f).coerceIn(0f, 1f) * 0.65f
+
+    // 1-Yard lines: solid when zoomed out (0.95f), softens to 0.35f guide when zoom is max to inches
+    val yardMaxZoomFade = ((pixelPerInch - 20f) / 25f).coerceIn(0f, 1f)
+    val yardLineAlpha = (0.95f - (0.60f * yardMaxZoomFade)).coerceIn(0.35f, 0.95f)
+
+    // ── Screen bounds culling ──
+    val totalInchesX = (yardWidthM / INCH_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalInchesY = (yardHeightM / INCH_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalSixInchesX = (yardWidthM / SIX_INCHES_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalSixInchesY = (yardHeightM / SIX_INCHES_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalFeetX = (yardWidthM / FOOT_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalFeetY = (yardHeightM / FOOT_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalYardsX = (yardWidthM / YARD_IN_METERS).roundToInt().coerceAtLeast(1)
+    val totalYardsY = (yardHeightM / YARD_IN_METERS).roundToInt().coerceAtLeast(1)
+
+    val minWorldX = maxOf(0f, TopDownProjection.screenToWorld(0f, 0f, camera).x)
+    val maxWorldX = minOf(yardWidthM, TopDownProjection.screenToWorld(size.width, 0f, camera).x)
+    val startInchX = maxOf(0, (minWorldX / INCH_IN_METERS).toInt() - 1)
+    val endInchX = minOf(totalInchesX, (maxWorldX / INCH_IN_METERS).toInt() + 1)
+
+    val minWorldY = maxOf(0f, TopDownProjection.screenToWorld(0f, 0f, camera).y)
+    val maxWorldY = minOf(yardHeightM, TopDownProjection.screenToWorld(0f, size.height, camera).y)
+    val startInchY = maxOf(0, (minWorldY / INCH_IN_METERS).toInt() - 1)
+    val endInchY = minOf(totalInchesY, (maxWorldY / INCH_IN_METERS).toInt() + 1)
+
+    // 2. White grid lines with smooth Level-of-Detail alpha blending inside garden bounds
+    clipRect(left = tl.x, top = tl.y, right = tl.x + yardScreenW, bottom = tl.y + yardScreenH) {
+        // A. 1-Inch Grid Lines (subtle 1" boxes)
+        if (inchLineAlpha > 0.01f) {
+            val inchColor = Color.White.copy(alpha = inchLineAlpha)
+            for (i in startInchX..endInchX) {
+                if (i % 6 != 0) {
+                    val gx = (i * INCH_IN_METERS).coerceAtMost(yardWidthM)
+                    val sx = TopDownProjection.worldToScreen(gx, 0f, camera).x
+                    drawLine(inchColor, Offset(sx, tl.y), Offset(sx, tl.y + yardScreenH), strokeWidth = 0.5f)
+                }
+            }
+            for (i in startInchY..endInchY) {
+                if (i % 6 != 0) {
+                    val gy = (i * INCH_IN_METERS).coerceAtMost(yardHeightM)
+                    val sy = TopDownProjection.worldToScreen(0f, gy, camera).y
+                    drawLine(inchColor, Offset(tl.x, sy), Offset(tl.x + yardScreenW, sy), strokeWidth = 0.5f)
+                }
+            }
+        }
+
+        // B. 6-Inch Grid Lines (medium crop zone boxes)
+        if (sixInchLineAlpha > 0.01f) {
+            val sixColor = Color.White.copy(alpha = sixInchLineAlpha)
+            val start6X = (startInchX / 6).coerceAtLeast(0)
+            val end6X = (endInchX / 6 + 1).coerceAtMost(totalSixInchesX)
+            for (si in start6X..end6X) {
+                if (si % 2 != 0) {
+                    val gx = (si * SIX_INCHES_IN_METERS).coerceAtMost(yardWidthM)
+                    val sx = TopDownProjection.worldToScreen(gx, 0f, camera).x
+                    drawLine(sixColor, Offset(sx, tl.y), Offset(sx, tl.y + yardScreenH), strokeWidth = 0.8f)
+                }
+            }
+            val start6Y = (startInchY / 6).coerceAtLeast(0)
+            val end6Y = (endInchY / 6 + 1).coerceAtMost(totalSixInchesY)
+            for (si in start6Y..end6Y) {
+                if (si % 2 != 0) {
+                    val gy = (si * SIX_INCHES_IN_METERS).coerceAtMost(yardHeightM)
+                    val sy = TopDownProjection.worldToScreen(0f, gy, camera).y
+                    drawLine(sixColor, Offset(tl.x, sy), Offset(tl.x + yardScreenW, sy), strokeWidth = 0.8f)
+                }
+            }
+        }
+
+        // C. 1-Foot Grid Lines (12-inch boundaries)
+        if (footLineAlpha > 0.01f) {
+            val footColor = Color.White.copy(alpha = footLineAlpha)
+            val startFtX = (startInchX / 12).coerceAtLeast(0)
+            val endFtX = (endInchX / 12 + 1).coerceAtMost(totalFeetX)
+            for (fi in startFtX..endFtX) {
+                if (fi % 3 != 0) {
+                    val gx = (fi * FOOT_IN_METERS).coerceAtMost(yardWidthM)
+                    val sx = TopDownProjection.worldToScreen(gx, 0f, camera).x
+                    drawLine(footColor, Offset(sx, tl.y), Offset(sx, tl.y + yardScreenH), strokeWidth = 1.1f)
+                }
+            }
+            val startFtY = (startInchY / 12).coerceAtLeast(0)
+            val endFtY = (endInchY / 12 + 1).coerceAtMost(totalFeetY)
+            for (fi in startFtY..endFtY) {
+                if (fi % 3 != 0) {
+                    val gy = (fi * FOOT_IN_METERS).coerceAtMost(yardHeightM)
+                    val sy = TopDownProjection.worldToScreen(0f, gy, camera).y
+                    drawLine(footColor, Offset(tl.x, sy), Offset(tl.x + yardScreenW, sy), strokeWidth = 1.1f)
+                }
+            }
+        }
+
+        // D. 1-Yard Major Lines (36-inch boundaries)
+        val yardColor = Color.White.copy(alpha = yardLineAlpha)
+        val startYdX = (startInchX / 36).coerceAtLeast(0)
+        val endYdX = (endInchX / 36 + 1).coerceAtMost(totalYardsX)
+        for (yi in startYdX..endYdX) {
+            val gx = (yi * YARD_IN_METERS).coerceAtMost(yardWidthM)
+            val sx = TopDownProjection.worldToScreen(gx, 0f, camera).x
+            drawLine(yardColor, Offset(sx, tl.y), Offset(sx, tl.y + yardScreenH), strokeWidth = 1.8f)
+        }
+        val startYdY = (startInchY / 36).coerceAtLeast(0)
+        val endYdY = (endInchY / 36 + 1).coerceAtMost(totalYardsY)
+        for (yi in startYdY..endYdY) {
+            val gy = (yi * YARD_IN_METERS).coerceAtMost(yardHeightM)
+            val sy = TopDownProjection.worldToScreen(0f, gy, camera).y
+            drawLine(yardColor, Offset(tl.x, sy), Offset(tl.x + yardScreenW, sy), strokeWidth = 1.8f)
+        }
+    }
+
+    // 3. Crisp white perimeter boundary border
     drawRoundRect(
-        color = FarmBorderColor.copy(alpha = 0.8f),
+        color = Color.White.copy(alpha = 0.95f),
         topLeft = tl,
         size = yardSize,
-        cornerRadius = CornerRadius(6f),
-        style = Stroke(
-            width = (2f * camera.zoom).coerceIn(1.5f, 3f),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
-        )
+        cornerRadius = CornerRadius(4f),
+        style = Stroke(width = 2.5f)
     )
 
-    // Dimension badge on Top-Left corner: "📐 YARD GUIDE: 15m × 10m • 150m²"
-    // Pinned safely inside visible canvas so it cannot hide behind top or left toolbar
-    if (yardScreenW > 80f) {
-        val badgeText = "📐 YARD GUIDE: ${if (yardWidthM % 1f == 0f) yardWidthM.toInt() else String.format("%.1f", yardWidthM)}m × ${if (yardHeightM % 1f == 0f) yardHeightM.toInt() else String.format("%.1f", yardHeightM)}m • ${(yardWidthM * yardHeightM).toInt()}m²"
-        val badgeStyle = TextStyle(
-            fontSize = (9f * camera.zoom).coerceIn(8f, 11f).sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFC8E6C9)
-        )
-        val measured = textMeasurer.measure(badgeText, badgeStyle, maxLines = 1)
-        val bW = measured.size.width.toFloat() + 14f
-        val bH = measured.size.height.toFloat() + 6f
-        val badgeX = maxOf(tl.x + 8f, 12f)
-        val badgeY = maxOf(tl.y + 8f, 8f)
-        drawRoundRect(
-            color = Color(0xEE111813),
-            topLeft = Offset(badgeX, badgeY),
-            size = Size(bW, bH),
-            cornerRadius = CornerRadius(6f)
-        )
-        drawRoundRect(
-            color = Color(0xFF4CAF50).copy(alpha = 0.8f),
-            topLeft = Offset(badgeX, badgeY),
-            size = Size(bW, bH),
-            cornerRadius = CornerRadius(6f),
-            style = Stroke(width = 1f)
-        )
-        drawText(measured, topLeft = Offset(badgeX + 7f, badgeY + 3f))
-    }
+    // 4. Metric / Inch Rulers with Dynamic Fading
+    if (showRulers) {
+        // ── Number & Label Alphas ──
+        // Big numbers (Yards): 1.0 when zoomed out, fades to 0.0 as zoom reaches max to inches (pixelPerInch 20 -> 36)
+        val bigYardLabelAlpha = (1.0f - ((pixelPerInch - 20f) / 16f)).coerceIn(0f, 1f)
 
-    // Dynamic Metric Rulers along Top and Left axes — Placed safely so numbers NEVER hide in top toolbar or side edges
-    if (showRulers && camera.zoom >= 0.22f) {
-        val rulerColor = Color(0xFF81C784).copy(alpha = 0.85f)
-        val textStyle = TextStyle(
-            fontSize = (8.5f * camera.zoom).coerceIn(7.5f, 10.5f).sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFE8F5E9)
-        )
+        // Foot numbers: visible at mid-zoom, fades as zoom reaches max to inches
+        val footLabelAlpha = ((pixelPerFoot - 30f) / 25f).coerceIn(0f, 1f) * (1.0f - ((pixelPerInch - 24f) / 16f)).coerceIn(0f, 1f)
 
-        // Safe clamped anchor Y so top ruler numbers remain visible even if user pans down
-        val safeAnchorY = maxOf(tl.y, 6f)
+        // 6-inch numbers: fades in when 6-inch has comfortable space (>= 28px)
+        val sixInchLabelAlpha = ((pixelPer6Inch - 28f) / 20f).coerceIn(0f, 1f)
 
-        // Top Axis Ticks (Horizontal: X)
-        var x = 0f
-        val step = if (camera.zoom > 0.8f) 1f else 5f
-        while (x <= yardWidthM) {
-            val sx = TopDownProjection.worldToScreen(x, 0f, camera).x
-            val isMajor = (x.toInt() % 5 == 0)
-            val tickH = if (isMajor) 10f else 5f
+        // 1-inch numbers: fades in when pixelPerInch >= 22px
+        val inchLabelAlpha = ((pixelPerInch - 22f) / 14f).coerceIn(0f, 1f)
 
-            // Draw tick mark crossing the perimeter line
-            drawLine(
-                color = rulerColor,
-                start = Offset(sx, safeAnchorY - 2f),
-                end = Offset(sx, safeAnchorY + tickH),
-                strokeWidth = if (isMajor) 2f else 1f
-            )
-
-            // Safe Number Placement: Placed with dark pill background anchored within visible viewport
-            if (isMajor && sx < tl.x + yardScreenW - 12f && sx > 16f) {
-                val label = "${x.toInt()}m"
-                val mLabel = textMeasurer.measure(label, textStyle, maxLines = 1)
-                val pillW = mLabel.size.width.toFloat() + 6f
-                val pillH = mLabel.size.height.toFloat() + 2f
-                val pillX = sx - pillW / 2f
-                val pillY = safeAnchorY + tickH + 2f
-
-                drawRoundRect(
-                    color = Color(0xD9111813),
-                    topLeft = Offset(pillX, pillY),
-                    size = Size(pillW, pillH),
-                    cornerRadius = CornerRadius(3f)
-                )
-                drawText(mLabel, topLeft = Offset(pillX + 3f, pillY + 1f))
-            }
-            x += step
+        val fontSize = when {
+            inchLabelAlpha > 0.4f -> (pixelPerInch * 0.28f).coerceIn(6.5f, 9.5f).sp
+            else -> (8.5f * camera.zoom).coerceIn(7f, 10f).sp
         }
 
-        // Safe clamped anchor X so left ruler numbers remain visible even if user pans right
-        val safeAnchorX = maxOf(tl.x, 6f)
+        // ── Ruler Numbers Step with Gap (0, 2, 4, 6, 8, ...) ──
+        // Tick and grid lines are there for every single 1 inch without number!
+        val labelStep = when {
+            pixelPerInch >= 12f -> 2 // Gap in numbers: 0", 2", 4", 6", 8", 10", 12"... (lines are there for 1", 3", 5"... without number)
+            pixelPer6Inch >= 28f -> 6 // Every 6 inches (0", 6", 12", 18", 24"...)
+            pixelPerFoot >= 30f -> 12 // Every 12 inches (0", 12", 24", 36"...)
+            else -> 36 // Only yards (0", 36", 72"...)
+        }
 
-        // Left Axis Ticks (Vertical: Y)
-        var y = 0f
-        val yStep = if (camera.zoom > 0.8f) 1f else 5f
-        while (y <= yardHeightM) {
-            val sy = TopDownProjection.worldToScreen(0f, y, camera).y
-            val isMajor = (y.toInt() % 5 == 0)
-            val tickW = if (isMajor) 10f else 5f
+        // ── Top Axis (Width Rulers) ──
+        for (i in startInchX..endInchX) {
+            val gx = (i * INCH_IN_METERS).coerceAtMost(yardWidthM)
+            val sx = TopDownProjection.worldToScreen(gx, 0f, camera).x
+            val isYard = (i % 36 == 0)
+            val isFoot = (i % 12 == 0)
+            val is6Inch = (i % 6 == 0)
+            val isEvenInch = (i % 2 == 0)
 
-            // Draw tick crossing the line
-            drawLine(
-                color = rulerColor,
-                start = Offset(safeAnchorX - 2f, sy),
-                end = Offset(safeAnchorX + tickW, sy),
-                strokeWidth = if (isMajor) 2f else 1f
-            )
-
-            // Safe Number Placement: Placed with dark pill background anchored within visible viewport
-            if (isMajor && sy < tl.y + yardScreenH - 12f && sy > 16f) {
-                val label = "${y.toInt()}m"
-                val mLabel = textMeasurer.measure(label, textStyle, maxLines = 1)
-                val pillW = mLabel.size.width.toFloat() + 6f
-                val pillH = mLabel.size.height.toFloat() + 2f
-                val pillX = safeAnchorX + tickW + 2f
-                val pillY = sy - pillH / 2f
-
-                drawRoundRect(
-                    color = Color(0xD9111813),
-                    topLeft = Offset(pillX, pillY),
-                    size = Size(pillW, pillH),
-                    cornerRadius = CornerRadius(3f)
-                )
-                drawText(mLabel, topLeft = Offset(pillX + 3f, pillY + 1f))
+            // Tick lines are drawn for every inch:
+            // Odd inches (1, 3, 5, 7, 9...) have tick lines without number!
+            val (tickH, tickStroke, tickAlpha) = when {
+                isYard -> Triple(11f, 1.8f, maxOf(0.6f, yardLineAlpha))
+                isFoot -> Triple(8f, 1.2f, maxOf(0.5f, footLineAlpha))
+                is6Inch -> Triple(6.5f, 1.0f, sixInchLineAlpha.coerceAtLeast(0.35f))
+                isEvenInch -> Triple(4.5f, 0.7f, inchLineAlpha)
+                else -> Triple(3.0f, 0.45f, inchLineAlpha) // Tick line is there for odd inches without number!
             }
-            y += yStep
+
+            if (tickAlpha > 0.02f) {
+                drawLine(
+                    color = Color.White.copy(alpha = tickAlpha),
+                    start = Offset(sx, tl.y - tickH),
+                    end = Offset(sx, tl.y),
+                    strokeWidth = tickStroke
+                )
+            }
+
+            // Draw label with gap (0, 2, 4, 6, 8, 10, ...)
+            val shouldDrawLabel = (i % labelStep == 0)
+            if (shouldDrawLabel) {
+                val (labelText, labelAlpha) = when {
+                    i == 0 -> Pair("0\"", 1.0f)
+                    isYard -> {
+                        if (bigYardLabelAlpha > 0.25f) Pair("${i}\" (${i / 36}yd)", bigYardLabelAlpha)
+                        else Pair("${i}\"", (1f - bigYardLabelAlpha).coerceIn(0f, 1f))
+                    }
+                    isFoot -> {
+                        if (footLabelAlpha > 0.25f) Pair("${i}\" (${i / 12}ft)", footLabelAlpha)
+                        else Pair("${i}\"", maxOf(sixInchLabelAlpha, inchLabelAlpha, 0.7f))
+                    }
+                    is6Inch -> Pair("${i}\"", maxOf(sixInchLabelAlpha, inchLabelAlpha))
+                    else -> Pair("${i}\"", inchLabelAlpha)
+                }
+
+                drawRulerLabel(
+                    text = labelText,
+                    x = sx,
+                    y = tl.y - tickH - 2f,
+                    alpha = labelAlpha,
+                    textMeasurer = textMeasurer,
+                    fontSize = fontSize,
+                    isTopAxis = true
+                )
+            }
+        }
+
+        // ── Left Axis (Height Rulers) ──
+        for (i in startInchY..endInchY) {
+            val gy = (i * INCH_IN_METERS).coerceAtMost(yardHeightM)
+            val sy = TopDownProjection.worldToScreen(0f, gy, camera).y
+            val isYard = (i % 36 == 0)
+            val isFoot = (i % 12 == 0)
+            val is6Inch = (i % 6 == 0)
+            val isEvenInch = (i % 2 == 0)
+
+            val (tickW, tickStroke, tickAlpha) = when {
+                isYard -> Triple(11f, 1.8f, maxOf(0.6f, yardLineAlpha))
+                isFoot -> Triple(8f, 1.2f, maxOf(0.5f, footLineAlpha))
+                is6Inch -> Triple(6.5f, 1.0f, sixInchLineAlpha.coerceAtLeast(0.35f))
+                isEvenInch -> Triple(4.5f, 0.7f, inchLineAlpha)
+                else -> Triple(3.0f, 0.45f, inchLineAlpha) // Tick line is there for odd inches without number!
+            }
+
+            if (tickAlpha > 0.02f) {
+                drawLine(
+                    color = Color.White.copy(alpha = tickAlpha),
+                    start = Offset(tl.x - tickW, sy),
+                    end = Offset(tl.x, sy),
+                    strokeWidth = tickStroke
+                )
+            }
+
+            val shouldDrawLabel = (i % labelStep == 0)
+            if (shouldDrawLabel) {
+                val (labelText, labelAlpha) = when {
+                    i == 0 -> Pair("0\"", 1.0f)
+                    isYard -> {
+                        if (bigYardLabelAlpha > 0.25f) Pair("${i}\" (${i / 36}yd)", bigYardLabelAlpha)
+                        else Pair("${i}\"", (1f - bigYardLabelAlpha).coerceIn(0f, 1f))
+                    }
+                    isFoot -> {
+                        if (footLabelAlpha > 0.25f) Pair("${i}\" (${i / 12}ft)", footLabelAlpha)
+                        else Pair("${i}\"", maxOf(sixInchLabelAlpha, inchLabelAlpha, 0.7f))
+                    }
+                    is6Inch -> Pair("${i}\"", maxOf(sixInchLabelAlpha, inchLabelAlpha))
+                    else -> Pair("${i}\"", inchLabelAlpha)
+                }
+
+                drawRulerLabel(
+                    text = labelText,
+                    x = tl.x - tickW - 2f,
+                    y = sy,
+                    alpha = labelAlpha,
+                    textMeasurer = textMeasurer,
+                    fontSize = fontSize,
+                    isTopAxis = false
+                )
+            }
         }
     }
+}
+
+private fun DrawScope.drawRulerLabel(
+    text: String,
+    x: Float,
+    y: Float,
+    alpha: Float,
+    textMeasurer: TextMeasurer,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    isTopAxis: Boolean
+) {
+    if (alpha <= 0.03f) return
+    val style = TextStyle(
+        fontSize = fontSize,
+        fontWeight = FontWeight.Bold,
+        color = Color.White.copy(alpha = alpha)
+    )
+    val m = textMeasurer.measure(text, style, maxLines = 1)
+    val pW = m.size.width.toFloat() + 4f
+    val pH = m.size.height.toFloat() + 2f
+    val (bX, bY) = if (isTopAxis) {
+        Pair(x - pW / 2f, y - pH)
+    } else {
+        Pair(x - pW, y - pH / 2f)
+    }
+    drawRoundRect(
+        color = Color(0xD9212121).copy(alpha = (0.85f * alpha).coerceIn(0f, 0.85f)),
+        topLeft = Offset(bX, bY),
+        size = Size(pW, pH),
+        cornerRadius = CornerRadius(3f)
+    )
+    drawText(m, topLeft = Offset(bX + 2f, bY + 1f))
+}
+
+private fun DrawScope.drawShieldIcon(center: Offset, radius: Float) {
+    val path = Path().apply {
+        val top = center.y - radius * 0.55f
+        val bottom = center.y + radius * 0.60f
+        val left = center.x - radius * 0.55f
+        val right = center.x + radius * 0.55f
+        moveTo(center.x, top)
+        lineTo(right, top + radius * 0.15f)
+        lineTo(right, center.y + radius * 0.15f)
+        cubicTo(
+            right, center.y + radius * 0.45f,
+            center.x + radius * 0.2f, bottom - radius * 0.1f,
+            center.x, bottom
+        )
+        cubicTo(
+            center.x - radius * 0.2f, bottom - radius * 0.1f,
+            left, center.y + radius * 0.45f,
+            left, center.y + radius * 0.15f
+        )
+        lineTo(left, top + radius * 0.15f)
+        close()
+    }
+    drawPath(path, color = Color.White)
+    val checkPath = Path().apply {
+        moveTo(center.x - radius * 0.28f, center.y)
+        lineTo(center.x - radius * 0.08f, center.y + radius * 0.20f)
+        lineTo(center.x + radius * 0.28f, center.y - radius * 0.18f)
+    }
+    drawPath(checkPath, color = Color(0xFF2E7D32), style = Stroke(width = 1.6f, cap = StrokeCap.Round))
+}
+
+private fun DrawScope.drawWarningIcon(center: Offset, radius: Float) {
+    val barTop = center.y - radius * 0.50f
+    val barBottom = center.y + radius * 0.12f
+    val dotY = center.y + radius * 0.45f
+    drawLine(
+        color = Color.White,
+        start = Offset(center.x, barTop),
+        end = Offset(center.x, barBottom),
+        strokeWidth = (radius * 0.26f).coerceAtLeast(1.5f),
+        cap = StrokeCap.Round
+    )
+    drawCircle(
+        color = Color.White,
+        radius = (radius * 0.14f).coerceAtLeast(1.2f),
+        center = Offset(center.x, dotY)
+    )
 }
 
 private fun DrawScope.drawHoverTile(
     worldPos: Offset,
     isValid: Boolean,
+    neighborStatus: NeighborStatus = NeighborStatus.NEUTRAL,
     camera: TopDownCamera,
     w: Float = 1f,
     h: Float = 1f
@@ -701,10 +926,240 @@ private fun DrawScope.drawHoverTile(
     val tl = TopDownProjection.worldToScreen(worldPos.x, worldPos.y, camera)
     val sw = TopDownProjection.worldSizeToScreen(w, camera)
     val sh = TopDownProjection.worldSizeToScreen(h, camera)
-    val color = if (isValid) ValidHover.copy(alpha = 0.35f) else InvalidHover.copy(alpha = 0.35f)
-    val borderColor = if (isValid) ValidHover else InvalidHover
-    drawRoundRect(color, tl, Size(sw, sh), CornerRadius(4f * camera.zoom.coerceIn(0.5f, 2f)))
-    drawRoundRect(borderColor, tl, Size(sw, sh), CornerRadius(4f * camera.zoom.coerceIn(0.5f, 2f)), style = Stroke(2f))
+    val cornerRadius = CornerRadius(6f * camera.zoom.coerceIn(0.5f, 2f))
+
+    when (neighborStatus) {
+        NeighborStatus.ANTAGONIST -> {
+            // Bad neighbor glowing danger zone: vivid coral red with outer halo
+            val glowColor = Color(0xFFFF1744)
+            drawRoundRect(
+                color = glowColor.copy(alpha = 0.18f),
+                topLeft = Offset(tl.x - 6f, tl.y - 6f),
+                size = Size(sw + 12f, sh + 12f),
+                cornerRadius = CornerRadius(8f * camera.zoom.coerceIn(0.5f, 2f))
+            )
+            drawRoundRect(glowColor.copy(alpha = 0.38f), tl, Size(sw, sh), cornerRadius)
+            drawRoundRect(glowColor, tl, Size(sw, sh), cornerRadius, style = Stroke(2.5f))
+        }
+        NeighborStatus.BENEFICIAL -> {
+            // Beneficial companion glowing synergy zone: luminous emerald green with outer halo
+            val glowColor = Color(0xFF00E676)
+            drawRoundRect(
+                color = glowColor.copy(alpha = 0.18f),
+                topLeft = Offset(tl.x - 6f, tl.y - 6f),
+                size = Size(sw + 12f, sh + 12f),
+                cornerRadius = CornerRadius(8f * camera.zoom.coerceIn(0.5f, 2f))
+            )
+            drawRoundRect(glowColor.copy(alpha = 0.38f), tl, Size(sw, sh), cornerRadius)
+            drawRoundRect(glowColor, tl, Size(sw, sh), cornerRadius, style = Stroke(2.5f))
+        }
+        NeighborStatus.NEUTRAL -> {
+            val color = if (isValid) ValidHover.copy(alpha = 0.35f) else InvalidHover.copy(alpha = 0.35f)
+            val borderColor = if (isValid) ValidHover else InvalidHover
+            drawRoundRect(color, tl, Size(sw, sh), cornerRadius)
+            drawRoundRect(borderColor, tl, Size(sw, sh), cornerRadius, style = Stroke(2f))
+        }
+    }
+}
+
+private fun DrawScope.drawDirectCrop(
+    zone: CropZoneRenderData,
+    allZones: List<CropZoneRenderData>,
+    isSelected: Boolean,
+    isResizeMode: Boolean = false,
+    showCompanion: Boolean,
+    showVariety: Boolean,
+    showMeasurement: Boolean = true,
+    showCropName: Boolean = true,
+    varietyName: String?,
+    camera: TopDownCamera,
+    textMeasurer: TextMeasurer
+) {
+    val zW = if (zone.widthM > 0.05f) zone.widthM else realLifeCropDiameterM(zone.cropName)
+    val zH = if (zone.heightM > 0.05f) zone.heightM else realLifeCropDiameterM(zone.cropName)
+    val center = TopDownProjection.worldToScreen(zone.offsetX + zW / 2f, zone.offsetY + zH / 2f, camera)
+    val zWPx = TopDownProjection.worldSizeToScreen(zW, camera)
+    val zHPx = TopDownProjection.worldSizeToScreen(zH, camera)
+    val maxRadiusPx = maxOf(zWPx, zHPx) / 2f
+
+    // Analyze neighbor proximity (Good vs Bad neighbors)
+    val analysis = FarmCompanionManager.analyzePlacedCrop(zone, allZones)
+
+    // ── GLOWING ZONE AURA AROUND CROP BODY ─────────────────────────
+    if (showCompanion) {
+        if (analysis.status == NeighborStatus.ANTAGONIST) {
+            // Bad neighbor glowing danger zone (Coral red aura)
+            drawCircle(
+                color = Color(0x33FF1744),
+                radius = maxRadiusPx * 1.35f,
+                center = center
+            )
+            drawCircle(
+                color = Color(0x99FF1744),
+                radius = maxRadiusPx * 1.15f,
+                center = center,
+                style = Stroke(width = 1.8f)
+            )
+        } else if (analysis.status == NeighborStatus.BENEFICIAL) {
+            // Beneficial companion synergy glowing zone (Emerald green aura)
+            drawCircle(
+                color = Color(0x3300E676),
+                radius = maxRadiusPx * 1.35f,
+                center = center
+            )
+            drawCircle(
+                color = Color(0x9900E676),
+                radius = maxRadiusPx * 1.15f,
+                center = center,
+                style = Stroke(width = 1.8f)
+            )
+        }
+    }
+
+    // Selection highlight: highlights the exact physical zone box occupied on the grid
+    if (isSelected) {
+        val tlScreen = TopDownProjection.worldToScreen(zone.offsetX, zone.offsetY, camera)
+        val zoneSizePx = Size(zWPx, zHPx)
+        val cornerRad = (3f * camera.zoom).coerceIn(2f, 6f)
+        drawRoundRect(
+            color = Color(0x33FFB300),
+            topLeft = tlScreen,
+            size = zoneSizePx,
+            cornerRadius = CornerRadius(cornerRad)
+        )
+        drawRoundRect(
+            color = Color(0xFFFFB300),
+            topLeft = tlScreen,
+            size = zoneSizePx,
+            cornerRadius = CornerRadius(cornerRad),
+            style = Stroke(width = 2.0f)
+        )
+
+        // If in resize mode, render 4 corner resize handles
+        if (isResizeMode) {
+            val trScreen = TopDownProjection.worldToScreen(zone.offsetX + zW, zone.offsetY, camera)
+            val blScreen = TopDownProjection.worldToScreen(zone.offsetX, zone.offsetY + zH, camera)
+            val brScreen = TopDownProjection.worldToScreen(zone.offsetX + zW, zone.offsetY + zH, camera)
+            val handleRadius = (7.5f * camera.zoom).coerceIn(6f, 13f)
+            val corners = listOf(tlScreen, trScreen, blScreen, brScreen)
+            for (corner in corners) {
+                drawCircle(color = Color(0xFFCCFF90), radius = handleRadius, center = corner)
+                drawCircle(color = Color(0xFF2E7D32), radius = handleRadius, center = corner, style = Stroke(2.2f))
+            }
+        }
+    }
+
+    // ── MULTI-CROP GENERATION WITHIN 1 UNIFIED ZONE ───────────────
+    // When a zone is resized larger, it populates multiple individual crops
+    // according to the vegetable's natural spacing, while remaining 1 single selectable zone.
+    val plantSpacing = cropSinglePlantSpacingM(zone.cropName).coerceAtLeast(0.06f)
+    val cols = maxOf(1, kotlin.math.round(zW / plantSpacing).toInt())
+    val rows = maxOf(1, kotlin.math.round(zH / plantSpacing).toInt())
+    val totalPlants = cols * rows
+    val cellW = zW / cols
+    val cellH = zH / rows
+    val cellWPx = TopDownProjection.worldSizeToScreen(cellW, camera)
+    val cellHPx = TopDownProjection.worldSizeToScreen(cellH, camera)
+    val plantIconSizePx = (minOf(cellWPx, cellHPx) * 0.88f).coerceAtLeast(6f)
+
+    for (r in 0 until rows) {
+        for (c in 0 until cols) {
+            val px = zone.offsetX + (c + 0.5f) * cellW
+            val py = zone.offsetY + (r + 0.5f) * cellH
+            val plantCenterPx = TopDownProjection.worldToScreen(px, py, camera)
+            CropSvgRenderer.drawCropSvg(
+                drawScope = this,
+                cropName = zone.cropName ?: "",
+                center = plantCenterPx,
+                sizePx = plantIconSizePx
+            )
+        }
+    }
+
+    // ── CROP BODY BADGE (Shield Icon if Good, Warning Icon if Bad) ─
+    if (showCompanion) {
+        val badgeR = (maxRadiusPx * 0.35f).coerceIn(8f, 16f)
+        val badgeCenter = Offset(center.x + (zWPx / 2f) * 0.72f, center.y - (zHPx / 2f) * 0.72f)
+
+        if (analysis.status == NeighborStatus.ANTAGONIST) {
+            // Warning Badge (Red circle with white border and warning icon)
+            drawCircle(Color(0xFFD32F2F), radius = badgeR, center = badgeCenter)
+            drawCircle(Color.White, radius = badgeR, center = badgeCenter, style = Stroke(1.5f))
+            drawWarningIcon(badgeCenter, badgeR)
+        } else if (analysis.status == NeighborStatus.BENEFICIAL) {
+            // Shield Badge (Green circle with white border and shield icon)
+            drawCircle(Color(0xFF2E7D32), radius = badgeR, center = badgeCenter)
+            drawCircle(Color.White, radius = badgeR, center = badgeCenter, style = Stroke(1.5f))
+            drawShieldIcon(badgeCenter, badgeR)
+        }
+    }
+
+    // Crop label displaying name, plant count, and physical zone size
+    val shouldShowLabel = (showCropName || showMeasurement) && (camera.zoom >= 1.2f || isSelected)
+    if (shouldShowLabel) {
+        val cName = if (showCropName) (zone.cropName ?: "Crop") else null
+        val vName = if (showCropName && showVariety && !varietyName.isNullOrBlank()) varietyName else null
+        val namePart = when {
+            cName != null && vName != null -> "$cName • $vName"
+            cName != null -> cName
+            else -> null
+        }
+
+        val countPart = if (totalPlants > 1) "$totalPlants plants" else null
+
+        val inchesW = (zW / INCH_IN_METERS).roundToInt()
+        val inchesH = (zH / INCH_IN_METERS).roundToInt()
+        val measurementPart = if (showMeasurement) {
+            if (inchesW == inchesH) {
+                when {
+                    inchesW >= 36 && inchesW % 36 == 0 -> "${inchesW / 36}yd (${inchesW}\")"
+                    inchesW >= 12 && inchesW % 12 == 0 -> "${inchesW / 12}ft (${inchesW}\")"
+                    else -> "${inchesW}\""
+                }
+            } else {
+                "${inchesW}\" × ${inchesH}\""
+            }
+        } else null
+
+        val labelText = when {
+            namePart != null && countPart != null && measurementPart != null ->
+                "$namePart ($countPart • $measurementPart)"
+            namePart != null && countPart != null ->
+                "$namePart ($countPart)"
+            namePart != null && measurementPart != null ->
+                "$namePart ($measurementPart)"
+            namePart != null ->
+                namePart
+            countPart != null && measurementPart != null ->
+                "$countPart ($measurementPart)"
+            measurementPart != null ->
+                measurementPart
+            countPart != null ->
+                countPart
+            else -> ""
+        }
+
+        if (labelText.isNotBlank()) {
+            val zFontSize = (8f * camera.zoom).coerceIn(6.5f, 11f)
+            val zMeasured = textMeasurer.measure(
+                text = labelText,
+                style = TextStyle(fontSize = zFontSize.sp, fontWeight = FontWeight.SemiBold, color = Color.White),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val pW = zMeasured.size.width.toFloat() + 6f
+            val pH = zMeasured.size.height.toFloat() + 2f
+            val pX = center.x - pW / 2f
+            val pY = center.y + (zHPx / 2f) + 4f
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.75f),
+                topLeft = Offset(pX, pY),
+                size = Size(pW, pH),
+                cornerRadius = CornerRadius(2f)
+            )
+            drawText(zMeasured, topLeft = Offset(pX + 3f, pY + 1f))
+        }
+    }
 }
 
 private fun DrawScope.drawPlotBed(
@@ -714,6 +1169,8 @@ private fun DrawScope.drawPlotBed(
     isSelected: Boolean,
     isDraggingCrop: Boolean = false,
     dragCropName: String = "",
+    showCompanion: Boolean = false,
+    showVariety: Boolean = false,
     camera: TopDownCamera,
     textMeasurer: TextMeasurer
 ) {
@@ -894,20 +1351,38 @@ private fun DrawScope.drawPlotBed(
                 // Crop zone label if zoomed in enough
                 if (zW > 35f && zH > 16f) {
                     val cName = zone.cropName ?: "Crop"
-                    val zFontSize = (9f * camera.zoom).coerceIn(6f, 11f)
+                    val vName = plot.cropVariety
+                    val labelText = if (showVariety && !vName.isNullOrBlank()) "$cName • $vName" else cName
+                    val zFontSize = (8.5f * camera.zoom).coerceIn(5.5f, 10.5f)
                     val zMeasured = textMeasurer.measure(
-                        text = cName,
+                        text = labelText,
                         style = TextStyle(fontSize = zFontSize.sp, fontWeight = FontWeight.Bold, color = Color.White),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     drawRoundRect(
-                        color = Color.Black.copy(alpha = 0.6f),
+                        color = Color.Black.copy(alpha = 0.65f),
                         topLeft = Offset(ztl.x + 2f, ztl.y + 2f),
                         size = Size(zMeasured.size.width.toFloat() + 6f, zMeasured.size.height.toFloat() + 2f),
                         cornerRadius = CornerRadius(2f)
                     )
                     drawText(zMeasured, topLeft = Offset(ztl.x + 5f, ztl.y + 3f))
+
+                    // Companion indicator if enabled
+                    if (showCompanion && !zone.cropName.isNullOrBlank()) {
+                        val compStyle = TextStyle(fontSize = (7f * camera.zoom).coerceIn(5f, 9f).sp, fontWeight = FontWeight.Bold, color = Color(0xFFC8E6C9))
+                        val compText = textMeasurer.measure("🌿 Companion", compStyle, maxLines = 1)
+                        val badgeX = ztl.x + zW - compText.size.width - 6f
+                        if (badgeX > ztl.x + zMeasured.size.width + 10f) {
+                            drawRoundRect(
+                                color = Color(0xDD1B5E20),
+                                topLeft = Offset(badgeX - 2f, ztl.y + 2f),
+                                size = Size(compText.size.width + 4f, compText.size.height + 2f),
+                                cornerRadius = CornerRadius(2f)
+                            )
+                            drawText(compText, topLeft = Offset(badgeX, ztl.y + 3f))
+                        }
+                    }
                 }
 
                 // Render SVG Crop inside the crop zone
@@ -1069,11 +1544,10 @@ private fun DrawScope.drawResizeHandles(plot: PlotRenderData, camera: TopDownCam
 
 private fun DrawScope.drawZoneSelectionBorder(
     zone: CropZoneRenderData,
-    parentBed: PlotRenderData,
     camera: TopDownCamera
 ) {
-    val zx = parentBed.posX + zone.offsetX
-    val zy = parentBed.posY + zone.offsetY
+    val zx = zone.offsetX
+    val zy = zone.offsetY
     val tl = TopDownProjection.worldToScreen(zx, zy, camera)
     val zW = TopDownProjection.worldSizeToScreen(zone.widthM, camera)
     val zH = TopDownProjection.worldSizeToScreen(zone.heightM, camera)
@@ -1093,10 +1567,9 @@ private fun DrawScope.drawZoneSelectionBorder(
 
 private fun DrawScope.drawZoneResizeHandles(
     zone: CropZoneRenderData,
-    parentBed: PlotRenderData,
     camera: TopDownCamera
 ) {
-    val handles = zoneHandlePositions(zone, parentBed)
+    val handles = zoneHandlePositions(zone)
     val handleRadius = (5f * camera.zoom).coerceIn(4f, 8f)
     val strokeW = (1.5f * camera.zoom).coerceIn(1f, 2.5f)
 
@@ -1132,11 +1605,11 @@ private fun hitTestHandle(worldPos: Offset, plot: PlotRenderData, hitRadius: Flo
     }?.key
 }
 
-private fun zoneHandlePositions(zone: CropZoneRenderData, parentBed: PlotRenderData): Map<HandleType, Offset> {
-    val x = parentBed.posX + zone.offsetX
-    val y = parentBed.posY + zone.offsetY
-    val w = zone.widthM
-    val h = zone.heightM
+private fun zoneHandlePositions(zone: CropZoneRenderData): Map<HandleType, Offset> {
+    val x = zone.offsetX
+    val y = zone.offsetY
+    val w = if (zone.widthM > 0.05f) zone.widthM else realLifeCropDiameterM(zone.cropName)
+    val h = if (zone.heightM > 0.05f) zone.heightM else realLifeCropDiameterM(zone.cropName)
     return mapOf(
         HandleType.CORNER_TL  to Offset(x, y),
         HandleType.MID_TOP    to Offset(x + w / 2f, y),
@@ -1152,10 +1625,9 @@ private fun zoneHandlePositions(zone: CropZoneRenderData, parentBed: PlotRenderD
 private fun hitTestZoneHandle(
     worldPos: Offset,
     zone: CropZoneRenderData,
-    parentBed: PlotRenderData,
     hitRadius: Float
 ): HandleType? {
-    val handles = zoneHandlePositions(zone, parentBed)
+    val handles = zoneHandlePositions(zone)
     return handles.entries.firstOrNull { (_, pos) ->
         dist(worldPos, pos) < hitRadius
     }?.key
@@ -1164,26 +1636,31 @@ private fun hitTestZoneHandle(
 private fun hitTestCropZone(
     worldPos: Offset,
     cropZones: List<CropZoneRenderData>,
-    plots: List<PlotRenderData>
+    activePlotId: String? = null
 ): CropZoneRenderData? {
-    // Return topmost (last) crop zone containing worldPos
-    return cropZones.lastOrNull { zone ->
-        val parent = plots.firstOrNull { it.id == zone.plotId }
-        if (parent != null) {
-            val zx = parent.posX + zone.offsetX
-            val zy = parent.posY + zone.offsetY
-            worldPos.x >= zx && worldPos.x <= zx + zone.widthM &&
-            worldPos.y >= zy && worldPos.y <= zy + zone.heightM
-        } else false
+    val gardenZones = if (activePlotId != null) {
+        cropZones.filter { it.plotId == activePlotId }
+    } else cropZones
+    return gardenZones.lastOrNull { zone ->
+        if (zone.cropName.isNullOrBlank() || zone.cropName.equals("Bed", ignoreCase = true)) return@lastOrNull false
+        val zW = if (zone.widthM > 0.05f) zone.widthM else realLifeCropDiameterM(zone.cropName)
+        val zH = if (zone.heightM > 0.05f) zone.heightM else realLifeCropDiameterM(zone.cropName)
+        val inBoundingBox = worldPos.x >= (zone.offsetX - 0.06f) &&
+                            worldPos.x <= (zone.offsetX + zW + 0.06f) &&
+                            worldPos.y >= (zone.offsetY - 0.06f) &&
+                            worldPos.y <= (zone.offsetY + zH + 0.06f)
+        val cx = zone.offsetX + zW / 2f
+        val cy = zone.offsetY + zH / 2f
+        val dx = worldPos.x - cx
+        val dy = worldPos.y - cy
+        val dist = sqrt(dx * dx + dy * dy)
+        val hitRadius = maxOf(maxOf(zW, zH) / 2f, 0.22f)
+        inBoundingBox || (dist <= hitRadius)
     }
 }
 
 private fun hitTestPlot(worldPos: Offset, plots: List<PlotRenderData>): PlotRenderData? {
-    // Return the topmost (last) plot that contains the point
-    return plots.lastOrNull { plot ->
-        worldPos.x >= plot.posX && worldPos.x <= plot.posX + plot.widthM &&
-        worldPos.y >= plot.posY && worldPos.y <= plot.posY + plot.heightM
-    }
+    return null
 }
 
 private fun handleTap(
@@ -1193,41 +1670,45 @@ private fun handleTap(
     activeTool: EditTool,
     activeCropName: String,
     activeCropId: String,
+    activeVariety: String?,
+    activeCropDiameterM: Float? = null,
     isSnapEnabled: Boolean,
     plots: List<PlotRenderData>,
-    editViewModel: EditViewModel
+    currentSelectedPlotId: String?,
+    editViewModel: EditViewModel,
+    onCropPlaced: () -> Unit,
+    onCropTapped: (CropZoneRenderData) -> Unit,
+    onTapOutsideCrop: () -> Unit
 ) {
-    val isBed = activeCropId.equals("bed", ignoreCase = true) || activeCropName.equals("Bed", ignoreCase = true)
-
-    if (activeCropName.isNotEmpty() &&
-        (activeTool == EditTool.ADD_PLANT || activeTool == EditTool.ADD_PLOT)
-    ) {
+    if (activeCropName.isNotEmpty() && !activeCropName.equals("Bed", ignoreCase = true)) {
         var tx = worldPos.x; var ty = worldPos.y
         if (isSnapEnabled) {
             val snapped = TopDownProjection.snapToGrid(worldPos)
             tx = snapped.x; ty = snapped.y
         }
-
-        if (isBed) {
-            editViewModel.addDirectPlantingPlot(tx.coerceIn(0f, 44f), ty.coerceIn(0f, 44f), "Bed", "bed")
-        } else {
-            // Crops can be placed on any garden bed
-            val targetBed = plots.firstOrNull { plot ->
-                tx >= plot.posX && tx < (plot.posX + plot.widthM) &&
-                ty >= plot.posY && ty < (plot.posY + plot.heightM)
-            }
-            if (targetBed != null) {
-                editViewModel.plantCropInBed(targetBed.id, activeCropName, activeCropId, tx, ty)
-            } else {
-                editViewModel.reportInvalidDropLocation("⚠️ Paki-lagay o i-tap ang pananim sa loob ng isang Garden Bed.")
+        val targetGarden = plots.firstOrNull { it.id == currentSelectedPlotId } ?: plots.firstOrNull()
+        if (targetGarden != null) {
+            val success = editViewModel.plantCropInBed(
+                bedPlotId = targetGarden.id,
+                newCropName = activeCropName,
+                newCropId = activeCropId,
+                atWorldX = tx,
+                atWorldY = ty,
+                variety = activeVariety,
+                initialDiameterM = activeCropDiameterM
+            )
+            if (success) {
+                onCropPlaced()
             }
         }
     } else if (hitCrop != null) {
+        // User tapped a crop on the grid
         editViewModel.selectCropZone(hitCrop.id)
-    } else if (hitPlot != null) {
-        editViewModel.selectPlot(hitPlot.id)
+        onCropTapped(hitCrop)
     } else {
-        editViewModel.deselect()
+        // Tapped outside any crop -> deselect all
+        editViewModel.selectCropZone(null)
+        onTapOutsideCrop()
     }
 }
 
@@ -1246,6 +1727,7 @@ private data class VisibleBounds(val left: Float, val top: Float, val right: Flo
 
 private fun dist(a: Offset, b: Offset): Float =
     sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y))
+
 
 /** Maps crop names to category-appropriate colors for the 2D crop dots. */
 internal fun cropColor(cropName: String): Color = when (cropName.lowercase()) {

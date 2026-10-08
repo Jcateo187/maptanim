@@ -259,6 +259,7 @@ export interface CommunityPost {
   category: CommunityCategory;
   title: string;
   content: string;
+  imageUrl?: string;
   likesCount: number;
   commentsCount: number;
   isPinned: boolean;

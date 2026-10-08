@@ -315,6 +315,7 @@ data class CommunityPost(
     val category: String,                // "PEST_ALERT", "FARMING_TIP", "EQUIPMENT", "GENERAL"
     val title: String,
     val content: String,
+    val imageUrl: String? = null,
     val likesCount: Int = 0,
     val commentsCount: Int = 0,
     val timestamp: String = "Just now",               // e.g. "2 hours ago"

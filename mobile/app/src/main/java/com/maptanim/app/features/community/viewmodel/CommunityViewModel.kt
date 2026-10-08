@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.community.viewmodel
+package com.maptanim.app.features.community.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -217,12 +217,13 @@ class CommunityViewModel(
         category: String,
         content: String,
         authorName: String = "",
+        imageUrl: String? = null,
         onResult: (Boolean) -> Unit = {}
     ) {
         viewModelScope.launch {
             _isPublishingPost.value = true
             val finalAuthor = authorName.ifBlank { _currentUserName.value }
-            val result = repository.addPost(title, category, content, finalAuthor)
+            val result = repository.addPost(title, category, content, finalAuthor, imageUrl)
             _isPublishingPost.value = false
             if (result.isSuccess) {
                 _postNotice.value = "Post published successfully! 🌾"

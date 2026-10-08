@@ -10,6 +10,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -244,23 +249,37 @@ fun CropDssManagementDialog(
                                         else -> "Fennel"
                                     }
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(text = "🌿 Beneficial Companions:", color = Color(0xFF81C784), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        Text(text = companions, color = Color(0xFFC0CDC0), fontSize = 11.sp)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(text = "⚠️ Antagonists to Avoid:", color = Color(0xFFFFB74D), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        Text(text = avoidCrops, color = Color(0xFFC0CDC0), fontSize = 11.sp)
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(Icons.Default.Spa, contentDescription = null, tint = Color(0xFF81C784), modifier = Modifier.size(16.dp))
+                                            Text(text = "Beneficial Companions:", color = Color(0xFF81C784), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Text(text = companions, color = Color(0xFFE0ECE0), fontSize = 13.sp)
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(Icons.Default.WarningAmber, contentDescription = null, tint = Color(0xFFFFB74D), modifier = Modifier.size(16.dp))
+                                            Text(text = "Antagonists to Avoid:", color = Color(0xFFFFB74D), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Text(text = avoidCrops, color = Color(0xFFE0ECE0), fontSize = 13.sp)
                                     }
 
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Button(
                                         onClick = { dssViewModel.openSettings() },
-                                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                                        modifier = Modifier.fillMaxWidth().height(44.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF20351C)),
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(10.dp),
                                         border = BorderStroke(1.dp, Color(0xFF385532))
                                     ) {
-                                        Text("✏️ Edit Bed & Planting Settings", color = Color(0xFFA5D6A7), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFFA5D6A7), modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Edit Bed & Planting Settings", color = Color(0xFFA5D6A7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -415,13 +434,24 @@ fun CropDssManagementDialog(
                                                 border = BorderStroke(1.dp, Color(0xFF2A3A25)),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Column(modifier = Modifier.padding(10.dp)) {
-                                                    Text(
-                                                        text = "💡 ${rec.title}",
-                                                        color = Color(0xFF81C784),
-                                                        fontSize = 12.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
+                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = androidx.compose.material.icons.Icons.Default.Eco,
+                                                            contentDescription = null,
+                                                            tint = Color(0xFF81C784),
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                        Text(
+                                                            text = rec.title,
+                                                            color = Color(0xFF81C784),
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
                                                         text = rec.content,
@@ -593,7 +623,7 @@ fun CropDssManagementDialog(
                                         "cucumber", "squash" ->
                                             "Follow with 🥬 Leafy Greens (Pechay or Lettuce) or Legumes to restore organic matter."
                                         "sitaw", "beans" ->
-                                            "Your bed soil is now nitrogen-enriched! Follow with heavy feeders like 🍅 Tomato, 🍆 Eggplant, or 🌽 Sweet Corn."
+                                            "Your garden soil is now nitrogen-enriched! Follow with heavy feeders like 🍅 Tomato, 🍆 Eggplant, or 🌽 Sweet Corn."
                                         else ->
                                             "Rotate with nitrogen-fixing legumes or rest soil with a 2-week vermicompost cover."
                                     }

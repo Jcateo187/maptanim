@@ -17,21 +17,22 @@ android {
         applicationId = "com.maptanim.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.2.8"
+        versionCode = 6
+        versionName = "1.2.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
                 enable = false
             }
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.8 Release Test Build - Master crop agronomic intelligence, calibrated vegetative stage care, and Supabase CLI database synchronization"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.9 Release Test Build - Community Hub photo sharing, single-row chat tray, full post detail feed, Planter action ring, and GrowIt 8-stage crop dossier"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }
@@ -41,7 +42,7 @@ android {
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.8 Debug Test Build - Master crop agronomic intelligence, calibrated vegetative stage care, and Supabase CLI database synchronization"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.9 Debug Test Build - Community Hub photo sharing, single-row chat tray, full post detail feed, Planter action ring, and GrowIt 8-stage crop dossier"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }

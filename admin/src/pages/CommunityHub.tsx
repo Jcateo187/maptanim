@@ -66,6 +66,8 @@ export const CommunityHub: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newAuthorName, setNewAuthorName] = useState('');
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newIsPinned, setNewIsPinned] = useState(false);
 
   // Reply State
@@ -315,11 +317,21 @@ export const CommunityHub: React.FC = () => {
 
     setIsPublishingPost(true);
     try {
+      let finalImageUrl = newImageUrl.trim() || undefined;
+      if (newImageFile) {
+        try {
+          finalImageUrl = await apiService.uploadCropImage(newImageFile);
+        } catch (uploadErr) {
+          console.warn('Image upload error:', uploadErr);
+        }
+      }
+
       const created = await apiService.createCommunityPost({
         title: newTitle.trim(),
         category: 'GENERAL',
         content: newContent.trim(),
         authorName: newAuthorName.trim() || 'MapTanim Agronomy Desk',
+        imageUrl: finalImageUrl,
         tags: ['CropCare', 'Vegetables', 'Community'],
         isPinned: newIsPinned,
       });
@@ -328,6 +340,8 @@ export const CommunityHub: React.FC = () => {
       setNewTitle('');
       setNewContent('');
       setNewAuthorName('');
+      setNewImageUrl('');
+      setNewImageFile(null);
       setNewIsPinned(false);
       showNotice('Post published successfully to Community Hub! 🌾', 'success');
       await fetchPosts(created?.id);
@@ -601,6 +615,16 @@ export const CommunityHub: React.FC = () => {
                       {post.content}
                     </p>
 
+                    {post.imageUrl && (
+                      <div className="mb-3 rounded-lg overflow-hidden border border-[#38434D] max-h-36 bg-[#1D2429]">
+                        <img
+                          src={post.imageUrl}
+                          alt={post.title}
+                          className="w-full h-36 object-cover"
+                        />
+                      </div>
+                    )}
+
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-3 border-t border-[#38434D] text-xs text-[#8A9BA8] font-mono">
                       <span className="text-[11px] text-[#4CAF50] font-semibold">
@@ -662,8 +686,19 @@ export const CommunityHub: React.FC = () => {
                 </div>
 
                 {/* Content */}
-                <div className="text-sm text-[#F4F4F4] leading-relaxed bg-[#1D2429] p-5 rounded-xl border border-[#38434D]">
-                  <p className="whitespace-pre-line leading-relaxed">{selectedPost.content}</p>
+                <div className="space-y-3">
+                  {selectedPost.imageUrl && (
+                    <div className="rounded-xl overflow-hidden border border-[#38434D] max-h-[340px] bg-[#1D2429]">
+                      <img
+                        src={selectedPost.imageUrl}
+                        alt={selectedPost.title}
+                        className="w-full h-full object-cover max-h-[340px]"
+                      />
+                    </div>
+                  )}
+                  <div className="text-sm text-[#F4F4F4] leading-relaxed bg-[#1D2429] p-5 rounded-xl border border-[#38434D]">
+                    <p className="whitespace-pre-line leading-relaxed">{selectedPost.content}</p>
+                  </div>
                 </div>
 
                 {/* Comments */}
@@ -1138,6 +1173,42 @@ export const CommunityHub: React.FC = () => {
                   placeholder="Write your discussion content or guidance..."
                   className="w-full p-3 bg-[#1D2429] border border-[#38434D] rounded-xl outline-none focus:border-[#4CAF50] text-[#F4F4F4] placeholder-[#8A9BA8] resize-none disabled:opacity-60"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-[#C7D0D8] uppercase tracking-wider text-[11px]">Attach Image (Optional)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isPublishingPost}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setNewImageFile(file);
+                        setNewImageUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="text-xs text-[#C7D0D8] file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#4CAF50]/20 file:text-[#4CAF50] hover:file:bg-[#4CAF50]/30 cursor-pointer"
+                  />
+                  {newImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewImageFile(null);
+                        setNewImageUrl('');
+                      }}
+                      className="text-xs text-[#E76F51] hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                {newImageUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-[#38434D] max-h-32 w-32 bg-[#1D2429]">
+                    <img src={newImageUrl} alt="Preview" className="w-full h-32 object-cover" />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 pt-1">

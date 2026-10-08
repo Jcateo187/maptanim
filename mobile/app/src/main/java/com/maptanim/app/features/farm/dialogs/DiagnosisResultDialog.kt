@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -134,13 +137,24 @@ fun DiagnosisResultDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = "💡 ${rec.title}",
-                                            color = if (rec.priority >= 2) AlertAmber else Color(0xFF81C784),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             modifier = Modifier.weight(1f)
-                                        )
+                                        ) {
+                                            Icon(
+                                                imageVector = androidx.compose.material.icons.Icons.Default.Eco,
+                                                contentDescription = null,
+                                                tint = if (rec.priority >= 2) AlertAmber else Color(0xFF81C784),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = rec.title,
+                                                color = if (rec.priority >= 2) AlertAmber else Color(0xFF81C784),
+                                                fontSize = 13.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                         if (rec.priority >= 2) {
                                             Surface(
                                                 color = Color(0xFF3E1E1E),
@@ -186,19 +200,30 @@ fun DiagnosisResultDialog(
                                 border = BorderStroke(1.dp, Color(0xFF8D5320)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text(
-                                        text = "⚠️ ${alert.title}",
-                                        color = AlertAmber,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.WarningAmber,
+                                            contentDescription = null,
+                                            tint = AlertAmber,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = alert.title,
+                                            color = AlertAmber,
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = alert.content,
                                         color = Color(0xFFFFE0B2),
-                                        fontSize = 11.sp,
-                                        lineHeight = 15.sp
+                                        fontSize = 12.5.sp,
+                                        lineHeight = 17.sp
                                     )
                                 }
                             }

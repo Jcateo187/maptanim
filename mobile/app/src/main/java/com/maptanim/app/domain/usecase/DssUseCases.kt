@@ -183,7 +183,7 @@ class RunDssEvaluationUseCase(
                 com.maptanim.app.domain.model.Notification(
                     id = "notif_dss_${decision.id}",
                     userId = input.farmerData.farm?.farmerId ?: "farmer-1",
-                    title = "⚠️ DSS Babala: ${decision.title}",
+                    title = "DSS Babala: ${decision.title}",
                     body = decision.summary,
                     taskType = decision.actionTaskType,
                     isRead = false,

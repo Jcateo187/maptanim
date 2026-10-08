@@ -1477,6 +1477,7 @@ class ApiService {
               category: (p.category as any) || 'GENERAL',
               title: p.title,
               content: p.content,
+              imageUrl: p.image_url,
               likesCount: p.likes_count || 0,
               commentsCount: postComments.length > 0 ? postComments.length : (p.comments_count || 0),
               isPinned: Boolean(p.is_pinned),
@@ -1526,6 +1527,7 @@ class ApiService {
     title: string;
     content: string;
     authorName?: string;
+    imageUrl?: string;
     tags?: string[];
     isPinned?: boolean;
   }): Promise<CommunityPost> {
@@ -1545,6 +1547,7 @@ class ApiService {
               category: post.category,
               title: post.title,
               content: post.content,
+              image_url: post.imageUrl || null,
               likes_count: 1,
               comments_count: 0,
               is_pinned: isPinned,
@@ -1568,6 +1571,7 @@ class ApiService {
       category: post.category,
       title: post.title,
       content: post.content,
+      imageUrl: post.imageUrl,
       likesCount: 1,
       commentsCount: 0,
       isPinned,

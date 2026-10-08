@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.viewmodel
+package com.maptanim.app.features.farm.viewmodel
 
 import com.maptanim.app.domain.model.CropPlot
 import com.maptanim.app.domain.model.EditTool
@@ -57,5 +57,6 @@ data class EditUiState(
     val pendingCropPlantings: List<CropPlantingDraft> = emptyList(),
     val saveErrorMessage: String? = null,
     val dropFeedbackMessage: String? = null,
-    val isSaveSuccessful: Boolean = false
+    val isSaveSuccessful: Boolean = false,
+    val cropPlantedDates: Map<String, String> = emptyMap()
 )

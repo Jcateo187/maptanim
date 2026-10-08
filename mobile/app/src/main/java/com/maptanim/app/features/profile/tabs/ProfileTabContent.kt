@@ -4,114 +4,88 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.maptanim.app.core.preferences.FavoriteCropsManager
+import com.maptanim.app.features.farm.dialogs.CropInformationDialog
 import com.maptanim.app.features.profile.ProfileViewModel
 import com.maptanim.app.features.profile.components.ConfirmChoiceDialog
 import com.maptanim.app.features.profile.components.UserCommunityActivityCard
-import com.maptanim.app.features.profile.components.UserFarmsListCard
-import com.maptanim.app.features.profile.components.UserHarvestHistoryCard
+import com.maptanim.app.features.profile.components.UserFavoriteCropsSection
 import com.maptanim.app.features.profile.components.UserProfileIdentityCard
 import com.maptanim.app.features.profile.modals.FullCommunityActivityModal
-import com.maptanim.app.features.profile.modals.FullFarmsListModal
-import com.maptanim.app.features.profile.modals.FullHarvestHistoryModal
 import com.maptanim.app.features.profile.model.ProfileUiState
 
 /**
- * ProfileTabContent — Profile tab coordinator composed of focused sub-cards in Daylight theme.
- * Decomposed from a 719-line monolith down to ~120 lines to strictly satisfy Gate 3.
+ * ProfileTabContent — Profile tab configured for portrait layout:
+ * - Top: 1 card containing Avatar (left) and Nickname with edit icon (right)
+ * - Middle: 1 row horizontal scroll for Favorite items (bottom of avatar card)
+ * - Bottom: User's Activity History with heading outside/top of card
  */
 @Composable
 fun ProfileTabContent(
     uiState: ProfileUiState,
     viewModel: ProfileViewModel
 ) {
-    var isFarmsExpanded by remember { mutableStateOf(false) }
-    var isHarvestExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val favoriteManager = remember(context) { FavoriteCropsManager.getInstance(context) }
+    val favoriteCrops by favoriteManager.favoriteCrops.collectAsState()
     var isForumExpanded by remember { mutableStateOf(false) }
+    var selectedCropDialog by remember { mutableStateOf<String?>(null) }
 
-    Row(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // LEFT SIDE: Avatar & Nickname Identity Card
-        UserProfileIdentityCard(
-            uiState = uiState,
-            onOpenViewAvatar = { viewModel.openViewAvatar() },
-            onStartEditNickname = { viewModel.startEditNickname() },
-            onNicknameInputChange = { viewModel.updateNicknameInput(it) },
-            onSubmitNicknameCheck = { viewModel.submitNicknameCheck() },
-            onCancelEditNickname = { viewModel.cancelEditNickname() },
-            modifier = Modifier
-                .weight(0.38f)
-                .fillMaxHeight()
-        )
+        // TOP: Single card with Avatar on the left and Nickname with edit icon on the right
+        item {
+            UserProfileIdentityCard(
+                uiState = uiState,
+                onOpenViewAvatar = { viewModel.openViewAvatar() },
+                onStartEditNickname = { viewModel.startEditNickname() },
+                onNicknameInputChange = { viewModel.updateNicknameInput(it) },
+                onSubmitNicknameCheck = { viewModel.submitNicknameCheck() },
+                onCancelEditNickname = { viewModel.cancelEditNickname() }
+            )
+        }
 
-        // RIGHT SIDE: Farms List, Harvest History & Community Forum Activity Cards
-        LazyColumn(
-            modifier = Modifier
-                .weight(0.62f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // 1. Farms List Card
-            item {
-                UserFarmsListCard(
-                    farms = uiState.farms,
-                    activeFarmId = uiState.activeFarmId,
-                    onCreateFarmClick = { viewModel.openCreateFarm() },
-                    onSeeMoreClick = { isFarmsExpanded = true },
-                    onSelectActiveFarm = { viewModel.selectActiveFarm(it) },
-                    onRenameFarmClick = { viewModel.openRenameFarm(it) }
-                )
-            }
+        // MIDDLE: Favorite Crops horizontal row (bottom of avatar card)
+        item {
+            UserFavoriteCropsSection(
+                favoriteCrops = favoriteCrops.toList(),
+                onCropClick = { cropName ->
+                    selectedCropDialog = cropName
+                }
+            )
+        }
 
-            // 2. Farm Harvest History Card
-            item {
-                UserHarvestHistoryCard(
-                    harvestHistory = uiState.harvestHistory,
-                    onSeeMoreClick = { isHarvestExpanded = true }
-                )
-            }
-
-            // 3. Community Forum Activity Card
-            item {
-                UserCommunityActivityCard(
-                    userPosts = uiState.userPosts,
-                    userProfile = uiState.userProfile,
-                    onSeeMoreClick = { isForumExpanded = true }
-                )
-            }
+        // BOTTOM: User Activity History (heading is outside on top of the card)
+        item {
+            UserCommunityActivityCard(
+                userPosts = uiState.userPosts,
+                userProfile = uiState.userProfile,
+                onSeeMoreClick = { isForumExpanded = true }
+            )
         }
     }
 
-    // Render Full List Modals when See More is clicked
-    if (isFarmsExpanded) {
-        FullFarmsListModal(
-            farms = uiState.farms,
-            activeFarmId = uiState.activeFarmId,
-            onCreateFarmClick = { viewModel.openCreateFarm() },
-            onRenameFarmClick = { viewModel.openRenameFarm(it) },
-            onDeleteFarmClick = { viewModel.openDeleteFarm(it) },
-            onSelectActiveFarm = { viewModel.selectActiveFarm(it) },
-            onDismiss = { isFarmsExpanded = false }
-        )
-    }
-
-    if (isHarvestExpanded) {
-        FullHarvestHistoryModal(
-            harvestHistory = uiState.harvestHistory,
-            onDismiss = { isHarvestExpanded = false }
-        )
-    }
-
+    // Full activity history modal when "See More" is tapped
     if (isForumExpanded) {
         FullCommunityActivityModal(
             posts = uiState.userPosts,
             currentUserNickname = uiState.userProfile.nickname,
             currentUserId = uiState.userProfile.id,
             onDismiss = { isForumExpanded = false }
+        )
+    }
+
+    // Crop Information Dialog when a favorite crop card is clicked
+    selectedCropDialog?.let { cropName ->
+        CropInformationDialog(
+            cropName = cropName,
+            onDismiss = { selectedCropDialog = null }
         )
     }
 

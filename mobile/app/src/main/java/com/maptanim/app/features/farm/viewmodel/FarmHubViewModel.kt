@@ -22,11 +22,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 /**
- * FarmHubViewModel — Consolidated Hub ViewModel coordinating the 4 core agricultural pillars:
- * 1. PlanTab (spatial layout, bed sizing, yard measurements)
- * 2. GuideTab (agronomic rules, growth stages, daily care)
- * 3. CheckUpTab (observations, pest/disease logging, crop health)
- * 4. HarvestTab (readiness, yield records, post-harvest protocol)
+ * FarmHubViewModel — Consolidated Farm Hub ViewModel coordinating agricultural operations.
  */
 class FarmHubViewModel(
     private val cropPlotRepository: CropPlotRepository = RepositoryProvider.cropPlotRepository,

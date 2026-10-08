@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.renderer.model
+package com.maptanim.app.features.farm.renderer.model
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -29,6 +29,7 @@ data class PlotRenderData(
     val daysToHarvest: Int = 60,
     val stageProgressRatio: Float = 0f,
     val plantedTimestampMs: Long = 0L,
+    val isActive: Boolean = true,
     val activeTasks: List<TaskPinData> = emptyList()
 ) {
     val currentStageProgressRatio: Float get() = stageProgressRatio
@@ -116,6 +117,7 @@ fun CropPlot.toRenderData(activeTasks: List<TaskPinData> = emptyList()): PlotRen
         daysToHarvest = defaultDays,
         stageProgressRatio = progressRatio,
         plantedTimestampMs = plantedMs,
+        isActive = isActive,
         activeTasks = activeTasks
     )
 }
@@ -146,7 +148,8 @@ data class CropZoneRenderData(
     val heightM: Float = 1.0f,
     val spacingM: Float = 0.5f,
     val growthStage: Int = 1,
-    val plantInstances: List<PlantInstanceRender> = emptyList()
+    val plantInstances: List<PlantInstanceRender> = emptyList(),
+    val plantedDate: String? = null
 )
 
 data class PlantInstanceRender(
@@ -156,4 +159,105 @@ data class PlantInstanceRender(
     val cropName: String = "",
     val growthStage: Int = 1
 )
+
+const val INCH_IN_METERS = 0.0254f
+const val SIX_INCHES_IN_METERS = 0.1524f // 6 inches = 0.5 foot (box size for small crops)
+const val FOOT_IN_METERS = 0.3048f       // 12 inches = 1 foot
+const val YARD_IN_METERS = 0.9144f       // 36 inches = 1 yard = 3 feet
+
+/**
+ * Real-life physical foliage/body diameter and occupied space of vegetables in meters.
+ * Calibrated in inches, feet, and yards:
+ * - Carrot / Radish / Garlic: 1 inch (0.0254m) = 1 box of 1" grid
+ * - Onion: 3 inches (0.0762m) = 3 boxes
+ * - Pechay / Bok Choy / Mustasa / Kangkong: 6 inches (0.1524m) = 6 boxes
+ * - Lettuce / Spinach: 8 inches (0.2032m) = 8 boxes
+ * - Chili / Pepper / Sitaw / Beans: 12 inches / 1 foot (0.3048m) = 12 boxes
+ * - Cabbage / Broccoli / Cauliflower: 15 inches (0.381m) = 15 boxes
+ * - Okra / Eggplant / Tomato / Cucumber / Bittergourd / Corn: 18 inches / 1.5 ft (0.4572m)
+ * - Pumpkin / Squash / Kalabasa / Watermelon: 36 inches / 1 yard / 3 ft (0.9144m)
+ */
+fun realLifeCropDiameterM(cropName: String?): Float {
+    val clean = cropName?.lowercase()?.replace(" ", "")?.replace("_", "")?.replace("-", "") ?: return FOOT_IN_METERS
+    return when {
+        clean.contains("carrot") || clean.contains("karot") -> INCH_IN_METERS // 1 inch (1 box of 1" grid)
+        clean.contains("radish") || clean.contains("labanos") ||
+        clean.contains("garlic") || clean.contains("bawang") -> INCH_IN_METERS // 1 inch (1 box of 1" grid)
+        clean.contains("onion") || clean.contains("sibuyas") -> INCH_IN_METERS * 3f // 3 inches
+
+        clean.contains("pechay") || clean.contains("bokchoy") || clean.contains("pakchoi") ||
+        clean.contains("mustasa") || clean.contains("mustard") ||
+        clean.contains("kangkong") || clean.contains("waterspinach") -> SIX_INCHES_IN_METERS // 6 inches (0.1524m)
+
+        clean.contains("lettuce") || clean.contains("litsugas") ||
+        clean.contains("spinach") -> INCH_IN_METERS * 8f // 8 inches (0.2032m)
+
+        clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") ||
+        clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> FOOT_IN_METERS // 12 inches / 1 foot (0.3048m)
+
+        clean.contains("cabbage") || clean.contains("repolyo") ||
+        clean.contains("broccoli") || clean.contains("cauliflower") -> INCH_IN_METERS * 15f // 15 inches (0.381m)
+
+        clean.contains("okra") ||
+        clean.contains("eggplant") || clean.contains("talong") ||
+        clean.contains("tomato") || clean.contains("kamatis") ||
+        clean.contains("pipino") || clean.contains("cucumber") ||
+        clean.contains("ampalaya") || clean.contains("bittergourd") ||
+        clean.contains("corn") || clean.contains("mais") -> INCH_IN_METERS * 18f // 18 inches / 1.5 ft (0.4572m)
+
+        clean.contains("kalabasa") || clean.contains("squash") ||
+        clean.contains("pumpkin") || clean.contains("watermelon") ||
+        clean.contains("pakwan") || clean.contains("melon") -> YARD_IN_METERS // 1 yard = 36 inches = 3 ft (0.9144m)
+
+        else -> FOOT_IN_METERS // 1 foot (12 inches) default
+    }
+}
+
+/**
+ * Individual plant spacing for vegetable crop multi-plant generation within a zone.
+ * Square Foot Gardening / DA-BPI recommended planting densities:
+ * - Carrot, Radish, Garlic, Onion: 3 inches (16 plants per 1-foot zone)
+ * - Pechay, Bok Choy, Mustard, Kangkong: 6 inches (4 plants per 1-foot zone)
+ * - Lettuce, Spinach: 8 inches
+ * - Chili, Pepper, Bush Beans: 12 inches / 1 foot
+ * - Cabbage, Broccoli: 15 inches
+ * - Tomato, Eggplant, Okra, Cucumber, Bittergourd, Corn: 18 inches / 1.5 ft
+ * - Squash, Kalabasa, Pumpkin, Watermelon: 36 inches / 1 yard
+ */
+fun cropSinglePlantSpacingM(cropName: String?): Float {
+    val clean = cropName?.lowercase()?.replace(" ", "")?.replace("_", "")?.replace("-", "") ?: return FOOT_IN_METERS
+    return when {
+        clean.contains("carrot") || clean.contains("karot") ||
+        clean.contains("radish") || clean.contains("labanos") ||
+        clean.contains("garlic") || clean.contains("bawang") ||
+        clean.contains("onion") || clean.contains("sibuyas") -> INCH_IN_METERS * 3f // 3 inches
+
+        clean.contains("pechay") || clean.contains("bokchoy") || clean.contains("pakchoi") ||
+        clean.contains("mustasa") || clean.contains("mustard") ||
+        clean.contains("kangkong") || clean.contains("waterspinach") -> SIX_INCHES_IN_METERS // 6 inches
+
+        clean.contains("lettuce") || clean.contains("litsugas") ||
+        clean.contains("spinach") -> INCH_IN_METERS * 8f // 8 inches
+
+        clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") ||
+        clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> FOOT_IN_METERS // 12 inches / 1 foot
+
+        clean.contains("cabbage") || clean.contains("repolyo") ||
+        clean.contains("broccoli") || clean.contains("cauliflower") -> INCH_IN_METERS * 15f // 15 inches
+
+        clean.contains("okra") ||
+        clean.contains("eggplant") || clean.contains("talong") ||
+        clean.contains("tomato") || clean.contains("kamatis") ||
+        clean.contains("pipino") || clean.contains("cucumber") ||
+        clean.contains("ampalaya") || clean.contains("bittergourd") ||
+        clean.contains("corn") || clean.contains("mais") -> INCH_IN_METERS * 18f // 18 inches (1.5 ft)
+
+        clean.contains("kalabasa") || clean.contains("squash") ||
+        clean.contains("pumpkin") || clean.contains("watermelon") ||
+        clean.contains("pakwan") || clean.contains("melon") -> YARD_IN_METERS // 36 inches (3 ft / 1 yd)
+
+        else -> FOOT_IN_METERS
+    }
+}
+
 

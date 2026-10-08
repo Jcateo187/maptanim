@@ -31,44 +31,32 @@ fun TodayTasksCard(
     onCompleteTask: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorderColor)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "TODAY'S CARE TASKS",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    letterSpacing = 1.sp,
-                    color = Color(0xFF555555)
-                )
+        // Section heading outside card at top
+        Text(
+            text = "TODAY'S CARE TASKS",
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            letterSpacing = 1.sp,
+            color = Color(0xFF555555),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
 
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFFE8F5E9)
-                ) {
-                    Text(
-                        text = "${tasks.size} PENDING",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = LushGreen,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-            }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, CardBorderColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
 
             if (tasks.isEmpty()) {
                 Row(
@@ -131,3 +119,5 @@ fun TodayTasksCard(
         }
     }
 }
+}
+

@@ -33,10 +33,14 @@ private val CardBorderColor = Color(0xFFE0E0E0)
 fun BedTimelineDialog(
     plot: PlotRenderData,
     cropZones: List<CropZoneRenderData>,
+    focusedCropName: String? = null,
     onDismiss: () -> Unit
 ) {
     val zonesInBed = cropZones.filter {
         it.plotId == plot.id && !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true)
+    }.let { list ->
+        if (focusedCropName.isNullOrBlank()) list
+        else list.sortedByDescending { it.cropName.equals(focusedCropName, ignoreCase = true) }
     }
 
     Dialog(onDismissRequest = onDismiss) {

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app
+package com.maptanim.app
 
 import android.Manifest
 import android.content.Context
@@ -140,7 +140,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
-            isAppearanceLightStatusBars = false
+            isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = false
         }
 
@@ -207,7 +207,7 @@ class MainActivity : ComponentActivity() {
                     WindowInsetsCompat.Type.statusBars() or
                             WindowInsetsCompat.Type.navigationBars()
                 )
-                isAppearanceLightStatusBars = false
+                isAppearanceLightStatusBars = true
                 isAppearanceLightNavigationBars = false
             }
         }

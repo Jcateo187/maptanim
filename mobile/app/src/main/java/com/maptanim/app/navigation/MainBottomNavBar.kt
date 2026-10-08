@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +31,8 @@ private val UnselectedGray = Color(0xFF757575)
 
 /**
  * MainBottomNavBar — Primary 5-tab navigation bar for MapTanim.
- * Follows the Daylight High-Contrast Theme (Pure White background, Lush Green active tab, Deep Black unselected).
+ * Follows clean aesthetic: no background on icons, no click/ripple animations,
+ * only the icon and label show the green accent color when active on that screen.
  */
 @Composable
 fun MainBottomNavBar(
@@ -41,10 +45,13 @@ fun MainBottomNavBar(
         shadowElevation = 8.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        NavigationBar(
-            containerColor = Color.White,
-            tonalElevation = 0.dp,
-            modifier = Modifier.height(64.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .navigationBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround
         ) {
             BottomNavItem.items.forEach { item ->
                 val isSelected = when (item) {
@@ -52,32 +59,38 @@ fun MainBottomNavBar(
                     BottomNavItem.Farm -> selectedRoute == Routes.FARM
                     BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
                     BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
-                    BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile")
+                    BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile") || selectedRoute == Routes.SETTINGS
                 }
-                NavigationBarItem(
-                    selected = isSelected,
-                    onClick = { onNavigate(item.route) },
-                    icon = {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = item.label,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = LushGreen,
-                        selectedTextColor = LushGreen,
-                        unselectedIconColor = UnselectedGray,
-                        unselectedTextColor = UnselectedGray,
-                        indicatorColor = LushGreen.copy(alpha = 0.12f)
+                val itemColor = if (isSelected) LushGreen else UnselectedGray
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onNavigate(item.route)
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        tint = itemColor,
+                        modifier = Modifier.size(24.dp)
                     )
-                )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = item.label,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = itemColor,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
@@ -144,39 +157,39 @@ fun LandscapeSideNavBar(
                         BottomNavItem.Farm -> selectedRoute == Routes.FARM
                         BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
                         BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
-                        BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile")
+                        BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile") || selectedRoute == Routes.SETTINGS
                     }
+                    val itemColor = if (isSelected) LushGreen else UnselectedGray
 
-                    Surface(
-                        onClick = { onNavigate(item.route) },
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) LushGreen.copy(alpha = 0.12f) else Color.Transparent,
-                        border = if (isSelected) BorderStroke(1.dp, LushGreen.copy(alpha = 0.4f)) else null,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = if (isOpen) 12.dp else 8.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = if (isOpen) Arrangement.Start else Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = if (isSelected) LushGreen else UnselectedGray,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            if (isOpen) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = item.label,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) LushGreen else DeepBlack,
-                                    maxLines = 1
-                                )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onNavigate(item.route)
                             }
+                            .padding(horizontal = if (isOpen) 12.dp else 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = if (isOpen) Arrangement.Start else Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.label,
+                            tint = itemColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        if (isOpen) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = item.label,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = itemColor,
+                                maxLines = 1
+                            )
                         }
                     }
                 }

@@ -105,7 +105,8 @@ class CommunityRepositoryImpl(
         title: String,
         category: String,
         content: String,
-        authorName: String
+        authorName: String,
+        imageUrl: String?
     ): Result<Unit> {
         val currentUserId = try {
             SupabaseClient.client.auth.currentUserOrNull()?.id
@@ -122,7 +123,8 @@ class CommunityRepositoryImpl(
             category = category,
             title = title,
             content = content,
-            likes_count = 1,
+            image_url = imageUrl,
+            likes_count = 0,
             comments_count = 0,
             is_pinned = false,
             tags = listOf(category, "CropCare", "Vegetables")
@@ -138,17 +140,17 @@ class CommunityRepositoryImpl(
                 category = category,
                 title = title,
                 content = content,
-                likesCount = 1,
+                imageUrl = imageUrl,
+                likesCount = 0,
                 commentsCount = 0,
                 timestamp = "Just now",
-                isLikedByMe = true,
+                isLikedByMe = false,
                 tags = listOf(category, "CropCare", "Vegetables")
             )
             postsState.value = listOf(newPost) + postsState.value
 
-            // Record authored post & initial reaction locally
+            // Record authored post locally
             CommunityPreferencesManager.getInstance().addMyPostId(currentUserId, newId)
-            CommunityPreferencesManager.getInstance().setPostLiked(currentUserId, newId, true)
 
             // Touch active presence in Supabase profiles so Admin immediately detects user as online
             if (currentUserId != null) {

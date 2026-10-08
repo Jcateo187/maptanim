@@ -19,7 +19,6 @@ import com.maptanim.app.features.farm.screen.FarmHubScreen
 import com.maptanim.app.features.home.screen.HomeScreen
 import com.maptanim.app.features.splash.screen.LoadingScreen
 import com.maptanim.app.features.profile.ProfileScreen
-import com.maptanim.app.features.reports.screen.ReportsScreen
 import com.maptanim.app.features.splash.screen.CompanyLogoScreen
 import com.maptanim.app.features.library.screen.LibraryScreen
 import com.maptanim.app.features.notifications.screen.NotificationsScreen
@@ -31,7 +30,11 @@ fun AppNavGraph() {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.COMPANY
+        startDestination = Routes.COMPANY,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
 
         composable(Routes.COMPANY) {
@@ -65,14 +68,22 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.PROFILE
+            route = Routes.PROFILE,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             ProfileScreen(navController = navController, initialTab = 0)
         }
 
         composable(
             route = Routes.PROFILE_WITH_TAB,
-            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 })
+            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             ProfileScreen(navController = navController, initialTab = tab)
@@ -97,37 +108,41 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.COMMUNITY
+            route = Routes.COMMUNITY,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             CommunityScreen(navController = navController)
         }
 
         composable(
-            route = Routes.SETTINGS
+            route = Routes.SETTINGS,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             ProfileScreen(navController = navController, initialTab = 1)
         }
 
         composable(
-            route = Routes.NOTIFICATIONS
+            route = Routes.NOTIFICATIONS,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             NotificationsScreen(navController = navController)
         }
 
         composable(
             route = Routes.FARM,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             FarmHubScreen(navController = navController)
         }
@@ -148,24 +163,6 @@ fun AppNavGraph() {
             }
         ) {
             AboutScreen(navController = navController)
-        }
-
-        composable(
-            route = Routes.REPORTS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
-        ) {
-            ReportsScreen(navController = navController)
         }
     }
 }

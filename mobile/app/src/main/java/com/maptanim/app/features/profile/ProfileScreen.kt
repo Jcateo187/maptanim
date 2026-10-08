@@ -7,9 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -24,6 +22,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.maptanim.app.navigation.MainBottomNavBar
+import com.maptanim.app.navigation.Routes
 import com.maptanim.app.features.profile.components.AvatarPickerModal
 import com.maptanim.app.features.profile.components.ConfirmChoiceDialog
 import com.maptanim.app.features.profile.components.ViewAvatarDialog
@@ -57,128 +57,97 @@ fun ProfileScreen(
         viewModel.selectTab(tab)
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color.White
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            // Header Bar (Back button + Profile / Settings Tabs)
+    Scaffold(
+        containerColor = Color.White,
+        topBar = {
             Surface(
                 color = Color.White,
                 border = BorderStroke(1.dp, CardBorderColor),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
             ) {
-                Row(
+                PrimaryTabRow(
+                    selectedTabIndex = uiState.selectedTab.coerceIn(0, 1),
+                    containerColor = Color.White,
+                    contentColor = LushGreen,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = DeepBlack
+                        .height(48.dp),
+                    indicator = {
+                        TabRowDefaults.PrimaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(selectedTabIndex = uiState.selectedTab.coerceIn(0, 1)),
+                            color = LushGreen,
+                            height = 3.dp
                         )
-                    }
-
-                    PrimaryTabRow(
-                        selectedTabIndex = uiState.selectedTab.coerceIn(0, 1),
-                        containerColor = Color.Transparent,
-                        contentColor = LushGreen,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        indicator = {
-                            TabRowDefaults.PrimaryIndicator(
-                                modifier = Modifier.tabIndicatorOffset(selectedTabIndex = uiState.selectedTab.coerceIn(0, 1)),
-                                color = LushGreen,
-                                height = 3.dp
+                    },
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = uiState.selectedTab == 0,
+                        onClick = { viewModel.selectTab(0) },
+                        text = {
+                            Text(
+                                text = "Profile",
+                                color = if (uiState.selectedTab == 0) DeepBlack else MutedText,
+                                fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp
                             )
                         },
-                        divider = {}
-                    ) {
-                        Tab(
-                            selected = uiState.selectedTab == 0,
-                            onClick = { viewModel.selectTab(0) },
-                            text = {
-                                Text(
-                                    text = "Profile",
-                                    color = if (uiState.selectedTab == 0) DeepBlack else MutedText,
-                                    fontWeight = if (uiState.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = if (uiState.selectedTab == 0) LushGreen else MutedText,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        )
-
-                        Tab(
-                            selected = uiState.selectedTab == 1,
-                            onClick = { viewModel.selectTab(1) },
-                            text = {
-                                Text(
-                                    text = "Settings",
-                                    color = if (uiState.selectedTab == 1) DeepBlack else MutedText,
-                                    fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = null,
-                                    tint = if (uiState.selectedTab == 1) LushGreen else MutedText,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        )
-                    }
-
-                    // Bell icon badge for notifications
-                    val unreadCount = uiState.notifications.count { !it.isRead }
-                    IconButton(
-                        onClick = { viewModel.selectTab(2) }
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (unreadCount > 0) {
-                                    Badge(
-                                        containerColor = LushGreen,
-                                        contentColor = Color.White
-                                    ) {
-                                        Text("$unreadCount", fontSize = 9.sp)
-                                    }
-                                }
-                            }
-                        ) {
+                        icon = {
                             Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notifications",
-                                tint = if (uiState.selectedTab == 2) LushGreen else DeepBlack
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = if (uiState.selectedTab == 0) LushGreen else MutedText,
+                                modifier = Modifier.size(18.dp)
                             )
+                        }
+                    )
+
+                    Tab(
+                        selected = uiState.selectedTab == 1,
+                        onClick = { viewModel.selectTab(1) },
+                        text = {
+                            Text(
+                                text = "Settings",
+                                color = if (uiState.selectedTab == 1) DeepBlack else MutedText,
+                                fontWeight = if (uiState.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = null,
+                                tint = if (uiState.selectedTab == 1) LushGreen else MutedText,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            MainBottomNavBar(
+                selectedRoute = Routes.PROFILE,
+                onNavigate = { route ->
+                    if (route != Routes.PROFILE) {
+                        navController.navigate(route) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 }
-            }
-
-            // Main Content Area
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-            ) {
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(innerPadding)
+        ) {
                 // Success Toast Banner
                 uiState.successMessage?.let { msg ->
                     Surface(
@@ -230,7 +199,6 @@ fun ProfileScreen(
                 }
             }
         }
-    }
 
     // ── Avatar Modals & Dialogs ────────────────────────────────────────────────
     if (uiState.showViewAvatarModal) {
