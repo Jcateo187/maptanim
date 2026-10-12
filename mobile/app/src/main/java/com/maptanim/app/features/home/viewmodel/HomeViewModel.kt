@@ -357,4 +357,21 @@ class HomeViewModel(
         val isCalibrated = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().isFarmCalibrated(farmId)
         _uiState.update { it.copy(isFarmCalibrated = isCalibrated) }
     }
+
+    fun startPlantingSchedule(plotId: String, plantingDate: LocalDate = LocalDate.now()) {
+        viewModelScope.launch {
+            val rawPlotId = plotId.substringBefore("_zone_").substringBefore("_crop_")
+            val farmId = activeFarmId ?: _uiState.value.activeFarm?.id ?: return@launch
+            val existingPlots = RepositoryProvider.cropPlotRepository.observePlots(farmId).firstOrNull() ?: emptyList()
+            val plot = existingPlots.firstOrNull { it.id == rawPlotId }
+            if (plot != null) {
+                val updated = plot.copy(
+                    plantedDate = plantingDate.toString(),
+                    currentStage = ManagementStage.VEGETATIVE_GROWTH
+                )
+                RepositoryProvider.cropPlotRepository.upsertPlot(updated)
+            }
+            loadFarmData(farmId)
+        }
+    }
 }

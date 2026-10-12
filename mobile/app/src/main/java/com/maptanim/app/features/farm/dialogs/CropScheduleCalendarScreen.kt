@@ -1,6 +1,7 @@
 package com.maptanim.app.features.farm.dialogs
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -11,9 +12,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -36,8 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.domain.model.CropGrowthStage
+import com.maptanim.app.domain.model.CropLog
 import com.maptanim.app.features.farm.components.BackyardCropAgroData
+import com.maptanim.app.features.farm.dialogs.CropCareDssDialog
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import java.time.LocalDate
 import java.time.YearMonth
@@ -83,7 +89,13 @@ enum class AgendaTaskType(
 
 enum class BottomScheduleViewMode(val label: String, val icon: ImageVector) {
     SPLIT_AGENDA("Daily Agenda", Icons.Default.Checklist),
-    TIMELINE_LIST("Timeline Schedule", Icons.Default.Timeline)
+    CHECKUP_HISTORY("Check Up history", Icons.Default.History)
+}
+
+enum class CalendarScreenTab(val label: String, val icon: ImageVector) {
+    CALENDAR("Calendar", Icons.Default.CalendarMonth),
+    GROWTH_TIMELINE("Growth Timeline", Icons.Default.Timeline),
+    TODAYS_TASK("Today's Task", Icons.Default.Checklist)
 }
 
 data class StageBannerInfo(
@@ -123,9 +135,22 @@ fun CropScheduleCalendarScreen(
     plotId: String,
     zoneId: String? = null,
     plantedDateStr: String,
+    initialTab: CalendarScreenTab = CalendarScreenTab.CALENDAR,
+    isPlanningMode: Boolean = false,
+    onStartSchedule: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
+    val today = remember { LocalDate.now() }
+    val effectivePlanningMode = isPlanningMode || remember(plantedDateStr, today) {
+        try {
+            val parsed = LocalDate.parse(plantedDateStr.take(10))
+            parsed.isAfter(today)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     val plantedDate = remember(plantedDateStr) {
         try {
             LocalDate.parse(plantedDateStr.take(10))
@@ -138,7 +163,6 @@ fun CropScheduleCalendarScreen(
     val totalDays = maturityProfile.baseDaysToHarvest
     val harvestDate = remember(plantedDate, totalDays) { plantedDate.plusDays(totalDays.toLong()) }
 
-    val today = remember { LocalDate.now() }
     val daysPlanted = remember(plantedDate, today) {
         ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
     }
@@ -155,24 +179,75 @@ fun CropScheduleCalendarScreen(
     var showAllTasksInAgenda by remember { mutableStateOf(false) }
     var bottomViewMode by remember { mutableStateOf(BottomScheduleViewMode.SPLIT_AGENDA) }
     var selectedCategoryFilter by remember { mutableStateOf<AgendaTaskType?>(null) }
-    var showAddCustomTaskDialog by remember { mutableStateOf(false) }
-    var customTasks by remember { mutableStateOf(listOf<AgendaScheduleItem>()) }
 
-    // Generate chronological agenda events
-    val baseScheduleItems = remember(plantedDate, cropName, maturityProfile) {
-        generateCropAgendaSchedule(cropName, plantedDate, maturityProfile)
+    // Floating navigation tab & scroll synchronization
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var activeNavTab by remember { mutableStateOf(initialTab) }
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+    var showCheckUpDssDialog by remember { mutableStateOf(false) }
+
+    // Scroll to initial tab on launch if requested
+    LaunchedEffect(initialTab) {
+        if (initialTab != CalendarScreenTab.CALENDAR) {
+            val targetIndex = if (effectivePlanningMode) {
+                1
+            } else {
+                when (initialTab) {
+                    CalendarScreenTab.CALENDAR -> 0
+                    CalendarScreenTab.GROWTH_TIMELINE -> 1
+                    CalendarScreenTab.TODAYS_TASK -> 2
+                }
+            }
+            lazyListState.scrollToItem(targetIndex)
+        }
     }
 
-    val scheduleItems = remember(baseScheduleItems, customTasks) {
-        (baseScheduleItems + customTasks).sortedBy { it.date }
+    // Automatically follow scroll position and highlight the visible section
+    LaunchedEffect(lazyListState.firstVisibleItemIndex) {
+        if (!isProgrammaticScroll) {
+            activeNavTab = if (effectivePlanningMode) {
+                if (lazyListState.firstVisibleItemIndex == 0) CalendarScreenTab.CALENDAR
+                else CalendarScreenTab.TODAYS_TASK
+            } else {
+                when {
+                    lazyListState.firstVisibleItemIndex == 0 -> CalendarScreenTab.CALENDAR
+                    lazyListState.firstVisibleItemIndex == 1 -> CalendarScreenTab.GROWTH_TIMELINE
+                    else -> CalendarScreenTab.TODAYS_TASK
+                }
+            }
+        }
+    }
+
+    // Reactive observation of check-up reports for this crop/planting
+    val checkUpLogsFlow = remember(plotId, gardenLabel) {
+        RepositoryProvider.cropLogRepository.observeLogsForPlanting(plotId)
+    }
+    val logsFromPlanting by checkUpLogsFlow.collectAsState(initial = emptyList())
+
+    val bedLogsFlow = remember(gardenLabel) {
+        RepositoryProvider.cropLogRepository.observeLogsForBed(gardenLabel)
+    }
+    val logsFromBed by bedLogsFlow.collectAsState(initial = emptyList())
+
+    val checkUpLogs = remember(logsFromPlanting, logsFromBed, cropName, plotId) {
+        val combined = (logsFromPlanting + logsFromBed).distinctBy { it.id }
+        combined.filter {
+            it.cropName.equals(cropName, ignoreCase = true) || it.cropPlantingId == plotId
+        }.sortedByDescending { it.createdAt.ifBlank { it.date } }
+    }
+
+    // Generate chronological agenda events
+    val scheduleItems = remember(plantedDate, cropName, maturityProfile) {
+        generateCropAgendaSchedule(cropName, plantedDate, maturityProfile).sortedBy { it.date }
     }
 
     // State for task completion toggles
     var completedTaskIds by remember { mutableStateOf(setOf<String>()) }
 
-    // Group items by date for monthly calendar indicator dots
-    val tasksByDate = remember(scheduleItems) {
-        scheduleItems.groupBy { it.date }
+    // Group items by date for monthly calendar indicator dots (empty in planning mode so color coding is hidden)
+    val tasksByDate = remember(scheduleItems, effectivePlanningMode) {
+        if (effectivePlanningMode) emptyMap() else scheduleItems.groupBy { it.date }
     }
 
     // List of dates for Daily Agenda View (Teams Style, Screenshot 1)
@@ -346,7 +421,8 @@ fun CropScheduleCalendarScreen(
                                     letterSpacing = (-0.2).sp
                                 )
                                 Text(
-                                    text = "$gardenLabel • Itinanim: $formattedPlantedDate",
+                                    text = if (effectivePlanningMode) "$gardenLabel • Pagpaplano (Hindi pa Nagsisimula)"
+                                           else "$gardenLabel • Itinanim: $formattedPlantedDate",
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MutedText
@@ -386,16 +462,48 @@ fun CropScheduleCalendarScreen(
                 }
 
                 // ═══════════════════════════════════════════════════════════════
+                // 3 Floating Tabs (Sticky navigation that follows user when scrolling down):
+                // 1. Calendar
+                // 2. Growth Timeline
+                // 3. Today's task (Daily Agenda, Timeline Schedule)
+                // ═══════════════════════════════════════════════════════════════
+                FloatingCalendarNavigationTabs(
+                    activeTab = activeNavTab,
+                    isPlanningMode = effectivePlanningMode,
+                    onTabSelected = { targetTab ->
+                        activeNavTab = targetTab
+                        coroutineScope.launch {
+                            isProgrammaticScroll = true
+                            try {
+                                val targetIndex = if (effectivePlanningMode) {
+                                    if (targetTab == CalendarScreenTab.CALENDAR) 0 else 1
+                                } else {
+                                    when (targetTab) {
+                                        CalendarScreenTab.CALENDAR -> 0
+                                        CalendarScreenTab.GROWTH_TIMELINE -> 1
+                                        CalendarScreenTab.TODAYS_TASK -> 2
+                                    }
+                                }
+                                lazyListState.animateScrollToItem(targetIndex)
+                            } finally {
+                                isProgrammaticScroll = false
+                            }
+                        }
+                    }
+                )
+
+                // ═══════════════════════════════════════════════════════════════
                 // Main Scrollable Body:
                 // 1. Monthly Calendar
                 // 2. Growth Timeline
                 // 3. Agenda Schedule of Events
                 // ═══════════════════════════════════════════════════════════════
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 14.dp),
-                    contentPadding = PaddingValues(vertical = 14.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // ── 1. MONTHLY CALENDAR CARD ──────────────────────────────
@@ -410,27 +518,38 @@ fun CropScheduleCalendarScreen(
                             },
                             tasksByDate = tasksByDate,
                             plantedDate = plantedDate,
-                            harvestDate = harvestDate
+                            harvestDate = harvestDate,
+                            isPlanningMode = effectivePlanningMode
                         )
                     }
 
-                    // ── 2. GROWTH TIMELINE CARD ───────────────────────────────
-                    item {
-                        GrowthTimelineCard(
-                            cropName = cropName,
-                            plantedDate = plantedDate,
-                            totalDays = totalDays,
-                            daysPlanted = daysPlanted,
-                            daysRemaining = daysRemaining,
-                            progressRatio = stageProgressRatio,
-                            formattedPlantedDate = formattedPlantedDate,
-                            formattedHarvestDate = formattedHarvestDate,
-                            maturityProfile = maturityProfile
-                        )
+                    // ── 2. GROWTH TIMELINE CARD (Hidden in Planning Mode) ────
+                    if (!effectivePlanningMode) {
+                        item {
+                            GrowthTimelineCard(
+                                cropName = cropName,
+                                plantedDate = plantedDate,
+                                totalDays = totalDays,
+                                daysPlanted = daysPlanted,
+                                daysRemaining = daysRemaining,
+                                progressRatio = stageProgressRatio,
+                                formattedPlantedDate = formattedPlantedDate,
+                                formattedHarvestDate = formattedHarvestDate,
+                                maturityProfile = maturityProfile
+                            )
+                        }
                     }
 
                     // ── 3. BOTTOM SPLIT PANE AGENDA VIEW / TIMELINE LIST ──────
-                    item {
+                    if (effectivePlanningMode) {
+                        item(key = "locked-schedule-and-history") {
+                            LockedScheduleAndHistoryCard(
+                                cropName = cropName,
+                                onStartSchedule = onStartSchedule
+                            )
+                        }
+                    } else {
+                        item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -446,15 +565,17 @@ fun CropScheduleCalendarScreen(
                                 Column(modifier = Modifier.weight(1f, fill = false)) {
                                     Text(
                                         text = if (bottomViewMode == BottomScheduleViewMode.SPLIT_AGENDA)
-                                            "Daily Agenda View"
+                                            "Today's Task • Daily Agenda"
                                         else
-                                            "Timeline Schedule View",
+                                            "Today's Task • Check Up history",
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = DeepBlack
                                     )
                                     Text(
-                                        text = if (showAllTasksInAgenda)
+                                        text = if (bottomViewMode == BottomScheduleViewMode.CHECKUP_HISTORY)
+                                            "Talaan ng mga nasuring problema at rekomendasyon (${checkUpLogs.size})"
+                                        else if (showAllTasksInAgenda)
                                             "Lahat (${scheduleItems.size}) ng gawain mula pagtanim hanggang ani"
                                         else if (selectedCalendarDate != null)
                                             "Gawain para sa linggo ng ${selectedCalendarDate?.format(fallbackDateFormatter)}"
@@ -464,7 +585,7 @@ fun CropScheduleCalendarScreen(
                                     )
                                 }
 
-                                // Segmented Control Toggle between Daily Agenda (Teams) and Timeline Schedule (Google Calendar)
+                                // Segmented Control Toggle between Daily Agenda and Check Up history
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = SurfaceBg,
@@ -473,7 +594,7 @@ fun CropScheduleCalendarScreen(
                                     Row(modifier = Modifier.padding(3.dp)) {
                                         listOf(
                                             BottomScheduleViewMode.SPLIT_AGENDA,
-                                            BottomScheduleViewMode.TIMELINE_LIST
+                                            BottomScheduleViewMode.CHECKUP_HISTORY
                                         ).forEach { mode ->
                                             val isSelected = bottomViewMode == mode
                                             Surface(
@@ -654,91 +775,288 @@ fun CropScheduleCalendarScreen(
                             }
                         }
                     } else {
-                        // ── MODE 2: TIMELINE SCHEDULE VIEW (Google Calendar Schedule Style - Screenshot 2)
-                        stageInfoList.forEach { stageInfo ->
-                            val stageTasks = scheduleItems
-                                .filter { it.stageName == stageInfo.stageKey && (selectedCategoryFilter == null || it.type == selectedCategoryFilter) }
-
-                            if (stageTasks.isNotEmpty()) {
-                                item(key = "scenic-banner-${stageInfo.stageKey}") {
-                                    GoogleCalendarStageScenicBanner(stageInfo = stageInfo)
-                                }
-
-                                val groupedByDate = stageTasks.groupBy { it.date }.toList()
-                                groupedByDate.forEachIndexed { dateIdx, (date, tasksOnDate) ->
-                                    tasksOnDate.forEach { item ->
-                                        item(key = "gcal-item-${item.id}") {
-                                            val isChecked = item.id in completedTaskIds
-                                            GoogleCalendarScheduleDateRow(
-                                                item = item,
-                                                isChecked = isChecked,
-                                                onToggleCheck = {
-                                                    completedTaskIds = if (isChecked) completedTaskIds - item.id else completedTaskIds + item.id
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    // Intervening gap days in stage (Matches "Sep 10 - 16, 2028" in Screenshot 2)
-                                    if (dateIdx < groupedByDate.size - 1) {
-                                        val nextDate = groupedByDate[dateIdx + 1].first
-                                        val gapDays = ChronoUnit.DAYS.between(date, nextDate)
-                                        if (gapDays >= 3) {
-                                            item(key = "gcal-interval-$date-$nextDate") {
-                                                val startDayStr = date.plusDays(1).dayOfMonth
-                                                val endDayStr = nextDate.minusDays(1).dayOfMonth
-                                                val monthName = date.month.getDisplayName(TextStyle.SHORT, Locale.forLanguageTag("fil-PH"))
-                                                    .ifBlank { date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) }
-                                                    .replaceFirstChar { it.uppercase() }
-                                                GoogleCalendarIntervalRow(
-                                                    label = "$monthName $startDayStr – $endDayStr • Patuloy na pag-aalaga at pagpapanatili ng moisture"
+                        // ── MODE 2: CHECK UP HISTORY VIEW (Replaces Timeline Schedule) ────────
+                        if (checkUpLogs.isEmpty()) {
+                            item(key = "checkup-history-empty") {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = CardBg,
+                                    border = BorderStroke(1.dp, CardBorderColor),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = LightGreenBg,
+                                            modifier = Modifier.size(54.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.History,
+                                                    contentDescription = null,
+                                                    tint = ForestGreen,
+                                                    modifier = Modifier.size(28.dp)
                                                 )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Wala Pang Check Up History",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepBlack
+                                        )
+                                        Text(
+                                            text = "Wala pang naitalang ulat sa pagsusuri para sa $cropName. Magsagawa ng Crop Check Up upang maitala ang mga problema at solusyon dito.",
+                                            fontSize = 12.sp,
+                                            color = MutedText,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        FilledTonalButton(
+                                            onClick = { showCheckUpDssDialog = true },
+                                            colors = ButtonDefaults.filledTonalButtonColors(
+                                                containerColor = LightGreenBg,
+                                                contentColor = ForestGreen
+                                            ),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Text("Magsagawa ng Check Up Ngayon", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                             }
                                         }
                                     }
                                 }
+                            }
+                        } else {
+                            items(checkUpLogs, key = { it.id }) { log ->
+                                CheckUpHistoryLogCard(log = log)
                             }
                         }
                     }
                 }
             }
 
-            // ═══════════════════════════════════════════════════════════════
-            // Floating Action Button (+) matching Screenshot 1 & 2
-            // ═══════════════════════════════════════════════════════════════
-            FloatingActionButton(
-                onClick = { showAddCustomTaskDialog = true },
-                containerColor = ForestGreen,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(20.dp)
-                    .size(54.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Magdagdag ng Gawain",
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-
-            if (showAddCustomTaskDialog) {
-                AddCustomFarmTaskDialog(
-                    initialDate = selectedCalendarDate ?: today,
-                    onDismiss = { showAddCustomTaskDialog = false },
-                    onAddTask = { newTask ->
-                        customTasks = customTasks + newTask
-                    }
+            if (showCheckUpDssDialog) {
+                CropCareDssDialog(
+                    cropName = cropName,
+                    varietyName = varietyName ?: "",
+                    gardenLabel = gardenLabel,
+                    plotId = plotId,
+                    onDismiss = { showCheckUpDssDialog = false }
                 )
             }
         }
     }
 }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Component 1: Monthly Calendar Card
 // ═══════════════════════════════════════════════════════════════════════════════
+@Composable
+private fun LockedScheduleAndHistoryCard(
+    cropName: String,
+    onStartSchedule: (() -> Unit)? = null
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = CardBg,
+        border = BorderStroke(1.2.dp, CardBorderColor),
+        shadowElevation = 2.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFFFF3E0),
+                border = BorderStroke(1.dp, AmberAlert.copy(alpha = 0.4f)),
+                modifier = Modifier.size(58.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Naka-lock",
+                        tint = AmberAlert,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "Naka-lock ang Daily Agenda at Check Up history",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = DeepBlack,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Nakatago ang mga pang-araw-araw na gawain, paalala (pagdidilig, pagpapataba), at talaan ng check-up dahil hindi pa nasisimulan ang iskedyul ng pananim para sa $cropName.",
+                    fontSize = 12.sp,
+                    color = MutedText,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = SurfaceBg,
+                border = BorderStroke(0.8.dp, CardBorderColor),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = ForestGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "I-click ang button sa ibaba upang simulan ang kalendaryo ng pagtatanim at i-unlock ang lahat ng aktibidad.",
+                        fontSize = 11.5.sp,
+                        color = Charcoal,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (onStartSchedule != null) {
+                Button(
+                    onClick = onStartSchedule,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ForestGreen,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Simulan ang Kalendaryo Ngayon",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloatingCalendarNavigationTabs(
+    activeTab: CalendarScreenTab,
+    onTabSelected: (CalendarScreenTab) -> Unit,
+    isPlanningMode: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val availableTabs = if (isPlanningMode) {
+        listOf(CalendarScreenTab.CALENDAR, CalendarScreenTab.TODAYS_TASK)
+    } else {
+        CalendarScreenTab.values().toList()
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = CardBg,
+        border = BorderStroke(1.dp, CardBorderColor),
+        shadowElevation = 3.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            availableTabs.forEach { tab ->
+                val isSelected = activeTab == tab
+                val tabBgColor by animateColorAsState(
+                    targetValue = if (isSelected) ForestGreen else Color.Transparent,
+                    label = "calendarTabBg"
+                )
+                val iconTint by animateColorAsState(
+                    targetValue = if (isSelected) Color.White else MutedText,
+                    label = "calendarTabIcon"
+                )
+                val textColor by animateColorAsState(
+                    targetValue = if (isSelected) Color.White else Charcoal,
+                    label = "calendarTabText"
+                )
+                val displayIcon = if (isPlanningMode && tab == CalendarScreenTab.TODAYS_TASK) Icons.Default.Lock else tab.icon
+                val displayLabel = if (isPlanningMode && tab == CalendarScreenTab.TODAYS_TASK) "Today's Task (Naka-lock)" else tab.label
+
+                Surface(
+                    onClick = { onTabSelected(tab) },
+                    shape = RoundedCornerShape(11.dp),
+                    color = tabBgColor,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = displayIcon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = displayLabel,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun MonthlyCalendarCard(
     viewingMonth: YearMonth,
@@ -747,7 +1065,8 @@ private fun MonthlyCalendarCard(
     onDateSelected: (LocalDate) -> Unit,
     tasksByDate: Map<LocalDate, List<AgendaScheduleItem>>,
     plantedDate: LocalDate,
-    harvestDate: LocalDate
+    harvestDate: LocalDate,
+    isPlanningMode: Boolean = false
 ) {
     val today = remember { LocalDate.now() }
     var isWeekMode by remember { mutableStateOf(false) }
@@ -890,8 +1209,8 @@ private fun MonthlyCalendarCard(
                                 val cellDate = viewingMonth.atDay(dayNumber)
                                 val isSelected = cellDate == selectedDate
                                 val isToday = cellDate == today
-                                val isPlantedDay = cellDate == plantedDate
-                                val isHarvestDay = cellDate == harvestDate
+                                val isPlantedDay = !isPlanningMode && cellDate == plantedDate
+                                val isHarvestDay = !isPlanningMode && cellDate == harvestDate
                                 val tasksOnDay = tasksByDate[cellDate] ?: emptyList()
 
                                 Box(
@@ -977,18 +1296,46 @@ private fun MonthlyCalendarCard(
                 )
             }
 
-            // Legend of Calendar Indicators
-            HorizontalDivider(color = CardBorderColor.copy(alpha = 0.6f))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                LegendDot(color = LushGreen, label = "Pagdidilig")
-                LegendDot(color = AmberAlert, label = "Pataba")
-                LegendDot(color = RedAlert, label = "Peste")
-                LegendDot(color = PurpleAccent, label = "Trellis")
-                LegendDot(color = GoldHarvest, label = "Pag-aani")
+            if (!isPlanningMode) {
+                // Legend of Calendar Indicators
+                HorizontalDivider(color = CardBorderColor.copy(alpha = 0.6f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LegendDot(color = LushGreen, label = "Pagdidilig")
+                    LegendDot(color = AmberAlert, label = "Pataba")
+                    LegendDot(color = RedAlert, label = "Peste")
+                    LegendDot(color = PurpleAccent, label = "Trellis")
+                    LegendDot(color = GoldHarvest, label = "Pag-aani")
+                }
+            } else {
+                HorizontalDivider(color = CardBorderColor.copy(alpha = 0.6f))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFF1F5F0),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = ForestGreen.copy(alpha = 0.8f),
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Walang naka-iskedyul na aktibidad habang nasa pagpaplano pa ang gulay na ito.",
+                            fontSize = 11.sp,
+                            color = Charcoal,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -1856,111 +2203,175 @@ private fun GoogleCalendarScheduleDateRow(
 }
 
 @Composable
-private fun GoogleCalendarIntervalRow(label: String) {
-    Text(
-        text = label,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Medium,
-        color = MutedText.copy(alpha = 0.7f),
-        modifier = Modifier.padding(start = 54.dp, top = 2.dp, bottom = 4.dp)
-    )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Add Custom Task Dialog (FAB (+) action)
-// ═══════════════════════════════════════════════════════════════════════════════
-@Composable
-private fun AddCustomFarmTaskDialog(
-    initialDate: LocalDate,
-    onDismiss: () -> Unit,
-    onAddTask: (AgendaScheduleItem) -> Unit
-) {
-    var title by remember { mutableStateOf("") }
-    var instruction by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(AgendaTaskType.WATERING) }
-    var timeStr by remember { mutableStateOf("7:00 AM") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
+private fun CheckUpHistoryLogCard(log: CropLog) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = CardBg,
+        border = BorderStroke(1.dp, CardBorderColor),
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header Row: Inspection Icon + Title + Date & Stage Badge
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.AddCircle, contentDescription = null, tint = ForestGreen)
-                Text("Magdagdag ng Paalala / Tala", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Pangalan ng Gawain") },
-                    placeholder = { Text("Hal. Maglagay ng mulch, mag-spray ng CalPhos...") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = instruction,
-                    onValueChange = { instruction = it },
-                    label = { Text("Detalye o Tagubilin (Opsiyonal)") },
-                    placeholder = { Text("Hal. 2 kutsara bawat litrong tubig...") },
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Kategorya:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlack)
                 Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    AgendaTaskType.values().forEach { type ->
-                        FilterChip(
-                            selected = selectedType == type,
-                            onClick = { selectedType = type },
-                            label = { Text(type.tagalogLabel, fontSize = 11.sp) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = type.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(13.dp)
-                                )
+                    Surface(
+                        shape = CircleShape,
+                        color = LightGreenBg,
+                        border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.3f)),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.MedicalServices,
+                                contentDescription = null,
+                                tint = ForestGreen,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = log.selectedChoice.ifBlank { "Pagsusuri sa Kalusugan" },
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "Petsa: ${log.date}",
+                            fontSize = 11.sp,
+                            color = MutedText
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = LightGreenBg
+                ) {
+                    Text(
+                        text = log.currentStage.label,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForestGreen,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            HorizontalDivider(color = CardBorderColor.copy(alpha = 0.6f), thickness = 0.8.dp)
+
+            // Problem & Symptoms Identified Section
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.WarningAmber,
+                        contentDescription = null,
+                        tint = AmberAlert,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "Mga Nasuring Problema / Sintomas:",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AmberAlert
+                    )
+                }
+
+                if (log.selectedCheckboxes.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        log.selectedCheckboxes.forEach { symptom ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFFFF3E0),
+                                border = BorderStroke(0.8.dp, AmberAlert.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .background(AmberAlert, CircleShape)
+                                    )
+                                    Text(
+                                        text = symptom,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFBF360C)
+                                    )
+                                }
                             }
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Walang partikular na problemang itinala.",
+                        fontSize = 11.sp,
+                        color = MutedText
+                    )
+                }
+            }
+
+            // Prescribed Solution / Notes Section
+            if (!log.notes.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = SurfaceBg,
+                    border = BorderStroke(0.8.dp, CardBorderColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = ForestGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Inirekomendang Hakbang / Lunas:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForestGreen
+                            )
+                        }
+                        Text(
+                            text = log.notes,
+                            fontSize = 11.5.sp,
+                            color = Charcoal,
+                            lineHeight = 15.sp
                         )
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (title.isNotBlank()) {
-                        val newItem = AgendaScheduleItem(
-                            id = "custom-${System.currentTimeMillis()}",
-                            date = initialDate,
-                            timeStr = timeStr,
-                            dayNumber = 0,
-                            type = selectedType,
-                            title = title.trim(),
-                            tagalogInstruction = instruction.ifBlank { "Personal na paalala para sa pananim." },
-                            stageName = "Gawain"
-                        )
-                        onAddTask(newItem)
-                        onDismiss()
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = ForestGreen),
-                enabled = title.isNotBlank()
-            ) {
-                Text("I-save", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Kanselahin", color = MutedText)
-            }
         }
-    )
+    }
 }

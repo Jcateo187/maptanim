@@ -1,32 +1,62 @@
 package com.maptanim.app.features.farm.dialogs
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.Coronavirus
+import androidx.compose.material.icons.filled.Height
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -35,7 +65,6 @@ import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.domain.model.CropLog
 import com.maptanim.app.domain.model.LogContext
 import com.maptanim.app.domain.model.ManagementStage
-import com.maptanim.app.features.farm.renderer.canvas.CardSvgRenderer
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -452,13 +481,40 @@ fun CropCareDssDialog(
                     Button(
                         onClick = {
                             hasSubmitted = true
-                            isSavedToLog = false
                             val activeChecked = selectedOptionIds.filterValues { it }.keys.toSet()
-                            evaluatedSolution = solveCropProblem(
+                            val sol = solveCropProblem(
                                 cropName = cropName,
                                 activityId = selectedActivityId,
                                 selectedOptions = activeChecked
                             )
+                            evaluatedSolution = sol
+
+                            // Automatically record check-up report to CropLog repository
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    val activeLabels = currentActivity.options
+                                        .filter { selectedOptionIds[it.id] == true }
+                                        .map { it.label }
+
+                                    val log = CropLog(
+                                        id = "log-${UUID.randomUUID().toString().take(8)}",
+                                        cropPlantingId = plotId.ifBlank { "plot-1" },
+                                        farmId = "",
+                                        bedId = gardenLabel,
+                                        cropName = cropName,
+                                        varietyName = varietyName,
+                                        currentStage = currentStage,
+                                        logContext = LogContext.OBSERVE,
+                                        selectedChoice = currentActivity.title,
+                                        selectedCheckboxes = if (activeLabels.isNotEmpty()) activeLabels else listOf("Pangkalahatang Kalusugan ng Halaman"),
+                                        notes = if (sol != null) "${sol.title}: ${sol.directAnswer.take(160)}" else "Sinuri ang kalagayan ng pananim.",
+                                        date = LocalDate.now().toString(),
+                                        createdAt = Instant.now().toString()
+                                    )
+                                    RepositoryProvider.cropLogRepository.insertLog(log)
+                                } catch (_: Exception) {}
+                            }
+                            isSavedToLog = true
                         },
                         modifier = Modifier
                             .fillMaxWidth()

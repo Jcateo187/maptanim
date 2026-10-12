@@ -16,6 +16,7 @@ import com.maptanim.app.features.auth.screen.LoginScreen
 import com.maptanim.app.features.auth.screen.WelcomeScreen
 import com.maptanim.app.features.community.screen.CommunityScreen
 import com.maptanim.app.features.farm.screen.FarmHubScreen
+import com.maptanim.app.features.farm.screen.GrowingScreen
 import com.maptanim.app.features.home.screen.HomeScreen
 import com.maptanim.app.features.splash.screen.LoadingScreen
 import com.maptanim.app.features.profile.ProfileScreen
@@ -65,6 +66,24 @@ fun AppNavGraph() {
             popExitTransition = { ExitTransition.None }
         ) {
             HomeScreen(navController)
+        }
+
+        composable(
+            route = "${Routes.GROWING}?gardenId={gardenId}",
+            arguments = listOf(
+                navArgument("gardenId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
+        ) { backStackEntry ->
+            val gardenId = backStackEntry.arguments?.getString("gardenId")
+            GrowingScreen(navController = navController, initialGardenId = gardenId)
         }
 
         composable(

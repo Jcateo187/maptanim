@@ -21,10 +21,12 @@ object Routes {
     const val PROFILE_WITH_TAB = "profile?tab={tab}"
 
     // Secondary / Modal Routes
+    const val GROWING = "growing"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
     const val ABOUT = "about"
 
     fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
     fun libraryRoute(cropName: String? = null) = if (cropName.isNullOrBlank()) LIBRARY else "$LIBRARY?cropName=$cropName"
+    fun growingRoute(gardenId: String? = null) = if (gardenId.isNullOrBlank()) GROWING else "$GROWING?gardenId=$gardenId"
 }

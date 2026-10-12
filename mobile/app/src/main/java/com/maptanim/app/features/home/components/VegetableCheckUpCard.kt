@@ -37,6 +37,7 @@ import com.maptanim.app.R
 import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.features.farm.renderer.canvas.GardenSvgRenderer
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
+import java.time.LocalDate
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
@@ -79,7 +80,8 @@ private val GardenImages = listOf(
 data class GardenCardItem(
     val id: String,
     val name: String,
-    val crops: List<PlantedVegetableData>
+    val crops: List<PlantedVegetableData>,
+    val startedTodayCount: Int = crops.size
 )
 
 data class PlantedVegetableData(
@@ -94,49 +96,59 @@ data class PlantedVegetableData(
 /**
  * VegetableCheckUpCard — Home screen module replacing the previous Quick Shortcuts.
  * Displays small cards showing each garden name.
- * When the user taps a garden name card, a modal shows the list of vegetables planted in that garden,
- * allowing the user to initiate a direct health and agronomic check-up for that vegetable.
+ * Only shows in numbers those vegetables who have ALREADY started a schedule on this day.
  */
 @Composable
 fun VegetableCheckUpCard(
     plots: List<PlotRenderData>,
-    farmName: String,
     onStartCheckUp: (cropName: String, variety: String, gardenLabel: String, plotId: String, stage: ManagementStage) -> Unit,
     onOpenFarmHub: () -> Unit,
+    onGardenClick: (gardenId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedGardenForInspection by remember { mutableStateOf<GardenCardItem?>(null) }
+    val today = remember { LocalDate.now() }
 
-    // Group plots into garden items
-    val gardens = remember(plots, farmName) {
+    // Group plots into garden items — only count vegetables whose schedule started on this day
+    val gardens = remember(plots, today) {
         if (plots.isEmpty()) {
             listOf(
                 GardenCardItem(
                     id = "garden_default",
-                    name = farmName.ifBlank { "My Vegetable Garden" },
-                    crops = emptyList()
+                    name = "Main Garden",
+                    crops = emptyList(),
+                    startedTodayCount = 0
                 )
             )
         } else {
             val grouped = plots.groupBy { it.plotLabel.substringBefore(" (Z") }
             grouped.map { (gardenLabel, plotList) ->
-                val vegetables = plotList.mapNotNull { p ->
+                val startedTodayVegetables = plotList.mapNotNull { p ->
                     val name = p.cropName?.trim()
                     if (!name.isNullOrBlank() && !name.equals("Bed", ignoreCase = true)) {
-                        PlantedVegetableData(
-                            plotId = p.id,
-                            cropName = name,
-                            cropVariety = p.cropVariety,
-                            daysPlanted = p.daysPlanted,
-                            growthStage = p.growthStage,
-                            stage = ManagementStage.fromIndex(p.growthStage - 1)
-                        )
+                        val parsedPlantDate = try {
+                            if (!p.plantedDate.isNullOrBlank()) LocalDate.parse(p.plantedDate.take(10)) else null
+                        } catch (_: Exception) { null }
+
+                        // Only vegetables that have already started a schedule on or before this day
+                        val isStartedOnThisDay = p.isMonitoringStarted && parsedPlantDate != null && !parsedPlantDate.isAfter(today)
+
+                        if (isStartedOnThisDay) {
+                            PlantedVegetableData(
+                                plotId = p.id,
+                                cropName = name,
+                                cropVariety = p.cropVariety,
+                                daysPlanted = p.daysPlanted,
+                                growthStage = p.growthStage,
+                                stage = ManagementStage.fromIndex(p.growthStage - 1)
+                            )
+                        } else null
                     } else null
                 }
                 GardenCardItem(
                     id = plotList.first().id,
                     name = gardenLabel,
-                    crops = vegetables
+                    crops = startedTodayVegetables,
+                    startedTodayCount = startedTodayVegetables.size
                 )
             }
         }
@@ -223,7 +235,7 @@ fun VegetableCheckUpCard(
                     itemsIndexed(gardens, key = { _, garden -> garden.id }) { index, garden ->
                         val gardenImageRes = GardenImages[(index % GardenImages.size + GardenImages.size) % GardenImages.size]
                         Surface(
-                            onClick = { selectedGardenForInspection = garden },
+                            onClick = { onGardenClick(garden.id) },
                             shape = RoundedCornerShape(10.dp),
                             color = Color.White,
                             shadowElevation = 2.dp,
@@ -256,7 +268,7 @@ fun VegetableCheckUpCard(
                                         .padding(4.dp)
                                 ) {
                                     Text(
-                                        text = "${garden.crops.size}",
+                                        text = "${garden.startedTodayCount}",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = DeepBlack, // Same color as garden name
@@ -289,243 +301,4 @@ fun VegetableCheckUpCard(
         }
     }
 
-    // Modal Dialog showing the List of Vegetables when user taps a Garden Name
-    selectedGardenForInspection?.let { garden ->
-        Dialog(
-            onDismissRequest = { selectedGardenForInspection = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .wrapContentHeight(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFE8F5E9)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Yard,
-                                    contentDescription = null,
-                                    tint = LushGreen,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = garden.name,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = DeepBlack
-                                )
-                                Text(
-                                    text = "Vegetables in this garden",
-                                    fontSize = 11.sp,
-                                    color = MutedText
-                                )
-                            }
-                        }
-
-                        IconButton(
-                            onClick = { selectedGardenForInspection = null },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = DeepBlack,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
-
-                    // List of Vegetables inside the garden
-                    if (garden.crops.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                text = "No vegetables planted in ${garden.name} yet.",
-                                fontSize = 13.sp,
-                                color = MutedText
-                            )
-                            Button(
-                                onClick = {
-                                    selectedGardenForInspection = null
-                                    onOpenFarmHub()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = "Plant Vegetables in Farm Hub",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-
-                            // Quick test check-up option for common vegetables
-                            Text(
-                                text = "Or run a quick check up on a standard vegetable:",
-                                fontSize = 11.sp,
-                                color = MutedText,
-                                modifier = Modifier.padding(top = 6.dp)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                listOf("Eggplant", "Tomato", "Pechay").forEach { defaultCrop ->
-                                    OutlinedButton(
-                                        onClick = {
-                                            selectedGardenForInspection = null
-                                            onStartCheckUp(
-                                                defaultCrop,
-                                                "",
-                                                garden.name,
-                                                garden.id,
-                                                ManagementStage.VEGETATIVE_GROWTH
-                                            )
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                        border = BorderStroke(1.dp, CardBorderColor)
-                                    ) {
-                                        Text(
-                                            text = defaultCrop,
-                                            fontSize = 11.sp,
-                                            color = DeepBlack,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 320.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(garden.crops) { cropItem ->
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = LightSurface,
-                                    border = BorderStroke(1.dp, CardBorderColor),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFFE8F5E9)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.LocalFlorist,
-                                                    contentDescription = null,
-                                                    tint = LushGreen,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                Text(
-                                                    text = cropItem.cropName,
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = DeepBlack
-                                                )
-                                                Text(
-                                                    text = if (cropItem.daysPlanted > 0)
-                                                        "${cropItem.daysPlanted} days planted • Stage ${cropItem.growthStage}"
-                                                    else
-                                                        "Stage ${cropItem.growthStage} • ${cropItem.cropVariety ?: "Vegetable"}",
-                                                    fontSize = 11.sp,
-                                                    color = MutedText
-                                                )
-                                            }
-                                        }
-
-                                        // Check Up Button
-                                        Button(
-                                            onClick = {
-                                                selectedGardenForInspection = null
-                                                onStartCheckUp(
-                                                    cropItem.cropName,
-                                                    cropItem.cropVariety ?: "",
-                                                    garden.name,
-                                                    cropItem.plotId,
-                                                    cropItem.stage
-                                                )
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
-                                            shape = RoundedCornerShape(8.dp),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            modifier = Modifier.height(34.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.MedicalServices,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "Check Up",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

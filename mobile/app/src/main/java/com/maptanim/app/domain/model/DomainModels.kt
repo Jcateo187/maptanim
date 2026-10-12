@@ -60,11 +60,13 @@ data class FarmEnvironment(
 data class Farm(
     val id: String,
     val farmerId: String,
-    val farmName: String,      // e.g. "Murcia Farm"
+    val farmName: String,      // e.g. "Murcia Farm" / Garden Name
     val createdAt: String,
     val updatedAt: String,
     val environment: FarmEnvironment = FarmEnvironment()
-)
+) {
+    val gardenName: String get() = farmName
+}
 
 
 

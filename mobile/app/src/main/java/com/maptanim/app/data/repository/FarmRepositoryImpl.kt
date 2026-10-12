@@ -100,6 +100,7 @@ private fun Farm.toDto() = FarmDto(
     id = id,
     farmer_id = farmerId,
     farm_name = farmName,
+    garden_name = farmName,
     created_at = createdAt,
     updated_at = updatedAt
 )
@@ -107,7 +108,7 @@ private fun Farm.toDto() = FarmDto(
 private fun FarmDto.toDomain(): Farm = Farm(
     id = id,
     farmerId = farmer_id,
-    farmName = farm_name,
+    farmName = garden_name?.takeIf { it.isNotBlank() } ?: farm_name,
     createdAt = created_at ?: "",
     updatedAt = updated_at ?: ""
 )

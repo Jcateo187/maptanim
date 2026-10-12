@@ -26,12 +26,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.R
 import com.maptanim.app.domain.model.ManagementStage
+import com.maptanim.app.features.farm.dialogs.CalendarScreenTab
 import com.maptanim.app.features.farm.dialogs.CropCareDssDialog
 import com.maptanim.app.features.farm.dialogs.CropInformationDialog
+import com.maptanim.app.features.farm.dialogs.CropScheduleCalendarScreen
 import com.maptanim.app.features.home.components.*
 import com.maptanim.app.features.home.viewmodel.HomeViewModel
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.navigation.Routes
+import java.time.LocalDate
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
@@ -42,6 +45,14 @@ private data class ActiveCheckUpTarget(
     val gardenLabel: String,
     val plotId: String,
     val stage: ManagementStage
+)
+
+private data class CalendarLaunchTarget(
+    val cropName: String,
+    val varietyName: String?,
+    val gardenLabel: String,
+    val plotId: String,
+    val plantedDateStr: String
 )
 
 /**
@@ -62,6 +73,7 @@ fun HomeScreen(
     val uiState by homeViewModel.uiState.collectAsState()
     var activeCheckUp by remember { mutableStateOf<ActiveCheckUpTarget?>(null) }
     var selectedCropForInfo by remember { mutableStateOf<String?>(null) }
+    var activeCalendarTarget by remember { mutableStateOf<CalendarLaunchTarget?>(null) }
 
     LaunchedEffect(Unit) {
         homeViewModel.refreshCalibration()
@@ -214,11 +226,13 @@ fun HomeScreen(
             item {
                 VegetableCheckUpCard(
                     plots = uiState.plots,
-                    farmName = uiState.activeFarm?.farmName ?: "My Vegetable Farm",
                     onStartCheckUp = { cropName, variety, gardenLabel, plotId, stage ->
                         activeCheckUp = ActiveCheckUpTarget(cropName, variety, gardenLabel, plotId, stage)
                     },
-                    onOpenFarmHub = { navController.navigate(Routes.FARM) }
+                    onOpenFarmHub = { navController.navigate(Routes.FARM) },
+                    onGardenClick = { gardenId ->
+                        navController.navigate(Routes.growingRoute(gardenId))
+                    }
                 )
             }
 
@@ -226,7 +240,23 @@ fun HomeScreen(
             item {
                 TodayTasksCard(
                     tasks = uiState.todayTasks,
-                    onCompleteTask = { taskId -> homeViewModel.completeTask(taskId) }
+                    onCompleteTask = { taskId -> homeViewModel.completeTask(taskId) },
+                    onTaskClick = { task ->
+                        val matchingPlot = uiState.plots.firstOrNull {
+                            it.id == task.plotId || (!task.cropName.isNullOrBlank() && it.cropName.equals(task.cropName, ignoreCase = true))
+                        }
+                        val plantedDateStr = matchingPlot?.plantedDate ?: LocalDate.now().minusDays(matchingPlot?.daysPlanted?.toLong() ?: 15L).toString()
+                        activeCalendarTarget = CalendarLaunchTarget(
+                            cropName = task.cropName?.ifBlank { "Kamatis" } ?: "Kamatis",
+                            varietyName = null,
+                            gardenLabel = task.plotLabel.ifBlank { "Garden" },
+                            plotId = task.plotId,
+                            plantedDateStr = plantedDateStr
+                        )
+                    },
+                    onViewMore = {
+                        navController.navigate(Routes.GROWING)
+                    }
                 )
             }
 
@@ -258,6 +288,19 @@ fun HomeScreen(
         CropInformationDialog(
             cropName = cropName,
             onDismiss = { selectedCropForInfo = null }
+        )
+    }
+    // Dedicated Calendar Screen opened from a Today's Task click (defaults to Today's Task tab)
+    activeCalendarTarget?.let { target ->
+        CropScheduleCalendarScreen(
+            cropName = target.cropName,
+            varietyName = target.varietyName,
+            gardenLabel = target.gardenLabel,
+            plotId = target.plotId,
+            plantedDateStr = target.plantedDateStr,
+            initialTab = CalendarScreenTab.TODAYS_TASK,
+            onDismiss = { activeCalendarTarget = null },
+            onReschedule = { /* Kept resilient */ }
         )
     }
     }

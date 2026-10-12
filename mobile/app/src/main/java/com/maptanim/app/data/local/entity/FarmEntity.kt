@@ -12,7 +12,9 @@ data class FarmEntity(
     @ColumnInfo(name = "farm_name") val farmName: String,
     @ColumnInfo(name = "created_at") val createdAt: String,
     @ColumnInfo(name = "updated_at") val updatedAt: String
-)
+) {
+    val gardenName: String get() = farmName
+}
 
 fun FarmEntity.toDomain() = Farm(
     id = id,
