@@ -18,6 +18,12 @@ class ActivityRepositoryImpl(
         }
     }
 
+    override fun observeAllActivities(): Flow<List<Activity>> {
+        return activityDao.observeAllActivities().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override suspend fun logActivity(activity: Activity) {
         activityDao.upsertActivity(activity.toEntity())
     }

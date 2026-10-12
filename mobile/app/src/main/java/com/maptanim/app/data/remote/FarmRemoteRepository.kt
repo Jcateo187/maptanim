@@ -33,4 +33,20 @@ class FarmRemoteRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun deleteFarm(farmId: String): Result<Unit> {
+        return try {
+            SupabaseClient.client
+                .from("farms")
+                .delete {
+                    filter {
+                        eq("id", farmId)
+                    }
+                }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
 }

@@ -14,9 +14,12 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 
 class CropPlotRepositoryImpl(
-    private val cropPlotDao: CropPlotDao? = null,
+    private val initialDao: CropPlotDao? = null,
     private val remoteDataSource: CropPlotRemoteDataSource = CropPlotRemoteDataSource()
 ) : CropPlotRepository {
+
+    private val cropPlotDao: CropPlotDao?
+        get() = initialDao ?: RepositoryProvider.getDatabase()?.cropPlotDao()
 
     private val inMemoryCache = MutableStateFlow<Map<String, List<CropPlot>>>(emptyMap())
 
@@ -39,28 +42,69 @@ class CropPlotRepositoryImpl(
     }
 
     override suspend fun savePlots(plots: List<CropPlot>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val farmId = plots.firstOrNull()?.farmId ?: "farm-1"
+        val resolvedFarmId = plots.firstOrNull()?.farmId
+            ?: RepositoryProvider.getDatabase()?.farmDao()?.getActiveFarm()?.id
+            ?: "farm-default"
         val plotIds = plots.map { it.id }
         if (plotIds.isNotEmpty()) {
-            cropPlotDao?.deletePlotsNotInList(farmId, plotIds)
+            cropPlotDao?.deletePlotsNotInList(resolvedFarmId, plotIds)
         } else {
-            cropPlotDao?.deletePlotsByFarmId(farmId)
+            cropPlotDao?.deletePlotsByFarmId(resolvedFarmId)
         }
         cropPlotDao?.upsertPlots(plots.map { it.toEntity() })
         
-        // Sync to remote
-        plots.forEach { plot ->
-            remoteDataSource.upsertPlot(plot.toDto())
+        val cached = inMemoryCache.value[resolvedFarmId] ?: emptyList()
+        // Avoid network traffic: only push plots that were actually added or modified
+        val changedPlots = plots.filter { p ->
+            val prev = cached.firstOrNull { it.id == p.id }
+            prev == null || prev != p
+        }
+        changedPlots.forEach { plot ->
+            try {
+                val res = remoteDataSource.upsertPlot(plot.toDto())
+                if (res.isFailure) {
+                    RepositoryProvider.syncRepository.enqueueSyncItem(
+                        tableName = "crop_plots",
+                        recordId = plot.farmId,
+                        operation = "UPSERT",
+                        payload = plot.id
+                    )
+                }
+            } catch (_: Exception) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plot.farmId,
+                    operation = "UPSERT",
+                    payload = plot.id
+                )
+            }
         }
 
         val current = inMemoryCache.value.toMutableMap()
-        current[farmId] = plots
+        current[resolvedFarmId] = plots
         inMemoryCache.value = current
     }
 
     override suspend fun deletePlot(plotId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.deletePlot(plotId)
-        remoteDataSource.deletePlot(plotId)
+        try {
+            val res = remoteDataSource.deletePlot(plotId)
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plotId,
+                    operation = "DELETE",
+                    payload = plotId
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "crop_plots",
+                recordId = plotId,
+                operation = "DELETE",
+                payload = plotId
+            )
+        }
 
         val current = inMemoryCache.value.toMutableMap()
         current.keys.forEach { farmId ->
@@ -71,7 +115,24 @@ class CropPlotRepositoryImpl(
 
     override suspend fun upsertPlot(plot: CropPlot) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.upsertPlot(plot.toEntity())
-        remoteDataSource.upsertPlot(plot.toDto())
+        try {
+            val res = remoteDataSource.upsertPlot(plot.toDto())
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "crop_plots",
+                    recordId = plot.farmId,
+                    operation = "UPSERT",
+                    payload = plot.id
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "crop_plots",
+                recordId = plot.farmId,
+                operation = "UPSERT",
+                payload = plot.id
+            )
+        }
 
         val current = inMemoryCache.value.toMutableMap()
         val list = (current[plot.farmId] ?: emptyList()).filter { it.id != plot.id } + plot
@@ -79,7 +140,7 @@ class CropPlotRepositoryImpl(
         inMemoryCache.value = current
     }
 
-    override suspend fun recordHarvest(plotId: String, yieldKg: Float?, notes: String?) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    override suspend fun recordHarvest(plotId: String, yieldKg: Float?, notes: String?, isFinalHarvest: Boolean) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val currentList = inMemoryCache.value.values.flatten()
         val plot = currentList.firstOrNull { it.id == plotId }
             ?: cropPlotDao?.observePlotById(plotId)?.firstOrNull()?.toDomain()
@@ -90,36 +151,43 @@ class CropPlotRepositoryImpl(
             val plantedDate = plot.plantedDate
             val plotLabel = plot.plotLabel
             val farmId = plot.farmId
+            val currentYield = yieldKg ?: 0f
 
-            // Calculate total growing duration (days or sim seconds)
-            val isSim = cropName.lowercase().contains("ampalaya") || cropVariety?.contains("10s", ignoreCase = true) == true
-            val growingDurationDays = if (isSim) {
-                val plantedMs = try {
-                    java.time.ZonedDateTime.parse(plantedDate).toInstant().toEpochMilli()
-                } catch (e: Exception) { 0L }
-                val elapsedMs = (System.currentTimeMillis() - plantedMs).coerceAtLeast(0L)
-                (elapsedMs / 1000L).toInt()
-            } else if (!plantedDate.isNullOrBlank()) {
+            // Calculate total growing duration in real days
+            val growingDurationDays = if (!plantedDate.isNullOrBlank()) {
                 try {
-                    val pDate = java.time.LocalDate.parse(plantedDate.take(10))
-                    java.time.temporal.ChronoUnit.DAYS.between(pDate, java.time.LocalDate.now()).toInt().coerceAtLeast(0)
-                } catch (e: Exception) { 30 }
-            } else { 30 }
+                    val pDate = if (plantedDate.contains("T")) {
+                        java.time.ZonedDateTime.parse(plantedDate).toLocalDate()
+                    } else {
+                        java.time.LocalDate.parse(plantedDate.take(10))
+                    }
+                    java.time.temporal.ChronoUnit.DAYS.between(pDate, java.time.LocalDate.now()).toInt().coerceAtLeast(1)
+                } catch (e: Exception) {
+                    30
+                }
+            } else {
+                30
+            }
+
+            val farmDao = RepositoryProvider.getDatabase()?.farmDao()
+            val activeFarm = farmDao?.getFarmById(farmId) ?: farmDao?.getActiveFarm()
+            val resolvedFarmName = activeFarm?.farmName ?: "My Farm"
 
             val harvestRecord = com.maptanim.app.domain.model.HarvestRecord(
                 id = java.util.UUID.randomUUID().toString(),
                 plotId = plot.id,
                 farmId = farmId,
-                farmName = "MapTanim Main Farm",
+                farmName = resolvedFarmName,
                 plotLabel = plotLabel,
                 cropName = cropName,
                 cropVariety = cropVariety,
                 plantedDate = plantedDate,
                 harvestedAt = java.time.ZonedDateTime.now().toString(),
                 growingDurationDays = growingDurationDays,
-                yieldKg = yieldKg ?: 0f,
+                yieldKg = currentYield,
                 qualityRating = 5,
-                notes = notes
+                notes = notes,
+                isFinalHarvest = isFinalHarvest
             )
 
             // Save complete harvest record under farm history
@@ -129,15 +197,32 @@ class CropPlotRepositoryImpl(
                 e.printStackTrace()
             }
 
-            // Remove crop from active monitoring list & clear plot for next cycle
-            val clearedPlot = plot.copy(
-                cropName = null,
-                cropId = null,
-                cropVariety = null,
-                plantedDate = null,
-                updatedAt = java.time.ZonedDateTime.now().toString()
-            )
-            upsertPlot(clearedPlot)
+            val nowStr = java.time.ZonedDateTime.now().toString()
+            if (isFinalHarvest) {
+                // Final harvest: remove crop from active bed, save to rotation history
+                val updatedHistory = (plot.previousCropsHistory + cropName).distinct()
+                val clearedPlot = plot.copy(
+                    cropName = null,
+                    cropId = null,
+                    cropVariety = null,
+                    plantedDate = null,
+                    currentStage = com.maptanim.app.domain.model.ManagementStage.PREPARATION,
+                    harvestCount = plot.harvestCount + 1,
+                    totalYieldKg = plot.totalYieldKg + currentYield,
+                    previousCropsHistory = updatedHistory,
+                    updatedAt = nowStr
+                )
+                upsertPlot(clearedPlot)
+            } else {
+                // Continuous multi-pick: keep crop active, increment harvest count and total yield
+                val continuousPlot = plot.copy(
+                    currentStage = com.maptanim.app.domain.model.ManagementStage.HARVEST,
+                    harvestCount = plot.harvestCount + 1,
+                    totalYieldKg = plot.totalYieldKg + currentYield,
+                    updatedAt = nowStr
+                )
+                upsertPlot(continuousPlot)
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.domain.model.SoilType
 
 @Entity(tableName = "crop_plots")
@@ -24,7 +25,11 @@ data class CropPlotEntity(
     @ColumnInfo(name = "is_active") val isActive: Boolean,
     @ColumnInfo(name = "notes") val notes: String?,
     @ColumnInfo(name = "created_at") val createdAt: String,
-    @ColumnInfo(name = "updated_at") val updatedAt: String
+    @ColumnInfo(name = "updated_at") val updatedAt: String,
+    @ColumnInfo(name = "current_stage", defaultValue = "PREPARATION") val currentStage: String = "PREPARATION",
+    @ColumnInfo(name = "harvest_count", defaultValue = "0") val harvestCount: Int = 0,
+    @ColumnInfo(name = "total_yield_kg", defaultValue = "0.0") val totalYieldKg: Float = 0f,
+    @ColumnInfo(name = "previous_crops_history", defaultValue = "") val previousCropsHistory: String = ""
 )
 
 fun CropPlotEntity.toDomain() = CropPlot(
@@ -44,7 +49,11 @@ fun CropPlotEntity.toDomain() = CropPlot(
     isActive = isActive,
     notes = notes,
     createdAt = createdAt,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    currentStage = try { ManagementStage.valueOf(currentStage) } catch (e: Exception) { ManagementStage.PREPARATION },
+    harvestCount = harvestCount,
+    totalYieldKg = totalYieldKg,
+    previousCropsHistory = if (previousCropsHistory.isBlank()) emptyList() else previousCropsHistory.split(",")
 )
 
 fun CropPlot.toEntity() = CropPlotEntity(
@@ -64,5 +73,9 @@ fun CropPlot.toEntity() = CropPlotEntity(
     isActive = isActive,
     notes = notes,
     createdAt = createdAt,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    currentStage = currentStage.name,
+    harvestCount = harvestCount,
+    totalYieldKg = totalYieldKg,
+    previousCropsHistory = previousCropsHistory.joinToString(",")
 )

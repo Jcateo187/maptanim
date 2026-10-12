@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Sili (Hot Chili Pepper / Labuyo) - Tapered Curving Red Pod -->
+  <!-- Green Stem & Crown -->
+  <path d="M42 22 C38 12 40 6 48 4 C46 8 44 14 44 20" stroke="#2E7D32" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M38 22 C38 20 54 20 56 22 L54 28 C48 30 42 28 38 22 Z" fill="#388E3C"/>
+  <ellipse cx="46" cy="22" rx="10" ry="3.5" fill="#1B5E20"/>
+  <!-- Curved Red Pepper Body -->
+  <radialGradient id="siliGrad" cx="36%" cy="40%" r="65%">
+    <stop offset="0%" stop-color="#FF5252"/>
+    <stop offset="50%" stop-color="#D32F2F"/>
+    <stop offset="100%" stop-color="#B71C1C"/>
+  </radialGradient>
+  <path d="M40 26 C36 40 38 60 48 76 C54 86 64 94 70 96 C66 90 58 78 54 62 C50 46 54 34 52 26 Z" fill="url(#siliGrad)"/>
+  <!-- Sleek Curved Highlight -->
+  <path d="M42 32 C40 46 42 64 50 78 C54 84 60 90 64 92" stroke="#FFCDD2" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.6"/>
+</svg>

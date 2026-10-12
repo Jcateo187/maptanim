@@ -2,7 +2,7 @@ package com.maptanim.app.data
 
 import com.maptanim.app.domain.model.Crop
 import com.maptanim.app.domain.model.SoilType
-import com.maptanim.app.ui.components.editcomponents.croptray.toCropOption
+import com.maptanim.app.features.farm.tabs.plan.toCropOption
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test

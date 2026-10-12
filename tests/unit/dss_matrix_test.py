@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MapTanim Mobile & DSS Engine Matrix Verification Test Suite
-Validates 2D Isometric Farm Canvas spatial grid bounds, crop zone allocation, and companion compatibility overlays.
+Validates 2D Farm Canvas spatial grid bounds, crop zone allocation, and companion compatibility overlays.
 """
 
 import sys
@@ -11,7 +11,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 def test_canvas_grid_bounds():
     """Verify 30m x 30m farm workspace grid bounds calculation."""
-    print("  [+] Testing 30m x 30m Isometric Canvas Grid Bounds...")
+    print("  [+] Testing 30m x 30m 2D Farm Canvas Grid Bounds...")
     GRID_SIZE_METERS = 30
     TILE_SIZE_PX = 64
     

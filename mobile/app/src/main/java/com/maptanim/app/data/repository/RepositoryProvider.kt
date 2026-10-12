@@ -7,7 +7,6 @@ import com.maptanim.app.domain.repository.CropPlotRepository
 import com.maptanim.app.domain.repository.CropRepository
 import com.maptanim.app.domain.repository.CropZoneRepository
 import com.maptanim.app.domain.repository.DssRuleRepository
-import com.maptanim.app.domain.repository.FarmObjectRepository
 import com.maptanim.app.domain.repository.FarmRepository
 import com.maptanim.app.domain.repository.KnowledgeBaseRepository
 import com.maptanim.app.domain.repository.NotificationRepository
@@ -31,14 +30,22 @@ object RepositoryProvider {
         }
     }
 
+    fun getDatabase(): AppDatabase? {
+        if (database == null && appContext != null) {
+            try {
+                database = AppDatabase.getInstance(appContext!!)
+            } catch (e: Throwable) {
+                android.util.Log.e("RepositoryProvider", "Failed to get AppDatabase: ${e.message}", e)
+            }
+        }
+        return database
+    }
+
     val cropPlotRepository: CropPlotRepository by lazy {
         CropPlotRepositoryImpl(database?.cropPlotDao())
     }
     val cropZoneRepository: CropZoneRepository by lazy {
         CropZoneRepositoryImpl(database?.cropZoneDao())
-    }
-    val farmObjectRepository: FarmObjectRepository by lazy {
-        FarmObjectRepositoryImpl(database?.farmObjectDao())
     }
     val farmRepository: FarmRepository by lazy {
         FarmRepositoryImpl(database?.farmDao())
@@ -73,10 +80,27 @@ object RepositoryProvider {
     val dssRuleRepository: DssRuleRepository by lazy {
         DssRuleRepositoryImpl(database?.dssRuleDao())
     }
+    val dssRepository: com.maptanim.app.domain.repository.DssRepository by lazy {
+        DssRepositoryImpl(database?.dssDecisionDao())
+    }
+    val cropLogRepository: com.maptanim.app.domain.repository.CropLogRepository by lazy {
+        CropLogRepositoryImpl(database?.cropLogDao())
+    }
+    val policyConsentDao: com.maptanim.app.data.local.dao.PolicyConsentDao? by lazy {
+        database?.policyConsentDao()
+    }
+    val cropKnowledgeRepository: CropKnowledgeRepository by lazy {
+        CropKnowledgeRepositoryImpl(database)
+    }
 
     suspend fun clearAllLocalCache() {
         try {
+            // Preserve user terms/privacy policy consent so it remains accepted after logout
+            val savedConsent = database?.policyConsentDao()?.getDefaultConsent()
             database?.clearAllTables()
+            if (savedConsent != null) {
+                database?.policyConsentDao()?.saveConsent(savedConsent)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

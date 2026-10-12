@@ -2,15 +2,71 @@ package com.maptanim.app.domain.model
 
 import com.maptanim.app.domain.model.SoilType
 
+// ─── Farm Environment & Agro-Zone ──────────────────────────────────────────
+
+enum class AgroZone(val label: String, val description: String, val elevationRange: String) {
+    LOWLAND("Lowland", "Warm tropical climate (0–500m elevation). Thrives with warm-season fruiting vegetables.", "0 – 500 m"),
+    HIGHLAND("Highland", "Cool temperate microclimate (>500m elevation). Ideal for brassicas and root crops.", "> 500 m");
+
+    companion object {
+        fun fromName(name: String?): AgroZone =
+            entries.firstOrNull { it.name.equals(name, ignoreCase = true) || it.label.equals(name, ignoreCase = true) } ?: LOWLAND
+    }
+}
+
+enum class SiteConstraint(val code: String, val label: String, val description: String) {
+    FLOODING("fl", "Flooding / Poor Drainage", "Prone to water pooling during tropical downpours; requires elevated beds."),
+    WIND_EXPOSURE("wi", "Strong Wind Exposure", "Open or gusty site; tall and trellised plants require sturdy staking."),
+    SHADY("sh", "Shady (< 5 hrs sun)", "Limited direct sunlight; fruiting crops need full sun or reflective mulch."),
+    WATER_SCARCITY("nw", "Water Scarcity", "Limited tap or well water access; requires heavy mulching or drip bottles."),
+    CHICKENS_ANIMALS("an", "Chickens & Stray Animals", "Free-range chickens or dogs present; requires thorny branch barriers or stick cages."),
+    SLOPING_WELL_DRAINED("sl", "Sloping / No Stagnant Flood", "Natural slope with good runoff; reduced root-rot risk.");
+
+    companion object {
+        fun fromCode(code: String?): SiteConstraint? =
+            entries.firstOrNull { it.code.equals(code, ignoreCase = true) || it.name.equals(code, ignoreCase = true) }
+    }
+}
+
+data class FarmEnvironment(
+    val zone: AgroZone = AgroZone.LOWLAND,
+    val defaultSoil: SoilType = SoilType.LOAM,
+    val widthM: Float = 10f,
+    val heightM: Float = 8f,
+    val constraints: Set<SiteConstraint> = emptySet(),
+    val season: String = "Wet / Rainy Season",
+    val availableMaterials: Set<String> = emptySet(),
+    val locationName: String = ""
+) {
+    val areaSqM: Float get() = widthM * heightM
+    val stepPacingEstimate: String get() {
+        val stepsW = kotlin.math.round(widthM / 0.85f).toInt()
+        val stepsH = kotlin.math.round(heightM / 0.85f).toInt()
+        return "≈ $stepsW × $stepsH steps (1 step ≈ 0.85m)"
+    }
+
+    val yardPresetComparisonText: String get() {
+        return when {
+            areaSqM <= 24f -> "Compact Yard (6m × 4m preset / 24 m²)"
+            areaSqM <= 96f -> "Medium Backyard (12m × 8m preset / 96 m²)"
+            areaSqM <= 216f -> "Spacious Lot (18m × 12m preset / 216 m²)"
+            else -> "Expansive Rural Lot (${String.format("%.1f", areaSqM)} m²)"
+        }
+    }
+}
+
 // ─── Farm ──────────────────────────────────────────────────────────────────
 
 data class Farm(
     val id: String,
     val farmerId: String,
-    val farmName: String,      // e.g. "Murcia Farm"
+    val farmName: String,      // e.g. "Murcia Farm" / Garden Name
     val createdAt: String,
-    val updatedAt: String
-)
+    val updatedAt: String,
+    val environment: FarmEnvironment = FarmEnvironment()
+) {
+    val gardenName: String get() = farmName
+}
 
 
 
@@ -33,7 +89,11 @@ data class CropPlot(
     val isActive: Boolean = true,
     val notes: String? = null,
     val createdAt: String = "",
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val currentStage: ManagementStage = ManagementStage.PREPARATION,
+    val harvestCount: Int = 0,
+    val totalYieldKg: Float = 0f,
+    val previousCropsHistory: List<String> = emptyList()
 )
 
 // ─── Crop (reference data from crops table) ────────────────────────────────
@@ -139,7 +199,7 @@ data class HarvestRecord(
     val id: String,
     val plotId: String,
     val farmId: String,
-    val farmName: String = "MapTanim Main Farm",
+    val farmName: String = "My Farm",
     val plotLabel: String = "Plot 1",
     val cropName: String,
     val cropVariety: String? = null,
@@ -148,7 +208,14 @@ data class HarvestRecord(
     val growingDurationDays: Int = 0,
     val yieldKg: Float = 0f,
     val qualityRating: Int = 5,   // 1–5
-    val notes: String? = null
+    val notes: String? = null,
+    // New fields from Crop Management flow spec
+    val harvestMethod: String? = null,     // e.g. "Manual Pick", "Cut at Base"
+    val quantity: Float = 0f,              // Numeric quantity harvested
+    val unit: String = "kg",               // "kg", "pcs", "bundles", "sacks"
+    val marketablePct: Float? = null,      // Optional: % marketable
+    val cropPlantingId: String? = null,     // Links to crop_planting for lifecycle tracking
+    val isFinalHarvest: Boolean = true      // False for continuous multi-pick harvests (e.g. Tomato, Okra, Eggplant)
 )
 
 // ─── Activity (farmer manual log) ─────────────────────────────────────────
@@ -160,6 +227,36 @@ data class Activity(
     val type: TaskType,
     val notes: String?,
     val performedAt: String
+)
+
+// ─── CropLog (crop management observation / action log) ───────────────────
+
+/**
+ * Represents a single log entry in the Crop Management flow.
+ * Created when the farmer submits a log via the "Add Log" dialog.
+ *
+ * Flow: STAGE → LOG_CONTEXT → QUESTION → CHOICE (A/B/C) → CHECKBOXES → SUBMIT
+ *
+ * After submission, this log is sent to the DSS engine for evaluation
+ * which may update tasks, recommendations, alerts, and trigger stage progression.
+ */
+data class CropLog(
+    val id: String,
+    val cropPlantingId: String,      // Links to crop_planting (plot/zone ID)
+    val farmId: String = "",
+    val bedId: String = "",
+    val cropId: String? = null,
+    val cropName: String = "",
+    val varietyId: String? = null,
+    val varietyName: String? = null,
+    val currentStage: ManagementStage = ManagementStage.PREPARATION,
+    val logContext: LogContext = LogContext.PREPARATION,
+    val selectedChoice: String = "A",       // "A", "B", or "C"
+    val selectedCheckboxes: List<String> = emptyList(),  // List of checkbox labels that were checked
+    val careActivity: CareActivity? = null, // Only for CARE_MAINTENANCE context
+    val notes: String? = null,
+    val date: String = "",                 // ISO-8601 date (YYYY-MM-DD)
+    val createdAt: String = ""             // ISO-8601 datetime
 )
 
 // ─── Notification ──────────────────────────────────────────────────────────
@@ -210,22 +307,6 @@ data class PlantInstance(
     val cropName: String
 )
 
-// ─── FarmObject (trellis, fence, exterior tree, decoration) ───────────────
-
-data class FarmObject(
-    val id: String,
-    val farmId: String,
-    val objectType: FarmObjectType,
-    val worldX: Float,
-    val worldY: Float,
-    val widthM: Float,
-    val heightM: Float,
-    val rotationDeg: Float = 0f,
-    val attachedPlotId: String? = null,
-    val createdAt: String = "",
-    val updatedAt: String = ""
-)
-
 // ─── Farmer Community & Forum Models ──────────────────────────────────────
 
 data class CommunityPost(
@@ -236,6 +317,7 @@ data class CommunityPost(
     val category: String,                // "PEST_ALERT", "FARMING_TIP", "EQUIPMENT", "GENERAL"
     val title: String,
     val content: String,
+    val imageUrl: String? = null,
     val likesCount: Int = 0,
     val commentsCount: Int = 0,
     val timestamp: String = "Just now",               // e.g. "2 hours ago"
@@ -251,7 +333,6 @@ data class CommunityComment(
     val timestamp: String
 )
 
-
 data class CommunityReport(
     val id: String,
     val reporterName: String,
@@ -264,77 +345,3 @@ data class CommunityReport(
     val status: String = "PENDING",     // "PENDING", "INVESTIGATING", "RESOLVED", "DISMISSED"
     val createdAt: String = "Just now"
 )
-
-// ─── FarmTile (isometric 45×45 grid cell) ──────────────────────────────────
-
-data class FarmTile(
-    val id: String,
-    val farmId: String,
-    val gridX: Int,                     // Column in the 45×45 isometric grid
-    val gridY: Int,                     // Row in the 45×45 isometric grid
-    val status: String,                 // TileStatus enum name
-    val currentCropId: String?,         // FK to crops table, null if empty
-    val tileLabel: String? = null,
-    val createdAt: String = "",
-    val updatedAt: String = ""
-)
-
-// ─── TilePlanting (drag-drop crop placement on a tile) ────────────────────
-
-data class TilePlanting(
-    val id: String,
-    val tileId: String,                 // FK to farm_tiles
-    val cropId: String,                 // FK to crops reference table
-    val cropName: String,
-    val cropVariety: String? = null,    // e.g. "Diamante Max F1", "Red Creole"
-    val widthM: Float,                  // Resizable crop width on tile
-    val heightM: Float,                 // Resizable crop height on tile
-    val offsetX: Float = 0f,            // Position offset within tile
-    val offsetY: Float = 0f,
-    val currentStage: String,           // CropGrowthStage enum name (6 stages)
-    val stageChangedAt: String,
-    val plantedAt: String,
-    val expectedHarvestDate: String?,
-    val cropProfileId: String? = null,  // FK to crop_profiles for growth durations
-    val isActive: Boolean = true,
-    val notes: String? = null,
-    val createdAt: String = "",
-    val updatedAt: String = ""
-)
-
-// ─── PlantingMonitor (care/observation logs & crop-specific tasks) ──────────
-
-data class PlantingMonitor(
-    val id: String,
-    val plantingId: String,             // FK to tile_plantings
-    val cropId: String,                 // Direct FK to crop for soil/season side nav filtering
-    val cropName: String,
-    val cropVariety: String? = null,
-    val monitorType: String,            // TaskType enum name: WATER, FERTILIZE, PEST_ALERT, etc.
-    val value: Float? = null,           // Measurement value (liters, kg, etc.)
-    val unit: String? = null,           // Unit label ("L", "kg", "mL")
-    val notes: String? = null,
-    val dueDate: String? = null,        // Due date for Today's Tasks
-    val isCompleted: Boolean = false,
-    val completedAt: String? = null,
-    val recordedAt: String,
-    val createdAt: String = ""
-)
-
-// ─── PlantingHarvest (yield record for a completed planting) ──────────────
-
-data class PlantingHarvest(
-    val id: String,
-    val plantingId: String,             // FK to tile_plantings
-    val cropName: String,
-    val cropVariety: String? = null,
-    val yieldKg: Float = 0f,
-    val yieldUnits: Int? = null,        // Alternative unit count (e.g. number of ears)
-    val qualityGrade: String? = "Grade A",
-    val harvestDate: String,
-    val growingDays: Int? = null,        // Calculated: harvestDate - plantedAt
-    val notes: String? = null,
-    val createdAt: String = ""
-)
-
-

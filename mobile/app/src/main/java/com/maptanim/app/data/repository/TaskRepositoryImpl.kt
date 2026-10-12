@@ -4,6 +4,7 @@ import com.maptanim.app.data.local.dao.TaskDao
 import com.maptanim.app.data.local.entity.toDomain
 import com.maptanim.app.data.local.entity.toEntity
 import com.maptanim.app.data.remote.TaskRemoteDataSource
+import com.maptanim.app.data.remote.dto.TaskDto
 import com.maptanim.app.domain.model.FarmTask
 import com.maptanim.app.domain.model.TaskType
 import com.maptanim.app.domain.repository.TaskRepository
@@ -58,9 +59,20 @@ class TaskRepositoryImpl(
 
     override suspend fun completeTask(taskId: String, completedAt: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         taskDao?.markTaskCompleted(taskId, completedAt)
-        remoteDataSource.completeTask(taskId, completedAt)
         inMemoryFallback.value = inMemoryFallback.value.map { task ->
             if (task.id == taskId) task.copy(isCompleted = true, completedAt = completedAt) else task
+        }
+
+        val remoteRes = remoteDataSource.completeTask(taskId, completedAt)
+        if (remoteRes.isFailure) {
+            try {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "tasks",
+                    recordId = taskId,
+                    operation = "UPDATE",
+                    payload = "{\"id\":\"$taskId\",\"is_completed\":true,\"completed_at\":\"$completedAt\"}"
+                )
+            } catch (_: Exception) {}
         }
     }
 
@@ -68,6 +80,37 @@ class TaskRepositoryImpl(
         taskDao?.upsertTasks(tasks.map { it.toEntity() })
         val existingIds = tasks.map { it.id }.toSet()
         inMemoryFallback.value = inMemoryFallback.value.filter { it.id !in existingIds } + tasks
+
+        if (tasks.isNotEmpty()) {
+            val dtos = tasks.map { task ->
+                TaskDto(
+                    id = task.id,
+                    farm_id = task.farmId,
+                    plot_id = task.plotId.ifBlank { null },
+                    task_type = task.taskType.name,
+                    title = task.title,
+                    sub_label = task.subLabel,
+                    due_date = task.dueDate,
+                    is_completed = task.isCompleted,
+                    completed_at = task.completedAt
+                )
+            }
+            val remoteRes = remoteDataSource.upsertTasks(dtos)
+            if (remoteRes.isFailure) {
+                for (dto in dtos) {
+                    try {
+                        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                        val payload = json.encodeToString(TaskDto.serializer(), dto)
+                        RepositoryProvider.syncRepository.enqueueSyncItem(
+                            tableName = "tasks",
+                            recordId = dto.id,
+                            operation = "INSERT",
+                            payload = payload
+                        )
+                    } catch (_: Exception) {}
+                }
+            }
+        }
     }
 
     suspend fun fetchFromRemote(farmId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -88,7 +131,9 @@ class TaskRepositoryImpl(
                     completedAt = dto.completed_at
                 )
             }
-            upsertTasks(domainTasks)
+            taskDao?.upsertTasks(domainTasks.map { it.toEntity() })
+            val existingIds = domainTasks.map { it.id }.toSet()
+            inMemoryFallback.value = inMemoryFallback.value.filter { it.id !in existingIds } + domainTasks
         }
     }
 }

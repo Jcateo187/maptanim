@@ -14,91 +14,65 @@ class AuthRepository {
     private val profileRepository = ProfileRepository()
 
     suspend fun signUp(
-
         email: String,
-
         password: String
-
     ): Result<Unit> {
+        val emailPrefix = email.substringBefore('@').takeIf { it.isNotBlank() }
 
         return try {
-
             client.auth.signUpWith(Email) {
-
                 this.email = email
-
                 this.password = password
-
             }
 
             val user = client.auth.currentUserOrNull()
                 ?: return Result.failure(Exception("User not found."))
 
-            // Insert into public.users (matches the updated Supabase table schema without full_name)
+            // Insert into public.users with email and role
             try {
                 val userRecord = User(
                     id = user.id,
-                    email = email
+                    email = email,
+                    role = "FARMER"
                 )
                 client.postgrest["users"].insert(userRecord)
             } catch (e: Exception) {
-                // User record may already exist (e.g. duplicate sign-up attempt), continue
                 e.printStackTrace()
             }
 
             val profile = Profile(
                 id = user.id,
-                nickname = null,
+                nickname = emailPrefix,
                 avatar = null
             )
 
             val profileResult = profileRepository.createProfile(profile)
-
             if (profileResult.isFailure) {
                 // Profile might already be created by DB trigger, log error but don't fail user registration
                 profileResult.exceptionOrNull()?.printStackTrace()
             }
 
             Result.success(Unit)
-
         } catch (e: Exception) {
-
             e.printStackTrace()
-
             Result.failure(e)
-
         }
-
     }
 
     suspend fun signIn(
-
         email: String,
-
         password: String
-
     ): Result<Unit> {
-
         return try {
-
             client.auth.signInWith(Email) {
-
                 this.email = email
-
                 this.password = password
-
             }
-
             Result.success(Unit)
-
         } catch (e: Exception) {
-
             e.printStackTrace()
-
             Result.failure(e)
-
         }
-
     }
 
     suspend fun signInAnonymously(): Result<Unit> {

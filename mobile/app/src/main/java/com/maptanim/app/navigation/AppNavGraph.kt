@@ -8,24 +8,21 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.compose.ui.window.DialogProperties
-import com.maptanim.app.ui.screens.auth.ForgotPasswordScreen
-import com.maptanim.app.ui.screens.auth.LoginScreen
-import com.maptanim.app.ui.screens.auth.WelcomeScreen
-import com.maptanim.app.ui.screens.about.AboutScreen
-import com.maptanim.app.ui.screens.calendar.CalendarScreen
-import com.maptanim.app.ui.screens.community.CommunityScreen
-import com.maptanim.app.ui.screens.edit.FarmEditorScreen
-import com.maptanim.app.ui.screens.home.HomeScreen
-import com.maptanim.app.ui.screens.knowledgebase.LibraryScreen
-import com.maptanim.app.ui.screens.loading.LoadingScreen
-import com.maptanim.app.ui.screens.monitoring.MonitoringScreen
-import com.maptanim.app.ui.screens.profile.ProfileScreen
-import com.maptanim.app.ui.screens.reports.ReportsScreen
-import com.maptanim.app.ui.screens.splash.CompanyLogoScreen
+import com.maptanim.app.features.about.screen.AboutScreen
+import com.maptanim.app.features.auth.screen.ForgotPasswordScreen
+import com.maptanim.app.features.auth.screen.LoginScreen
+import com.maptanim.app.features.auth.screen.WelcomeScreen
+import com.maptanim.app.features.community.screen.CommunityScreen
+import com.maptanim.app.features.farm.screen.FarmHubScreen
+import com.maptanim.app.features.farm.screen.GrowingScreen
+import com.maptanim.app.features.home.screen.HomeScreen
+import com.maptanim.app.features.splash.screen.LoadingScreen
+import com.maptanim.app.features.profile.ProfileScreen
+import com.maptanim.app.features.splash.screen.CompanyLogoScreen
+import com.maptanim.app.features.library.screen.LibraryScreen
+import com.maptanim.app.features.notifications.screen.NotificationsScreen
 
 @Composable
 fun AppNavGraph() {
@@ -34,7 +31,11 @@ fun AppNavGraph() {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.COMPANY
+        startDestination = Routes.COMPANY,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
 
         composable(Routes.COMPANY) {
@@ -68,93 +69,101 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.EDIT,
+            route = "${Routes.GROWING}?gardenId={gardenId}",
+            arguments = listOf(
+                navArgument("gardenId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
+        ) { backStackEntry ->
+            val gardenId = backStackEntry.arguments?.getString("gardenId")
+            GrowingScreen(navController = navController, initialGardenId = gardenId)
+        }
+
+        composable(
+            route = Routes.PROFILE,
             enterTransition = { EnterTransition.None },
             exitTransition = { ExitTransition.None },
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }
         ) {
-            FarmEditorScreen(navController)
-        }
-
-        dialog(
-            route = Routes.PROFILE,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
             ProfileScreen(navController = navController, initialTab = 0)
         }
 
-        dialog(
+        composable(
             route = Routes.PROFILE_WITH_TAB,
             arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             ProfileScreen(navController = navController, initialTab = tab)
         }
 
-        dialog(
-            route = Routes.LIBRARY,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
-            LibraryScreen(navController = navController)
+        composable(
+            route = "${Routes.LIBRARY}?cropName={cropName}",
+            arguments = listOf(
+                navArgument("cropName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
+        ) { backStackEntry ->
+            val cropName = backStackEntry.arguments?.getString("cropName")
+            LibraryScreen(navController = navController, initialCropName = cropName)
         }
 
-        dialog(
+        composable(
             route = Routes.COMMUNITY,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             CommunityScreen(navController = navController)
         }
 
-        dialog(
+        composable(
             route = Routes.SETTINGS,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
-            ProfileScreen(navController = navController, initialTab = 2)
-        }
-
-        dialog(
-            route = Routes.NOTIFICATIONS,
-            dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             ProfileScreen(navController = navController, initialTab = 1)
         }
 
         composable(
-            route = Routes.CALENDAR,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
+            route = Routes.NOTIFICATIONS,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
-            CalendarScreen(navController = navController)
+            NotificationsScreen(navController = navController)
         }
 
         composable(
-            route = Routes.FARMS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
+            route = Routes.FARM,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
-            MonitoringScreen(navController = navController)
+            FarmHubScreen(navController = navController)
         }
 
         composable(
@@ -173,24 +182,6 @@ fun AppNavGraph() {
             }
         ) {
             AboutScreen(navController = navController)
-        }
-
-        composable(
-            route = Routes.REPORTS,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    tween(300)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    tween(300)
-                )
-            }
-        ) {
-            ReportsScreen(navController = navController)
         }
     }
 }

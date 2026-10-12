@@ -28,23 +28,7 @@ enum class SoilType {
     CHALKY   // Off-white, alkaline, low water retention
 }
 
-/**
- * Growth stage of a planting bed, calculated from:
- *   beds.planted_date (Room DB) + crops.days_to_harvest (Room DB)
- * by GrowthStageCalculator. Never hardcoded.
- */
-enum class GrowthStage {
-    SPROUT,             // Stage 1: Germination / Emergence (0–15% progress)
-    SEEDLING,           // Stage 2: Early Leaf Development (15–35% progress)
-    VEGETATIVE,         // Stage 3: Rapid Stem & Leaf Expansion (35–65% progress)
-    FLOWERING,          // Stage 4: Budding / Podding / Fruiting (65–90% progress)
-    HARVEST_READY,      // Stage 5: Full Maturation (90%+ progress)
-    GERMINATION,        // Legacy alias for SPROUT
-    EARLY_VEGETATIVE,   // Legacy alias for SEEDLING
-    MID_VEGETATIVE,     // Legacy alias for VEGETATIVE
-    FRUITING,           // Legacy alias for FLOWERING
-    OVERDUE             // Legacy alias for HARVEST_READY
-}
+
 
 /**
  * Edit tool enum. Active tool drives left panel highlight and canvas gesture behavior.
@@ -66,7 +50,14 @@ enum class TaskType {
     FERTILIZE,       // Green — fertilization due
     HARVEST,         // Amber — harvest window reached
     PEST_ALERT,      // Red — pest risk for crop/season
-    APPLY_PESTICIDE  // Orange — follow-up after pest alert
+    APPLY_PESTICIDE, // Orange — follow-up after pest alert
+    WEED,            // Light Green — clearing grass / weeding
+    TRELLIS,         // Brown — install trellis/balag
+    NUTRITION,       // Emerald — organic or synthetic nutrition
+    ROTATION_ALERT,  // Teal — post-harvest crop rotation suggestion
+    SOIL_AMENDMENT,  // Soil amendment / conditioning
+    PRUNING,         // Pruning dead or diseased foliage
+    OBSERVATION      // Scouting and field observation
 }
 
 /**
@@ -116,7 +107,7 @@ enum class FarmObjectType {
 }
 
 /**
- * Isometric tile lifecycle status for farm_tiles.status column.
+ * Farm grid tile lifecycle status for farm_tiles.status column.
  * Tracks the state of each tile cell in the 45×45 grid.
  */
 enum class TileStatus {
@@ -140,5 +131,89 @@ enum class CropGrowthStage {
     FLOWERING,     // Stage 4: Budding / podding / fruiting (55–75% progress)
     RIPENING,      // Stage 5: Fruit/tuber maturation (75–95% progress)
     HARVEST        // Stage 6: Full maturity, ready to pick (95%+ progress)
+}
+
+/**
+ * Crop planting lifecycle status.
+ * Tracks the overall state of a crop planting from planning through harvest.
+ *   PLANNED → ACTIVE (when planting is confirmed) → HARVESTED → COMPLETED
+ */
+enum class CropPlantingStatus {
+    PLANNED,       // Crop has been placed in bed and saved, but not yet physically planted
+    ACTIVE,        // Planting confirmed — crop timeline is running
+    HARVESTED,     // At least one harvest has been recorded
+    COMPLETED      // All harvests done, crop lifecycle finished
+}
+
+/**
+ * 6-stage management lifecycle matching the Crop Management flow spec.
+ * Drives which log contexts, questions, and UI elements are available.
+ * Different from CropGrowthStage (which is a time-based calculation);
+ * ManagementStage is driven by farmer logs + DSS evaluation.
+ */
+enum class ManagementStage(val label: String, val stageNumber: Int) {
+    PREPARATION("Preparation", 1),
+    PLANTING("Planting", 2),
+    EARLY_GROWTH("Early Growth", 3),
+    VEGETATIVE_GROWTH("Vegetative Growth", 4),
+    FLOWERING_FRUIT_DEVELOPMENT("Flowering / Fruit Development", 5),
+    HARVEST("Harvest", 6);
+
+    companion object {
+        fun fromIndex(index: Int): ManagementStage = entries.getOrElse(index) { PREPARATION }
+        fun fromLabel(label: String?): ManagementStage =
+            entries.firstOrNull { it.label.equals(label, ignoreCase = true) || it.name.equals(label, ignoreCase = true) } ?: VEGETATIVE_GROWTH
+    }
+}
+
+/**
+ * Log context — what the farmer is recording when they "Add Log".
+ * Allowed contexts depend on the current ManagementStage.
+ */
+enum class LogContext(val label: String) {
+    PREPARATION("Preparation"),
+    READINESS("Readiness"),
+    PLANTING("Planting"),
+    INITIAL_OBSERVATION("Initial Observation"),
+    OBSERVE("Observe"),
+    CARE_MAINTENANCE("Care / Maintenance");
+
+    companion object {
+        /**
+         * Returns the allowed log contexts for a given management stage.
+         */
+        fun allowedForStage(stage: ManagementStage): List<LogContext> = when (stage) {
+            ManagementStage.PREPARATION -> listOf(PREPARATION, READINESS)
+            ManagementStage.PLANTING -> listOf(PLANTING, INITIAL_OBSERVATION)
+            ManagementStage.EARLY_GROWTH -> listOf(OBSERVE, CARE_MAINTENANCE)
+            ManagementStage.VEGETATIVE_GROWTH -> listOf(OBSERVE, CARE_MAINTENANCE)
+            ManagementStage.FLOWERING_FRUIT_DEVELOPMENT -> listOf(OBSERVE, CARE_MAINTENANCE)
+            ManagementStage.HARVEST -> emptyList() // Harvest has its own special flow
+        }
+    }
+}
+
+/**
+ * Care/Maintenance activity types for the CARE_MAINTENANCE log context.
+ * Only activities applicable to the current crop, variety, stage, and method are shown.
+ */
+enum class CareActivity(val label: String) {
+    WATERING("Watering"),
+    WEEDING("Weeding"),
+    FERTILIZING("Fertilizing"),
+    MULCHING("Mulching"),
+    STAKING("Staking"),
+    PRUNING("Pruning"),
+    PEST_CONTROL("Pest Control"),
+    OTHER("Other Applicable Care")
+}
+
+/**
+ * Harvest readiness assessment choices.
+ */
+enum class HarvestReadiness(val label: String) {
+    NOT_READY("Not Ready"),
+    PARTIALLY_READY("Partially Ready"),
+    READY_TO_HARVEST("Ready to Harvest")
 }
 

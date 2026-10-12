@@ -9,8 +9,17 @@ interface HarvestDao {
     @Query("SELECT * FROM harvest_records WHERE farm_id = :farmId ORDER BY harvested_at DESC")
     fun observeHarvestRecords(farmId: String): Flow<List<HarvestEntity>>
 
+    @Query("SELECT * FROM harvest_records ORDER BY harvested_at DESC")
+    fun observeAllHarvestRecords(): Flow<List<HarvestEntity>>
+
     @Upsert
     fun upsertHarvest(record: HarvestEntity)
+
+    @Query("SELECT * FROM harvest_records WHERE crop_planting_id = :cropPlantingId ORDER BY harvested_at DESC")
+    fun getHarvestsForPlanting(cropPlantingId: String): Flow<List<HarvestEntity>>
+
+    @Query("SELECT * FROM harvest_records WHERE zone_id = :plotId ORDER BY harvested_at DESC")
+    fun getHarvestsForPlot(plotId: String): Flow<List<HarvestEntity>>
 
     @Query("DELETE FROM harvest_records WHERE id = :id")
     fun deleteHarvest(id: String): Int

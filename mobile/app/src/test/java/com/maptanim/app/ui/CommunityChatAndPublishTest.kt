@@ -112,4 +112,55 @@ class CommunityChatAndPublishTest {
         onPublishResult(true)
         assertTrue(navigatedBackToFeed)
     }
+
+    @Test
+    fun `community post retains image URL when authored`() {
+        val testPost = com.maptanim.app.domain.model.CommunityPost(
+            id = "post-img-1",
+            authorName = "Ka-Juan",
+            category = "PEST_ALERT",
+            title = "Stem borer found on tomato crops",
+            content = "Look at this leaf damage from this morning.",
+            imageUrl = "https://example.com/images/crop_pest.jpg",
+            likesCount = 5,
+            commentsCount = 2
+        )
+
+        assertEquals("https://example.com/images/crop_pest.jpg", testPost.imageUrl)
+        assertEquals("Stem borer found on tomato crops", testPost.title)
+    }
+
+    @Test
+    fun `related posts calculation excludes active post and retains other discussions`() {
+        val activePost = com.maptanim.app.domain.model.CommunityPost(
+            id = "post-active",
+            authorName = "Ka-Juan",
+            category = "PEST_ALERT",
+            title = "Active Post Title",
+            content = "Active Post Content"
+        )
+        val otherPost1 = com.maptanim.app.domain.model.CommunityPost(
+            id = "post-other-1",
+            authorName = "Maria",
+            category = "PEST_ALERT",
+            title = "Related Pest Tip",
+            content = "Neem oil works well."
+        )
+        val otherPost2 = com.maptanim.app.domain.model.CommunityPost(
+            id = "post-other-2",
+            authorName = "Pedro",
+            category = "GENERAL",
+            title = "Market prices",
+            content = "Prices in Benguet today."
+        )
+
+        val allPosts = listOf(activePost, otherPost1, otherPost2)
+        val relatedPosts = allPosts.filter { it.id != activePost.id }
+
+        assertEquals(2, relatedPosts.size)
+        assertFalse(relatedPosts.any { it.id == activePost.id })
+        assertTrue(relatedPosts.any { it.id == "post-other-1" })
+        assertTrue(relatedPosts.any { it.id == "post-other-2" })
+    }
 }
+

@@ -38,21 +38,60 @@ class FarmRepositoryImpl(
 
     override suspend fun upsertFarm(farm: Farm) = withContext(Dispatchers.IO) {
         farmDao?.upsertFarm(farm.toEntity())
-        remoteRepository.upsertFarm(farm.toDto())
+        try {
+            val res = remoteRepository.upsertFarm(farm.toDto())
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "farms",
+                    recordId = farm.id,
+                    operation = "UPSERT",
+                    payload = farm.id
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "farms",
+                recordId = farm.id,
+                operation = "UPSERT",
+                payload = farm.id
+            )
+        }
         farmsCache.value = farmsCache.value.filter { it.id != farm.id } + farm
     }
 
     override suspend fun deleteFarm(farmId: String) = withContext(Dispatchers.IO) {
         farmDao?.deleteFarm(farmId)
+        try {
+            val res = remoteRepository.deleteFarm(farmId)
+            if (res.isFailure) {
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "farms",
+                    recordId = farmId,
+                    operation = "DELETE",
+                    payload = farmId
+                )
+            }
+        } catch (_: Exception) {
+            RepositoryProvider.syncRepository.enqueueSyncItem(
+                tableName = "farms",
+                recordId = farmId,
+                operation = "DELETE",
+                payload = farmId
+            )
+        }
         farmsCache.value = farmsCache.value.filter { it.id != farmId }
     }
 
-    suspend fun fetchFromRemote(farmerId: String) = withContext(Dispatchers.IO) {
+    suspend fun fetchFromRemote(farmerId: String): List<Farm> = withContext(Dispatchers.IO) {
         val result = remoteRepository.getFarmsForFarmer(farmerId)
-        result.getOrNull()?.let { dtos ->
+        val dtos = result.getOrNull()
+        if (dtos != null) {
             val farms = dtos.map { it.toDomain() }
             farmDao?.upsertFarms(farms.map { it.toEntity() })
             farmsCache.value = farms
+            farms
+        } else {
+            emptyList()
         }
     }
 }
@@ -61,6 +100,7 @@ private fun Farm.toDto() = FarmDto(
     id = id,
     farmer_id = farmerId,
     farm_name = farmName,
+    garden_name = farmName,
     created_at = createdAt,
     updated_at = updatedAt
 )
@@ -68,7 +108,7 @@ private fun Farm.toDto() = FarmDto(
 private fun FarmDto.toDomain(): Farm = Farm(
     id = id,
     farmerId = farmer_id,
-    farmName = farm_name,
+    farmName = garden_name?.takeIf { it.isNotBlank() } ?: farm_name,
     createdAt = created_at ?: "",
     updatedAt = updated_at ?: ""
 )

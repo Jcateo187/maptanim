@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Ruffled Curly Salad Lettuce Leaves -->
+  <!-- Outer Ruffled Leaves -->
+  <path d="M50 50 C26 34 14 52 20 68 C28 84 50 86 50 86 C50 86 72 84 80 68 C86 52 74 34 50 50 Z" fill="#689F38"/>
+  <path d="M50 50 C30 20 16 38 24 56 C32 68 50 68 50 68 Z" fill="#7CB342"/>
+  <path d="M50 50 C70 20 84 38 76 56 C68 68 50 68 50 68 Z" fill="#7CB342"/>
+  <path d="M50 50 C36 16 64 16 50 50 Z" fill="#8BC34A"/>
+  <!-- Middle Curly Frills -->
+  <path d="M30 40 Q24 46 28 54 Q34 60 42 56 Q38 46 30 40 Z" fill="#9CCC65"/>
+  <path d="M70 40 Q76 46 72 54 Q66 60 58 56 Q62 46 70 40 Z" fill="#9CCC65"/>
+  <!-- Rosette Heart (Inner Tender Lime Leaves) -->
+  <ellipse cx="50" cy="54" rx="20" ry="18" fill="#AED581"/>
+  <ellipse cx="50" cy="56" rx="13" ry="11" fill="#C5E1A5"/>
+  <!-- Frilly Leaf Margin Accents -->
+  <path d="M22 62 Q18 68 24 74 Q32 80 40 82" stroke="#DCEDC8" stroke-width="1.6" fill="none"/>
+  <path d="M78 62 Q82 68 76 74 Q68 80 60 82" stroke="#DCEDC8" stroke-width="1.6" fill="none"/>
+  <path d="M36 28 Q44 24 50 26 Q56 24 64 28" stroke="#F1F8E9" stroke-width="1.8" fill="none"/>
+</svg>

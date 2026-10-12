@@ -87,7 +87,6 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 - 📄 [**35. Asset Pipeline & Graphic Specifications**](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md) — Sprite sheet resolutions, PNG asset organization, Python PIL asset generation scripts, and memory caching.
 - 📄 [**38. Audio & Sound Design Specifications**](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md) — Sound effects (SFX) triggers, ambient background music, and audio manager implementation.
 - 📄 [**39. Crop View Interaction & Variety Simulation**](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md) — Interactive crop inspection modals, variety simulation controls, and real-time yield estimates.
-- 📄 [**43. 2D Isometric Projection Reference & Developer Cookbook**](file:///d:/Development/MapTanim/docs/43_ISOMETRIC_PROJECTION_GUIDE.md) — Tailwind-style cheat-sheet, coordinate transforms, 2:1 projection math, depth sorting, touch picking, hit-testing, and copy-paste recipes for Jetpack Compose & Web Canvas.
 
 ---
 
@@ -99,6 +98,7 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 - 📄 [**23. Push & Local Notification System**](file:///d:/Development/MapTanim/docs/23_NOTIFICATION_SYSTEM.md) — AlarmManager local notification scheduling, task reminder alerts, and broadcast advisory triggers.
 - 📄 [**36. Crop Variety Timeline & Seasonality Specs**](file:///d:/Development/MapTanim/docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md) — Detailed timeline curves, maturity days, wet/dry season suitability, and crop variety parameters.
 - 📄 [**37. Specifications & Scope Refinements**](file:///d:/Development/MapTanim/docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md) — Clarified functional boundaries, hardware requirements, and localized crop scope definitions.
+- 📄 [**43. Beginner Backyard DSS & Multi-Cycle Crop Management**](file:///d:/Development/MapTanim/docs/43_BEGINNER_BACKYARD_DSS_IMPLEMENTATION.md) — Complete implementation spec for beginner backyard gardeners: dynamic backyard sizing, plant zone capacity calculation, 3-phase daily guide, symptom checker diagnostic matrix, multi-cycle harvest tracking, and succession/rotation ranking.
 
 ---
 

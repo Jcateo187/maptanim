@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Okra (Lady's Finger) - Slender Pentagonal Ribbed Pod -->
+  <!-- Top Stem & Cap -->
+  <path d="M50 8 C48 14 46 18 46 22 L54 22 C54 18 52 14 50 8 Z" fill="#2E7D32"/>
+  <ellipse cx="50" cy="22" rx="14" ry="4" fill="#388E3C"/>
+  <path d="M38 22 C40 24 60 24 62 22 L60 26 C56 28 44 28 40 26 Z" fill="#1B5E20"/>
+  <!-- 5-Faceted Pod Body -->
+  <linearGradient id="okraGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#4CAF50"/>
+    <stop offset="35%" stop-color="#66BB6A"/>
+    <stop offset="70%" stop-color="#43A047"/>
+    <stop offset="100%" stop-color="#2E7D32"/>
+  </linearGradient>
+  <path d="M40 25 C41 48 45 76 50 96 C55 76 59 48 60 25 Z" fill="url(#okraGrad)"/>
+  <!-- Angular Ridge Lines -->
+  <path d="M46 25 C46 50 48 76 50 96" stroke="#2E7D32" stroke-width="1.6" fill="none"/>
+  <path d="M54 25 C54 50 52 76 50 96" stroke="#1B5E20" stroke-width="1.6" fill="none"/>
+  <!-- Longitudinal Highlight -->
+  <path d="M43 28 C44 50 47 72 49 88" stroke="#A5D6A7" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+</svg>

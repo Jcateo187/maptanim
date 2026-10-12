@@ -16,6 +16,12 @@ interface DssRuleDao {
     @Query("SELECT * FROM dss_rules")
     fun getAllRules(): List<DssRuleEntity>
 
+    @Query("SELECT * FROM dss_rules WHERE (LOWER(crop_a) = LOWER(:cropA) AND LOWER(crop_b) = LOWER(:cropB)) OR (LOWER(crop_a) = LOWER(:cropB) AND LOWER(crop_b) = LOWER(:cropA)) LIMIT 1")
+    fun findRelationship(cropA: String, cropB: String): DssRuleEntity?
+
+    @Query("SELECT * FROM dss_rules WHERE LOWER(crop_a) = LOWER(:cropName) OR LOWER(crop_b) = LOWER(:cropName)")
+    fun findRulesForCrop(cropName: String): List<DssRuleEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsertRules(rules: List<DssRuleEntity>)
 

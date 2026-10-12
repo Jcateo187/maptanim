@@ -42,4 +42,16 @@ class TaskRemoteDataSource {
             Result.failure(e)
         }
     }
+
+    suspend fun upsertTasks(tasks: List<TaskDto>): Result<Unit> {
+        return try {
+            SupabaseClient.client
+                .from("tasks")
+                .upsert(tasks)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
 }

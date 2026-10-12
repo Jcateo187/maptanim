@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Kangkong (Water Spinach) - Hollow Stems & Spear Leaves -->
+  <!-- Stems -->
+  <path d="M50 96 C48 76 46 54 44 32" stroke="#4CAF50" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <path d="M47 62 C38 52 28 42 22 34" stroke="#43A047" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M48 48 C58 38 68 30 76 24" stroke="#43A047" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- Hollow Stem Node Rings -->
+  <circle cx="47" cy="62" r="3" fill="#81C784"/>
+  <circle cx="45" cy="48" r="3" fill="#81C784"/>
+  <!-- Arrowhead / Lanceolate Leaves -->
+  <!-- Left Leaf -->
+  <path d="M22 34 C12 28 8 16 14 8 C22 10 26 22 22 34 Z" fill="#388E3C"/>
+  <path d="M22 34 L15 12" stroke="#A5D6A7" stroke-width="1.2" fill="none"/>
+  <!-- Right Leaf -->
+  <path d="M76 24 C86 18 90 6 84 2 C76 4 72 16 76 24 Z" fill="#2E7D32"/>
+  <path d="M76 24 L83 6" stroke="#A5D6A7" stroke-width="1.2" fill="none"/>
+  <!-- Top Center Shoot Leaf -->
+  <path d="M44 32 C38 20 40 4 48 2 C54 8 52 22 44 32 Z" fill="#43A047"/>
+  <path d="M44 32 L47 6" stroke="#C8E6C9" stroke-width="1.4" fill="none"/>
+  <!-- Secondary Leaf Left -->
+  <path d="M36 50 C26 44 24 34 28 28 C34 32 36 42 36 50 Z" fill="#4CAF50"/>
+  <!-- Secondary Leaf Right -->
+  <path d="M58 40 C68 34 70 24 66 18 C60 22 58 32 58 40 Z" fill="#4CAF50"/>
+</svg>

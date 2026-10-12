@@ -12,7 +12,6 @@ export interface Farmer {
   id: string;
   email: string;
   fullName: string;
-  phoneNumber?: string;
   role: UserRole;
   status: AccountStatus;
   farmName: string;
@@ -119,6 +118,18 @@ export interface Crop {
   commonPests?: string[];
   imageUrl: string;
   activePlantingCount?: number;
+  needsTrellis?: boolean;
+  trellisType?: string;
+  preferredPlantingMethod?: string;
+  weedingIntervalDays?: number;
+  varieties?: {
+    varietyName: string;
+    localNamePh?: string;
+    growthDurationDays: number;
+    fruitLengthCm?: string;
+    bitternessLevel?: string;
+    diseaseResistance?: string;
+  }[];
 }
 
 export interface PestGuide {
@@ -248,6 +259,7 @@ export interface CommunityPost {
   category: CommunityCategory;
   title: string;
   content: string;
+  imageUrl?: string;
   likesCount: number;
   commentsCount: number;
   isPinned: boolean;

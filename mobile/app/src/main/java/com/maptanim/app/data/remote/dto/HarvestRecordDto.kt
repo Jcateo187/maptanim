@@ -12,7 +12,7 @@ data class HarvestRecordDto(
     val id: String,
     @SerialName("farm_id") val farmId: String,
     @SerialName("plot_id") val plotId: String? = null,
-    @SerialName("farm_name") val farmName: String? = "MapTanim Main Farm",
+    @SerialName("farm_name") val farmName: String? = "My Farm",
     @SerialName("plot_label") val plotLabel: String? = "Plot 1",
     @SerialName("crop_name") val cropName: String,
     @SerialName("crop_variety") val cropVariety: String? = null,

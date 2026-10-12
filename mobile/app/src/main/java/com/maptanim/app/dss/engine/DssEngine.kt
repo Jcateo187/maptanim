@@ -10,23 +10,21 @@ import java.time.temporal.ChronoUnit
  * Calculates the current growth stage for a plot's crop.
  *
  * Input:  crop_plots.planted_date (Room DB) + crops.days_to_harvest (Room DB)
- * Output: GrowthStage enum value
+ * Output: CropGrowthStage enum value (6 stages)
  */
 class GrowthStageCalculator {
 
-    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): GrowthStage {
+    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): CropGrowthStage {
         val daysSincePlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
-        if (daysToHarvest > 0 && daysSincePlanting > daysToHarvest) {
-            return GrowthStage.OVERDUE
-        }
         val progress = if (daysToHarvest > 0) (daysSincePlanting.toFloat() / daysToHarvest.toFloat()).coerceIn(0f, 1f) else 0f
 
         return when {
-            progress < 0.15f -> GrowthStage.SPROUT
-            progress < 0.35f -> GrowthStage.SEEDLING
-            progress < 0.65f -> GrowthStage.VEGETATIVE
-            progress < 0.90f -> GrowthStage.FLOWERING
-            else             -> GrowthStage.HARVEST_READY
+            progress < 0.15f -> CropGrowthStage.GERMINATION
+            progress < 0.30f -> CropGrowthStage.SEEDLING
+            progress < 0.55f -> CropGrowthStage.VEGETATIVE
+            progress < 0.75f -> CropGrowthStage.FLOWERING
+            progress < 0.95f -> CropGrowthStage.RIPENING
+            else             -> CropGrowthStage.HARVEST
         }
     }
 }
@@ -189,7 +187,7 @@ class DssEngine(
     private fun generateTasksForPlot(
         plot: CropPlot,
         crop: Crop,
-        stage: GrowthStage,
+        stage: CropGrowthStage,
         activities: List<Activity>,
         today: LocalDate
     ): List<GeneratedTask> {
@@ -215,7 +213,7 @@ class DssEngine(
         }
 
         // ── FERTILIZE task ────────────────────────────────────────────────
-        if (stage in listOf(GrowthStage.SEEDLING, GrowthStage.VEGETATIVE, GrowthStage.FLOWERING, GrowthStage.EARLY_VEGETATIVE, GrowthStage.MID_VEGETATIVE)) {
+        if (stage in listOf(CropGrowthStage.SEEDLING, CropGrowthStage.VEGETATIVE, CropGrowthStage.FLOWERING, CropGrowthStage.RIPENING)) {
             val lastFertilized = activities
                 .filter { it.plotId == plot.id && it.type == TaskType.FERTILIZE }
                 .mapNotNull { runCatching { LocalDate.parse(it.performedAt.take(10)) }.getOrNull() }
@@ -236,7 +234,7 @@ class DssEngine(
         }
 
         // ── HARVEST task ──────────────────────────────────────────────────
-        if (stage == GrowthStage.HARVEST_READY || stage == GrowthStage.OVERDUE) {
+        if (stage == CropGrowthStage.HARVEST) {
             generated.add(GeneratedTask(
                 plotId = plot.id, plotLabel = plot.plotLabel, cropName = crop.name,
                 taskType = TaskType.HARVEST,
@@ -272,5 +270,65 @@ class DssEngine(
             in 5..9  -> Season.WET
             else     -> Season.DRY
         }
+    }
+
+    // ─── 2.0 Full Agricultural Rule Evaluation Pipeline ───────────────────────
+
+    private val validator = com.maptanim.app.dss.evaluator.DssInputValidator()
+    private val seasonEvaluator = com.maptanim.app.dss.evaluator.DssSeasonEvaluator()
+    private val soilEvaluator = com.maptanim.app.dss.evaluator.DssSoilEvaluator(soilScorer)
+    private val growthCareEvaluator = com.maptanim.app.dss.evaluator.DssGrowthCareEvaluator(growthCalculator)
+    private val pestEvaluator = com.maptanim.app.dss.evaluator.DssPestDiseaseEvaluator()
+    private val companionEvaluator = com.maptanim.app.dss.evaluator.DssCompanionEvaluator()
+    private val rotationEvaluator = com.maptanim.app.dss.evaluator.DssRotationEvaluator()
+    private val harvestEvaluator = com.maptanim.app.dss.evaluator.DssHarvestEvaluator(growthCalculator)
+    private val resolver = com.maptanim.app.dss.evaluator.DssConflictAndPriorityResolver()
+
+    /**
+     * Executes the comprehensive end-to-end DSS evaluation according to the documented
+     * research rule pipeline:
+     * 1. Validate Input (no invented values)
+     * 2. Evaluate documented conditions (Season, Soil, Care, Pests, Companions, Rotation, Harvest)
+     * 3. Collect valid decisions
+     * 4. Check duplicates and resolve conflicts
+     * 5. Assign priorities
+     * 6. Generate final DSS Result with explanations and citations
+     */
+    fun evaluateSession(input: com.maptanim.app.dss.model.DssInput): com.maptanim.app.dss.model.DssResult {
+        // Step 1: Validate available input
+        val validationIssues = validator.validate(input.farmerData, input.referenceData)
+
+        // Step 2: Run modular evaluators
+        val rawDecisions = mutableListOf<com.maptanim.app.dss.model.DssDecision>()
+        rawDecisions.addAll(seasonEvaluator.evaluate(input))
+        rawDecisions.addAll(soilEvaluator.evaluate(input))
+        rawDecisions.addAll(growthCareEvaluator.evaluate(input))
+        rawDecisions.addAll(pestEvaluator.evaluate(input))
+        rawDecisions.addAll(companionEvaluator.evaluate(input))
+        rawDecisions.addAll(rotationEvaluator.evaluate(input))
+        rawDecisions.addAll(harvestEvaluator.evaluate(input))
+
+        // Step 3: Resolve conflicts, deduplicate, and assign priorities
+        val prioritizedDecisions = resolver.resolveAndPrioritize(rawDecisions)
+
+        // Step 4: Build summary metrics
+        val summary = com.maptanim.app.dss.model.DssResultSummary(
+            totalDecisions = prioritizedDecisions.size,
+            criticalAlerts = prioritizedDecisions.count { it.priority == com.maptanim.app.dss.model.DssPriority.CRITICAL },
+            highPriorityCount = prioritizedDecisions.count { it.priority == com.maptanim.app.dss.model.DssPriority.HIGH },
+            recommendationsCount = prioritizedDecisions.count { it.decisionType == com.maptanim.app.dss.model.DssDecisionType.RECOMMENDATION },
+            tasksCount = prioritizedDecisions.count { it.decisionType == com.maptanim.app.dss.model.DssDecisionType.TASK },
+            monitoredPlotsCount = input.farmerData.plots.size
+        )
+
+        return com.maptanim.app.dss.model.DssResult(
+            session = input.session,
+            farmId = input.session.farmId,
+            farmName = input.session.farmName,
+            decisions = prioritizedDecisions,
+            insufficientDataNotices = validationIssues,
+            summary = summary,
+            evaluatedAt = input.farmerData.currentDate.toString()
+        )
     }
 }

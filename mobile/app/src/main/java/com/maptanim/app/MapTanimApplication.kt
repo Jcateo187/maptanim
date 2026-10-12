@@ -8,6 +8,12 @@ import coil.memory.MemoryCache
 import okhttp3.OkHttpClient
 
 class MapTanimApplication : Application(), ImageLoaderFactory {
+    override fun onCreate() {
+        super.onCreate()
+        com.maptanim.app.data.repository.RepositoryProvider.initialize(this)
+        com.maptanim.app.data.sync.SyncWorker.enqueuePeriodic(this)
+    }
+
     override fun newImageLoader(): ImageLoader {
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor { chain ->

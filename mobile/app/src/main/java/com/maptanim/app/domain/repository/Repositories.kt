@@ -47,8 +47,8 @@ interface CropPlotRepository {
     /** Upsert a single plot (used after Add Plot in Edit Mode). */
     suspend fun upsertPlot(plot: CropPlot)
 
-    /** Record harvest event, log harvest activity, and reset plot crop state for next cycle. */
-    suspend fun recordHarvest(plotId: String, yieldKg: Float? = null, notes: String? = null)
+    /** Record harvest event, log harvest activity, and update or reset plot crop state for next cycle. */
+    suspend fun recordHarvest(plotId: String, yieldKg: Float? = null, notes: String? = null, isFinalHarvest: Boolean = true)
 }
 
 // ─── TaskRepository ────────────────────────────────────────────────────────
@@ -117,6 +117,7 @@ interface NotificationRepository {
 
 interface HarvestRepository {
     fun observeHarvestRecords(farmId: String): Flow<List<HarvestRecord>>
+    fun observeAllHarvestRecords(): Flow<List<HarvestRecord>>
     suspend fun recordHarvest(record: HarvestRecord)
 }
 
@@ -124,6 +125,7 @@ interface HarvestRepository {
 
 interface ActivityRepository {
     fun observeActivities(plotId: String): Flow<List<Activity>>
+    fun observeAllActivities(): Flow<List<Activity>>
     suspend fun logActivity(activity: Activity)
 }
 
@@ -160,10 +162,16 @@ interface CropZoneRepository {
     suspend fun deleteZone(zoneId: String)
 }
 
-// ─── FarmObjectRepository ─────────────────────────────────────────────────
+// ─── CropLogRepository ────────────────────────────────────────────────────
 
-interface FarmObjectRepository {
-    fun observeObjectsByFarmId(farmId: String): Flow<List<FarmObject>>
-    suspend fun saveObjects(objects: List<FarmObject>)
-    suspend fun deleteObject(objectId: String)
+interface CropLogRepository {
+    fun observeLogsForPlanting(cropPlantingId: String): Flow<List<CropLog>>
+    fun observeLogsForBed(bedId: String): Flow<List<CropLog>>
+    fun observeLogsForFarm(farmId: String): Flow<List<CropLog>>
+    suspend fun getLogsForPlanting(cropPlantingId: String): List<CropLog>
+    suspend fun getLatestLog(cropPlantingId: String): CropLog?
+    suspend fun countLogsForStage(cropPlantingId: String, stage: ManagementStage): Int
+    suspend fun insertLog(log: CropLog)
+    suspend fun deleteLog(id: String)
 }
+
