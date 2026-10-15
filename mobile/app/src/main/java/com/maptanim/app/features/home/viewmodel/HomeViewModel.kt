@@ -29,6 +29,8 @@ data class HomeUiState(
     val systemUpdateAvailable: Boolean = false,
     val systemUpdateTitle: String? = null,
     val canvasMode: CanvasMode = CanvasMode.VIEW,
+    val showTaskCompletionOverlay: Boolean = false,
+    val completedTaskPlotTarget: PlotRenderData? = null,
     val error: String? = null
 )
 
@@ -170,7 +172,7 @@ class HomeViewModel(
             val isCalibrated = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance().isFarmCalibrated(farmId)
             _uiState.update { it.copy(isFarmCalibrated = isCalibrated) }
 
-            // One-time cleanup: delete old hardcoded demo plots that were previously seeded
+            // One-time cleanup: delete old hardcoded demo plots from local Room cache if present
             val oldPlotIds = listOf("plot-1", "plot-2", "plot-3", "plot-4")
             oldPlotIds.forEach { plotId ->
                 try { RepositoryProvider.cropPlotRepository.deletePlot(plotId) } catch (_: Exception) {}
@@ -183,8 +185,37 @@ class HomeViewModel(
             }
 
             launch {
-                getTodayTasksUseCase(farmId, today).collect { tasks ->
-                    _uiState.update { it.copy(todayTasks = tasks) }
+                combine(
+                    getTodayTasksUseCase(farmId, today),
+                    _uiState.map { it.plots }.distinctUntilChanged()
+                ) { tasks, plots ->
+                    if (plots.isEmpty()) tasks
+                    else {
+                        val activePlots = plots.filter { !it.plantedDate.isNullOrBlank() }
+                        tasks.filter { task ->
+                            if (activePlots.isEmpty()) return@filter false
+                            val taskCrop = task.cropName?.lowercase()?.trim()
+                            if (!taskCrop.isNullOrBlank()) {
+                                activePlots.any { activePlot ->
+                                    val matchesCrop = activePlot.cropName?.lowercase()?.trim() == taskCrop
+                                    val rawTaskPlotId = task.plotId.substringBefore("_zone_").substringBefore("_crop_")
+                                    val rawActivePlotId = activePlot.id.substringBefore("_zone_").substringBefore("_crop_")
+                                    val matchesPlot = task.plotId == "general" ||
+                                        activePlot.id == task.plotId ||
+                                        rawActivePlotId == rawTaskPlotId
+                                    matchesCrop && matchesPlot
+                                }
+                            } else {
+                                activePlots.any { activePlot ->
+                                    val rawTaskPlotId = task.plotId.substringBefore("_zone_").substringBefore("_crop_")
+                                    val rawActivePlotId = activePlot.id.substringBefore("_zone_").substringBefore("_crop_")
+                                    activePlot.id == task.plotId || rawActivePlotId == rawTaskPlotId
+                                }
+                            }
+                        }
+                    }
+                }.collect { filteredTasks ->
+                    _uiState.update { it.copy(todayTasks = filteredTasks) }
                 }
             }
 
@@ -216,7 +247,8 @@ class HomeViewModel(
             }
 
             launch {
-                getFarmPlotsUseCase(farmId).flatMapLatest { plots ->
+                getFarmPlotsUseCase(farmId).flatMapLatest { allPlots ->
+                    val plots = allPlots.filter { it.isActive }
                     val plotIds = plots.map { it.id }
                     if (plotIds.isNotEmpty()) {
                         combine(
@@ -240,15 +272,21 @@ class HomeViewModel(
                                 }
 
                                 if (matchingZones.isNotEmpty()) {
+                                    val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
                                     matchingZones.forEachIndexed { zIdx, zone ->
                                         val zCropName = zone.cropName ?: "Vegetable"
                                         val zCropId = zone.cropId ?: zCropName.lowercase()
+                                        val zPlantedDate = farmPrefs.resolveCropPlantedDate(zone.id, plot.id, zCropName)
+                                            ?: if (matchingZones.size == 1 && !plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true) && !plot.cropName.equals("Garden", ignoreCase = true)) {
+                                                farmPrefs.getCropPlantedDate(plot.id)
+                                            } else null
                                         renderPlots.add(
                                             plot.copy(
                                                 id = if (matchingZones.size > 1) "${plot.id}_zone_${zone.id}" else plot.id,
                                                 plotLabel = if (matchingZones.size > 1) "${plot.plotLabel} (Z${zIdx + 1})" else plot.plotLabel,
                                                 cropName = zCropName,
-                                                cropId = zCropId
+                                                cropId = zCropId,
+                                                plantedDate = zPlantedDate
                                             ).toRenderData(activeTasks = taskPins)
                                         )
                                     }
@@ -258,21 +296,35 @@ class HomeViewModel(
                                         plot.notes.removePrefix("Crops: ").split(", ").map { it.trim() }.filter { it.isNotBlank() }
                                     } else emptyList()
 
+                                    val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
                                     if (bedCropsFromNotes.isNotEmpty()) {
                                         bedCropsFromNotes.forEachIndexed { cIdx, cName ->
+                                            val cPlantedDate = farmPrefs.resolveCropPlantedDate(null, plot.id, cName)
+                                                ?: farmPrefs.getCropPlantedDate("${plot.id}_crop_$cIdx")
                                             renderPlots.add(
                                                 plot.copy(
                                                     id = if (bedCropsFromNotes.size > 1) "${plot.id}_crop_$cIdx" else plot.id,
                                                     plotLabel = if (bedCropsFromNotes.size > 1) "${plot.plotLabel} (${cIdx + 1})" else plot.plotLabel,
                                                     cropName = cName,
-                                                    cropId = cName.lowercase()
+                                                    cropId = cName.lowercase(),
+                                                    plantedDate = cPlantedDate
                                                 ).toRenderData(activeTasks = taskPins)
                                             )
                                         }
-                                    } else if (!plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true) && plot.cropId != "bed") {
-                                        renderPlots.add(plot.toRenderData(activeTasks = taskPins))
+                                    } else if (!plot.cropName.isNullOrBlank() && !plot.cropName.equals("Bed", ignoreCase = true) && !plot.cropName.equals("Garden", ignoreCase = true) && plot.cropId != "bed") {
+                                        val pPlantedDate = farmPrefs.resolveCropPlantedDate(null, plot.id, plot.cropName)
+                                            ?: farmPrefs.getCropPlantedDate(plot.id)
+                                        renderPlots.add(
+                                            plot.copy(
+                                                plantedDate = pPlantedDate
+                                            ).toRenderData(activeTasks = taskPins)
+                                        )
                                     } else {
-                                        renderPlots.add(plot.toRenderData(activeTasks = taskPins))
+                                        renderPlots.add(
+                                            plot.copy(
+                                                plantedDate = null
+                                            ).toRenderData(activeTasks = taskPins)
+                                        )
                                     }
                                 }
                             }
@@ -348,7 +400,93 @@ class HomeViewModel(
                     RepositoryProvider.cropPlotRepository.recordHarvest(task.plotId, 0f, actNotes)
                 }
             }
+
+            // Check if vegetable harvest completed or all today's tasks completed
+            val remainingTasks = _uiState.value.todayTasks.filter { it.id != taskId && !it.isCompleted }
+            val matchingPlot = _uiState.value.plots.firstOrNull {
+                it.id == task?.plotId ||
+                (!task?.cropName.isNullOrBlank() && it.cropName.equals(task?.cropName, ignoreCase = true)) ||
+                (!task?.plotLabel.isNullOrBlank() && it.plotLabel.equals(task?.plotLabel, ignoreCase = true))
+            }
+            val isVegetableHarvest = (task?.taskType == TaskType.HARVEST)
+            val allDailyTasksCompleted = remainingTasks.isEmpty() && _uiState.value.todayTasks.isNotEmpty()
+
+            if (isVegetableHarvest || allDailyTasksCompleted) {
+                _uiState.update {
+                    it.copy(
+                        showTaskCompletionOverlay = true,
+                        completedTaskPlotTarget = matchingPlot
+                    )
+                }
+            }
+
             activeFarmId?.let { loadFarmData(it) }
+        }
+    }
+
+    fun dismissTaskCompletionOverlay() {
+        _uiState.update { it.copy(showTaskCompletionOverlay = false) }
+    }
+
+    fun replantCropOnPlot(plotId: String, cropName: String) {
+        viewModelScope.launch {
+            startPlantingSchedule(plotId, cropName, LocalDate.now())
+            dismissTaskCompletionOverlay()
+        }
+    }
+
+    fun compostAndFallowPlot(plotId: String) {
+        viewModelScope.launch {
+            val rawPlotId = plotId.substringBefore("_zone_").substringBefore("_crop_")
+            val farmId = activeFarmId ?: _uiState.value.activeFarm?.id ?: return@launch
+            val existingPlots = RepositoryProvider.cropPlotRepository.observePlots(farmId).firstOrNull() ?: emptyList()
+            val plot = existingPlots.firstOrNull { it.id == rawPlotId }
+            if (plot != null) {
+                val updatedPlot = plot.copy(
+                    cropName = "Soil Rehabilitation (Fallow & Compost)",
+                    cropId = null,
+                    cropVariety = "Organic Compost / Mulch",
+                    notes = "Plot placed in 10-day fallow with organic compost for soil rejuvenation.",
+                    plantedDate = LocalDate.now().toString(),
+                    currentStage = ManagementStage.PREPARATION,
+                    isActive = true
+                )
+                RepositoryProvider.cropPlotRepository.upsertPlot(updatedPlot)
+            }
+            activeFarmId?.let { loadFarmData(it) }
+            dismissTaskCompletionOverlay()
+        }
+    }
+
+    fun rotateCropOnPlot(plotId: String, newCropName: String) {
+        viewModelScope.launch {
+            val rawPlotId = plotId.substringBefore("_zone_").substringBefore("_crop_")
+            val farmId = activeFarmId ?: _uiState.value.activeFarm?.id ?: return@launch
+            val existingPlots = RepositoryProvider.cropPlotRepository.observePlots(farmId).firstOrNull() ?: emptyList()
+            val plot = existingPlots.firstOrNull { it.id == rawPlotId }
+            if (plot != null) {
+                val prevList = if (!plot.cropName.isNullOrBlank()) {
+                    plot.previousCropsHistory + plot.cropName
+                } else {
+                    plot.previousCropsHistory
+                }
+                val updatedPlot = plot.copy(
+                    cropName = newCropName,
+                    cropId = newCropName.lowercase().replace(" ", "_"),
+                    cropVariety = "Standard",
+                    notes = "Crop rotated from ${plot.cropName ?: "previous crop"} to $newCropName for nutrient balance.",
+                    plantedDate = LocalDate.now().toString(),
+                    currentStage = ManagementStage.PREPARATION,
+                    harvestCount = 0,
+                    totalYieldKg = 0f,
+                    previousCropsHistory = prevList,
+                    isActive = true
+                )
+                RepositoryProvider.cropPlotRepository.upsertPlot(updatedPlot)
+            }
+            startPlantingSchedule(plotId, newCropName, LocalDate.now())
+            activeFarmId?.let { loadFarmData(it) }
+            dismissTaskCompletionOverlay()
         }
     }
 
@@ -358,18 +496,45 @@ class HomeViewModel(
         _uiState.update { it.copy(isFarmCalibrated = isCalibrated) }
     }
 
-    fun startPlantingSchedule(plotId: String, plantingDate: LocalDate = LocalDate.now()) {
+    fun startPlantingSchedule(plotId: String, cropName: String? = null, plantingDate: LocalDate = LocalDate.now()) {
         viewModelScope.launch {
             val rawPlotId = plotId.substringBefore("_zone_").substringBefore("_crop_")
+            val zoneId = if (plotId.contains("_zone_")) plotId.substringAfter("_zone_") else null
             val farmId = activeFarmId ?: _uiState.value.activeFarm?.id ?: return@launch
+            val dateStr = plantingDate.toString()
+
+            val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+            if (plotId.contains("_zone_") || plotId.contains("_crop_")) {
+                farmPrefs.saveCropPlantedDate(plotId, dateStr)
+            }
+            if (!cropName.isNullOrBlank()) {
+                farmPrefs.saveCropPlantedDate("${rawPlotId}_${cropName}", dateStr)
+                farmPrefs.saveCropPlantedDate("${plotId}_${cropName}", dateStr)
+            }
+            if (!zoneId.isNullOrBlank()) {
+                farmPrefs.saveCropPlantedDate(zoneId, dateStr)
+            }
+
             val existingPlots = RepositoryProvider.cropPlotRepository.observePlots(farmId).firstOrNull() ?: emptyList()
+            val existingZones = RepositoryProvider.cropZoneRepository.observeZonesByPlotIds(listOf(rawPlotId)).firstOrNull() ?: emptyList()
             val plot = existingPlots.firstOrNull { it.id == rawPlotId }
             if (plot != null) {
-                val updated = plot.copy(
-                    plantedDate = plantingDate.toString(),
-                    currentStage = ManagementStage.VEGETATIVE_GROWTH
+                val hasMultipleCropsInNotes = plot.notes?.startsWith("Crops: ") == true && plot.notes.contains(",")
+                val hasMultipleZones = existingZones.size > 1
+                val isSingleDedicatedPlot = !hasMultipleCropsInNotes && !hasMultipleZones && (
+                    zoneId == null ||
+                    plot.cropName.equals(cropName, ignoreCase = true)
                 )
-                RepositoryProvider.cropPlotRepository.upsertPlot(updated)
+
+                if (isSingleDedicatedPlot) {
+                    farmPrefs.saveCropPlantedDate(rawPlotId, dateStr)
+                    val updated = plot.copy(
+                        plantedDate = dateStr,
+                        cropName = cropName ?: plot.cropName,
+                        currentStage = ManagementStage.VEGETATIVE_GROWTH
+                    )
+                    RepositoryProvider.cropPlotRepository.upsertPlot(updated)
+                }
             }
             loadFarmData(farmId)
         }

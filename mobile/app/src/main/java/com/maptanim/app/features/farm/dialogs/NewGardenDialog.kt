@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Yard
 import androidx.compose.material3.*
@@ -402,6 +403,8 @@ fun AdjustGardenSizeDialog(
     initialWidthFt: Float,
     initialHeightFt: Float,
     gardenLabel: String,
+    hasVegetables: Boolean = false,
+    vegetableCount: Int = 0,
     onDismiss: () -> Unit,
     onApply: (widthFt: Float, heightFt: Float) -> Unit
 ) {
@@ -455,17 +458,38 @@ fun AdjustGardenSizeDialog(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFF1F8E9),
-                    border = BorderStroke(1.dp, LushGreen.copy(alpha = 0.4f)),
+                    color = if (hasVegetables) Color(0xFFFFF8E1) else Color(0xFFF1F8E9),
+                    border = BorderStroke(1.dp, if (hasVegetables) Color(0xFFFFB300) else LushGreen.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Maximum width is 40 ft and maximum height is 40 ft.",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = DeepBlack,
-                        modifier = Modifier.padding(10.dp)
-                    )
+                    if (hasVegetables) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFE65100),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "May $vegetableCount nakatanim na gulay. Maaari lamang palakihin ang hardin (hindi maaaring paliitin) upang hindi maiwan ang mga gulay sa canvas.",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = DeepBlack
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Maximum width is 40 ft and maximum height is 40 ft.",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepBlack,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
                 }
 
                 Row(
@@ -479,7 +503,12 @@ fun AdjustGardenSizeDialog(
                             errorMessage = null
                         },
                         label = { Text("Width (ft)") },
-                        supportingText = { Text("Max: 40 ft", fontSize = 10.sp) },
+                        supportingText = {
+                            Text(
+                                if (hasVegetables) "Min: ${String.format(Locale.US, "%.1f", initialWidthFt)} ft • Max: 40 ft" else "Max: 40 ft",
+                                fontSize = 10.sp
+                            )
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = DeepBlack,
                             unfocusedTextColor = DeepBlack,
@@ -498,7 +527,12 @@ fun AdjustGardenSizeDialog(
                             errorMessage = null
                         },
                         label = { Text("Height (ft)") },
-                        supportingText = { Text("Max: 40 ft", fontSize = 10.sp) },
+                        supportingText = {
+                            Text(
+                                if (hasVegetables) "Min: ${String.format(Locale.US, "%.1f", initialHeightFt)} ft • Max: 40 ft" else "Max: 40 ft",
+                                fontSize = 10.sp
+                            )
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = DeepBlack,
                             unfocusedTextColor = DeepBlack,
@@ -538,6 +572,10 @@ fun AdjustGardenSizeDialog(
                             }
                             if (w > 40f || h > 40f) {
                                 errorMessage = "Maximum width and height is 40 ft."
+                                return@Button
+                            }
+                            if (hasVegetables && (w < (initialWidthFt - 0.05f) || h < (initialHeightFt - 0.05f))) {
+                                errorMessage = "Hindi maaaring paliitin ang hardin habang may mga nakatanim na gulay. Palakihin lamang ang sukat o tanggalin muna ang mga gulay."
                                 return@Button
                             }
                             onApply(w, h)

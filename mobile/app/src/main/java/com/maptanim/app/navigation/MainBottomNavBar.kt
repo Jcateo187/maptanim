@@ -56,7 +56,7 @@ fun MainBottomNavBar(
             BottomNavItem.items.forEach { item ->
                 val isSelected = when (item) {
                     BottomNavItem.Home -> selectedRoute == Routes.HOME
-                    BottomNavItem.Farm -> selectedRoute == Routes.FARM
+                    BottomNavItem.Farm -> selectedRoute == Routes.FARM || selectedRoute == Routes.GROWING || selectedRoute.startsWith(Routes.GROWING)
                     BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
                     BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
                     BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile") || selectedRoute == Routes.SETTINGS
@@ -154,7 +154,7 @@ fun LandscapeSideNavBar(
                 BottomNavItem.items.forEach { item ->
                     val isSelected = when (item) {
                         BottomNavItem.Home -> selectedRoute == Routes.HOME
-                        BottomNavItem.Farm -> selectedRoute == Routes.FARM
+                        BottomNavItem.Farm -> selectedRoute == Routes.FARM || selectedRoute == Routes.GROWING || selectedRoute.startsWith(Routes.GROWING)
                         BottomNavItem.Community -> selectedRoute == Routes.COMMUNITY
                         BottomNavItem.Vegetables -> selectedRoute == Routes.LIBRARY
                         BottomNavItem.Profile -> selectedRoute == Routes.PROFILE || selectedRoute.startsWith("profile") || selectedRoute == Routes.SETTINGS

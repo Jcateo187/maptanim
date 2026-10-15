@@ -14,17 +14,37 @@ import java.time.temporal.ChronoUnit
  */
 class GrowthStageCalculator {
 
-    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): CropGrowthStage {
+    fun calculate(plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): CropGrowthStage =
+        calculateForCrop(null, plantedDate, daysToHarvest, today)
+
+    fun calculateForCrop(cropName: String?, plantedDate: LocalDate, daysToHarvest: Int, today: LocalDate): CropGrowthStage {
         val daysSincePlanting = ChronoUnit.DAYS.between(plantedDate, today).toInt().coerceAtLeast(0)
         val progress = if (daysToHarvest > 0) (daysSincePlanting.toFloat() / daysToHarvest.toFloat()).coerceIn(0f, 1f) else 0f
 
+        val lower = cropName?.lowercase()?.trim() ?: ""
+        val isLeafy = lower.contains("pechay") || lower.contains("petsay") || lower.contains("lettuce") ||
+                lower.contains("litsugas") || lower.contains("mustasa") || lower.contains("cabbage") ||
+                lower.contains("repolyo") || lower.contains("kangkong") || lower.contains("bok choy")
+
+        val isRootTuber = lower.contains("carrot") || lower.contains("karot") || lower.contains("potato") ||
+                lower.contains("patatas") || lower.contains("radish") || lower.contains("labanos") ||
+                lower.contains("onion") || lower.contains("sibuyas")
+
         return when {
-            progress < 0.15f -> CropGrowthStage.GERMINATION
-            progress < 0.30f -> CropGrowthStage.SEEDLING
-            progress < 0.55f -> CropGrowthStage.VEGETATIVE
-            progress < 0.75f -> CropGrowthStage.FLOWERING
-            progress < 0.95f -> CropGrowthStage.RIPENING
-            else             -> CropGrowthStage.HARVEST
+            isLeafy || isRootTuber -> when {
+                progress < 0.15f -> CropGrowthStage.GERMINATION
+                progress < 0.35f -> CropGrowthStage.SEEDLING
+                progress < 0.88f -> CropGrowthStage.VEGETATIVE
+                else             -> CropGrowthStage.HARVEST
+            }
+            else -> when {
+                progress < 0.15f -> CropGrowthStage.GERMINATION
+                progress < 0.30f -> CropGrowthStage.SEEDLING
+                progress < 0.55f -> CropGrowthStage.VEGETATIVE
+                progress < 0.75f -> CropGrowthStage.FLOWERING
+                progress < 0.95f -> CropGrowthStage.RIPENING
+                else             -> CropGrowthStage.HARVEST
+            }
         }
     }
 }

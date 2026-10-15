@@ -63,6 +63,10 @@ class TaskRepositoryImpl(
             if (task.id == taskId) task.copy(isCompleted = true, completedAt = completedAt) else task
         }
 
+        val task = inMemoryFallback.value.find { it.id == taskId }
+        val isGuest = task?.farmId?.contains("guest", ignoreCase = true) == true || taskId.contains("guest", ignoreCase = true)
+        if (isGuest) return@withContext
+
         val remoteRes = remoteDataSource.completeTask(taskId, completedAt)
         if (remoteRes.isFailure) {
             try {
@@ -81,12 +85,15 @@ class TaskRepositoryImpl(
         val existingIds = tasks.map { it.id }.toSet()
         inMemoryFallback.value = inMemoryFallback.value.filter { it.id !in existingIds } + tasks
 
-        if (tasks.isNotEmpty()) {
-            val dtos = tasks.map { task ->
+        val nonGuestTasks = tasks.filter { !it.farmId.contains("guest", ignoreCase = true) }
+        if (nonGuestTasks.isNotEmpty()) {
+            val dtos = nonGuestTasks.map { task ->
                 TaskDto(
                     id = task.id,
                     farm_id = task.farmId,
                     plot_id = task.plotId.ifBlank { null },
+                    plot_label = task.plotLabel,
+                    crop_name = task.cropName,
                     task_type = task.taskType.name,
                     title = task.title,
                     sub_label = task.subLabel,
@@ -114,6 +121,7 @@ class TaskRepositoryImpl(
     }
 
     suspend fun fetchFromRemote(farmId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (farmId.contains("guest", ignoreCase = true)) return@withContext
         val result = remoteDataSource.getTasksForFarm(farmId)
         result.getOrNull()?.let { dtos ->
             val domainTasks = dtos.map { dto ->
@@ -121,8 +129,8 @@ class TaskRepositoryImpl(
                     id = dto.id,
                     farmId = dto.farm_id,
                     plotId = dto.plot_id ?: "",
-                    plotLabel = "PLOT",
-                    cropName = dto.sub_label,
+                    plotLabel = dto.plot_label?.takeIf { it.isNotBlank() } ?: dto.sub_label?.takeIf { it.isNotBlank() } ?: "Garden",
+                    cropName = dto.crop_name?.takeIf { it.isNotBlank() } ?: dto.sub_label,
                     taskType = try { TaskType.valueOf(dto.task_type) } catch (e: Exception) { TaskType.WATER },
                     title = dto.title,
                     subLabel = dto.sub_label,

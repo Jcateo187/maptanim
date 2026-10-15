@@ -6,6 +6,9 @@ import io.github.jan.supabase.postgrest.from
 class FarmRemoteRepository {
 
     suspend fun getFarmsForFarmer(farmerId: String): Result<List<FarmDto>> {
+        if (farmerId.equals("guest", ignoreCase = true)) {
+            return Result.success(emptyList())
+        }
         return try {
             val farms = SupabaseClient.client
                 .from("farms")
@@ -23,6 +26,9 @@ class FarmRemoteRepository {
     }
 
     suspend fun upsertFarm(farm: FarmDto): Result<Unit> {
+        if (farm.farmer_id.equals("guest", ignoreCase = true)) {
+            return Result.success(Unit)
+        }
         return try {
             SupabaseClient.client
                 .from("farms")
@@ -35,6 +41,9 @@ class FarmRemoteRepository {
     }
 
     suspend fun deleteFarm(farmId: String): Result<Unit> {
+        if (farmId.contains("guest", ignoreCase = true)) {
+            return Result.success(Unit)
+        }
         return try {
             SupabaseClient.client
                 .from("farms")

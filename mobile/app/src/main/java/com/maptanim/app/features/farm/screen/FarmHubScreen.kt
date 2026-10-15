@@ -38,6 +38,8 @@ import com.maptanim.app.features.farm.dialogs.CropScheduleCalendarScreen
 import com.maptanim.app.features.farm.renderer.model.PlotRenderData
 import com.maptanim.app.features.farm.viewmodel.EditViewModel
 import com.maptanim.app.features.farm.viewmodel.FarmHubViewModel
+import com.maptanim.app.domain.model.ManagementStage
+import com.maptanim.app.features.farm.schedule.resolveScheduleStatus
 import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.navigation.Routes
 import java.util.Locale
@@ -51,7 +53,8 @@ data class CareDialogData(
     val cropName: String,
     val varietyName: String = "",
     val gardenLabel: String = "Garden",
-    val plotId: String = ""
+    val plotId: String = "",
+    val zoneId: String? = null
 )
 
 data class CropCalendarTarget(
@@ -80,6 +83,7 @@ data class CropCalendarTarget(
 @Composable
 fun FarmHubScreen(
     navController: NavController,
+    initialPlotId: String? = null,
     viewModel: FarmHubViewModel = viewModel()
 ) {
     val editViewModel: EditViewModel = viewModel()
@@ -87,7 +91,10 @@ fun FarmHubScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     // ── Navigation & View Modes ──────────────────────────────────────────────
-    var isEditingMode by remember { mutableStateOf(false) }
+    var isEditingMode by remember(initialPlotId) {
+        mutableStateOf(!initialPlotId.isNullOrBlank())
+    }
+    var initialNavHandled by remember(initialPlotId) { mutableStateOf(false) }
 
     // ── Archive & Header State ───────────────────────────────────────────────
     var showArchived by remember { mutableStateOf(false) }
@@ -100,6 +107,15 @@ fun FarmHubScreen(
     var showCropName by remember { mutableStateOf(true) }
     var isVegetableOverlayVisible by remember { mutableStateOf(false) }
 
+    // Intercept back button when in 2D editing mode to exit back to garden list
+    androidx.activity.compose.BackHandler(enabled = isEditingMode) {
+        if (isVegetableOverlayVisible) {
+            isVegetableOverlayVisible = false
+        } else {
+            isEditingMode = false
+        }
+    }
+
     // ── Dialog Visibility States ─────────────────────────────────────────────
     var showNewGardenDialog by remember { mutableStateOf(false) }
     var showAdjustGardenDialog by remember { mutableStateOf(false) }
@@ -110,19 +126,40 @@ fun FarmHubScreen(
     var showSetPlantingDateForTarget by remember { mutableStateOf<CropCalendarTarget?>(null) }
     var activeCalendarTarget by remember { mutableStateOf<CropCalendarTarget?>(null) }
     var gardenToRename by remember { mutableStateOf<PlotRenderData?>(null) }
+    var gardenToDeleteSoft by remember { mutableStateOf<PlotRenderData?>(null) }
+    var gardenToDeletePermanent by remember { mutableStateOf<PlotRenderData?>(null) }
 
     // Active selected plot for sizing & rotation
-    val selectedPlot = remember(editUiState.plots, editUiState.selectedPlotId) {
+    val selectedPlot = remember(editUiState.plots, editUiState.selectedPlotId, initialPlotId) {
         editUiState.plots.firstOrNull { it.id == editUiState.selectedPlotId }
+            ?: if (!initialPlotId.isNullOrBlank()) {
+                editUiState.plots.firstOrNull { it.id == initialPlotId }
+                    ?: editUiState.plots.firstOrNull { it.plotLabel.equals(initialPlotId, ignoreCase = true) }
+                    ?: editUiState.plots.firstOrNull { it.id.startsWith("${initialPlotId}_") || initialPlotId.startsWith("${it.id}_") }
+            } else null
             ?: editUiState.plots.firstOrNull()
     }
 
     // Filter plots based on "Show Archive" checkbox toggle
     val displayedPlots = remember(editUiState.plots, showArchived) {
         if (showArchived) {
-            editUiState.plots
+            editUiState.plots.filter { !it.isActive }
         } else {
             editUiState.plots.filter { it.isActive }
+        }
+    }
+
+    // If opened with an initialPlotId, automatically select that plot and switch to 2D editing mode
+    LaunchedEffect(initialPlotId, editUiState.plots) {
+        if (!initialPlotId.isNullOrBlank() && !initialNavHandled && editUiState.plots.isNotEmpty()) {
+            val target = editUiState.plots.firstOrNull { it.id == initialPlotId }
+                ?: editUiState.plots.firstOrNull { it.plotLabel.equals(initialPlotId, ignoreCase = true) }
+                ?: editUiState.plots.firstOrNull { it.id.startsWith("${initialPlotId}_") || initialPlotId.startsWith("${it.id}_") }
+            if (target != null) {
+                editViewModel.selectPlot(target.id)
+                isEditingMode = true
+                initialNavHandled = true
+            }
         }
     }
 
@@ -159,7 +196,18 @@ fun FarmHubScreen(
                     onToggleCompanion = { showCompanion = it },
                     onToggleVariety = { showVariety = it },
                     onToggleMeasurement = { showMeasurement = it },
-                    onToggleCropName = { showCropName = it }
+                    onToggleCropName = { showCropName = it },
+                    onGoHome = {
+                        isEditingMode = false
+                        isVegetableOverlayVisible = false
+                        val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+                        if (!popped) {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(0) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
                 )
             } else {
                 // ── GARDEN TOP BAR ───────────────────────────────────────────
@@ -240,10 +288,20 @@ fun FarmHubScreen(
                     selectedRoute = Routes.FARM,
                     onNavigate = { route ->
                         if (route != Routes.FARM) {
-                            navController.navigate(route) {
-                                popUpTo(Routes.HOME) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                            if (route == Routes.HOME) {
+                                val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+                                if (!popped) {
+                                    navController.navigate(Routes.HOME) {
+                                        popUpTo(0) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            } else {
+                                navController.navigate(route) {
+                                    popUpTo(Routes.HOME) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         }
                     }
@@ -321,8 +379,10 @@ fun FarmHubScreen(
                             GardenListItemCard(
                                 plot = plot,
                                 onCardClick = {
-                                    editViewModel.selectPlot(plot.id)
-                                    isEditingMode = true
+                                    if (plot.isActive) {
+                                        editViewModel.selectPlot(plot.id)
+                                        isEditingMode = true
+                                    }
                                 },
                                 onRename = {
                                     gardenToRename = plot
@@ -331,7 +391,11 @@ fun FarmHubScreen(
                                     editViewModel.setPlotArchived(plot.id, isArchived = plot.isActive)
                                 },
                                 onDelete = {
-                                    editViewModel.deletePlot(plot.id)
+                                    if (plot.isActive) {
+                                        gardenToDeleteSoft = plot
+                                    } else {
+                                        gardenToDeletePermanent = plot
+                                    }
                                 }
                             )
                         }
@@ -381,15 +445,22 @@ fun FarmHubScreen(
                     onToggleVegetableOverlay = {
                         isVegetableOverlayVisible = !isVegetableOverlayVisible
                     },
+                    onOpenVegetableOverlay = {
+                        isVegetableOverlayVisible = true
+                    },
+                    onDismissVegetableOverlay = {
+                        isVegetableOverlayVisible = false
+                    },
                     onOpenCropInfo = { cropName ->
                         showCropInfoDialog = cropName
                     },
-                    onOpenCareScreen = { cName, vName, gLabel, pId ->
+                    onOpenCareScreen = { cName, vName, gLabel, pId, zId ->
                         showCareDssDialog = CareDialogData(
                             cropName = cName,
                             varietyName = vName,
                             gardenLabel = gLabel,
-                            plotId = pId
+                            plotId = pId,
+                            zoneId = zId
                         )
                     },
                     onOpenCalendar = { cropName, variety, gardenLabel, plotId, zoneId ->
@@ -459,16 +530,105 @@ fun FarmHubScreen(
         )
     }
 
+    // ── Delete Garden Soft Confirmation Dialog (Move to Archive with 30-day retention) ──
+    gardenToDeleteSoft?.let { target ->
+        AlertDialog(
+            onDismissRequest = { gardenToDeleteSoft = null },
+            title = {
+                Text(
+                    text = "Burahin ang Hardin?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = DeepBlack
+                )
+            },
+            text = {
+                Text(
+                    text = "Ang hardin na \"${target.plotLabel.ifBlank { "Garden" }}\" ay itatago sa Archive. Mayroon kang 30 araw upang ibalik ito bago ito tuluyang mabura sa database.",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        editViewModel.deletePlotSoft(target.id)
+                        gardenToDeleteSoft = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text("Itago sa Archive", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { gardenToDeleteSoft = null }) {
+                    Text("Kanselahin", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // ── Delete Garden Permanent Confirmation Dialog ───────────────────────────
+    gardenToDeletePermanent?.let { target ->
+        AlertDialog(
+            onDismissRequest = { gardenToDeletePermanent = null },
+            title = {
+                Text(
+                    text = "Tuluyang Burahin ang Hardin?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFFD32F2F)
+                )
+            },
+            text = {
+                Text(
+                    text = "Sigurado ka bang nais mong tuluyang burahin ang \"${target.plotLabel.ifBlank { "Garden" }}\"? Hindi na ito maibabalik kailanman sa database.",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        editViewModel.deletePlotPermanently(target.id)
+                        gardenToDeletePermanent = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text("Burahin Nang Tuluyan", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { gardenToDeletePermanent = null }) {
+                    Text("Kanselahin", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     // ── 3. Adjust Garden Size Dialog (Max 40 ft) ─────────────────────────────
     if (showAdjustGardenDialog) {
         val targetPlot = selectedPlot ?: editUiState.plots.firstOrNull()
         val currentWidthFt = (targetPlot?.widthM ?: 3.0f) / 0.3048f
         val currentHeightFt = (targetPlot?.heightM ?: 1.5f) / 0.3048f
+        val currentVegZones = if (targetPlot != null) {
+            editUiState.cropZones.filter {
+                it.plotId == targetPlot.id &&
+                !it.cropName.isNullOrBlank() &&
+                !it.cropName.equals("Bed", ignoreCase = true)
+            }
+        } else emptyList()
 
         AdjustGardenSizeDialog(
             initialWidthFt = currentWidthFt,
             initialHeightFt = currentHeightFt,
             gardenLabel = targetPlot?.plotLabel ?: "Garden",
+            hasVegetables = currentVegZones.isNotEmpty(),
+            vegetableCount = currentVegZones.size,
             onDismiss = { showAdjustGardenDialog = false },
             onApply = { widthFt, heightFt ->
                 targetPlot?.let {
@@ -487,6 +647,8 @@ fun FarmHubScreen(
             farmName = selectedPlot?.plotLabel?.ifBlank { null } ?: "Garden",
             plots = editUiState.plots,
             cropZones = editUiState.cropZones,
+            selectedPlot = selectedPlot,
+            cropPlantedDates = editUiState.cropPlantedDates,
             onDismiss = { showGardenSummaryDialog = false }
         )
     }
@@ -501,11 +663,36 @@ fun FarmHubScreen(
 
     // ── 6. Crop Care & DSS Evaluation Dialog ─────────────────────────────────
     showCareDssDialog?.let { careData ->
+        val cropKey = careData.zoneId ?: "${careData.plotId}_${careData.cropName}"
+        val plantedDate = editViewModel.getCropPlantedDate(cropKey, careData.zoneId, careData.plotId)
+        val status = resolveScheduleStatus(
+            plantedDate = plantedDate,
+            cropName = careData.cropName,
+            isMonitoringStarted = !plantedDate.isNullOrBlank()
+        )
         CropCareDssDialog(
             cropName = careData.cropName,
             varietyName = careData.varietyName,
             gardenLabel = careData.gardenLabel,
             plotId = careData.plotId,
+            currentStage = status.stageOrNull ?: ManagementStage.VEGETATIVE_GROWTH,
+            scheduleStatus = status,
+            onOpenSchedule = {
+                showCareDssDialog = null
+                val target = CropCalendarTarget(
+                    cropName = careData.cropName,
+                    varietyName = careData.varietyName,
+                    gardenLabel = careData.gardenLabel,
+                    plotId = careData.plotId,
+                    zoneId = careData.zoneId,
+                    initialPlantedDate = plantedDate
+                )
+                if (plantedDate.isNullOrBlank()) {
+                    showSetPlantingDateForTarget = target
+                } else {
+                    activeCalendarTarget = target
+                }
+            },
             onDismiss = { showCareDssDialog = null }
         )
     }
@@ -538,6 +725,13 @@ fun FarmHubScreen(
             plotId = target.plotId,
             zoneId = target.zoneId,
             plantedDateStr = target.initialPlantedDate ?: java.time.LocalDate.now().toString(),
+            isPlanningMode = target.initialPlantedDate.isNullOrBlank(),
+            onStartSchedule = {
+                val cropKey = target.zoneId ?: "${target.plotId}_${target.cropName}"
+                val todayStr = java.time.LocalDate.now().toString()
+                editViewModel.saveCropPlantedDate(cropKey, target.zoneId, target.plotId, todayStr)
+                activeCalendarTarget = target.copy(initialPlantedDate = todayStr)
+            },
             onDismiss = { activeCalendarTarget = null },
             onReschedule = {
                 // Top header right icon clicked: re-open date overlay to reschedule
@@ -578,6 +772,29 @@ private fun GardenListItemCard(
     val widthFt = plot.widthM / 0.3048f
     val heightFt = plot.heightM / 0.3048f
 
+    val daysPassed = remember(plot.notes, plot.updatedAt) {
+        val dateStr = if (plot.notes?.startsWith("DELETED_AT:") == true) {
+            plot.notes.removePrefix("DELETED_AT:")
+        } else if (plot.notes?.startsWith("ARCHIVED_AT:") == true) {
+            plot.notes.removePrefix("ARCHIVED_AT:")
+        } else {
+            plot.updatedAt ?: ""
+        }
+        if (dateStr.isNotBlank()) {
+            try {
+                val instant = if (dateStr.contains("T")) {
+                    java.time.Instant.parse(dateStr)
+                } else {
+                    java.time.LocalDate.parse(dateStr.take(10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+                }
+                java.time.temporal.ChronoUnit.DAYS.between(instant, java.time.Instant.now()).toInt().coerceAtLeast(0)
+            } catch (_: Exception) {
+                0
+            }
+        } else 0
+    }
+    val daysRemaining = (30 - daysPassed).coerceIn(1, 30)
+
     Surface(
         onClick = onCardClick,
         shape = RoundedCornerShape(14.dp),
@@ -593,7 +810,7 @@ private fun GardenListItemCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ── Left Side: Garden Name & (Width X Height ft) ─────────────
+            // ── Left Side: Garden Name, Countdown Badge & (Width X Height ft) ────
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -611,14 +828,15 @@ private fun GardenListItemCard(
 
                     if (!plot.isActive) {
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFEEEEEE)
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFFFEBEE),
+                            border = BorderStroke(0.5.dp, Color(0xFFFFCDD2))
                         ) {
                             Text(
-                                text = "Archived",
+                                text = "Nasa Archive • $daysRemaining araw bago mabura",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.Gray,
+                                color = Color(0xFFC62828),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -677,11 +895,11 @@ private fun GardenListItemCard(
                         }
                     )
 
-                    // 2. Archive / Unarchive
+                    // 2. Archive / Ibalik (Restore)
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = if (plot.isActive) "Archive" else "Unarchive",
+                                text = if (plot.isActive) "Archive" else "Ibalik ang Hardin (Restore)",
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = DeepBlack
@@ -691,7 +909,7 @@ private fun GardenListItemCard(
                             Icon(
                                 imageVector = if (plot.isActive) Icons.Default.Archive else Icons.Default.Unarchive,
                                 contentDescription = null,
-                                tint = Color(0xFFE65100),
+                                tint = if (plot.isActive) Color(0xFFE65100) else LushGreen,
                                 modifier = Modifier.size(18.dp)
                             )
                         },
@@ -707,7 +925,7 @@ private fun GardenListItemCard(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = "Delete",
+                                text = if (plot.isActive) "Delete" else "Burahin Nang Tuluyan",
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color(0xFFD32F2F)
@@ -715,7 +933,7 @@ private fun GardenListItemCard(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.DeleteOutline,
+                                imageVector = if (plot.isActive) Icons.Default.DeleteOutline else Icons.Default.DeleteForever,
                                 contentDescription = null,
                                 tint = Color(0xFFD32F2F),
                                 modifier = Modifier.size(18.dp)

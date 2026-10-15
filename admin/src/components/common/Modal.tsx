@@ -63,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <div
       ref={backdropRef}
-      className={`fixed inset-0 z-[9999] overflow-y-auto p-3 sm:p-4 bg-[#112230]/85 backdrop-blur-md animate-fadeIn flex justify-center ${
+      className={`fixed inset-0 z-[9999] overflow-y-auto p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn flex justify-center ${
         position === 'center'
           ? 'items-center min-h-screen'
           : 'items-start pt-3 sm:pt-6 md:pt-8 pb-10'
@@ -81,21 +81,21 @@ export const Modal: React.FC<ModalProps> = ({
         if (e.target === backdropRef.current) onClose();
       }}
     >
-      <div className={`w-[95vw] sm:w-full ${resolvedWidthClass} overflow-hidden shadow-2xl border border-[#38434D] bg-[#2B3136] rounded-2xl text-[#F4F4F4] my-auto`}>
+      <div className={`w-[95vw] sm:w-full ${resolvedWidthClass} overflow-hidden shadow-2xl border border-[#E5E7EB] bg-white rounded-2xl text-[#111813] my-auto`}>
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#38434D] bg-[#183145]">
-          <h3 className="text-base sm:text-lg font-bold text-[#F4F4F4] truncate pr-2">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#E5E7EB] bg-[#F9FAFB]">
+          <h3 className="text-base sm:text-lg font-bold text-[#111813] truncate pr-2">
             {title}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#8A9BA8] hover:text-[#F4F4F4] hover:bg-[#1D2429] transition cursor-pointer"
+            className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#111813] hover:bg-[#F3F4F6] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         {/* Modal Body */}
-        <div ref={bodyRef} className="p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
+        <div ref={bodyRef} className="p-4 sm:p-6 max-h-[85vh] overflow-y-auto bg-white text-[#111813]">
           {children}
         </div>
       </div>

@@ -8,8 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.filled.VolumeMute
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
@@ -22,14 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.maptanim.app.core.audio.LocalSoundManager
-import com.maptanim.app.core.audio.SoundEffect
 import com.maptanim.app.features.profile.ProfileViewModel
 import com.maptanim.app.features.profile.model.ProfileUiState
-import com.maptanim.app.features.shared.guide.TutorialViewModel
 import com.maptanim.app.navigation.Routes
 
 private val LushGreen = Color(0xFF2E7D32)
@@ -39,7 +33,7 @@ private val MutedText = Color(0xFF555555)
 private val LightSurface = Color(0xFFF9FAF8)
 
 /**
- * SettingsTabContent — App settings, audio controls, account binding, and support in Daylight theme.
+ * SettingsTabContent — App settings, account binding, and support in Daylight theme.
  */
 @Composable
 fun SettingsTabContent(
@@ -47,10 +41,6 @@ fun SettingsTabContent(
     viewModel: ProfileViewModel,
     navController: NavHostController
 ) {
-    var showAudioSettingsModal by remember { mutableStateOf(false) }
-    val soundManager = LocalSoundManager.current
-    var isAudioMuted by remember { mutableStateOf(soundManager.isMuted) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,89 +49,7 @@ fun SettingsTabContent(
     ) {
         Spacer(modifier = Modifier.height(4.dp))
 
-        // 1. Audio & Sound Settings Section
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, CardBorderColor),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
-                    showAudioSettingsModal = true
-                }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(
-                        imageVector = if (isAudioMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = null,
-                        tint = LushGreen
-                    )
-                    Column {
-                        Text("Audio & Sound Effects", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (isAudioMuted) "Master Audio Muted" else "Music & Sound Effects Active",
-                            color = if (isAudioMuted) Color(0xFFC62828) else LushGreen,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
-            }
-        }
-
-        // 2. Replay Tutorial Section
-        val tutorialViewModel: TutorialViewModel = viewModel()
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, CardBorderColor),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
-                    tutorialViewModel.restartTutorial()
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.HOME) { inclusive = true }
-                    }
-                }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = null,
-                        tint = LushGreen
-                    )
-                    Column {
-                        Text("Replay Farmer Guide Tutorial", fontWeight = FontWeight.Bold, color = DeepBlack, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Restart Tatay Juan step-by-step interactive onboarding",
-                            color = MutedText,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MutedText)
-            }
-        }
-
-        // 3. Bind Account Section
+        // 1. Bind Account Section
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = Color.White,
@@ -181,7 +89,7 @@ fun SettingsTabContent(
             }
         }
 
-        // 4. Report Issue / Feedback Section
+        // 2. Report Issue / Feedback Section
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = Color.White,
@@ -206,7 +114,7 @@ fun SettingsTabContent(
             }
         }
 
-        // 5. About MapTanim Section
+        // 3. About MapTanim Section
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = Color.White,
@@ -214,7 +122,6 @@ fun SettingsTabContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    soundManager.playSfx(SoundEffect.TAP_BUTTON)
                     navController.navigate(Routes.ABOUT)
                 }
         ) {
@@ -245,7 +152,7 @@ fun SettingsTabContent(
             }
         }
 
-        // 6. Log Out Section
+        // 4. Log Out Section
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = Color.White,
@@ -267,62 +174,6 @@ fun SettingsTabContent(
                     Text("Log Out", fontWeight = FontWeight.Bold, color = Color(0xFFC62828), fontSize = 14.sp)
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFC62828))
-            }
-        }
-    }
-
-    // Modal: Audio Settings Dialog
-    if (showAudioSettingsModal) {
-        Dialog(onDismissRequest = { showAudioSettingsModal = false }) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, CardBorderColor),
-                modifier = Modifier.fillMaxWidth(0.92f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("Audio Settings", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DeepBlack)
-                    Text(
-                        text = "Toggle background sound and interactive feedback effects.",
-                        fontSize = 12.sp,
-                        color = MutedText
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Mute All Audio", fontSize = 14.sp, color = DeepBlack)
-                        Switch(
-                            checked = isAudioMuted,
-                            onCheckedChange = { muted ->
-                                soundManager.isMuted = muted
-                                isAudioMuted = muted
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = LushGreen
-                            )
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            onClick = { showAudioSettingsModal = false },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = LushGreen)
-                        ) {
-                            Text("Done", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
             }
         }
     }

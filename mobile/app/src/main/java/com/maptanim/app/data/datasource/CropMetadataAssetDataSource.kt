@@ -377,22 +377,20 @@ object CropMetadataAssetDataSource {
     fun getCropAssetImagePath(cropId: String?, cropName: String?): String {
         val clean = (cropId ?: cropName ?: "").lowercase().replace(" ", "").replace("_", "").replace("-", "")
         val fileName = when {
+            clean.contains("bellpepper") || clean.contains("sweetpepper") || clean.contains("atsal") || clean.contains("pepper") || clean.contains("sili") -> "bell_pepper.png"
+            clean.contains("greenonion") || clean.contains("scallion") || clean.contains("dahonngsibuyas") || clean.contains("onion") || clean.contains("sibuyas") -> "green_onion.png"
+            clean.contains("potato") || clean.contains("patatas") -> "potato.png"
             clean.contains("ampalaya") || clean.contains("bittergourd") -> "ampalaya.png"
             clean.contains("cabbage") || clean.contains("repolyo") -> "cabbage.png"
             clean.contains("carrot") || clean.contains("karot") -> "carrot.png"
-            clean.contains("corn") || clean.contains("mais") -> "corn.png"
             clean.contains("eggplant") || clean.contains("talong") -> "eggplant.png"
-            clean.contains("kangkong") || clean.contains("waterspinach") -> "kangkong.png"
             clean.contains("lettuce") || clean.contains("litsugas") -> "lettuce.png"
-            clean.contains("okra") -> "okra.png"
-            clean.contains("onion") || clean.contains("sibuyas") -> "onion.png"
             clean.contains("pechay") || clean.contains("pakchoi") || clean.contains("bokchoy") -> "pechay.png"
             clean.contains("pipino") || clean.contains("cucumber") -> "pipino.png"
             clean.contains("pumpkin") || clean.contains("squash") || clean.contains("kalabasa") -> "pumpkin.png"
-            clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") || clean.contains("labuyo") -> "sili.png"
-            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("stringbeans") || clean.contains("beans") -> "sitaw.png"
+            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("stringbeans") || clean.contains("beans") || clean.contains("yardlong") -> "sitaw.png"
             clean.contains("tomato") || clean.contains("kamatis") -> "tomato.png"
-            else -> "ampalaya.png"
+            else -> "tomato.png"
         }
         return "file:///android_asset/metadata/crops_images/$fileName"
     }

@@ -118,12 +118,13 @@ class UserRepositoryImpl(
                 } catch (_: Exception) {}
 
                 val profile = try { profileRepository.getProfile(user.id) } catch (_: Exception) { null }
+                val isGuest = user.email.isNullOrEmpty() || user.email?.endsWith("@maptanim.local", ignoreCase = true) == true
                 userProfileState.value = UserProfile(
                     id = profile?.id ?: user.id,
-                    nickname = profile?.nickname ?: user.email?.substringBefore("@") ?: "",
+                    nickname = profile?.nickname?.takeIf { it.isNotBlank() } ?: if (isGuest) "Guest Farmer" else user.email?.substringBefore("@") ?: "Farmer",
                     avatarAssetPath = profile?.avatar ?: "Avatar/Male_Avatar.png",
-                    isAccountBound = !user.email.isNullOrEmpty(),
-                    boundEmail = user.email,
+                    isAccountBound = !isGuest,
+                    boundEmail = if (isGuest) null else user.email,
                     nicknameUpdatedAt = profile?.nicknameUpdatedAt,
                     tutorialCompletedAt = profile?.tutorialCompletedAt
                 )

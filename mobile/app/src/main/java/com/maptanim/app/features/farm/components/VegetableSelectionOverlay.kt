@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -17,10 +18,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
@@ -63,25 +68,35 @@ private val CardBg = Color(0xFFFFFFFF)
 private val SurfaceBg = Color(0xFFF2F5F0)
 
 val CROP_PREVIEW_IMAGES: Map<String, Int> = mapOf(
-    "Tomato" to R.drawable.ph_tomato_hero
+    "Tomato" to R.drawable.ph_tomato_hero,
+    "Carrot" to R.drawable.ph_carrot_hero,
+    "Eggplant" to R.drawable.ph_eggplant_hero,
+    "Pechay" to R.drawable.ph_pechay_hero,
+    "Green Onion" to R.drawable.ph_green_onion_hero,
+    "Potato" to R.drawable.ph_potato_hero,
+    "Cabbage" to R.drawable.ph_cabbage_hero,
+    "Lettuce" to R.drawable.ph_lettuce_hero,
+    "Ampalaya" to R.drawable.ph_ampalaya_hero,
+    "Squash" to R.drawable.ph_squash_hero,
+    "Cucumber" to R.drawable.ph_cucumber_hero,
+    "String Beans" to R.drawable.ph_sitaw_hero,
+    "Bell Pepper" to R.drawable.ph_bell_pepper_hero
 )
 
 val DEFAULT_CROP_VARIETIES: Map<String, List<String>> = mapOf(
     "Tomato" to listOf("Diamante Max F1", "Cherry", "Apollo", "Roma VF", "Native Kamatis"),
     "Eggplant" to listOf("Fortuner F1", "Casino F1", "Long Purple", "Mistisa F1"),
+    "Bell Pepper" to listOf("Sultan F1", "Red Knight", "Blue Jay", "Yolo Wonder"),
     "Carrot" to listOf("Terracotta F1", "New Kuroda", "Chantenay"),
     "Lettuce" to listOf("General F1", "Grand Rapids", "Lollo Rossa"),
-    "Chili Pepper" to listOf("Django F1", "Red Hot F1", "Siling Labuyo"),
     "Cabbage" to listOf("Rare Ball F1", "Scorpio F1", "K-K Cross"),
     "Pechay" to listOf("Black Behi", "Pavito", "Baby Bok Choy"),
     "Cucumber" to listOf("Pilgrim F1", "Green Magic", "Native Pipino"),
-    "Okra" to listOf("Smooth Green F1", "Clemson Spineless"),
-    "Onion" to listOf("Red Pinoy F1", "Yellow Granex", "Red Creole"),
+    "Green Onion" to listOf("Scallion Green", "Tokyo Long White", "Native Bunching"),
     "Squash" to listOf("Suprema F1", "San Mateo"),
-    "Corn" to listOf("Macho Sweet F1", "Sweet Pearl"),
     "String Beans" to listOf("Sandigan F1", "Negro F1"),
     "Ampalaya" to listOf("Galaxy Max F1", "Jade Star"),
-    "Kangkong" to listOf("Upland Green", "Bonsai")
+    "Potato" to listOf("Igorota", "Granola", "Atlantic", "Ganza")
 )
 
 /**
@@ -102,35 +117,26 @@ fun getCropFamily(crop: Crop): CropFamilyInfo {
 fun getCropFamily(cropName: String): CropFamilyInfo {
     val lower = cropName.lowercase()
     return when {
-        lower.contains("tomato") || lower.contains("eggplant") || lower.contains("chili") || lower.contains("sili") || lower.contains("pepper") || lower.contains("kamatis") || lower.contains("talong") || lower.contains("solan") || lower.contains("capsicum") ->
+        lower.contains("tomato") || lower.contains("eggplant") || lower.contains("bell pepper") || lower.contains("sweet pepper") || lower.contains("atsal") || lower.contains("potato") || lower.contains("patatas") || lower.contains("kamatis") || lower.contains("talong") || lower.contains("solan") || lower.contains("capsicum") ->
             CropFamilyInfo("Solanaceae", "Nightshade Family", "🍅", 1)
 
-        lower.contains("squash") || lower.contains("cucumber") || lower.contains("ampalaya") || lower.contains("pipino") || lower.contains("kalabasa") || lower.contains("pumpkin") || lower.contains("gourd") || lower.contains("cucurb") || lower.contains("momordica") || lower.contains("patola") || lower.contains("upo") ->
+        lower.contains("squash") || lower.contains("cucumber") || lower.contains("ampalaya") || lower.contains("pipino") || lower.contains("kalabasa") || lower.contains("pumpkin") || lower.contains("gourd") || lower.contains("cucurb") || lower.contains("momordica") ->
             CropFamilyInfo("Cucurbitaceae", "Gourd Family", "🥒", 2)
 
-        lower.contains("cabbage") || lower.contains("pechay") || lower.contains("repolyo") || lower.contains("bok choy") || lower.contains("brassica") || lower.contains("mustasa") || lower.contains("radish") || lower.contains("labanos") ->
+        lower.contains("cabbage") || lower.contains("pechay") || lower.contains("repolyo") || lower.contains("bok choy") || lower.contains("brassica") ->
             CropFamilyInfo("Brassicaceae", "Mustard / Cabbage Family", "🥬", 3)
 
-        lower.contains("string beans") || lower.contains("sitaw") || lower.contains("bean") || lower.contains("vigna") || lower.contains("legume") || lower.contains("munggo") || lower.contains("sigarilyas") || lower.contains("bataw") ->
+        lower.contains("string beans") || lower.contains("sitaw") || lower.contains("bean") || lower.contains("vigna") || lower.contains("legume") || lower.contains("yardlong") ->
             CropFamilyInfo("Fabaceae", "Legume Family", "🫘", 4)
 
-        lower.contains("onion") || lower.contains("sibuyas") || lower.contains("garlic") || lower.contains("bawang") || lower.contains("allium") || lower.contains("leek") ->
+        lower.contains("onion") || lower.contains("scallion") || lower.contains("dahon ng sibuyas") || lower.contains("allium") ->
             CropFamilyInfo("Amaryllidaceae", "Allium Family", "🧅", 5)
 
-        lower.contains("carrot") || lower.contains("karot") || lower.contains("daucus") || lower.contains("celery") || lower.contains("kintsay") ->
+        lower.contains("carrot") || lower.contains("karot") || lower.contains("daucus") ->
             CropFamilyInfo("Apiaceae", "Carrot Family", "🥕", 6)
 
-        lower.contains("okra") || lower.contains("abelmoschus") || lower.contains("malva") ->
-            CropFamilyInfo("Malvaceae", "Mallow Family", "🌿", 7)
-
-        lower.contains("corn") || lower.contains("mais") || lower.contains("zea") || lower.contains("poac") ->
-            CropFamilyInfo("Poaceae", "Grass / Cereal Family", "🌽", 8)
-
-        lower.contains("kangkong") || lower.contains("spinach") || lower.contains("water spinach") || lower.contains("ipomoea") || lower.contains("kamote") || lower.contains("sweet potato") ->
-            CropFamilyInfo("Convolvulaceae", "Morning Glory Family", "🥗", 9)
-
         lower.contains("lettuce") || lower.contains("litsugas") || lower.contains("lactuca") || lower.contains("aster") ->
-            CropFamilyInfo("Asteraceae", "Daisy / Aster Family", "🥗", 10)
+            CropFamilyInfo("Asteraceae", "Daisy / Aster Family", "🥗", 7)
 
         else ->
             CropFamilyInfo("Horticultural", "Vegetable Family", "🌱", 99)
@@ -147,9 +153,9 @@ val CATALOG_CATEGORY_CHIPS = listOf(
     CatalogCategoryChip("Fruit", "🍅"),
     CatalogCategoryChip("Leafy", "🥬"),
     CatalogCategoryChip("Root", "🥕"),
+    CatalogCategoryChip("Tuber", "🥔"),
     CatalogCategoryChip("Bulb", "🧅"),
-    CatalogCategoryChip("Podded", "🫘"),
-    CatalogCategoryChip("Stem", "🌽")
+    CatalogCategoryChip("Podded", "🫘")
 )
 
 /**
@@ -165,6 +171,7 @@ fun VegetableSelectionOverlay(
     onCropDragStart: (cropName: String, cropId: String, variety: String?, screenOffset: Offset) -> Unit,
     onCropDragging: (screenOffset: Offset) -> Unit,
     onCropDragEnd: (screenOffset: Offset) -> Unit,
+    onCropDragCancel: () -> Unit = {},
     onPlantDirectly: (cropName: String, cropId: String, variety: String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -193,6 +200,32 @@ fun VegetableSelectionOverlay(
             .toSortedMap(compareBy { it.sortOrder })
     }
 
+    val gridState = rememberLazyGridState()
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // When user pulls/drags downward (available.y > 0) while at the top of the grid
+                if (available.y > 10f && gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset <= 0) {
+                    onDismiss()
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 8f) {
+                    onDismiss()
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     AnimatedVisibility(
         visible = isVisible,
         enter = slideInVertically(initialOffsetY = { it }),
@@ -203,6 +236,7 @@ fun VegetableSelectionOverlay(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.60f)
+                .nestedScroll(nestedScrollConnection)
                 .shadow(16.dp, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)),
             shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
             color = SurfaceBg,
@@ -212,11 +246,42 @@ fun VegetableSelectionOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                // Header Bar (Subtitle 'Drag Vegetable to 2D Canvas' deleted)
+                // Top Centered Pill / Drag Handle for intuitive pull-down / scroll-down dismiss
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                if (dragAmount > 6f) {
+                                    onDismiss()
+                                }
+                            }
+                        }
+                        .padding(top = 2.dp, bottom = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(42.dp)
+                            .height(4.5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFFB0BEC5))
+                    )
+                }
+
+                // Header Bar with Drag-to-Dismiss
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                if (dragAmount > 8f) {
+                                    onDismiss()
+                                }
+                            }
+                        },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -406,6 +471,7 @@ fun VegetableSelectionOverlay(
                 // Grid of Vegetable Cards grouped by Crop Family
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
+                    state = gridState,
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -451,6 +517,7 @@ fun VegetableSelectionOverlay(
                                 },
                                 onDragging = onCropDragging,
                                 onDragEnd = onCropDragEnd,
+                                onDragCancel = onCropDragCancel,
                                 onPlantDirectly = {
                                     onPlantDirectly(crop.name, crop.id, currentVariety)
                                 }
@@ -506,6 +573,7 @@ private fun VegetableCardItem(
     onDragStart: (Offset) -> Unit,
     onDragging: (Offset) -> Unit,
     onDragEnd: (Offset) -> Unit,
+    onDragCancel: () -> Unit = {},
     onPlantDirectly: () -> Unit
 ) {
     var cardRootOffset by remember { mutableStateOf(Offset.Zero) }
@@ -526,7 +594,7 @@ private fun VegetableCardItem(
                 onDragging(currentTouchOffset)
             },
             onDragEnd = { onDragEnd(currentTouchOffset) },
-            onDragCancel = { onDragEnd(currentTouchOffset) }
+            onDragCancel = { onDragCancel() }
         )
     }
 
@@ -657,36 +725,16 @@ private fun VegetableCardItem(
             .clickable { onPlantDirectly() }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background SVG or Image taking the WHOLE card
-            val previewImageRes = CROP_PREVIEW_IMAGES[crop.name]
-            if (previewImageRes != null) {
-                Image(
-                    painter = painterResource(id = previewImageRes),
-                    contentDescription = crop.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF1F8E9)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 14.dp)
-                    ) {
-                        CropSvgRenderer.drawCropSvg(
-                            drawScope = this,
-                            cropName = crop.name,
-                            center = Offset(size.width / 2f, (size.height / 2f) - 16.dp.toPx()),
-                            sizePx = minOf(size.width, size.height) * 0.85f
-                        )
-                    }
-                }
-            }
+            // Background High-Resolution Hero Image taking the WHOLE card
+            val previewImageRes = getCropHeroDrawable("${crop.name} ${crop.id}")
+            Image(
+                painter = painterResource(id = previewImageRes),
+                contentDescription = crop.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+            )
 
             // Top-End Info Action Button
             Surface(

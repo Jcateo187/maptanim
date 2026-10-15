@@ -28,6 +28,7 @@ data class ProfileUiState(
     val activeFarmId: String? = null,
     val userPosts: List<CommunityPost> = emptyList(),
     val harvestHistory: List<HarvestRecord> = emptyList(),
+    val checkUpLogs: List<com.maptanim.app.domain.model.CropLog> = emptyList(),
 
     // Farm creation & rename states
     val showCreateFarmModal: Boolean = false,

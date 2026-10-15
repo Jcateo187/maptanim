@@ -330,7 +330,9 @@ data class CommunityComment(
     val postId: String,
     val authorName: String,
     val content: String,
-    val timestamp: String
+    val timestamp: String,
+    val authorId: String? = null,
+    val authorAvatarUrl: String? = null
 )
 
 data class CommunityReport(

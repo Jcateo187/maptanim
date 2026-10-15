@@ -1,259 +1,526 @@
 # 🌱 MapTanim
 
-> **A Mobile-Based Interactive Farm Management and Agricultural Decision Support System (DSS) for Vegetable Farmers in the Philippines**
+> **A Mobile-Based Interactive Farm Management and Agroecological Decision Support System (DSS) for Vegetable Farmers in the Philippines**
 
 <div align="center">
 
-![Platform](https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=android)
-![Language](https://img.shields.io/badge/Language-Kotlin-purple?style=for-the-badge&logo=kotlin)
-![UI](https://img.shields.io/badge/UI-Jetpack%20Compose-blue?style=for-the-badge&logo=android)
-![Architecture](https://img.shields.io/badge/Architecture-MVVM%20%2B%20Clean%20Architecture-orange?style=for-the-badge)
-![Backend](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase)
-![Database](https://img.shields.io/badge/Database-Room%20%7C%20PostgreSQL-blue?style=for-the-badge&logo=postgresql)
-![Status](https://img.shields.io/badge/Status-Completed%20%2F%20Active-brightgreen?style=for-the-badge)
-![License](https://img.shields.io/badge/License-Academic-lightgrey?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Android%2010%2B%20(API%2029--34)-green?style=for-the-badge&logo=android)
+![Language](https://img.shields.io/badge/Language-Kotlin%202.2.10-purple?style=for-the-badge&logo=kotlin)
+![UI](https://img.shields.io/badge/UI-Jetpack%20Compose%202D%20Top--Down%20Canvas-blue?style=for-the-badge&logo=android)
+![Architecture](https://img.shields.io/badge/Architecture-MVVM%20%2B%20Clean%20Architecture%20%2B%20Offline--First-orange?style=for-the-badge)
+![Admin Dashboard](https://img.shields.io/badge/Admin%20Web-React%2018%20%7C%20TypeScript%205.7%20%7C%20Vite%206-61DAFB?style=for-the-badge&logo=react)
+![Backend](https://img.shields.io/badge/Backend-Supabase%20Cloud%20BaaS-3ECF8E?style=for-the-badge&logo=supabase)
+![Database](https://img.shields.io/badge/Database-Room%20SQLite%20%7C%20PostgreSQL%2015-336791?style=for-the-badge&logo=postgresql)
+![Status](https://img.shields.io/badge/Status-Production%20Ready%20(v1.2.9)-brightgreen?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Academic%20Capstone-lightgrey?style=for-the-badge)
 
 </div>
 
 ---
 
 ## 📖 Table of Contents
-- [Overview](#-overview)
-- [Capstone Project Details](#-capstone-project-details)
-- [Final User Interface & Screen Specifications](#-final-user-interface--screen-specifications)
-  - [1. HomeScreen (View Mode Dashboard)](#1-homescreen-view-mode-dashboard)
-  - [2. EditScreen (Default View & Floating Controls)](#2-editscreen-default-view--floating-controls)
-  - [3. EditScreen (Crop Tray & Crop Selection Active View)](#3-editscreen-crop-tray--crop-selection-active-view)
-- [Core Features & Direct Planting Mechanics](#-core-features--direct-planting-mechanics)
-- [Technology Stack](#-technology-stack)
-- [Backend & Database Architecture](#-backend--database-architecture)
-- [Admin Dashboard (React + TypeScript)](#-admin-dashboard-react--typescript)
-- [Decision Support System (DSS)](#-decision-support-system-dss)
-- [Repository Structure](#-repository-structure)
-- [Documentation Index](#-documentation-index)
-- [Contributors & Academic Attributions](#-contributors--academic-attributions)
- a  n
----
 
-## 🌿 Overview
-
-**MapTanim** is a landscape-oriented native Android application designed to empower smallholder vegetable farmers in the Philippines through an **Interactive 2D Isometric Farm Workspace**, **Digital Farm Management**, and a deterministic **Agroecological Decision Support System (DSS)**.
-
-Instead of relying on notebooks, memory, or complex form-based data entry, MapTanim transforms the farm into a dynamic 2D visual workspace. Built on **Direct-to-Soil Canvas Planting**, farmers directly drag and drop crops onto soil grid tiles (creating expandable 1×1 $m^2$ crop zones with no separate physical raised bed objects required), view companion planting compatibility overlays, monitor crop growth stages, and receive science-based recommendations aligned with Department of Agriculture (DA) and Bureau of Plant Industry (BPI) standards.
-
----
-
-## 🎓 Capstone Project Details
-
-- **Title**: MapTanim: A Mobile-Based Interactive Farm Management with Agricultural Decision Support for Vegetable Farmers
-- **Institution**: STI West Negros University, College of Information and Communications Technology (2026)
-- **Degree**: Bachelor of Science in Information Technology
-- **Proponents**:
-  - Jomarey D. Parreño (Project Manager)
-  - John Ryan R. Vasquez (System Analyst)
-  - Jason B. Juanillo (Lead Programmer)
-  - James M. Cateo (UI/UX & Assistant Programmer)
-- **Capstone Adviser**: Ms. Danica S. Duazo
-- **Capstone Coordinator**: Engr. Nahdem C. Columida, CpE
-- **CICT Dean**: Mae B. Lodana, PhD TM
+- [Executive Overview](#-executive-overview)
+- [Academic Capstone Attribution](#-academic-capstone-attribution)
+- [System Architecture](#-system-architecture)
+- [📱 Tier 1: Mobile Application (Android)](#-tier-1-mobile-application-android)
+  - [2D Top-Down Orthographic Garden Canvas](#2d-top-down-orthographic-garden-canvas)
+  - [Direct-to-Soil Drag-and-Drop & Radial Action Ring](#direct-to-soil-drag-and-drop--radial-action-ring)
+  - [8-Handle Interactive Resizing & Real-Life Spacing](#8-handle-interactive-resizing--real-life-spacing)
+  - [Agroecological Decision Support System (DSS)](#agroecological-decision-support-system-dss)
+  - [Offline-First Room SQLite & Sync Pipeline](#offline-first-room-sqlite--sync-pipeline)
+  - [Farmer Community Hub & Attachment Pipeline](#farmer-community-hub--attachment-pipeline)
+  - [Farm Hub, Calendar & Harvest Telemetry](#farm-hub-calendar--harvest-telemetry)
+- [🖥️ Tier 2: Web Admin Dashboard (React + TypeScript)](#️-tier-2-web-admin-dashboard-react--typescript)
+  - [Architecture & Tech Stack](#architecture--tech-stack)
+  - [Administrative Features & Console Capabilities](#administrative-features--console-capabilities)
+  - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+- [🗄️ Tier 3: Supabase Cloud Backend & Database](#️-tier-3-supabase-cloud-backend--database)
+  - [PostgreSQL Relational Schema (Cleaned v1.0)](#postgresql-relational-schema-cleaned-v10)
+  - [Row Level Security (RLS) Hardening](#row-level-security-rls-hardening)
+  - [Serverless Edge Functions](#serverless-edge-functions)
+  - [Supabase Storage Buckets](#supabase-storage-buckets)
+- [🥦 Canonical 13 Philippine Vegetable Catalog & Botanical Families](#-canonical-13-philippine-vegetable-catalog--botanical-families)
+- [📂 Cleaned Repository Structure](#-cleaned-repository-structure)
+- [🚀 Quick Start & Development Setup](#-quick-start--development-setup)
+  - [Android Mobile App](#android-mobile-app)
+  - [Web Admin Dashboard](#web-admin-dashboard)
+  - [Supabase Database & Edge Functions](#supabase-database--edge-functions)
+  - [Automated Multi-Platform Test Suite](#automated-multi-platform-test-suite)
+- [📚 Master Documentation Index](#-master-documentation-index)
 
 ---
 
-## 🖼️ Final User Interface & Screen Specifications
+## 🌿 Executive Overview
 
-### 1. HomeScreen (View Mode Dashboard)
-![HomeScreen UI](https://raw.githubusercontent.com/maptanim/mobile/main/docs/assets/homescreen_final.png)
+**MapTanim** is an integrated agroecological farm management and decision support ecosystem engineered specifically for smallholder vegetable farmers, backyard gardeners, and urban growers in the Philippines.
 
-#### UI Elements:
-- **Top HUD Bar**:
-  - **Profile Avatar & Nickname**: Custom profile avatar image and user's nickname (derived from email prefix upon registration or customized in profile settings) in a dark rounded pill.
-  - **Farm Name**: Displays the active farm name loaded directly from Supabase / local Room database.
-  - **Crops Counter Chip**: Dark pill chip displaying real-time total active crops count (`🌱 Crops`).
-  - **Harvest Counter Chip**: Orange pill chip displaying real-time harvest-ready crops count (`🚜 Ready to Harvest`).
-  - **Quick Action Icons**: Notification Bell (with unread notification badge count) and Settings Gear buttons.
-- **Left HUD Panel**:
-  - **Monitoring Card**: Dark rounded card with green radio icon, titled **"Monitoring"**, subtitle `"Full Screen"`.
-  - **Today's Tasks Card**: Dark rounded card with blue clipboard icon, titled **"Today's Tasks"**, subtitle `"4 Tasks"`.
-- **Right HUD Panel**:
-  - **Library Card**: Dark rounded card with book icon, titled **"Library"**.
-  - **Community Card**: Dark rounded card with chat bubbles icon, titled **"Community"**.
-- **Bottom Right Action Button**: Prominent white rounded rectangular Floating Action Button (FAB) with green pencil icon + `"Edit"` label navigating directly to `FarmEditorScreen`.
-- **2D Isometric Map Canvas**: 30m x 30m loam soil grid surrounded by perimeter wooden fences, coconut trees, mango trees, banana trees, flowers, bushes, and rocks.
+Traditional digital agriculture tools often fail in rural and peri-urban Philippine farming communities due to their reliance on expensive connected IoT sensors, unstable internet, complicated form-heavy data entry, and generic agronomic recommendations detached from local Philippine crop varieties, pest profiles, and soil types.
+
+MapTanim solves these challenges through three synchronized architectural tiers:
+1. **Interactive 2D Top-Down Garden Canvas**: Completely replaces rigid form entry with a flat, orthographic 2D soil grid viewport. Farmers plant vegetables directly into rich loam soil, inspect plants with a tactile 6-action radial overlay ring, and resize crop zones using physical inch-, foot-, and yard-calibrated bounding boxes.
+2. **Deterministic Agroecological DSS Engine**: Evaluates spatial companion compatibility ($d \le 3.0\text{m}$), 58 DA/BPI companion planting rules, and 5-stage phenological growth progression 100% deterministically from verified Philippine agricultural science — operating flawlessly offline with **zero IoT hardware and zero weather API dependency**.
+3. **Synchronized Three-Tier Architecture**: Built around native Android Kotlin (offline-first Room SQLite with WorkManager background sync), a multi-tenant React 18 Admin Web Dashboard, and a hardened Supabase PostgreSQL cloud backend.
 
 ---
 
-### 2. EditScreen (Default View & Floating Controls)
-![EditScreen Default View](https://raw.githubusercontent.com/maptanim/mobile/main/docs/assets/editscreen_default_final.png)
+## 🎓 Academic Capstone Attribution
 
-#### UI Elements:
-- **Top Right Navigation Bar**:
-  - **Save Button**: Green rounded pill button (`#2E7D32`) with white save icon + `"Save"` text. Triggers the **Save Farm Layout** modal dialog.
-  - **Exit Button**: Red rounded pill button (`#C62828`) with white exit icon + `"Exit"` text. Returns to `HomeScreen`.
-- **Right Floating Toggle Button**:
-  - **Add Plant / Crops Button**: Dark floating pill button with green flower icon + `"Add Plant / Crops"` label. Opens `CropTray`.
+This project was conceived, designed, and developed as an undergraduate Capstone Project at:
 
----
-
-### 3. EditScreen (Crop Tray & Crop Selection Active View)
-![EditScreen Active Crop Selection](https://raw.githubusercontent.com/maptanim/mobile/main/docs/assets/editscreen_croptray_final.png)
-
-#### UI Elements & Direct Planting Mechanics:
-- **Right Crop Selection Drawer (`CropTray`)**:
-  - **Header**: Title `"SELECT CROPS (2)"` with close `✕` button.
-  - **Filter Tabs**: `All`, `Seasonal`, `Permanent` with green active underline.
-  - **Search & Category**: `"Search crops..."` input field with search icon and category filter button.
-  - **Instruction Banner**: `💡 Hold & drag crop card onto farm area to plant`.
-  - **Crop Cards**:
-    - **Carrot Card**: Light green active card with carrot graphic, titled **"Carrot"**, subtitle `Root • Drag/Tap`.
-    - **String Beans Card**: Light gray card with beans graphic, titled **"String Beans"**, subtitle `Podded • Drag/Tap`.
-- **Live Placement Preview & Drag-and-Drop**:
-  - Dragging a crop card from `CropTray` displays an elevated floating circular preview carrying the Stage 1 crop sprite.
-  - A real-time placement preview renders across soil tiles: **Blue Border** (valid placement) or **Red Border** (invalid/collision).
-- **1×1 Drop Event & Selection Mode**:
-  - Releasing finger instantiates an initial 1×1 `CropZone` (`width = 1`, `height = 1`).
-  - Auto-selects the Crop Zone, replacing the blue preview with a permanent **White Border** outline and displaying the floating bottom toolbar.
-- **Contextual Bottom Toolbar & 8-Handle Resizing**:
-  - Displays dark floating bottom pill bar with 3 tools: **Duplicate**, **Resize**, **Delete**.
-  - Tapping **Resize** activates **8 interactive handles** (corners and edge midpoints) to expand `width` and `height`, automatically populating new grid tiles with duplicate plant instances via `PlantInstanceGenerator` without scaling plant sprites.
-- **Placed Crop Re-positioning & Boundary Clamping**:
-  - Pressing and dragging any placed Crop Zone locks onto it with 1:1 finger tracking (`Math.round` nearest grid rounding).
-  - All drops, drag re-positioning, and hover previews are strictly clamped to `[0.0, 30.0 - cropSize]` meters inside perimeter fences.
-
+* **Institution**: **STI West Negros University**
+* **College**: College of Information and Communications Technology (CICT)
+* **Program**: Bachelor of Science in Information Technology (BSIT)
+* **Academic Year**: 2025–2026
+* **Capstone Proponents**:
+  - **Jomarey D. Parreño** — Project Manager
+  - **John Ryan R. Vasquez** — System Analyst
+  - **Jason B. Juanillo** — Lead Mobile Programmer
+  - **James M. Cateo** — UI/UX Designer & Full-Stack Programmer
+* **Capstone Adviser**: Ms. Danica S. Duazo
+* **Capstone Coordinator**: Engr. Nahdem C. Columida, CpE
+* **CICT Dean**: Mae B. Lodana, PhD TM
 
 ---
 
-## 🛠️ Technology Stack
+## 🏛️ System Architecture
 
-| Layer | Technologies & Tools |
-|---|---|
-| **Mobile Client** | Native Android, **Kotlin**, **Jetpack Compose**, Compose Canvas, ViewModel, StateFlow, Coroutines |
-| **Local Database** | **Room Database** (SQLite), Offline-first Caching, DataStore |
-| **Backend & Cloud** | **Supabase** (PostgreSQL, Supabase Auth, Storage, Edge Functions, Realtime, Row Level Security) |
-| **Admin Dashboard** | **React**, **TypeScript**, Vite, TailwindCSS, Recharts, Lucide Icons |
-| **Decision Support** | Agroecological Rule Engine (Kotlin / TypeScript Edge Functions), DA/BPI Philippine Data |
-| **Build System & Tools**| Gradle (Kotlin DSL), Git, GitHub Actions, Android Studio, Antigravity CLI |
+MapTanim operates on a decoupled, offline-first client-server architecture:
+
+```mermaid
+flowchart TD
+    subgraph MobileApp ["📱 Mobile Client (Android Native - Kotlin 2.2.10)"]
+        UI["Jetpack Compose UI (Daylight High-Contrast Theme)"]
+        Canvas["2D Top-Down Canvas (TopDownFarmCanvas & CropSvgRenderer)"]
+        VM["ViewModels & StateFlow (EditViewModel, FarmHubViewModel)"]
+        DSS["DSS Evaluators (Growth, Season, PlaceBased, Companion)"]
+        Room[("Room SQLite DB (Offline Cache)")]
+        SyncQ["SyncQueue Table"]
+        Worker["WorkManager SyncWorker"]
+        
+        UI --> Canvas
+        Canvas --> VM
+        VM --> DSS
+        VM --> Room
+        Room --> SyncQ
+        SyncQ --> Worker
+    end
+
+    subgraph SupabaseCloud ["☁️ Cloud Backend (Supabase BaaS)"]
+        Auth["Supabase Auth (JWT / Sessions)"]
+        Postgres[("PostgreSQL 15 (Cleaned Schema 001-030)")]
+        RLS["Row Level Security (is_admin / Owner-Scoped)"]
+        Storage["Storage Buckets (crop-images, community)"]
+        Edge["Serverless Edge Functions (Deno Runtime)"]
+        
+        Postgres --- RLS
+    end
+
+    subgraph AdminDashboard ["🖥️ Web Admin Console (React 18 + Vite 6)"]
+        AdminUI["React 18 + Tailwind CSS SPA"]
+        AdminCtx["AuthContext (Role = ADMINISTRATOR)"]
+        AdminApi["ApiService (Unified Live Supabase Client)"]
+        Recharts["Recharts Telemetry & Analytics"]
+        
+        AdminUI --> AdminCtx
+        AdminUI --> AdminApi
+        AdminApi --> Recharts
+    end
+
+    Worker -- "HTTPS / TLS (Sync Mutations)" --> Postgres
+    VM -- "Direct Auth / Realtime" --> Auth
+    Storage -. "Crop Assets & Photo CDN" .-> UI
+    Storage -. "Crop Assets CDN" .-> AdminUI
+    AdminApi -- "PostgREST API / RLS" --> Postgres
+    AdminApi -- "Admin Auth" --> Auth
+    Edge -- "DSS Evaluation / Broadcasts" --> Postgres
+```
 
 ---
 
-## 🗄️ Backend, Database & Serverless Microservices Architecture
+## 📱 Tier 1: Mobile Application (Android)
 
-- **Supabase Cloud & Microservices Tier**:
-  - **Live URL**: `https://ojilvcglpzbtpjxguhzj.supabase.co`
-  - **Live Architecture Board**: [Miro Architecture Board (11 System Frames)](https://miro.com/app/board/uXjVHxtgZgg=/) | [Interactive HTML Flowchart](docs/flowchart.html)
-  - **Cleaned Database Core (10 Relational Tables)**: `users`, `profiles`, `farms`, `crop_plots`, `crop_zones`, `crops` (Canonical 15), `dss_rules` (58 rules), `tasks`, `harvest_records`, `feedback`, `community_posts` (with comments/reports), and `notifications`. Obsolete tables (`farm_tiles`, `farm_objects`, `tile_plantings`, `planting_monitors`, `crop_profiles`) dropped via Migration 020 (`020_cleanup_redundant_schema.sql`).
-  - **Frontend-Only Optimization**: 45×45 isometric grid (`farm_tiles`) and environmental scenery (`farm_objects`) are rendered purely in Compose canvas and background layers, saving thousands of empty database rows.
-  - **Serverless Edge Microservices**:
-    - **`evaluate-dss`**: Evaluates Euclidean proximity ($d \le 3.0\text{m}$) between planted plots, 58 companion rules (`BENEFICIAL` vs `ANTAGONIST`), 5-stage phenological growth progression, and dynamic care tasks (`WATER`, `FERTILIZE`, `HARVEST`, `PEST_ALERT`) upserting into `public.tasks`.
-    - **`broadcast-dispatcher`**: Admin emergency center pushing urgent pest advisories to `public.notifications`.
-  - **Zero Weather / Zero GPS Tracking**: Operates 100% deterministically from verified local Philippine agronomic intervals without external weather APIs (no Open-Meteo, no PAGASA).
-  - **100% Pure Supabase Storage**: Egress-free CDN hosting on `crop-images` bucket. All legacy Cloudflare Worker and R2 dependencies completely eliminated.
-- **Room SQLite Local Persistence**:
-  - Offline-first architecture allowing full farm layout editing and task completion without active internet connection.
-  - Two-way synchronization with Supabase when network connectivity is available.
+* **Location**: [`mobile/app/`](mobile/app/)
+* **Stack**: Kotlin 2.2.10, Jetpack Compose, Compose Canvas, Room SQLite, WorkManager, Coil, Supabase Kotlin BOM 3.6.0.
+* **Target OS**: Android 10+ (API 29 to 34).
+
+### 2D Top-Down Orthographic Garden Canvas
+The rendering engine ([`TopDownFarmCanvas.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/TopDownFarmCanvas.kt)) is built purely in **2D top-down flat orthographic projection**:
+- **Orthographic Coordinate Mapping**: [`TopDownProjection`](mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/TopDownFarmCanvas.kt#L68-L103) maps world meter coordinates $(x, y)$ directly to screen pixel offsets:
+  $$\text{screenX} = \text{worldX} \times \text{PPM} \times \text{zoom} + \text{panX}$$
+  $$\text{screenY} = \text{worldY} \times \text{PPM} \times \text{zoom} + \text{panY}$$
+  Where $\text{PPM} = 40.0\text{ px/meter}$.
+- **Top-Down Yard Rulers**: Displays metric yard, feet, and inch measurements along the top and left borders, with dynamic number ticks reflecting real dimensions (e.g. $10\text{ ft} \times 8\text{ ft}$).
+- **Rich Loam Soil Surface**: Centered dark brown loam soil grid (`#261814`) with clean white grid lines and high-contrast bounding boxes.
+- **Zero-Pixelation Vector SVG Rendering**: [`CropSvgRenderer.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/CropSvgRenderer.kt) draws crisp, scalable 2D top-down vector illustrations directly into Compose `DrawScope` with zero raster degradation at any zoom level.
+
+### Direct-to-Soil Drag-and-Drop & Radial Action Ring
+- **Direct Soil Planting**: No abstract container hierarchies or physical raised-bed objects required. Tapping the bottom-right `[+] ADD VEGETABLES` button opens [`VegetableSelectionOverlay.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/components/VegetableSelectionOverlay.kt). Farmers drag a vegetable card and drop it directly onto the top-down soil grid.
+- **Focus Dimming**: Tapping an existing planted crop applies a soft background tint over the canvas and locks viewport panning to focus interaction on the selected plant.
+- **6-Action Radial Floating Ring**: [`CropCircleActionOverlay.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/components/CropCircleActionOverlay.kt) animates a tactile circular action ring with a spring bounce, positioning 6 key tools symmetrically around the vegetable at clock hours:
+  - 🕛 **12:00 — See Info** (`Icons.Default.Info`): Opens detailed botanical, varietal, and cultural care dossier.
+  - 🕑 **2:00 — Check Up** (`Icons.Default.MedicalServices`): Launches the DSS symptom checker & diagnostic health examination.
+  - 🕓 **4:00 — Calendar** (`Icons.Default.CalendarMonth`): Opens planting date configuration, growth stage progress, and harvest window calculator.
+  - 🕕 **6:00 — Resize** (`Icons.Default.AspectRatio`): Activates the interactive 8-handle bounding box and quick resize bar (- / + in inches/feet).
+  - 🕗 **8:00 — Copy** (`Icons.Default.ContentCopy`): Duplicates the crop zone to an adjacent grid position.
+  - 🕙 **10:00 — Delete** (`Icons.Default.DeleteOutline`): Prompts a confirmation dialog to safely remove the crop zone.
+  - 🔘 **Center**: High-resolution vegetable hero avatar and crop name badge.
+
+### 8-Handle Interactive Resizing & Real-Life Spacing
+- **8 Touch Handles**: Corner handles (`TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`) and edge midpoints (`TOP`, `BOTTOM`, `LEFT`, `RIGHT`) allow farmers to resize crop zones to exact yard measurements.
+- **Grid Snapping**: Automatically snaps to 6-inch increments ($0.1524\text{m}$) or 1-foot increments ($0.3048\text{m}$).
+- **Real-Life Canopy & Spacing Calibration** ([`RenderModels.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/model/RenderModels.kt#L173-L252)):
+  - *Carrot / Radish*: 1 inch diameter ($0.0254\text{m}$), 3-inch spacing
+  - *Green Onion / Scallion*: 3 inches diameter ($0.0762\text{m}$), 3-inch spacing
+  - *Pechay / Bok Choy*: 6 inches diameter ($0.1524\text{m}$), 6-inch spacing
+  - *Lettuce*: 8 inches diameter ($0.2032\text{m}$), 8-inch spacing
+  - *Yardlong String Beans / Potato*: 12 inches / 1 ft ($0.3048\text{m}$), 12-inch spacing
+  - *Cabbage*: 15 inches diameter ($0.381\text{m}$), 15-inch spacing
+  - *Tomato / Eggplant / Cucumber / Bitter Gourd / Bell Pepper*: 18 inches / 1.5 ft ($0.4572\text{m}$), 18-inch spacing
+  - *Squash / Kalabasa*: 36 inches / 1 yard ($0.9144\text{m}$), 36-inch spacing
+- Expanding a crop zone automatically tiles duplicate plant instances with authentic agronomic spacing without stretching vegetable sprites.
+
+### Agroecological Decision Support System (DSS)
+- **Zero IoT & Zero Weather Dependency**: Operates deterministically from field-tested Philippine agronomic rules (Bureau of Plant Industry & Department of Agriculture).
+- **Spatial Companion Engine (58 Rules)**: Analyzes Euclidean proximity ($d \le 3.0\text{m}$) between all placed vegetables on the top-down canvas:
+  - **Beneficial Pairings**: e.g., Tomato + Basil/Lettuce (pest repellent & soil moisture conservation), Eggplant + String Beans (nitrogen fixation).
+  - **Antagonistic Pairings**: e.g., Tomato + Eggplant (shared fungal blight risks & heavy nitrogen depletion), Tomato + Corn (attracts corn earworm/fruitworm).
+- **5-Stage Phenological Growth Progression**:
+  1. *Sprout (0–15%)*: Sowing depth, moisture retention, nursery germination.
+  2. *Seedling (15–35%)*: Hardening off, gentle bottom-watering, thinning.
+  3. *Vegetative (35–65%)*: Nitrogen scheduling, weeding, bamboo trellising.
+  4. *Flowering & Fruit Set (65–90%)*: Potassium/Phosphorus amendments, blossom rot prevention.
+  5. *Harvest (90%+)*: Maturity indicators, pick-vs-pull harvesting techniques.
+- **₱0 Household Remedy Symptom Checker**: Multi-question diagnostic decision trees for common pests (Cutworms, Aphids, Fruit Borers) and deficiencies with zero-budget household solutions (wood ash, chili-garlic-soap spray, crushed eggshell calcium tea).
+
+### Offline-First Room SQLite & Sync Pipeline
+- **Immediate Local Writes**: All farm creations, garden resizing, vegetable placements, task completions, and harvest entries write to **Room SQLite** instantly.
+- **SyncQueue Pattern**: Every mutation inserts a queued operation (`INSERT`, `UPDATE`, `DELETE`) with timestamp and serialized JSON payload into `sync_queue`.
+- **Background `SyncWorker`**: An Android `WorkManager` periodic and immediate worker drains `sync_queue` in chronological order with exponential backoff on network availability.
+
+### Farmer Community Hub & Attachment Pipeline
+- **Community Forum**: High-performance photo-sharing feed with post titles, descriptions, like reactions, and threaded comments.
+- **Multi-Scheme Image Resolver**: Safely handles camera and gallery URIs across `file://`, `content://`, `http://`, and `https://` protocols with bounded-height letterboxing and full-screen image dialogs.
+- **Abuse Moderation**: Built-in reporting dialog allowing farmers to flag inappropriate posts directly into the admin moderation queue.
+
+### Farm Hub, Calendar & Harvest Telemetry
+- **FarmHubScreen**: Multi-garden management dashboard listing gardens with dimensions (e.g. $10\text{ ft} \times 8\text{ ft}$), archive toggle, and `+ NEW GARDEN` modal with scrollable dimension selectors.
+- **Planting Calendar**: Stage progression tabs, simulation day calculations from planting date, and projected harvest windows.
+- **Harvest Tracker**: Logs historical yields (kg), crop quality ratings, and auto-calculates cumulative farm harvest stats.
 
 ---
 
-## 💻 Admin Dashboard (React + TypeScript)
+## 🖥️ Tier 2: Web Admin Dashboard (React + TypeScript)
 
-- **Location**: `admin/` project module.
-- **Role**: Web-based management console for agronomists and system administrators.
-- **Features**:
-  - **Canonical 15-Crop Catalog**: Minimal base crop cards with viewport-centered varietal breakdown modals mounted via React Portals (`createPortal`).
-  - **Mobile DSS Engine Hub & Sandbox**: Interactive simulation slider testing 5-stage growth progression, companion synergies, and daily task dispatch.
-  - **Broadcast Center**: Emergency pest alert and seasonal advisory dispatcher.
-  - **DSS Rule Matrix Editor**: Multi-preset companion planting configurator.
-  - **Farmer Directory & Harvest KPIs**: Real-time yield tracking and farm telemetry.
+* **Location**: [`admin/`](admin/)
+* **Stack**: React 18, TypeScript 5.7, Vite 6, Tailwind CSS 4, Lucide React, Recharts.
+* **Role**: Centralized administrative web console for agronomists, extension workers, and platform operators.
+
+### Architecture & Tech Stack
+- Single Page Application (SPA) containerized via Docker and Nginx.
+- Communicates directly with Supabase via `@supabase/supabase-js` using standard PostgREST queries governed by database Row Level Security.
+- Zero mock dependencies: Live Supabase PostgreSQL integration through [`admin/src/services/api.ts`](admin/src/services/api.ts).
+
+### Administrative Features & Console Capabilities
+1. **Dashboard Overview**:
+   - Live KPI Stat Cards: Total Registered Farmers, Active Farms, Total Crop Plots, Monthly Harvest Yield (kg), Platform CSAT.
+   - Dynamic Recharts Visualizations: Crop Distribution Pie Charts, 6-Month Harvest Yield Bar Charts, 30-Day Farmer Registration trends.
+2. **Farmer Directory & User Management**:
+   - Complete registry of farmers with active plots count, account status (`ACTIVE`, `SUSPENDED`), and registration dates.
+   - Administrative actions: Update user status, reassign user roles, view farm details.
+3. **Community Hub Moderation**:
+   - Real-time review of farmer posts and comments.
+   - Moderation panel for reviewing flagged posts reported by community members with instant one-click deletion.
+4. **Customer Service & Support Ticket Center**:
+   - Live support chat and ticket triage system.
+   - CSAT rating analytics, SLA resolution times, and ticket category breakdown.
+5. **Crop Catalog & Agronomic Rules Hub**:
+   - View, create, edit, and delete canonical Philippine vegetable varieties and companion planting rules.
+   - Synchronize official metadata and crop photographic assets to Supabase Storage.
+6. **System Audit Logs**:
+   - Immutable security trail logging all administrative mutations (crop edits, user suspensions, post removals) to `admin_audit_logs`.
+
+### Role-Based Access Control (RBAC)
+- Authenticates through official Supabase Auth (`signInWithPassword`).
+- Enforces role verification requiring `role = 'ADMINISTRATOR'` and `status = 'ACTIVE'` in `public.users`.
+- Backend PostgreSQL RLS policies verify credentials via `is_admin()` security definer function before returning administrative datasets.
 
 ---
 
-## 🧠 Decision Support System (DSS)
+## 🗄️ Tier 3: Supabase Cloud Backend & Database
 
-Deterministically evaluates agroecological science against 5 core farm parameters:
-1. **Soil Classification**: Loam, Clay, Sandy, Silty, Peaty, Chalky.
-2. **Plant-Part Category (8 Types)**: Bulb, Stem, Shoot, Leafy, Flower, Fruit, Root, Tuber.
-3. **5-Stage Phenological Progression**: Sprout (0–15%) → Seedling (15–35%) → Vegetative (35–65%) → Flowering (65–90%) → Harvest (90%+).
-4. **Spatial Proximity & Companion Matrix**: Euclidean distance ($d \le 3.0\text{m}$) evaluating 58 bi-directional companion rules and shared pest risks.
-5. **Zero Weather Dependency**: 100% deterministic rules based on physiological watering intervals, soil moisture retention, and field-tested Philippine research.
+* **Location**: [`database/migration/`](database/migration/) & [`supabase/migrations/`](supabase/migrations/)
+* **Live Project**: `https://ojilvcglpzbtpjxguhzj.supabase.co`
+* **Migrations**: 001 through 030 (Cleaned and aligned).
+
+### PostgreSQL Relational Schema (Cleaned v1.0)
+Legacy redundant tables (`farm_tiles`, `farm_objects`, `tile_plantings`, `planting_monitors`, `crop_profiles`) have been permanently purged via Migration 020 to eliminate database bloat and optimize mobile bandwidth. Scenery and grid tiles are rendered procedurally on the client.
+
+#### Core Relational Tables
+| Table | Description | Primary Key | Foreign Keys / Relations |
+|---|---|---|---|
+| `users` | User identity & platform roles (`FARMER`, `ADMINISTRATOR`, `GUEST`) | `id` (UUID) | Matches `auth.users(id)` |
+| `profiles` | Extended profile metadata (nickname, avatar, tutorial status) | `id` (UUID) | `id → auth.users.id` |
+| `farms` | Farm entities with metric yard dimensions (`yard_width_m`, `yard_length_m`) | `id` (TEXT) | `farmer_id → users.id` |
+| `crop_plots` | Direct-soil planting plots (`pos_x`, `pos_y`, `width_m`, `height_m`, `soil_type`) | `id` (TEXT) | `farm_id → farms.id` |
+| `crop_zones` | Sub-regions organizing individual plant instances within plots | `id` (TEXT) | `plot_id → crop_plots.id` |
+| `crops` | Canonical 15 Philippine vegetable reference data & agronomic constants | `id` (UUID) | Admin-managed catalog |
+| `dss_rules` | 58 bi-directional companion planting rules (`BENEFICIAL`, `ANTAGONIST`) | `id` (UUID) | `crop_a_id, crop_b_id → crops.id` |
+| `tasks` | Daily actionable tasks (`WATER`, `FERTILIZE`, `HARVEST`, `PEST_ALERT`) | `id` (TEXT) | `plot_id → crop_plots.id`, `farm_id → farms.id` |
+| `harvest_records`| Historical yield logs (`yield_kg`, `harvest_date`, `quality_rating`) | `id` (TEXT) | `plot_id → crop_plots.id` |
+| `community_posts`| Farmer community forum posts with image attachments and like counts | `id` (TEXT) | `user_id → users.id` |
+| `community_comments`| Threaded discussion comments on community posts | `id` (TEXT) | `post_id → community_posts.id`, `user_id → users.id` |
+| `community_reports`| Flagged abuse reports on posts for admin moderation | `id` (TEXT) | `post_id → community_posts.id`, `reporter_id → users.id` |
+| `feedback` | User customer service inquiries, bug reports, and CSAT scores | `id` (TEXT) | `user_id → users.id` |
+| `notifications` | In-app alerts, task reminders, and emergency broadcast advisories | `id` (TEXT) | `user_id → users.id` |
+| `admin_audit_logs`| Tamper-proof audit logs for admin actions (INSERT/SELECT only) | `id` (TEXT) | `admin_id → users.id` |
+
+### Row Level Security (RLS) Hardening
+- **Owner-Scoped Policies**: All farmer data tables (`farms`, `crop_plots`, `crop_zones`, `tasks`, `harvest_records`, `feedback`) enforce `auth.uid() = farmer_id` or `auth.uid() = user_id`.
+- **Admin Privilege Definer**:
+  ```sql
+  CREATE OR REPLACE FUNCTION public.is_admin()
+  RETURNS BOOLEAN AS $$
+  BEGIN
+    RETURN EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid()
+        AND role = 'ADMINISTRATOR'
+        AND status = 'ACTIVE'
+    );
+  END;
+  $$ LANGUAGE plpgsql SECURITY DEFINER;
+  ```
+- **Admin Read/Write Policies**: Table policies permit full read access to administrators across all operational tables for dashboard telemetry and platform moderation.
+
+### Serverless Edge Functions
+Located in [`backend/supabase/functions/`](backend/supabase/functions/) (Deno TypeScript runtime):
+- **`evaluate-dss`**: Evaluates farm spatial layout, Euclidean crop distance ($d \le 3.0\text{m}$), 58 companion rules, and phenological stage progression, dispatching dynamic care tasks into `public.tasks`.
+- **`broadcast-dispatcher`**: Admin dispatch service broadcasting urgent pest infestation warnings and seasonal advisories across user notification queues.
+- **`sync-profile`**: Handles user creation, role assignment, and metadata synchronization upon Supabase Auth registration.
+
+### Supabase Storage Buckets
+- `crop-images`: Public CDN hosting high-resolution vegetable sprites, botanical illustrations, and phenological stage photographs.
+- `community-images`: Public bucket storing farmer photo uploads from the mobile Community Hub.
+- `avatars`: User profile avatar graphics.
 
 ---
 
-## 📂 Repository Structure
+## 🥦 Canonical 13 Philippine Vegetable Catalog & Botanical Families
+
+MapTanim groups the 13 canonical Philippine vegetable crops into **7 Botanical Families** ([`VegetableSelectionOverlay.kt`](mobile/app/src/main/java/com/maptanim/app/features/farm/components/VegetableSelectionOverlay.kt#L102-L140)) to guide crop rotation and prevent soil-borne pathogen accumulation:
+
+| Botanical Family | Icon | Crops Included | Local Names | Maturity (Days) | Ideal Soil | Companion Planting Highlights |
+|---|---|---|---|---|---|---|
+| **Solanaceae** *(Nightshade)* | 🍅 | Tomato, Eggplant, Bell Pepper, Potato | Kamatis, Talong, Siling Atsal, Patatas | 75–110 | Loam / Sandy Loam | **Beneficial**: Basil, Beans, Carrot • **Antagonist**: Corn, Fennel |
+| **Cucurbitaceae** *(Gourd)* | 🥒 | Squash, Cucumber, Bitter Gourd | Kalabasa, Pipino, Ampalaya | 50–100 | Loam / Sandy Loam | **Beneficial**: Corn, Legumes, Radish • **Antagonist**: Potato, Aromatic Herbs |
+| **Brassicaceae** *(Cabbage/Mustard)* | 🥬 | Cabbage, Pechay | Repolyo, Pechay / Bok Choy | 30–90 | Loam | **Beneficial**: Mint, Celery, Onion • **Antagonist**: Tomato, Strawberry |
+| **Fabaceae** *(Legume)* | 🫘 | String Beans / Yardlong Bean | Sitaw | 55–65 | Loam / Clay | **Beneficial**: Corn, Eggplant, Cucumber • **Antagonist**: Onion, Garlic |
+| **Amaryllidaceae** *(Allium)* | 🧅 | Green Onion / Scallion | Sibuyas Dahon | 60–70 | Sandy Loam | **Beneficial**: Carrot, Cabbage, Tomato • **Antagonist**: Beans, Peas |
+| **Apiaceae** *(Carrot)* | 🥕 | Carrot | Karot | 70–80 | Deep Sandy Loam | **Beneficial**: Lettuce, Tomato, Rosemary • **Antagonist**: Dill, Fennel |
+| **Asteraceae** *(Daisy/Aster)* | 🥗 | Lettuce | Litsugas | 40–50 | Sandy Loam | **Beneficial**: Carrot, Radish, Strawberry • **Antagonist**: Celery, Parsley |
+
+---
+
+## 📂 Cleaned Repository Structure
 
 ```
 MapTanim/
-├── mobile/                  # Native Android Kotlin Application
+├── .github/
+│   └── workflows/              # GitHub Actions CI/CD (Android, Admin, DevOps)
+├── admin/                      # React 18 + Vite 6 + TypeScript 5.7 Admin Dashboard
+│   ├── public/                 # Static assets & crop metadata images
+│   ├── src/
+│   │   ├── components/         # Layout (Header, Sidebar), Common (Modal, Badge), Charts
+│   │   ├── context/            # AuthContext (real Supabase RBAC), ThemeContext
+│   │   ├── pages/              # Dashboard, Farmers, Community, Feedback, SystemLogs
+│   │   ├── services/           # api.ts (Unified Live Supabase Service), supabase.ts
+│   │   └── types/              # TypeScript interface definitions & Supabase DB types
+│   ├── package.json
+│   └── vite.config.ts
+├── backend/                    # Backend Android Library Module & Supabase Functions
+│   ├── src/main/java/          # com.maptanim.backend (AuthRepository, SupabaseClient)
+│   ├── supabase/functions/     # Edge Microservices (evaluate-dss, broadcast-dispatcher)
+│   └── build.gradle.kts
+├── database/                   # Supabase Database Migrations & Reference SQL
+│   ├── migration/              # 001 to 030 Versioned SQL Migrations
+│   ├── seed/                   # Master crop knowledge seeds
+│   └── sql/                    # Baseline schemas
+├── deployment/                 # Docker, Nginx, Environment templates & test runners
+│   ├── Dockerfile.admin        # Production multi-stage Nginx build for Admin Web
+│   ├── docker-compose.yml      # Service container orchestration
+│   ├── nginx.conf              # SPA Nginx configuration with Gzip & security headers
+│   └── scripts/                # bootstrap-env and run-all-tests runners
+├── docs/                       # Comprehensive Technical Documentation Suite
+│   ├── 00_GETTING_STARTED.md   # Setup prerequisites & smoke tests
+│   ├── 03_SYSTEM_ARCHITECTURE.md
+│   ├── 04_ANDROID_ARCHITECTURE.md
+│   ├── 07_DATABASE_DESIGN.md
+│   ├── 20_DECISION_SUPPORT_SYSTEM.md
+│   ├── 24_OFFLINE_SYNCHRONIZATION.md
+│   └── README.md               # Master Documentation Hub Index
+├── mobile/                     # Native Android Kotlin Jetpack Compose Application
 │   └── app/
-│       └── src/main/java/com/maptanim/app/
-│           ├── data/        # Room entities, DAOs, Repositories, Supabase DTOs
-│           ├── domain/      # UseCases, Repositories interfaces, Domain Models
-│           ├── renderer/    # FarmCanvasRenderer, IsometricProjection, PlantInstanceGenerator
-│           └── ui/          # Jetpack Compose Screens (Home, Edit, Tasks, Settings, HUD)
-├── backend/                 # Supabase Database Migrations, RLS Policies, Edge Functions
-├── admin/                   # React + TypeScript Web Admin Dashboard
-├── shared/                  # Shared DTOs and validation constants
-├── docs/                    # Complete 37-chapter Markdown Documentation suite
-└── README.md                # Project Overview & Specification
+│       ├── src/main/
+│       │   ├── assets/         # Crop SVG vector assets & official JSON metadata
+│       │   ├── java/com/maptanim/app/
+│       │   │   ├── core/       # Logging & Application Singletons
+│       │   │   ├── data/       # Room Database, DAOs, Entities, Repositories, SyncWorker
+│       │   │   ├── domain/     # Clean Architecture Domain Models & Use Cases
+│       │   │   ├── dss/        # Agroecological Decision Support Evaluators
+│       │   │   ├── features/   # Auth, Home, Farm (Canvas & Tray), Community, Profile
+│       │   │   │   └── farm/
+│       │   │   │       ├── canvas/    # FarmCanvasView & FarmLayoutPreviewCanvas
+│       │   │   │       ├── components/# CropCircleActionOverlay & VegetableSelectionOverlay
+│       │   │   │       └── renderer/  # TopDownFarmCanvas, CropSvgRenderer, RenderModels
+│       │   │   ├── navigation/ # Jetpack Compose Navigation Graph
+│       │   │   └── ui/         # Theme tokens, Daylight High-Contrast Palette
+│       │   └── res/            # Drawables, mipmaps, strings, colors, themes
+│       └── build.gradle.kts
+├── supabase/                   # Supabase CLI Project Configuration
+│   ├── config.toml             # Local Supabase dev config
+│   └── migrations/             # Timestamped Supabase CLI migrations
+├── tests/                      # Automated Verification & Integration Test Suite
+│   ├── integration/            # api_integration_test.py (Database & API payload contracts)
+│   ├── performance/            # load_simulation_test.py (Latency & telemetry benchmarks)
+│   ├── ui/                     # admin_e2e_test.mjs (Admin UI contracts & service verification)
+│   └── unit/                   # dss_matrix_test.py (2D grid math & companion planting logic)
+├── build.gradle.kts            # Root Gradle project configuration
+├── settings.gradle.kts         # Gradle module inclusions (:mobile:app, :backend)
+└── README.md                   # Master Project Documentation & Specification
 ```
 
 ---
 
-## 📚 Complete Documentation Suite (44 Technical Modules)
-All technical documentation modules are located in the [`docs/`](docs/) directory and indexed in the [Master Documentation Hub](docs/README.md):
+## 🚀 Quick Start & Development Setup
 
-| Chapter | Module / Topic | Link |
-|---|---|---|
-| **Hub** | **Master Documentation Index & Hub** | [README.md](docs/README.md) |
-| **00** | Getting Started & Environment Setup | [00_GETTING_STARTED.md](docs/00_GETTING_STARTED.md) |
-| **01** | Project Overview & Goals | [01_PROJECT_OVERVIEW.md](docs/01_PROJECT_OVERVIEW.md) |
-| **02** | Software Requirements Specification | [02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md](docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md) |
-| **03** | System Architecture | [03_SYSTEM_ARCHITECTURE.md](docs/03_SYSTEM_ARCHITECTURE.md) |
-| **04** | Android App Architecture | [04_ANDROID_ARCHITECTURE.md](docs/04_ANDROID_ARCHITECTURE.md) |
-| **05** | Backend Services Architecture | [05_BACKEND_ARCHITECTURE.md](docs/05_BACKEND_ARCHITECTURE.md) |
-| **06** | Admin Dashboard Specifications | [06_ADMIN_DASHBOARD.md](docs/06_ADMIN_DASHBOARD.md) |
-| **07** | Database Schema & SQL Design | [07_DATABASE_DESIGN.md](docs/07_DATABASE_DESIGN.md) |
-| **08** | Supabase Project Configuration | [08_SUPABASE_CONFIGURATION.md](docs/08_SUPABASE_CONFIGURATION.md) |
-| **09** | Authentication & Security | [09_AUTHENTICATION.md](docs/09_AUTHENTICATION.md) |
-| **10** | API Reference & Endpoints | [10_API_DOCUMENTATION.md](docs/10_API_DOCUMENTATION.md) |
-| **11** | App Navigation Graph | [11_NAVIGATION.md](docs/11_NAVIGATION.md) |
-| **12** | UI / UX Design Guidelines | [12_UI_UX_GUIDELINES.md](docs/12_UI_UX_GUIDELINES.md) |
-| **13** | Theme & Design System | [13_DESIGN_SYSTEM.md](docs/13_DESIGN_SYSTEM.md) |
-| **14** | Jetpack Compose Component Library | [14_COMPONENT_LIBRARY.md](docs/14_COMPONENT_LIBRARY.md) |
-| **15** | 2D Isometric Render Engine | [15_RENDER_ENGINE.md](docs/15_RENDER_ENGINE.md) |
-| **16** | Interactive Plot Mapping Specs | [16_INTERACTIVE_PLOT_MAPPING.md](docs/16_INTERACTIVE_PLOT_MAPPING.md) |
-| **17** | Digital Farm Management Engine | [17_FARM_MANAGEMENT.md](docs/17_FARM_MANAGEMENT.md) |
-| **18** | View Mode & Dashboard Specifications | [18_VIEW_MODE.md](docs/18_VIEW_MODE.md) |
-| **19** | Edit Mode & Layout Tooling | [19_EDIT_MODE.md](docs/19_EDIT_MODE.md) |
-| **20** | Agroecological Decision Support System | [20_DECISION_SUPPORT_SYSTEM.md](docs/20_DECISION_SUPPORT_SYSTEM.md) |
-| **21** | Philippine Vegetable Knowledge Base | [21_KNOWLEDGE_BASE.md](docs/21_KNOWLEDGE_BASE.md) |
-| **22** | Planting Calendar Engine | [22_CALENDAR.md](docs/22_CALENDAR.md) |
-| **23** | Push & Local Notification System | [23_NOTIFICATION_SYSTEM.md](docs/23_NOTIFICATION_SYSTEM.md) |
-| **24** | Offline-First Sync Architecture | [24_OFFLINE_SYNCHRONIZATION.md](docs/24_OFFLINE_SYNCHRONIZATION.md) |
-| **25** | Data Protection & RLS Security | [25_SECURITY.md](docs/25_SECURITY.md) |
-| **26** | Testing Strategy & Automation | [26_TESTING.md](docs/26_TESTING.md) |
-| **27** | Deployment & Release Pipeline | [27_DEPLOYMENT.md](docs/27_DEPLOYMENT.md) |
-| **28** | Repository Project Directory Structure | [28_PROJECT_STRUCTURE.md](docs/28_PROJECT_STRUCTURE.md) |
-| **29** | Kotlin & Compose Coding Standards | [29_CODING_STANDARDS.md](docs/29_CODING_STANDARDS.md) |
-| **30** | Git Branching & Commit Workflow | [30_GIT_WORKFLOW.md](docs/30_GIT_WORKFLOW.md) |
-| **31** | Developer Contribution Guidelines | [31_CONTRIBUTING.md](docs/31_CONTRIBUTING.md) |
-| **32** | Version Release History & Changelog | [32_CHANGELOG.md](docs/32_CHANGELOG.md) |
-| **33** | Project Feature Roadmap | [33_ROADMAP.md](docs/33_ROADMAP.md) |
-| **34** | Direct Soil Crop Planting & 8-Handle Resize System | [34_CROP_PLANTING_AND_RESIZE_SYSTEM.md](docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md) |
-| **35** | Asset Pipeline & Isometric Graphics | [35_ASSETS_PLANNING.md](docs/35_ASSETS_PLANNING.md) |
-| **36** | Crop Variety Timeline & Seasonality | [36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md](docs/36_CROP_VARIETY_TIMELINE_AND_SEASONALITY.md) |
-| **37** | Specifications & Scope Refinements | [37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md](docs/37_SYSTEM_SPECIFICATIONS_AND_SCOPE_REFINEMENTS.md) |
-| **38** | Audio & Sound Design Specifications | [38_AUDIO_AND_SOUND_ASSETS_PLANNING.md](docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md) |
-| **39** | Crop View Interaction & Variety Simulation | [39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md](docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md) |
-| **40** | User & Profile Schema Refinement | [40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md](docs/40_USER_AND_PROFILE_SCHEMA_REFINEMENT.md) |
-| **41** | Users & Profiles Database Tables | [41_USERS_AND_PROFILES_DATABASE_TABLES.md](docs/41_USERS_AND_PROFILES_DATABASE_TABLES.md) |
-| **42** | High-Scalability & Multi-Tenancy Architecture | [42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md](docs/42_SCALABILITY_AND_MULTI_TENANCY_ARCHITECTURE.md) |
-| **Ops** | DevOps Architecture & Free Release Pipelines | [DEVOPS.md](docs/DEVOPS.md) |
+### Prerequisites
+- **Java Development Kit (JDK)**: OpenJDK 17 or higher
+- **Android Studio**: Ladybug / Meerkat (2024.2+) with Android SDK 34/37
+- **Node.js**: v18.0+ or v20.0+ with npm / npx
+- **Python**: 3.10+ (for integration test suites)
+- **Supabase CLI**: Optional, for local database migrations
 
 ---
 
-## 👥 Contributors & Academic Attributions
-- **Jomarey D. Parreño** — Project Manager
-- **John Ryan R. Vasquez** — System Analyst
-- **Jason B. Juanillo** — Lead Programmer
-- **James M. Cateo** — UI/UX & Assistant Programmer
-- **Capstone Adviser**: Ms. Danica S. Duazo  
-*STI West Negros University — College of Information and Communications Technology (2026)*
+### Android Mobile App
+
+1. Open Android Studio and select **Open** → choose the repository root folder (`MapTanim/`).
+2. Allow Gradle sync to complete automatically.
+3. Configure your local signing and Firebase variables in `mobile/app/local.properties` (or use defaults).
+4. Build the debug APK via Gradle:
+   ```bash
+   # Windows (PowerShell)
+   .\gradlew.bat assembleDebug
+
+   # Linux / macOS
+   ./gradlew assembleDebug
+   ```
+5. Deploy to an Android emulator or connected device via Android Studio Run (`Shift + F10`).
+
+---
+
+### Web Admin Dashboard
+
+1. Navigate to the admin web directory:
+   ```bash
+   cd admin
+   ```
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the Vite local development server:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+4. To build for production:
+   ```bash
+   npm run build
+   ```
+
+---
+
+### Supabase Database & Edge Functions
+
+1. Link to the MapTanim Supabase cloud project:
+   ```bash
+   npx supabase link --project-ref ojilvcglpzbtpjxguhzj
+   ```
+2. Apply database migrations:
+   ```bash
+   npx supabase db push
+   ```
+3. Deploy Edge Functions:
+   ```bash
+   npx supabase functions deploy evaluate-dss
+   npx supabase functions deploy broadcast-dispatcher
+   npx supabase functions deploy sync-profile
+   ```
+
+---
+
+### Automated Multi-Platform Test Suite
+
+MapTanim includes an automated test runner executing verification across all platform tiers:
+
+**Windows (PowerShell):**
+```powershell
+.\deployment\scripts\run-all-tests.ps1
+```
+
+**Linux / macOS (Bash):**
+```bash
+./deployment/scripts/run-all-tests.sh
+```
+
+**Individual Test Suites:**
+- **Admin TypeScript & E2E**: `node tests/ui/admin_e2e_test.mjs`
+- **Database & API Integration**: `py tests/integration/api_integration_test.py`
+- **DSS Matrix & Grid Bounds**: `py tests/unit/dss_matrix_test.py`
+- **Performance & Telemetry**: `py tests/performance/load_simulation_test.py`
+- **Mobile Android Unit Tests**: `.\gradlew.bat testDebugUnitTest`
+
+---
+
+## 📚 Master Documentation Index
+
+Comprehensive technical documentation is maintained in the [`docs/`](docs/) directory and indexed in the [Master Documentation Hub](docs/README.md):
+
+| Category | Chapter | Title & Link |
+|---|---|---|
+| **Overview** | **00** | [Getting Started & Setup Guide](docs/00_GETTING_STARTED.md) |
+| | **01** | [Project Overview & Capstone Goals](docs/01_PROJECT_OVERVIEW.md) |
+| | **02** | [Software Requirements Specification (SRS)](docs/02_SOFTWARE_REQUIREMENTS_SPECIFICATION.md) |
+| **Architecture** | **03** | [System Architecture & Data Flow](docs/03_SYSTEM_ARCHITECTURE.md) |
+| | **04** | [Android Native App Architecture](docs/04_ANDROID_ARCHITECTURE.md) |
+| | **05** | [Backend Services & Supabase Architecture](docs/05_BACKEND_ARCHITECTURE.md) |
+| | **06** | [Admin Web Dashboard Specifications](docs/06_ADMIN_DASHBOARD.md) |
+| **Database** | **07** | [Primary Database Design & SQL Schema](docs/07_DATABASE_DESIGN.md) |
+| | **08** | [Supabase Project Configuration](docs/08_SUPABASE_CONFIGURATION.md) |
+| | **09** | [Authentication & Session Management](docs/09_AUTHENTICATION.md) |
+| | **25** | [Row-Level Security (RLS) & Data Protection](docs/25_SECURITY.md) |
+| **UI & Render Engine** | **11** | [Android Navigation Graph](docs/11_NAVIGATION.md) |
+| | **13** | [Theme & Design System Tokens](docs/13_DESIGN_SYSTEM.md) |
+| | **16** | [Interactive Plot Mapping System](docs/16_INTERACTIVE_PLOT_MAPPING.md) |
+| | **19** | [Edit Mode & Layout Tooling](docs/19_EDIT_MODE.md) |
+| | **34** | [Direct Soil Crop Planting & 8-Handle Resizing](docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md) |
+| **Decision Support** | **20** | [Agroecological Decision Support System (DSS)](docs/20_DECISION_SUPPORT_SYSTEM.md) |
+| | **21** | [Philippine Vegetable Knowledge Base](docs/21_KNOWLEDGE_BASE.md) |
+| | **22** | [Planting Calendar Engine](docs/22_CALENDAR.md) |
+| | **43** | [Beginner Backyard DSS Implementation](docs/43_BEGINNER_BACKYARD_DSS_IMPLEMENTATION.md) |
+| **Sync & Ops** | **24** | [Offline-First Sync Architecture (Room + WorkManager)](docs/24_OFFLINE_SYNCHRONIZATION.md) |
+| | **26** | [Automated Testing Strategy](docs/26_TESTING.md) |
+| | **27** | [Deployment & Release Operations](docs/27_DEPLOYMENT.md) |
+| | **Ops** | [DevOps Pipelines & CI/CD (`DEVOPS.md`)](docs/DEVOPS.md) |
+
+---
+
+<div align="center">
+
+**MapTanim** — Empowering Smallholder Vegetable Farmers with Intuitive Digital Tools & Grounded Science.  
+*College of Information and Communications Technology • STI West Negros University (2026)*
+
+</div>

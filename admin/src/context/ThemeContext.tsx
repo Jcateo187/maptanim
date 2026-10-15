@@ -12,21 +12,21 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
-    // Permanent mobile dark theme
-    document.documentElement.classList.add('dark');
-    document.documentElement.classList.remove('light');
-    document.documentElement.style.backgroundColor = '#0b151a';
-    document.documentElement.style.colorScheme = 'dark';
+    // MapTanim High-Contrast Daylight Color System (matching mobile theme)
+    document.documentElement.classList.add('light');
+    document.documentElement.classList.remove('dark');
+    document.documentElement.style.backgroundColor = '#F7FAF7';
+    document.documentElement.style.colorScheme = 'light';
     try {
       localStorage.removeItem('theme');
-      localStorage.setItem('maptanim_admin_theme', 'dark');
+      localStorage.setItem('maptanim_admin_theme', 'light');
     } catch {
       // ignore storage access errors
     }
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode: true, toggleTheme: () => {} }}>
+    <ThemeContext.Provider value={{ isDarkMode: false, toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

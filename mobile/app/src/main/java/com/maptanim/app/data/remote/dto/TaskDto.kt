@@ -8,6 +8,8 @@ data class TaskDto(
     val id: String = "",
     @SerialName("farm_id") val farm_id: String,
     @SerialName("plot_id") val plot_id: String? = null,
+    @SerialName("plot_label") val plot_label: String? = null,
+    @SerialName("crop_name") val crop_name: String? = null,
     @SerialName("task_type") val task_type: String,
     val title: String,
     @SerialName("sub_label") val sub_label: String? = null,

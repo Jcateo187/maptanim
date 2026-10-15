@@ -75,21 +75,35 @@ class ProfileViewModel(
             }
         }
 
-        // Observe real harvest history records dynamically for active farm
+        // Observe real harvest history records dynamically for active farm (scoped to user's farm)
         @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         viewModelScope.launch {
             _uiState.map { it.activeFarmId }.distinctUntilChanged().flatMapLatest { farmId ->
                 if (!farmId.isNullOrBlank()) {
                     RepositoryProvider.harvestRepository.observeHarvestRecords(farmId)
                 } else {
-                    RepositoryProvider.harvestRepository.observeAllHarvestRecords()
+                    kotlinx.coroutines.flow.flowOf(emptyList())
                 }
             }.collect { records ->
                 _uiState.update { it.copy(harvestHistory = records) }
             }
         }
 
-        // Observe real community posts & forum activity for current user
+        // Observe real check up activity logs dynamically for active farm (scoped to user's farm)
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        viewModelScope.launch {
+            _uiState.map { it.activeFarmId }.distinctUntilChanged().flatMapLatest { farmId ->
+                if (!farmId.isNullOrBlank()) {
+                    RepositoryProvider.cropLogRepository.observeLogsForFarm(farmId)
+                } else {
+                    kotlinx.coroutines.flow.flowOf(emptyList())
+                }
+            }.collect { logs ->
+                _uiState.update { it.copy(checkUpLogs = logs) }
+            }
+        }
+
+        // Observe real community posts & forum activity strictly for current user
         viewModelScope.launch {
             combine(
                 userRepository.observeUserProfile(),
@@ -103,17 +117,20 @@ class ProfileViewModel(
 
                 val userNickname = profile.nickname.trim()
                 val userEmailPrefix = profile.boundEmail?.substringBefore('@')?.trim()
-                val myLocalPostIds = CommunityPreferencesManager.getInstance().getMyPostIds(currentUserId)
-                val myLocalLikedIds = CommunityPreferencesManager.getInstance().getLikedPostIds(currentUserId)
+                val myLocalPostIds = if (!currentUserId.isNullOrBlank()) {
+                    CommunityPreferencesManager.getInstance().getMyPostIds(currentUserId)
+                } else emptySet()
+                val myLocalLikedIds = if (!currentUserId.isNullOrBlank()) {
+                    CommunityPreferencesManager.getInstance().getLikedPostIds(currentUserId)
+                } else emptySet()
 
                 allPosts.filter { post ->
                     val isAuthoredByMe = (currentUserId != null && post.authorId != null && post.authorId == currentUserId) ||
                             (userNickname.isNotBlank() && post.authorName.equals(userNickname, ignoreCase = true)) ||
                             (!userEmailPrefix.isNullOrBlank() && post.authorName.equals(userEmailPrefix, ignoreCase = true)) ||
-                            post.authorName.equals("You", ignoreCase = true) ||
-                            post.id in myLocalPostIds
+                            (currentUserId != null && post.id in myLocalPostIds)
 
-                    val isReactedByMe = post.isLikedByMe || post.id in myLocalLikedIds
+                    val isReactedByMe = (currentUserId != null && post.id in myLocalLikedIds)
 
                     isAuthoredByMe || isReactedByMe
                 }
@@ -331,6 +348,14 @@ class ProfileViewModel(
             userRepository.deleteNotification(id)
             if (_uiState.value.selectedNotification?.id == id) {
                 _uiState.update { it.copy(selectedNotification = null) }
+            }
+        }
+    }
+
+    fun markAllNotificationsAsRead() {
+        viewModelScope.launch {
+            _uiState.value.notifications.filter { !it.isRead }.forEach { notif ->
+                userRepository.markNotificationAsRead(notif.id)
             }
         }
     }

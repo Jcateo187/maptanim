@@ -6,6 +6,7 @@ import com.maptanim.app.data.local.entity.toEntity
 import com.maptanim.app.data.remote.CropPlotRemoteDataSource
 import com.maptanim.app.data.remote.dto.CropPlotDto
 import com.maptanim.app.domain.model.CropPlot
+import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.domain.model.SoilType
 import com.maptanim.app.domain.repository.CropPlotRepository
 import kotlinx.coroutines.flow.Flow
@@ -59,24 +60,33 @@ class CropPlotRepositoryImpl(
             val prev = cached.firstOrNull { it.id == p.id }
             prev == null || prev != p
         }
-        changedPlots.forEach { plot ->
-            try {
-                val res = remoteDataSource.upsertPlot(plot.toDto())
-                if (res.isFailure) {
-                    RepositoryProvider.syncRepository.enqueueSyncItem(
-                        tableName = "crop_plots",
-                        recordId = plot.farmId,
-                        operation = "UPSERT",
-                        payload = plot.id
-                    )
+
+        // Guest accounts operate local-only to prevent RLS violations and queue pollution
+        if (!resolvedFarmId.contains("guest", ignoreCase = true)) {
+            changedPlots.forEach { plot ->
+                try {
+                    val dto = plot.toDto()
+                    val res = remoteDataSource.upsertPlot(dto)
+                    if (res.isFailure) {
+                        val jsonPayload = kotlinx.serialization.json.Json.encodeToString(CropPlotDto.serializer(), dto)
+                        RepositoryProvider.syncRepository.enqueueSyncItem(
+                            tableName = "crop_plots",
+                            recordId = plot.id,
+                            operation = "UPSERT",
+                            payload = jsonPayload
+                        )
+                    }
+                } catch (_: Exception) {
+                    try {
+                        val jsonPayload = kotlinx.serialization.json.Json.encodeToString(CropPlotDto.serializer(), plot.toDto())
+                        RepositoryProvider.syncRepository.enqueueSyncItem(
+                            tableName = "crop_plots",
+                            recordId = plot.id,
+                            operation = "UPSERT",
+                            payload = jsonPayload
+                        )
+                    } catch (_: Exception) {}
                 }
-            } catch (_: Exception) {
-                RepositoryProvider.syncRepository.enqueueSyncItem(
-                    tableName = "crop_plots",
-                    recordId = plot.farmId,
-                    operation = "UPSERT",
-                    payload = plot.id
-                )
             }
         }
 
@@ -87,6 +97,16 @@ class CropPlotRepositoryImpl(
 
     override suspend fun deletePlot(plotId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.deletePlot(plotId)
+        val current = inMemoryCache.value.toMutableMap()
+        current.keys.forEach { farmId ->
+            current[farmId] = current[farmId]?.filter { it.id != plotId } ?: emptyList()
+        }
+        inMemoryCache.value = current
+
+        if (plotId.contains("guest", ignoreCase = true) || plotId.isBlank()) {
+            return@withContext
+        }
+
         try {
             val res = remoteDataSource.deletePlot(plotId)
             if (res.isFailure) {
@@ -105,33 +125,23 @@ class CropPlotRepositoryImpl(
                 payload = plotId
             )
         }
-
-        val current = inMemoryCache.value.toMutableMap()
-        current.keys.forEach { farmId ->
-            current[farmId] = current[farmId]?.filter { it.id != plotId } ?: emptyList()
-        }
-        inMemoryCache.value = current
     }
 
     override suspend fun upsertPlot(plot: CropPlot) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         cropPlotDao?.upsertPlot(plot.toEntity())
-        try {
-            val res = remoteDataSource.upsertPlot(plot.toDto())
+        if (!plot.farmId.contains("guest", ignoreCase = true) && plot.id.isNotBlank() && plot.farmId.isNotBlank()) {
+            val dto = plot.toDto()
+            val res = try { remoteDataSource.upsertPlot(dto) } catch (e: Exception) { Result.failure(e) }
             if (res.isFailure) {
-                RepositoryProvider.syncRepository.enqueueSyncItem(
-                    tableName = "crop_plots",
-                    recordId = plot.farmId,
-                    operation = "UPSERT",
-                    payload = plot.id
-                )
+                try {
+                    RepositoryProvider.syncRepository.enqueueSyncItem(
+                        tableName = "crop_plots",
+                        recordId = plot.id,
+                        operation = "UPSERT",
+                        payload = kotlinx.serialization.json.Json.encodeToString(CropPlotDto.serializer(), dto)
+                    )
+                } catch (_: Exception) {}
             }
-        } catch (_: Exception) {
-            RepositoryProvider.syncRepository.enqueueSyncItem(
-                tableName = "crop_plots",
-                recordId = plot.farmId,
-                operation = "UPSERT",
-                payload = plot.id
-            )
         }
 
         val current = inMemoryCache.value.toMutableMap()
@@ -226,15 +236,72 @@ class CropPlotRepositoryImpl(
         }
     }
 
-    suspend fun fetchFromRemote(farmId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    override suspend fun renamePlot(plotId: String, newLabel: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val nowStr = java.time.Instant.now().toString()
+        cropPlotDao?.updatePlotLabel(plotId, newLabel, nowStr)
+        val currentPlot = cropPlotDao?.getPlotById(plotId)?.toDomain()
+            ?: inMemoryCache.value.values.flatten().firstOrNull { it.id == plotId }
+        if (currentPlot != null) {
+            val updated = currentPlot.copy(plotLabel = newLabel, updatedAt = nowStr)
+            upsertPlot(updated)
+        }
+    }
+
+    override suspend fun setPlotArchived(plotId: String, isArchived: Boolean, archiveTimestamp: String?) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val nowStr = java.time.Instant.now().toString()
+        val currentPlot = cropPlotDao?.getPlotById(plotId)?.toDomain()
+            ?: inMemoryCache.value.values.flatten().firstOrNull { it.id == plotId }
+        if (currentPlot != null) {
+            val updatedNotes = if (isArchived) {
+                "DELETED_AT:${archiveTimestamp ?: nowStr}"
+            } else {
+                if (currentPlot.notes?.startsWith("DELETED_AT:") == true || currentPlot.notes?.startsWith("ARCHIVED_AT:") == true) null else currentPlot.notes
+            }
+            val updated = currentPlot.copy(
+                isActive = !isArchived,
+                notes = updatedNotes,
+                updatedAt = nowStr
+            )
+            cropPlotDao?.updatePlotActiveStatus(plotId, !isArchived, nowStr, updatedNotes)
+            upsertPlot(updated)
+        }
+    }
+
+    override suspend fun purgeExpiredArchivedPlots(olderThanDays: Int) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val archivedEntities = cropPlotDao?.getAllArchivedPlots() ?: emptyList()
+        val now = java.time.Instant.now()
+        archivedEntities.forEach { entity ->
+            val dateStr = if (entity.notes?.startsWith("DELETED_AT:") == true) {
+                entity.notes.removePrefix("DELETED_AT:")
+            } else if (entity.notes?.startsWith("ARCHIVED_AT:") == true) {
+                entity.notes.removePrefix("ARCHIVED_AT:")
+            } else {
+                entity.updatedAt
+            }
+            try {
+                val deletedInstant = if (dateStr.contains("T")) {
+                    java.time.Instant.parse(dateStr)
+                } else {
+                    java.time.LocalDate.parse(dateStr.take(10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+                }
+                val days = java.time.temporal.ChronoUnit.DAYS.between(deletedInstant, now)
+                if (days >= olderThanDays) {
+                    deletePlot(entity.id)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    suspend fun fetchFromRemote(farmId: String): List<CropPlot> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val result = remoteDataSource.getPlotsByFarm(farmId)
-        result.getOrNull()?.let { dtos ->
-            val plots = dtos.map { it.toDomain() }
+        val plots = result.getOrNull()?.map { it.toDomain() } ?: emptyList()
+        if (plots.isNotEmpty()) {
             cropPlotDao?.upsertPlots(plots.map { it.toEntity() })
             val current = inMemoryCache.value.toMutableMap()
             current[farmId] = plots
             inMemoryCache.value = current
         }
+        plots
     }
 }
 
@@ -254,6 +321,10 @@ private fun CropPlot.toDto() = CropPlotDto(
     notes = notes,
     planted_date = plantedDate,
     is_active = isActive,
+    current_stage = currentStage.name,
+    harvest_count = harvestCount,
+    total_yield_kg = totalYieldKg,
+    previous_crops_history = previousCropsHistory.joinToString(","),
     created_at = createdAt,
     updated_at = updatedAt
 )
@@ -275,5 +346,9 @@ private fun CropPlotDto.toDomain() = CropPlot(
     isActive = is_active,
     notes = notes,
     createdAt = created_at ?: "",
-    updatedAt = updated_at ?: ""
+    updatedAt = updated_at ?: "",
+    currentStage = try { ManagementStage.valueOf(current_stage) } catch (e: Exception) { ManagementStage.PREPARATION },
+    harvestCount = harvest_count,
+    totalYieldKg = total_yield_kg,
+    previousCropsHistory = if (previous_crops_history.isBlank()) emptyList() else previous_crops_history.split(",")
 )

@@ -1,11 +1,8 @@
-﻿package com.maptanim.app.features.auth.components
+package com.maptanim.app.features.auth.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,17 +30,20 @@ fun TermsCheckbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.primary
+                checkedColor = Color(0xFF2E7D32),
+                uncheckedColor = Color(0xFF6B7280)
             )
         )
 
         val annotatedString = buildAnnotatedString {
-            append("I agree to the ")
-            
+            withStyle(style = SpanStyle(color = Color(0xFF111813))) {
+                append("I agree to the ")
+            }
+
             pushStringAnnotation(tag = "TERMS", annotation = "terms")
             withStyle(
                 style = SpanStyle(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32),
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline
                 )
@@ -52,12 +52,14 @@ fun TermsCheckbox(
             }
             pop()
 
-            append(" and ")
+            withStyle(style = SpanStyle(color = Color(0xFF111813))) {
+                append(" and ")
+            }
 
             pushStringAnnotation(tag = "PRIVACY", annotation = "privacy")
             withStyle(
                 style = SpanStyle(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32),
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline
                 )
@@ -86,7 +88,7 @@ fun TermsCheckbox(
             },
             style = androidx.compose.ui.text.TextStyle(
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color(0xFF111813)
             ),
             modifier = Modifier.padding(start = 4.dp)
         )

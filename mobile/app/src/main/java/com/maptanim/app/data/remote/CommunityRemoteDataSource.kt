@@ -88,6 +88,33 @@ class CommunityRemoteDataSource {
         }
     }
 
+    suspend fun updatePost(
+        postId: String,
+        title: String,
+        content: String,
+        category: String
+    ): Result<Unit> {
+        return try {
+            SupabaseClient.client
+                .from("community_posts")
+                .update(
+                    mapOf(
+                        "title" to title,
+                        "content" to content,
+                        "category" to category
+                    )
+                ) {
+                    filter {
+                        eq("id", postId)
+                    }
+                }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
     suspend fun deletePost(postId: String): Result<Unit> {
         return try {
             SupabaseClient.client

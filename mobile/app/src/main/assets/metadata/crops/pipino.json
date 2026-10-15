@@ -5,32 +5,139 @@
   "local_name_ph": "Pipino",
   "scientific_name": "Cucumis sativus",
   "taxonomic_family": "Cucurbitaceae",
-  "crop_type": "Cucurbit / Vine",
+  "crop_type": "Cucurbit / Climbing Vine",
   "growing_specifications": {
-    "days_to_harvest": "50 days",
-    "optimal_soil_ph": "6.0 - 6.8",
-    "optimal_temperature_c": "20 - 32 C",
-    "description": "High-demand lowland vining fruit vegetable grown on bamboo trellises nationwide."
+    "days_to_harvest": "35-50 days",
+    "optimal_soil_ph": "5.5 - 6.8",
+    "optimal_temperature_c": "24 - 30 C",
+    "watering_interval_days": 2,
+    "fertilize_interval_days": 10,
+    "description": "High-demand rapid-cycling vining fruit vegetable cultivated on vertical bamboo trellises across Philippine lowlands. Famous for its crisp, cylindrical, refreshing fruits with over 95% water content and high yield potential."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Cucumber classified under Cucurbit / Climbing Vine?",
+      "summary": "Cucumis sativus belongs to the gourd family (Cucurbitaceae), growing as an indeterminate climbing herbaceous vine with coiled tendrils and monoecious yellow flowers.",
+      "points": [
+        "Climbing Vine Morphology: Produces slender vines that climb 2–3 meters along vertical trellis netting, elevating fruit off the ground to prevent contact decay.",
+        "High Water Pepo Fruit: Yields cylindrical green fruits with crisp, watery flesh containing 95% moisture and mild flavor.",
+        "Rapid Turnover: One of the fastest-producing cucurbits, beginning harvest in 35–45 days and continuing for several weeks."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is harvest maturity set to 35–50 days with daily/alternate-day picking?",
+      "summary": "Fast cell enlargement requires frequent harvesting (every 1–2 days) to capture crisp, tender, dark green fruits before they turn pale, yellow, or seed-hardened.",
+      "points": [
+        "Emergence & Seedling Phase (Days 1–10): True seeds germinate in 4–7 days with rapid true leaf expansion.",
+        "Vegetative & Trellis Training (Days 10–25): Fast vine elongation, lateral shoot pruning, and trellis climbing.",
+        "Flowering to First Harvest (Days 25–40): Yellow blossoms develop into market-ready fruits within 10–14 days after pollination.",
+        "Continuous 1–2 Day Picking Frequency: Harvesting every 1–2 days stimulates continuous flower bud setting and prevents fruit from turning yellow and bitter."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Cucumber require consistent watering every 2 days?",
+      "summary": "With 95% fruit water content and shallow fibrous root systems, inconsistent moisture triggers cucurbitacin bitterness and curved, deformed fruits.",
+      "points": [
+        "Cucurbitacin Bitterness Suppression: Moisture deficits trigger natural defensive cucurbitacins in the rind and stem end, making cucumbers astringent and bitter.",
+        "Crooked Fruit Prevention: Steady transpiration ensures uniform bilateral cell division, producing straight, cylindrical, premium-grade fruits.",
+        "Root Aeration: Proper furrow/drip irrigation prevents stagnant waterlogging and root rot while keeping moisture at 60–70% field capacity."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Cucumber thrive in well-drained loam (pH 5.5–6.8) on raised beds?",
+      "summary": "Friable, organic-rich soil ensures fast root penetration while raised beds protect against root suffocation and soil-borne damping-off.",
+      "points": [
+        "Raised Bed Aeration: 20 cm elevated beds safeguard root systems from waterlogging during heavy tropical downpours.",
+        "Nutrient Availability: A pH of 5.5–6.8 optimizes uptake of Potassium (80–120 kg/ha) for fruit bulking and Calcium to prevent blossom-end distortion.",
+        "Organic Matter: Compost incorporation retains essential moisture and supports beneficial soil microbial activity."
+      ]
+    }
   },
   "varieties": [
+    {
+      "variety_id": "var_pipino_diamante_f1",
+      "variety_name": "Diamante F1",
+      "local_name_ph": "Pipino Diamante F1",
+      "growth_duration_days": 42,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 8,
+        "stage3_vegetative": 14,
+        "stage4_flowering": 10,
+        "stage5_harvest": 6
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY_SEASON"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 8,
+      "description": "Leading commercial slicing hybrid in the Philippines from East-West Seed. Produces uniform, straight, dark green cylindrical fruits (18–22 cm) with thick, crispy flesh and strong tolerance to Downy Mildew and CMV.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-17"
+    },
     {
       "variety_id": "var_pipino_emerald_f1",
       "variety_name": "Emerald F1",
       "local_name_ph": "Pipino Emerald F1",
-      "growth_duration_days": 50,
+      "growth_duration_days": 45,
       "stage_days": {
         "stage1_sprout": 4,
-        "stage2_seedling": 10,
-        "stage3_vegetative": 16,
-        "stage4_flowering": 14,
+        "stage2_seedling": 9,
+        "stage3_vegetative": 15,
+        "stage4_flowering": 11,
         "stage5_harvest": 6
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "WET_SEASON_RAISED_BEDS"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Crisp green hybrid cucumber with dark rind, high moisture content, and outstanding field resistance to powdery mildew and fruit rot.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-20"
+    },
+    {
+      "variety_id": "var_pipino_pochero_f1",
+      "variety_name": "Pochero F1",
+      "local_name_ph": "Pipino Pochero F1",
+      "growth_duration_days": 40,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 8,
+        "stage3_vegetative": 14,
+        "stage4_flowering": 9,
+        "stage5_harvest": 5
       },
       "optimal_seasons": [
         "YEAR_ROUND"
       ],
       "watering_interval_days": 2,
+      "fertilize_interval_days": 8,
+      "description": "High-vigor hybrid bred for heavy continuous fruiting, sweet crisp flesh, and excellent shelf life for commercial wholesale markets.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-15"
+    },
+    {
+      "variety_id": "var_pipino_native_opv",
+      "variety_name": "Pipino Pilipino",
+      "local_name_ph": "Katutubong Pipino (Native OPV)",
+      "growth_duration_days": 50,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 16,
+        "stage4_flowering": 12,
+        "stage5_harvest": 7
+      },
+      "optimal_seasons": [
+        "DRY_SEASON",
+        "BACKYARD"
+      ],
+      "watering_interval_days": 2,
       "fertilize_interval_days": 10,
-      "description": "Crisp green hybrid cucumber with dark rind, high moisture content and high resistance to powdery mildew.",
+      "description": "Traditional open-pollinated native slicing cucumber adapted to backyard gardens, producing tender, juicy fruits with refreshing flavor.",
       "sample_planted_date": "2026-08-06",
       "sample_expected_harvest_date": "2026-09-25"
     }
@@ -38,8 +145,8 @@
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/pipino.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/pipino.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
-    "license": "MapTanim Original Asset",
+    "author": "MapTanim Original Agronomic Asset",
+    "license": "MapTanim Open Agricultural Asset",
     "hash_sha256": "c5a1f916c15d8ebdf00bee84475d333d18da0221004cf9e1c00303740e45fd7d"
   }
 }

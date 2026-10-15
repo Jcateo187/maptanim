@@ -8,7 +8,6 @@ data class FarmDto(
     val id: String = "",
     @SerialName("farmer_id") val farmer_id: String,
     @SerialName("farm_name") val farm_name: String = "",
-    @SerialName("garden_name") val garden_name: String? = null,
     @SerialName("created_at") val created_at: String? = null,
     @SerialName("updated_at") val updated_at: String? = null
 )

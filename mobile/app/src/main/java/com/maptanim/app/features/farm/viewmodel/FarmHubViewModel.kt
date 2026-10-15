@@ -94,7 +94,15 @@ class FarmHubViewModel(
                 val db = RepositoryProvider.getDatabase()
                 val existing = db?.farmDao()?.getFarmById(farmId) ?: db?.farmDao()?.getActiveFarm()
                 if (existing != null) {
-                    db?.farmDao()?.upsertFarm(existing.copy(farmName = name))
+                    RepositoryProvider.farmRepository.upsertFarm(
+                        com.maptanim.app.domain.model.Farm(
+                            id = existing.id,
+                            farmerId = existing.farmerId,
+                            farmName = name,
+                            createdAt = existing.createdAt,
+                            updatedAt = java.time.Instant.now().toString()
+                        )
+                    )
                 }
             }
 
@@ -344,7 +352,7 @@ class FarmHubViewModel(
         val newPlot = CropPlot(
             id = UUID.randomUUID().toString(),
             farmId = farmId,
-            plotLabel = "Bed #${existingCount + 1}",
+            plotLabel = if (!cropName.isNullOrBlank()) cropName else "Plot #${existingCount + 1}",
             cropName = cropName,
             cropId = cropName?.lowercase()?.replace(" ", "_"),
             soilType = soilType,
@@ -465,7 +473,7 @@ class FarmHubViewModel(
                     ?: _uiState.value.activePlot
                 val farmId = _uiState.value.activeFarmId.ifBlank { targetPlot?.farmId ?: "farm-default" }
                 val plotId = targetPlot?.id ?: log.cropPlantingId.ifBlank { "plot-1" }
-                val plotLabel = targetPlot?.plotLabel ?: log.bedId.ifBlank { "Bed #1" }
+                val plotLabel = targetPlot?.plotLabel ?: log.bedId.ifBlank { "Garden Plot" }
                 val cropName = targetPlot?.cropName ?: log.cropName.ifBlank { "Vegetable" }
                 val cropVariety = targetPlot?.cropVariety ?: log.varietyName ?: "Standard"
                 val currentStage = targetPlot?.currentStage ?: log.currentStage
@@ -483,7 +491,7 @@ class FarmHubViewModel(
                     pendingTasks = emptyList(),
                     plantingDate = targetPlot?.plantedDate,
                     plantingMethod = "Transplanting",
-                    daysToHarvest = 75
+                    daysToHarvest = targetPlot?.cropName?.let { com.maptanim.app.features.farm.components.BackyardCropAgroData.getProfile(it).baseDaysToHarvest } ?: 75
                 )
 
                 // Persist generated tasks to TaskRepository

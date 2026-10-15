@@ -1,8 +1,9 @@
-﻿package com.maptanim.app.features.splash.screen
+package com.maptanim.app.features.splash.screen
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -71,7 +72,7 @@ fun CompanyLogoScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF09140E)),
+            .background(Color(0xFFF7FAF7)),
         contentAlignment = Alignment.Center
     ) {
         Card(
@@ -83,8 +84,9 @@ fun CompanyLogoScreen(
             colors = CardDefaults.cardColors(
                 containerColor = Color.White
             ),
+            border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = 12.dp
+                defaultElevation = 10.dp
             )
         ) {
             Box(

@@ -1,16 +1,32 @@
-﻿package com.maptanim.app.features.auth.components
+package com.maptanim.app.features.auth.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -18,11 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.maptanim.app.navigation.Routes
-import com.maptanim.app.features.auth.components.PrimaryButton
-import com.maptanim.app.features.auth.components.AppTextField
-import com.maptanim.app.features.auth.components.PasswordTextField
 import com.maptanim.app.features.auth.viewmodel.AuthViewModel
+import com.maptanim.app.navigation.Routes
 
 @Composable
 fun LoginCard(
@@ -67,7 +80,11 @@ fun LoginCard(
         modifier = Modifier
             .width(430.dp)
             .padding(24.dp),
-        elevation = CardDefaults.cardElevation(10.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF7FAF7)
+        ),
+        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
 
         Column(
@@ -80,14 +97,16 @@ fun LoginCard(
             Text(
                 text = "Welcome Back",
                 fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF111813)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Sign in to continue using MapTanim.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF4B5563)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -125,19 +144,24 @@ fun LoginCard(
 
                     Checkbox(
                         checked = rememberMe,
-                        onCheckedChange = { rememberMe = it }
+                        onCheckedChange = { rememberMe = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF2E7D32),
+                            uncheckedColor = Color(0xFF6B7280)
+                        )
                     )
 
                     Text(
                         text = "Remember Me",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF111813)
                     )
 
                 }
 
                 Text(
                     text = "Forgot Password?",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
@@ -183,11 +207,14 @@ fun LoginCard(
 
             Row {
 
-                Text("Don't have an account? ")
+                Text(
+                    text = "Don't have an account? ",
+                    color = Color(0xFF4B5563)
+                )
 
                 Text(
                     text = "Create Account",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32),
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable {

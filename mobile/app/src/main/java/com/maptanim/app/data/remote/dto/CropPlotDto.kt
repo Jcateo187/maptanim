@@ -24,6 +24,10 @@ data class CropPlotDto(
     val notes: String? = null,
     @SerialName("planted_date") val planted_date: String? = null,
     @SerialName("is_active") val is_active: Boolean = true,
+    @SerialName("current_stage") val current_stage: String = "PREPARATION",
+    @SerialName("harvest_count") val harvest_count: Int = 0,
+    @SerialName("total_yield_kg") val total_yield_kg: Float = 0.0f,
+    @SerialName("previous_crops_history") val previous_crops_history: String = "",
     @SerialName("created_at") val created_at: String? = null,
     @SerialName("updated_at") val updated_at: String? = null
 )

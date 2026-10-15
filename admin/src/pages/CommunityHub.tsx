@@ -18,10 +18,18 @@ import {
   UserPlus,
   AlertCircle,
   Users,
+  Maximize2,
+  Smartphone,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { CommunityPost, CommunityComment, CommunityReport, ReportStatus, Farmer } from '../types';
 import { apiService } from '../services/api';
+
+const isValidWebImageUrl = (url?: string | null): boolean => {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:');
+};
 
 interface ChatChannel {
   id: string;
@@ -55,6 +63,7 @@ export const CommunityHub: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'NEWEST' | 'LIKES' | 'COMMENTS' | 'PINNED'>('PINNED');
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Moderation filter state
   const [reportFilterStatus, setReportFilterStatus] = useState<ReportStatus | 'ALL'>('ALL');
@@ -616,13 +625,34 @@ export const CommunityHub: React.FC = () => {
                     </p>
 
                     {post.imageUrl && (
-                      <div className="mb-3 rounded-lg overflow-hidden border border-[#38434D] max-h-36 bg-[#1D2429]">
-                        <img
-                          src={post.imageUrl}
-                          alt={post.title}
-                          className="w-full h-36 object-cover"
-                        />
-                      </div>
+                      isValidWebImageUrl(post.imageUrl) ? (
+                        <div
+                          className="mb-3 rounded-lg overflow-hidden border border-[#38434D] bg-[#141A1E] flex items-center justify-center max-h-[320px] cursor-pointer group relative"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImageUrl(post.imageUrl || null);
+                          }}
+                          title="Click to view full image"
+                        >
+                          <img
+                            src={post.imageUrl}
+                            alt={post.title}
+                            className="w-full h-auto max-h-[320px] object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/75 backdrop-blur-sm rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 pointer-events-none font-medium">
+                            <Maximize2 className="w-3 h-3" /> Full size
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-3 px-3 py-2 rounded-lg bg-[#141A1E] border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-2">
+                          <Smartphone className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                          <span>Photo captured on farmer device (local storage)</span>
+                        </div>
+                      )
                     )}
 
                     {/* Footer */}
@@ -688,13 +718,30 @@ export const CommunityHub: React.FC = () => {
                 {/* Content */}
                 <div className="space-y-3">
                   {selectedPost.imageUrl && (
-                    <div className="rounded-xl overflow-hidden border border-[#38434D] max-h-[340px] bg-[#1D2429]">
-                      <img
-                        src={selectedPost.imageUrl}
-                        alt={selectedPost.title}
-                        className="w-full h-full object-cover max-h-[340px]"
-                      />
-                    </div>
+                    isValidWebImageUrl(selectedPost.imageUrl) ? (
+                      <div
+                        className="rounded-xl overflow-hidden border border-[#38434D] bg-[#141A1E] flex items-center justify-center max-h-[500px] cursor-pointer group relative"
+                        onClick={() => setPreviewImageUrl(selectedPost.imageUrl || null)}
+                        title="Click to view full image in high resolution"
+                      >
+                        <img
+                          src={selectedPost.imageUrl}
+                          alt={selectedPost.title}
+                          className="w-full h-auto max-h-[500px] object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+                          onError={(e) => {
+                            (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/80 backdrop-blur-sm rounded-lg text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 pointer-events-none font-medium">
+                          <Maximize2 className="w-3.5 h-3.5" /> View Full Resolution
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-2.5 rounded-xl bg-[#141A1E] border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2.5">
+                        <Smartphone className="w-4 h-4 shrink-0 text-amber-400" />
+                        <span>This post contains a photo attached on the farmer's physical device in offline local storage.</span>
+                      </div>
+                    )
                   )}
                   <div className="text-sm text-[#F4F4F4] leading-relaxed bg-[#1D2429] p-5 rounded-xl border border-[#38434D]">
                     <p className="whitespace-pre-line leading-relaxed">{selectedPost.content}</p>
@@ -1205,8 +1252,8 @@ export const CommunityHub: React.FC = () => {
                   )}
                 </div>
                 {newImageUrl && (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-[#38434D] max-h-32 w-32 bg-[#1D2429]">
-                    <img src={newImageUrl} alt="Preview" className="w-full h-32 object-cover" />
+                  <div className="mt-2 rounded-lg overflow-hidden border border-[#38434D] max-h-48 w-full max-w-sm bg-[#141A1E] flex items-center justify-center p-1.5">
+                    <img src={newImageUrl} alt="Preview" className="w-full h-auto max-h-44 object-contain rounded" />
                   </div>
                 )}
               </div>
@@ -1359,6 +1406,32 @@ export const CommunityHub: React.FC = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Image Lightbox Modal */}
+      {previewImageUrl && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-150"
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <button
+            onClick={() => setPreviewImageUrl(null)}
+            className="absolute top-5 right-5 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-10"
+            aria-label="Close image preview"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div
+            className="relative max-w-full max-h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewImageUrl}
+              alt="Full size view"
+              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
           </div>
         </div>
       )}

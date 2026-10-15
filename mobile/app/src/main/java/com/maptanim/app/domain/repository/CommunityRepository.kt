@@ -10,6 +10,8 @@ interface CommunityRepository {
     suspend fun refreshPosts()
     suspend fun toggleLikePost(postId: String)
     suspend fun addPost(title: String, category: String, content: String, authorName: String, imageUrl: String? = null): Result<Unit>
+    suspend fun updatePost(postId: String, title: String, content: String, category: String): Result<Unit>
+    suspend fun deletePost(postId: String): Result<Unit>
     suspend fun addComment(postId: String, content: String, authorName: String)
     suspend fun submitReport(
         targetType: String,

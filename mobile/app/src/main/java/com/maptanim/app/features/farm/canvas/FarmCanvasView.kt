@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -30,13 +31,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import com.maptanim.app.features.farm.companion.CompanionProximityAlert
 import com.maptanim.app.features.farm.companion.FarmCompanionManager
 import com.maptanim.app.features.farm.companion.NeighborStatus
 import kotlinx.coroutines.delay
 import com.maptanim.app.features.farm.components.CropCircleActionOverlay
 import com.maptanim.app.features.farm.components.VegetableSelectionOverlay
+import com.maptanim.app.features.farm.components.getCropHeroDrawable
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import com.maptanim.app.features.farm.renderer.canvas.TopDownCamera
 import com.maptanim.app.features.farm.renderer.canvas.TopDownFarmCanvas
@@ -88,13 +93,14 @@ fun FarmCanvasView(
     isExpanded: Boolean = true,
     isVegetableOverlayVisible: Boolean = false,
     onToggleVegetableOverlay: () -> Unit = {},
+    onOpenVegetableOverlay: () -> Unit = onToggleVegetableOverlay,
+    onDismissVegetableOverlay: () -> Unit = onToggleVegetableOverlay,
     onToggleExpand: () -> Unit = {},
     onOpenYardGuide: () -> Unit = {},
     onSelectLayer: (CanvasLayer) -> Unit = {},
     onDeletePlot: (String) -> Unit = {},
     onOpenCropInfo: (cropName: String) -> Unit = {},
-    onOpenCareScreen: (cropName: String, variety: String, bedLabel: String, plotId: String) -> Unit = { _, _, _, _ -> },
-    onOpenInspect: () -> Unit = {},
+    onOpenCareScreen: (cropName: String, variety: String, bedLabel: String, plotId: String, zoneId: String?) -> Unit = { _, _, _, _, _ -> },
     onOpenTimeline: () -> Unit = {},
     onOpenCalendar: (cropName: String, variety: String?, gardenLabel: String, plotId: String, zoneId: String) -> Unit = { _, _, _, _, _ -> },
     onNavigateToGuide: () -> Unit = {},
@@ -457,7 +463,7 @@ fun FarmCanvasView(
 
             // Radial floating circular action buttons centered around the crop (Picture 2)
             if (isCropVisibleOnScreen) {
-                val overlaySizePx = with(density) { 240.dp.roundToPx() }
+                val overlaySizePx = with(density) { 260.dp.roundToPx() }
                 val overlayHalfPx = overlaySizePx / 2
                 val cropCenterX = cropScreenCenter.x.toInt()
                 val cropCenterY = cropScreenCenter.y.toInt()
@@ -483,7 +489,8 @@ fun FarmCanvasView(
                             selectedCrop.cropName,
                             selectedCrop.varietyName ?: "",
                             selectedCrop.gardenLabel,
-                            selectedCrop.plotId
+                            selectedCrop.plotId,
+                            selectedCrop.zoneId
                         )
                     },
                     onOpenCalendar = {
@@ -520,7 +527,7 @@ fun FarmCanvasView(
         // ── 3. BUTTON AT THE BOTTOM RIGHT: [+] ADD VEGETABLES (Single +) ──────
         if (!isVegetableOverlayVisible && !isDraggingCrop && pendingCopyCrop == null && selectedCrop == null) {
             Surface(
-                onClick = onToggleVegetableOverlay,
+                onClick = onOpenVegetableOverlay,
                 shape = RoundedCornerShape(24.dp),
                 color = LushGreen,
                 shadowElevation = 8.dp,
@@ -553,9 +560,10 @@ fun FarmCanvasView(
         }
 
         // ── 4. THE VEGETABLE SELECTION OVERLAY (Direct Planting) ─────────────
+        val hideTray = isDraggingCrop || !isVegetableOverlayVisible
         VegetableSelectionOverlay(
             isVisible = isVegetableOverlayVisible,
-            onDismiss = onToggleVegetableOverlay,
+            onDismiss = onDismissVegetableOverlay,
             onOpenCropInfo = onOpenCropInfo,
             onCropDragStart = { cropName, cropId, variety, screenOffset ->
                 isDraggingCrop = true
@@ -563,9 +571,7 @@ fun FarmCanvasView(
                 dragCropId = cropId
                 dragVariety = variety
                 dragTouchPos = screenOffset
-                if (isVegetableOverlayVisible) {
-                    onToggleVegetableOverlay()
-                }
+                // Overlay slides off-screen via graphicsLayer and hides immediately on drag start
             },
             onCropDragging = { screenOffset ->
                 dragTouchPos = screenOffset
@@ -573,9 +579,7 @@ fun FarmCanvasView(
             onCropDragEnd = { dropOffset ->
                 if (isDraggingCrop) {
                     val dropWorld = TopDownProjection.screenToWorld(dropOffset.x, dropOffset.y, liveCamera)
-                    isDraggingCrop = false
 
-                    // Direct planting on centered grid within garden bounds
                     if (dropWorld.x >= 0f && dropWorld.x <= yardWidthM &&
                         dropWorld.y >= 0f && dropWorld.y <= yardHeightM
                     ) {
@@ -593,7 +597,15 @@ fun FarmCanvasView(
                     } else {
                         editViewModel.reportInvalidDropLocation("Paki-drop ang pananim sa loob ng garden grid.")
                     }
+
+                    // First dismiss the vegetable catalog overlay so it stays hidden and cannot come back
+                    onDismissVegetableOverlay()
+                    isDraggingCrop = false
                 }
+            },
+            onCropDragCancel = {
+                onDismissVegetableOverlay()
+                isDraggingCrop = false
             },
             onPlantDirectly = { cropName, cropId, variety ->
                 val target = selectedPlot ?: editUiState.plots.firstOrNull()
@@ -605,8 +617,16 @@ fun FarmCanvasView(
                         variety = variety
                     )
                 }
+                // Dismiss overlay so the newly planted crop is immediately visible on canvas
+                onDismissVegetableOverlay()
             },
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .graphicsLayer {
+                    // Completely hide the vegetable catalog when dragging or dismissed
+                    alpha = if (hideTray) 0f else 1f
+                    translationY = if (hideTray) size.height.coerceAtLeast(1200f) else 0f
+                }
         )
 
         // ── 5. FLOATING DRAG PREVIEW BUBBLE (With Dynamic Companion Glow & Badges) ────
@@ -650,14 +670,15 @@ fun FarmCanvasView(
                         .border(2.5.dp, borderColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Canvas(modifier = Modifier.size(44.dp)) {
-                        CropSvgRenderer.drawCropSvg(
-                            drawScope = this,
-                            cropName = dragCropName,
-                            center = Offset(size.width / 2f, size.height / 2f),
-                            sizePx = size.width * 0.85f
-                        )
-                    }
+                    val dragHeroRes = getCropHeroDrawable(dragCropName)
+                    Image(
+                        painter = painterResource(id = dragHeroRes),
+                        contentDescription = dragCropName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                    )
 
                     if (dragCompanionAnalysis?.status == NeighborStatus.ANTAGONIST) {
                         Surface(

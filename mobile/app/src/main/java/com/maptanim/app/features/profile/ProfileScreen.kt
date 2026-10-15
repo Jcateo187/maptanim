@@ -62,27 +62,27 @@ fun ProfileScreen(
         topBar = {
             Surface(
                 color = Color.White,
+                shadowElevation = 2.dp,
                 border = BorderStroke(1.dp, CardBorderColor),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
+                modifier = Modifier.fillMaxWidth()
             ) {
-                PrimaryTabRow(
-                    selectedTabIndex = uiState.selectedTab.coerceIn(0, 1),
-                    containerColor = Color.White,
-                    contentColor = LushGreen,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    indicator = {
-                        TabRowDefaults.PrimaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(selectedTabIndex = uiState.selectedTab.coerceIn(0, 1)),
-                            color = LushGreen,
-                            height = 3.dp
-                        )
-                    },
-                    divider = {}
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
+                    PrimaryTabRow(
+                        selectedTabIndex = uiState.selectedTab.coerceIn(0, 1),
+                        containerColor = Color.White,
+                        contentColor = LushGreen,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        indicator = {
+                            TabRowDefaults.PrimaryIndicator(
+                                modifier = Modifier.tabIndicatorOffset(selectedTabIndex = uiState.selectedTab.coerceIn(0, 1)),
+                                color = LushGreen,
+                                height = 3.dp
+                            )
+                        },
+                        divider = {}
+                    ) {
                     Tab(
                         selected = uiState.selectedTab == 0,
                         onClick = { viewModel.selectTab(0) },
@@ -126,16 +126,27 @@ fun ProfileScreen(
                     )
                 }
             }
+        }
         },
         bottomBar = {
             MainBottomNavBar(
                 selectedRoute = Routes.PROFILE,
                 onNavigate = { route ->
                     if (route != Routes.PROFILE) {
-                        navController.navigate(route) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                        if (route == Routes.HOME) {
+                            val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+                            if (!popped) {
+                                navController.navigate(Routes.HOME) {
+                                    popUpTo(0) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        } else {
+                            navController.navigate(route) {
+                                popUpTo(Routes.HOME) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     }
                 }

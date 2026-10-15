@@ -10,6 +10,7 @@ import com.maptanim.app.domain.model.CommunityComment
 import com.maptanim.app.domain.model.CommunityPost
 import com.maptanim.app.domain.repository.CommunityRepository
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,6 +117,38 @@ class CommunityRepositoryImpl(
         val newId = "post_${System.currentTimeMillis()}"
         val sanitizedAuthor = authorName.trim()
 
+        // Upload attached local image to Supabase Storage so all users and admins can see it
+        var resolvedImageUrl: String? = if (imageUrl?.startsWith("http://") == true || imageUrl?.startsWith("https://") == true) imageUrl else null
+        if (!imageUrl.isNullOrBlank() && resolvedImageUrl == null) {
+            val localFile = java.io.File(imageUrl)
+            if (localFile.exists()) {
+                try {
+                    val bytes = localFile.readBytes()
+                    val fileName = "post_${newId}_${java.util.UUID.randomUUID().toString().take(6)}.jpg"
+                    val uploadUrl = java.net.URL("${SupabaseClient.SUPABASE_URL}/storage/v1/object/crop-images/$fileName")
+                    val conn = uploadUrl.openConnection() as java.net.HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.setRequestProperty("apikey", SupabaseClient.SUPABASE_ANON_KEY)
+                    conn.setRequestProperty("Authorization", "Bearer ${SupabaseClient.SUPABASE_ANON_KEY}")
+                    conn.setRequestProperty("Content-Type", "image/jpeg")
+                    conn.doOutput = true
+                    conn.outputStream.use { os ->
+                        os.write(bytes)
+                    }
+                    val code = conn.responseCode
+                    if (code in 200..299) {
+                        resolvedImageUrl = "${SupabaseClient.SUPABASE_URL}/storage/v1/object/public/crop-images/$fileName"
+                        android.util.Log.d("CommunityRepo", "Successfully uploaded post image to Supabase: $resolvedImageUrl")
+                    } else {
+                        android.util.Log.e("CommunityRepo", "Failed to upload post image to Supabase Storage: HTTP $code")
+                    }
+                    conn.disconnect()
+                } catch (e: Exception) {
+                    android.util.Log.e("CommunityRepo", "Error uploading image to Supabase", e)
+                }
+            }
+        }
+
         val dto = CommunityPostDto(
             id = newId,
             author_id = currentUserId,
@@ -123,7 +156,7 @@ class CommunityRepositoryImpl(
             category = category,
             title = title,
             content = content,
-            image_url = imageUrl,
+            image_url = resolvedImageUrl,
             likes_count = 0,
             comments_count = 0,
             is_pinned = false,
@@ -140,7 +173,7 @@ class CommunityRepositoryImpl(
                 category = category,
                 title = title,
                 content = content,
-                imageUrl = imageUrl,
+                imageUrl = resolvedImageUrl,
                 likesCount = 0,
                 commentsCount = 0,
                 timestamp = "Just now",
@@ -165,6 +198,37 @@ class CommunityRepositoryImpl(
         return result
     }
 
+    override suspend fun updatePost(
+        postId: String,
+        title: String,
+        content: String,
+        category: String
+    ): Result<Unit> {
+        val result = remoteDataSource.updatePost(postId, title, content, category)
+        if (result.isSuccess) {
+            postsState.value = postsState.value.map { post ->
+                if (post.id == postId) {
+                    post.copy(title = title, content = content, category = category)
+                } else post
+            }
+        }
+        return result
+    }
+
+    override suspend fun deletePost(postId: String): Result<Unit> {
+        val currentUserId = try {
+            SupabaseClient.client.auth.currentUserOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
+        val result = remoteDataSource.deletePost(postId)
+        if (result.isSuccess) {
+            postsState.value = postsState.value.filter { it.id != postId }
+            CommunityPreferencesManager.getInstance().removeMyPostId(currentUserId, postId)
+        }
+        return result
+    }
+
     override suspend fun addComment(postId: String, content: String, authorName: String) {
         val newId = "comm_${System.currentTimeMillis()}"
         val sanitizedAuthor = authorName.trim()
@@ -179,7 +243,8 @@ class CommunityRepositoryImpl(
             postId = postId,
             authorName = sanitizedAuthor,
             content = content,
-            timestamp = "Just now"
+            timestamp = "Just now",
+            authorId = currentUserId
         )
         commentsState.value = commentsState.value + newComment
 

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.renderer.canvas
+package com.maptanim.app.features.farm.renderer.canvas
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -38,18 +38,16 @@ object CropSvgRenderer {
             clean.contains("carrot") || clean.contains("karot") -> drawCarrot(drawScope, cx, cy, r)
             clean.contains("tomato") || clean.contains("kamatis") -> drawTomato(drawScope, cx, cy, r)
             clean.contains("eggplant") || clean.contains("talong") -> drawEggplant(drawScope, cx, cy, r)
-            clean.contains("pechay") || clean.contains("bokchoy") || clean.contains("pakchoi") -> drawPechay(drawScope, cx, cy, r)
-            clean.contains("corn") || clean.contains("mais") -> drawCorn(drawScope, cx, cy, r)
-            clean.contains("onion") || clean.contains("sibuyas") -> drawOnion(drawScope, cx, cy, r)
+            clean.contains("pechay") || clean.contains("petsay") || clean.contains("bokchoy") -> drawPechay(drawScope, cx, cy, r)
+            clean.contains("greenonion") || clean.contains("scallion") || clean.contains("dahonngsibuyas") || clean.contains("onion") || clean.contains("sibuyas") -> drawOnion(drawScope, cx, cy, r)
+            clean.contains("potato") || clean.contains("patatas") -> drawPotato(drawScope, cx, cy, r)
             clean.contains("cabbage") || clean.contains("repolyo") -> drawCabbage(drawScope, cx, cy, r)
             clean.contains("lettuce") || clean.contains("litsugas") -> drawLettuce(drawScope, cx, cy, r)
             clean.contains("ampalaya") || clean.contains("bittergourd") -> drawAmpalaya(drawScope, cx, cy, r)
-            clean.contains("okra") -> drawOkra(drawScope, cx, cy, r)
-            clean.contains("kangkong") || clean.contains("waterspinach") -> drawKangkong(drawScope, cx, cy, r)
             clean.contains("pumpkin") || clean.contains("squash") || clean.contains("kalabasa") -> drawPumpkin(drawScope, cx, cy, r)
-            clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") -> drawSili(drawScope, cx, cy, r)
+            clean.contains("bellpepper") || clean.contains("sweetpepper") || clean.contains("atsal") || clean.contains("pepper") || clean.contains("sili") -> drawBellPepper(drawScope, cx, cy, r)
             clean.contains("pipino") || clean.contains("cucumber") -> drawPipino(drawScope, cx, cy, r)
-            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> drawSitaw(drawScope, cx, cy, r)
+            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("yardlong") || clean.contains("polebean") || clean.contains("beans") -> drawSitaw(drawScope, cx, cy, r)
             else -> drawGenericCrop(drawScope, cx, cy, r)
         }
     }
@@ -451,6 +449,100 @@ object CropSvgRenderer {
 
         // Leaf cap at top
         ds.drawCircle(Color(0xFF2E7D32), (r * 0.15f).coerceAtLeast(2f), Offset(cx, cy - r * 0.7f))
+    }
+
+    // 16. Potato (Golden-brown earthy tuber + dark green bushy leaves + eyes)
+    private fun drawPotato(ds: DrawScope, cx: Float, cy: Float, r: Float) {
+        // Bushy green leaves
+        val leafGreen = Color(0xFF2E7D32)
+        val leafPath = Path().apply {
+            moveTo(cx, cy - r * 0.2f)
+            cubicTo(cx - r * 0.5f, cy - r * 0.5f, cx - r * 0.4f, cy - r * 0.85f, cx, cy - r * 0.8f)
+            cubicTo(cx + r * 0.4f, cy - r * 0.85f, cx + r * 0.5f, cy - r * 0.5f, cx, cy - r * 0.2f)
+            close()
+        }
+        ds.drawPath(leafPath, leafGreen)
+
+        // Oval Golden-earth Tuber
+        val tuber = Path().apply {
+            moveTo(cx - r * 0.55f, cy + r * 0.1f)
+            cubicTo(cx - r * 0.6f, cy - r * 0.35f, cx + r * 0.6f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.1f)
+            cubicTo(cx + r * 0.5f, cy + r * 0.65f, cx - r * 0.5f, cy + r * 0.65f, cx - r * 0.55f, cy + r * 0.1f)
+            close()
+        }
+        ds.drawPath(tuber, Color(0xFFD4A373))
+
+        // Skin texture / eyes
+        val eyeColor = Color(0xFFBC6C25)
+        val eyeSize = (r * 0.08f).coerceAtLeast(1.5f)
+        ds.drawCircle(eyeColor, radius = eyeSize, center = Offset(cx - r * 0.25f, cy))
+        ds.drawCircle(eyeColor, radius = eyeSize * 0.8f, center = Offset(cx + r * 0.22f, cy - r * 0.1f))
+        ds.drawCircle(eyeColor, radius = eyeSize, center = Offset(cx + r * 0.1f, cy + r * 0.35f))
+        ds.drawCircle(eyeColor, radius = eyeSize * 0.7f, center = Offset(cx - r * 0.15f, cy + r * 0.4f))
+    }
+
+    // 17. Bell Pepper / Siling Atsal (Thick-walled blocky 3-lobed sweet pepper + calyx & stem)
+    private fun drawBellPepper(ds: DrawScope, cx: Float, cy: Float, r: Float) {
+        val pepperColor = Color(0xFFC62828)
+        val shadowColor = Color(0xFF8E0000)
+        val highlightColor = Color(0xFFFF8A80).copy(alpha = 0.55f)
+
+        // Left lobe
+        val leftLobe = Path().apply {
+            moveTo(cx - r * 0.15f, cy - r * 0.45f)
+            cubicTo(cx - r * 0.65f, cy - r * 0.4f, cx - r * 0.65f, cy + r * 0.45f, cx - r * 0.25f, cy + r * 0.65f)
+            cubicTo(cx - r * 0.1f, cy + r * 0.65f, cx - r * 0.05f, cy, cx - r * 0.15f, cy - r * 0.45f)
+            close()
+        }
+        ds.drawPath(leftLobe, shadowColor)
+
+        // Right lobe
+        val rightLobe = Path().apply {
+            moveTo(cx + r * 0.15f, cy - r * 0.45f)
+            cubicTo(cx + r * 0.65f, cy - r * 0.4f, cx + r * 0.65f, cy + r * 0.45f, cx + r * 0.25f, cy + r * 0.65f)
+            cubicTo(cx + r * 0.1f, cy + r * 0.65f, cx + r * 0.05f, cy, cx + r * 0.15f, cy - r * 0.45f)
+            close()
+        }
+        ds.drawPath(rightLobe, shadowColor)
+
+        // Center primary lobe (blocky front face)
+        val centerLobe = Path().apply {
+            moveTo(cx, cy - r * 0.5f)
+            cubicTo(cx - r * 0.4f, cy - r * 0.45f, cx - r * 0.4f, cy + r * 0.55f, cx, cy + r * 0.7f)
+            cubicTo(cx + r * 0.4f, cy + r * 0.55f, cx + r * 0.4f, cy - r * 0.45f, cx, cy - r * 0.5f)
+            close()
+        }
+        ds.drawPath(centerLobe, pepperColor)
+
+        // Glossy vertical highlights on lobes
+        ds.drawLine(
+            color = highlightColor,
+            start = Offset(cx - r * 0.18f, cy - r * 0.3f),
+            end = Offset(cx - r * 0.18f, cy + r * 0.4f),
+            strokeWidth = (r * 0.08f).coerceAtLeast(1.5f),
+            cap = StrokeCap.Round
+        )
+
+        // Calyx (Crown leaves on top)
+        val calyx = Path().apply {
+            moveTo(cx - r * 0.3f, cy - r * 0.45f)
+            lineTo(cx - r * 0.15f, cy - r * 0.35f)
+            lineTo(cx, cy - r * 0.45f)
+            lineTo(cx + r * 0.15f, cy - r * 0.35f)
+            lineTo(cx + r * 0.3f, cy - r * 0.45f)
+            lineTo(cx + r * 0.2f, cy - r * 0.55f)
+            lineTo(cx, cy - r * 0.5f)
+            lineTo(cx - r * 0.2f, cy - r * 0.55f)
+            close()
+        }
+        ds.drawPath(calyx, Color(0xFF2E7D32))
+
+        // Thick curved green stem
+        val stem = Path().apply {
+            moveTo(cx, cy - r * 0.48f)
+            cubicTo(cx - r * 0.05f, cy - r * 0.7f, cx + r * 0.15f, cy - r * 0.85f, cx + r * 0.25f, cy - r * 0.9f)
+        }
+        ds.drawPath(stem, Color(0xFF1B5E20), style = Stroke((r * 0.13f).coerceAtLeast(2f), cap = StrokeCap.Round))
     }
 
     // Generic sprout

@@ -59,7 +59,7 @@ object BedAgronomicAdvisor {
                 }
             }
 
-            lower.contains("eggplant") || lower.contains("talong") -> {
+            lower.contains("eggplant") || lower.contains("talong") || lower.contains("bell pepper") || lower.contains("sweet pepper") || lower.contains("atsal") -> {
                 when {
                     daysPlanted < 25 -> AgronomicGuidanceInsight(
                         stageName = "Establishment",
@@ -104,7 +104,7 @@ object BedAgronomicAdvisor {
                 }
             }
 
-            lower.contains("sitaw") || lower.contains("bean") || lower.contains("legume") -> {
+            lower.contains("sitaw") || lower.contains("bean") || lower.contains("legume") || lower.contains("yardlong") || lower.contains("stringbean") -> {
                 when {
                     daysPlanted < 20 -> AgronomicGuidanceInsight(
                         stageName = "Vining Stage",
@@ -123,17 +123,23 @@ object BedAgronomicAdvisor {
                 }
             }
 
-            lower.contains("okra") -> {
-                AgronomicGuidanceInsight(
-                    stageName = if (daysPlanted < 30) "Vegetative Stage" else "Pod Bearing",
-                    managementProtocolTitle = if (daysPlanted < 30) "Sunlight & Drainage Protocol" else "Tender Pod Snapping",
-                    scientificBasis = "Malvaceae Agronomic Guide: Okra thrives in full tropical heat and well-draining loam. Pods mature 4–6 days after flower opening.",
-                    recommendedCareAction = if (daysPlanted < 30)
-                        "Ensure 6+ hours direct tropical sun; okra is naturally drought tolerant once established."
-                    else
-                        "Harvest pods when 3–4 inches long; pods should snap cleanly at tip before becoming woody.",
-                    inspectionStatusText = "Normal okra vigor. Tap [Inspect] to log pod development."
-                )
+            lower.contains("potato") || lower.contains("patatas") -> {
+                when {
+                    daysPlanted < 30 -> AgronomicGuidanceInsight(
+                        stageName = "Emergence & Foliage",
+                        managementProtocolTitle = "Hilling Up & Stolon Care",
+                        scientificBasis = "Philippine Highland Solanaceae Protocol: Mounding loose friable soil around the base of developing stems promotes secondary stolon formation and prevents green solanine poisoning of shallow tubers.",
+                        recommendedCareAction = "Hill up loose soil and mature compost 10–15 cm around stem bases. Avoid overwatering.",
+                        inspectionStatusText = "Active vegetative vigor. Tap [Inspect] to verify stem height and hilling."
+                    )
+                    else -> AgronomicGuidanceInsight(
+                        stageName = "Tuber Bulking & Maturation",
+                        managementProtocolTitle = "Soil Moisture Stability & Skin Setting",
+                        scientificBasis = "Tuber Physiology: Stable moisture prevents hollow-heart and knobby malformations. Stop watering 10 days before harvest to allow periderm skin to set.",
+                        recommendedCareAction = "Maintain uniform soil moisture. Withhold irrigation when vines yellow to cure tuber skins.",
+                        inspectionStatusText = "Tuber bulking active. Tap [Inspect] to log harvest readiness."
+                    )
+                }
             }
 
             else -> {

@@ -21,5 +21,9 @@ data class CropDto(
     @SerialName("optimal_ph_max") val optimal_ph_max: Float? = 7.0f,
     @SerialName("suitable_soils") val suitable_soils: List<String>? = emptyList(),
     @SerialName("image_url") val image_url: String? = null,
+    @SerialName("companion_plants_good") val companion_plants_good: List<String>? = null,
+    @SerialName("companion_plants_bad") val companion_plants_bad: List<String>? = null,
+    @SerialName("common_pests") val common_pests: List<String>? = null,
+    @SerialName("harvest_indicators") val harvest_indicators: String? = null,
     val description: String? = null
 )

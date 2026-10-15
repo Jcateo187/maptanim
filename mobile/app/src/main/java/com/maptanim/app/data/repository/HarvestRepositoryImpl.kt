@@ -30,6 +30,10 @@ class HarvestRepositoryImpl(
     override suspend fun recordHarvest(record: HarvestRecord) {
         harvestDao.upsertHarvest(record.toEntity())
 
+        if (record.farmId.contains("guest", ignoreCase = true)) {
+            return
+        }
+
         val dto = record.toDto()
         val result = remoteDataSource.recordHarvest(dto)
         if (result.isFailure) {
@@ -47,6 +51,9 @@ class HarvestRepositoryImpl(
     }
 
     suspend fun fetchFromRemote(farmId: String) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (farmId.contains("guest", ignoreCase = true)) {
+            return@withContext
+        }
         val result = remoteDataSource.getHarvestsByFarm(farmId)
         result.getOrNull()?.forEach { dto ->
             harvestDao.upsertHarvest(dto.toEntity())
@@ -64,10 +71,19 @@ private fun HarvestRecord.toDto() = HarvestRecordDto(
     cropVariety = cropVariety,
     plantedDate = plantedDate,
     harvestedAt = harvestedAt,
-    harvestedDate = try { harvestedAt.take(10) } catch (_: Exception) { null },
+    harvestedDate = try { if (harvestedAt.length >= 10) harvestedAt.take(10) else null } catch (_: Exception) { null },
     growingDurationDays = growingDurationDays,
     yieldKg = yieldKg,
+    yieldUnits = quantity.toInt().takeIf { it > 0 },
+    qualityGrade = when {
+        qualityRating >= 5 -> "Grade A"
+        qualityRating >= 3 -> "Grade B"
+        else -> "Grade C"
+    },
     qualityRating = qualityRating,
+    seasonalInsight = "Optimal harvest window observed",
+    rotationSuggestion = null,
+    fallowUntilDate = null,
     notes = notes
 )
 

@@ -43,8 +43,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
 import com.maptanim.app.features.farm.renderer.canvas.CardSvgRenderer
+import com.maptanim.app.features.farm.dialogs.vegetables_information.*
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Eye-Friendly, Glare-Free, High-Contrast Color Palette
@@ -95,11 +99,12 @@ fun CropInformationDialog(
             decorFitsSystemWindows = false
         )
     ) {
+        ConfigureDialogSystemBars(isLightStatusBar = true, isLightNavigationBar = true)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SurfaceBg)
-                .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -260,6 +265,7 @@ private fun TopDossierAppBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -843,18 +849,33 @@ private fun ExpandableCropRelationGrid(
                                 .height(120.dp)
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
-                                // SVG takes the whole card
-                                Canvas(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp)
-                                ) {
-                                    CropSvgRenderer.drawCropSvg(
-                                        drawScope = this,
-                                        cropName = item.name,
-                                        center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
-                                        sizePx = minOf(size.width, size.height) * 0.85f
+                                // High-detail image or SVG fallback
+                                val imageModel = remember(item) { CropCardImageResolver.resolvePlantRelationImage(item) }
+                                if (imageModel != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(imageModel)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = item.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(bottom = 22.dp, top = 8.dp, start = 8.dp, end = 8.dp)
                                     )
+                                } else {
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp)
+                                    ) {
+                                        CropSvgRenderer.drawCropSvg(
+                                            drawScope = this,
+                                            cropName = item.name,
+                                            center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
+                                            sizePx = minOf(size.width, size.height) * 0.85f
+                                        )
+                                    }
                                 }
 
                                 // Status Badge
@@ -1100,19 +1121,34 @@ private fun ExpandablePestDiseaseGrid(
                                 .height(115.dp)
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
-                                // Pest / Disease SVG takes the whole card
-                                Canvas(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp)
-                                ) {
-                                    CardSvgRenderer.drawPestDiseaseSvg(
-                                        drawScope = this,
-                                        isPest = isPest,
-                                        severity = item.severity,
-                                        center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
-                                        sizePx = minOf(size.width, size.height) * 0.78f
+                                // High-detail image or SVG fallback
+                                val imageModel = remember(item) { CropCardImageResolver.resolvePestDiseaseImage(item) }
+                                if (imageModel != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(imageModel)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = item.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(bottom = 22.dp, top = 8.dp, start = 8.dp, end = 8.dp)
                                     )
+                                } else {
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp)
+                                    ) {
+                                        CardSvgRenderer.drawPestDiseaseSvg(
+                                            drawScope = this,
+                                            isPest = isPest,
+                                            severity = item.severity,
+                                            center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
+                                            sizePx = minOf(size.width, size.height) * 0.78f
+                                        )
+                                    }
                                 }
 
                                 // Top Severity Badge
@@ -1227,18 +1263,33 @@ private fun ExpandableCrittersGrid(
                                 .height(115.dp)
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
-                                // Beneficial Critter SVG takes the whole card
-                                Canvas(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp)
-                                ) {
-                                    CardSvgRenderer.drawBeneficialCritterSvg(
-                                        drawScope = this,
-                                        name = item.name,
-                                        center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
-                                        sizePx = minOf(size.width, size.height) * 0.78f
+                                // High-detail image or SVG fallback
+                                val imageModel = remember(item) { CropCardImageResolver.resolveCritterImage(item) }
+                                if (imageModel != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(imageModel)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = item.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(bottom = 22.dp, top = 8.dp, start = 8.dp, end = 8.dp)
                                     )
+                                } else {
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp)
+                                    ) {
+                                        CardSvgRenderer.drawBeneficialCritterSvg(
+                                            drawScope = this,
+                                            name = item.name,
+                                            center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
+                                            sizePx = minOf(size.width, size.height) * 0.78f
+                                        )
+                                    }
                                 }
 
                                 // Top Check Status Icon

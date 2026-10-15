@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,12 +35,18 @@ import androidx.navigation.NavController
 import com.maptanim.app.R
 import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.features.farm.components.BackyardCropAgroData
-import com.maptanim.app.features.farm.dialogs.CalendarScreenTab
+import com.maptanim.app.features.farm.schedule.CalendarScreenTab
 import com.maptanim.app.features.farm.dialogs.CropCareDssDialog
 import com.maptanim.app.features.farm.dialogs.CropScheduleCalendarScreen
+import com.maptanim.app.features.farm.dialogs.SetPlantingDateDialog
+import com.maptanim.app.data.repository.RepositoryProvider
+import com.maptanim.app.features.farm.schedule.CheckUpRecorder
+import com.maptanim.app.features.farm.schedule.CropScheduleStatus
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
-import com.maptanim.app.features.home.viewmodel.HomeViewModel
+import com.maptanim.app.navigation.MainBottomNavBar
 import com.maptanim.app.navigation.Routes
+import com.maptanim.app.features.farm.schedule.resolveScheduleStatus
+import com.maptanim.app.features.home.viewmodel.HomeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -87,7 +94,8 @@ data class GrowingVegetableItem(
     val isCalendarStarted: Boolean,
     val isFutureDate: Boolean,
     val targetPlantingDate: LocalDate?,
-    val plotLabel: String
+    val plotLabel: String,
+    val scheduleStatus: CropScheduleStatus = CropScheduleStatus.NoSchedule
 )
 
 private data class CalendarTarget(
@@ -104,7 +112,9 @@ private data class CheckUpTarget(
     val varietyName: String,
     val gardenLabel: String,
     val plotId: String,
-    val stage: ManagementStage
+    val stage: ManagementStage,
+    val scheduleStatus: CropScheduleStatus? = null,
+    val plantedDateStr: String? = null
 )
 
 /**
@@ -125,21 +135,25 @@ fun GrowingScreen(
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
 
+    val allLogsFlow = remember { RepositoryProvider.cropLogRepository.observeAllLogs() }
+    val allLogs by allLogsFlow.collectAsState(initial = emptyList())
+
     var activeCalendarTarget by remember { mutableStateOf<CalendarTarget?>(null) }
     var activeCheckUpTarget by remember { mutableStateOf<CheckUpTarget?>(null) }
+    var showSetPlantingDateForTarget by remember { mutableStateOf<CalendarTarget?>(null) }
     var activeGrowingTab by remember { mutableStateOf(GrowingScreenTab.GROWING) }
 
     val today = remember { LocalDate.now() }
 
     // Build garden items and categorize crops into Growing vs Planning
-    val gardens = remember(uiState.plots, today) {
+    val gardens = remember(uiState.plots, today, uiState.activeFarm?.farmName) {
         val plots = uiState.plots
 
         if (plots.isEmpty()) {
             listOf(
                 GrowingGardenItem(
                     id = "garden_default",
-                    name = "Main Garden",
+                    name = uiState.activeFarm?.farmName?.takeIf { it.isNotBlank() } ?: "Aking Hardin",
                     allCrops = emptyList(),
                     growingCrops = emptyList(),
                     planningCrops = emptyList()
@@ -147,17 +161,22 @@ fun GrowingScreen(
             )
         } else {
             val grouped = plots.groupBy { it.plotLabel.substringBefore(" (Z") }
-            grouped.map { (gardenLabel, plotList) ->
+            val individualGardens = grouped.map { (gardenLabel, plotList) ->
                 val allVegetables = plotList.mapNotNull { p ->
                     val name = p.cropName?.trim()
-                    if (!name.isNullOrBlank() && !name.equals("Bed", ignoreCase = true)) {
+                    if (!name.isNullOrBlank() && !name.equals("Bed", ignoreCase = true) && !name.equals("Garden", ignoreCase = true)) {
                         val parsedPlantDate = try {
                             if (!p.plantedDate.isNullOrBlank()) LocalDate.parse(p.plantedDate.take(10)) else null
                         } catch (_: Exception) { null }
 
-                        val isFuture = parsedPlantDate != null && parsedPlantDate.isAfter(today)
-                        // Only crops that have started a schedule on or before this day belong in Growing
-                        val isGrowingOnThisDay = p.isMonitoringStarted && parsedPlantDate != null && !isFuture
+                        val schedStatus = resolveScheduleStatus(
+                            plantedDate = p.plantedDate,
+                            cropName = name,
+                            isMonitoringStarted = p.isMonitoringStarted && !p.plantedDate.isNullOrBlank(),
+                            today = today
+                        )
+                        val isFuture = schedStatus is CropScheduleStatus.Upcoming
+                        val isGrowingOnThisDay = schedStatus.canCheckUp
 
                         GrowingVegetableItem(
                             plotId = p.id,
@@ -165,12 +184,13 @@ fun GrowingScreen(
                             cropVariety = p.cropVariety,
                             daysPlanted = p.daysPlanted,
                             growthStage = p.growthStage,
-                            stage = ManagementStage.fromIndex(p.growthStage - 1),
+                            stage = schedStatus.stageOrNull ?: ManagementStage.fromIndex(p.growthStage - 1),
                             plantedDateStr = p.plantedDate,
                             isCalendarStarted = isGrowingOnThisDay,
                             isFutureDate = isFuture,
                             targetPlantingDate = parsedPlantDate,
-                            plotLabel = p.plotLabel
+                            plotLabel = p.plotLabel,
+                            scheduleStatus = schedStatus
                         )
                     } else null
                 }
@@ -179,20 +199,37 @@ fun GrowingScreen(
                 val planning = allVegetables.filter { !it.isCalendarStarted }
 
                 GrowingGardenItem(
-                    id = plotList.first().id,
+                    id = plotList.first().id.substringBefore("_zone_"),
                     name = gardenLabel,
                     allCrops = allVegetables,
                     growingCrops = growing,
                     planningCrops = planning
                 )
             }
+
+            if (individualGardens.isNotEmpty()) {
+                val allCropsList = individualGardens.flatMap { it.allCrops }
+                val allGrowingList = individualGardens.flatMap { it.growingCrops }
+                val allPlanningList = individualGardens.flatMap { it.planningCrops }
+                val allGardensItem = GrowingGardenItem(
+                    id = "all_gardens",
+                    name = "Lahat (All)",
+                    allCrops = allCropsList,
+                    growingCrops = allGrowingList,
+                    planningCrops = allPlanningList
+                )
+                listOf(allGardensItem) + individualGardens
+            } else {
+                individualGardens
+            }
         }
     }
 
-    // Active selected garden (defaults to initialGardenId or the first garden)
+    // Active selected garden (defaults to initialGardenId, or "all_gardens" if available, or first garden)
     var selectedGardenId by remember(gardens, initialGardenId) {
         mutableStateOf(
             gardens.firstOrNull { it.id == initialGardenId }?.id
+                ?: gardens.firstOrNull { it.id == "all_gardens" }?.id
                 ?: gardens.firstOrNull { it.growingCrops.isNotEmpty() || it.planningCrops.isNotEmpty() }?.id
                 ?: gardens.firstOrNull()?.id
                 ?: ""
@@ -238,8 +275,13 @@ fun GrowingScreen(
                             fontWeight = FontWeight.ExtraBold,
                             color = DeepBlack
                         )
+                        val subtitleText = if (selectedGarden?.id == "all_gardens") {
+                            "Lahat ng Pananim • ${gardens.size - 1} Hardin"
+                        } else {
+                            "${selectedGarden?.name ?: "Hardin"} • ${gardens.size} Hardin"
+                        }
                         Text(
-                            text = "${selectedGarden?.name ?: "Hardin"} • ${gardens.size} Hardin",
+                            text = subtitleText,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = MutedText
@@ -247,6 +289,28 @@ fun GrowingScreen(
                     }
                 }
             }
+        },
+        bottomBar = {
+            MainBottomNavBar(
+                selectedRoute = Routes.GROWING,
+                onNavigate = { route ->
+                    if (route == Routes.HOME) {
+                        val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+                        if (!popped) {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(0) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    } else if (route != Routes.GROWING) {
+                        navController.navigate(route) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+            )
         },
         containerColor = SurfaceBg
     ) { innerPadding ->
@@ -285,7 +349,9 @@ fun GrowingScreen(
                             }
 
                             Surface(
-                                onClick = { selectedGardenId = garden.id },
+                                onClick = {
+                                    selectedGardenId = garden.id
+                                },
                                 shape = RoundedCornerShape(12.dp),
                                 color = Color.White,
                                 shadowElevation = if (isSelected) 4.dp else 1.5.dp,
@@ -440,6 +506,7 @@ fun GrowingScreen(
                     } else {
                         selectedGarden?.planningCrops?.size ?: 0
                     }
+                    val gardenTitle = if (selectedGarden?.id == "all_gardens") "Lahat ng Hardin" else (selectedGarden?.name ?: "Hardin")
                     Text(
                         text = if (activeGrowingTab == GrowingScreenTab.GROWING)
                             "MGA NAKATANIM NA GULAY ($count)"
@@ -451,7 +518,7 @@ fun GrowingScreen(
                         color = MutedText
                     )
                     Text(
-                        text = selectedGarden?.name ?: "Hardin",
+                        text = gardenTitle,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
                         color = ForestGreen
@@ -468,6 +535,8 @@ fun GrowingScreen(
 
             if (displayedCrops.isEmpty()) {
                 item {
+                    val isAllGardens = selectedGarden?.id == "all_gardens"
+                    val currentGardenName = selectedGarden?.name ?: "Hardin"
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = CardBg,
@@ -498,26 +567,48 @@ fun GrowingScreen(
                                 color = DeepBlack
                             )
                             Text(
-                                text = if (activeGrowingTab == GrowingScreenTab.GROWING)
-                                    "Walang gulay na nagsimula na ng kalendaryo sa hardin na ito ngayong araw. Maaari kang pumunta sa tab na 'Planning' upang simulan ang kalendaryo o magtanim sa Farm Canvas."
-                                else
-                                    "Lahat ng nakatanim sa hardin na ito ay aktibo nang lumalaki ngayong araw, o maaari kang mag-draft ng bagong pananim sa Farm Canvas 2D.",
+                                text = if (isAllGardens) {
+                                    if (activeGrowingTab == GrowingScreenTab.GROWING)
+                                        "Walang gulay na kasalukuyang lumalaki sa anumang hardin. Maaari kang pumunta sa Hardin Screen upang magdagdag o mamahala ng iyong mga hardin."
+                                    else
+                                        "Walang nakaplanong pananim sa anumang hardin. Pumunta sa Hardin Screen upang mag-draft ng bagong pananim sa Farm Canvas."
+                                } else {
+                                    if (activeGrowingTab == GrowingScreenTab.GROWING)
+                                        "Walang gulay na kasalukuyang lumalaki sa $currentGardenName. Buksan ang 2D Canvas upang magtanim o mag-ayos ng mga gulay."
+                                    else
+                                        "Walang nakaplanong gulay sa $currentGardenName. Buksan ang 2D Canvas upang maglagay ng bagong pananim."
+                                },
                                 fontSize = 12.sp,
                                 color = MutedText,
-                                lineHeight = 17.sp
+                                lineHeight = 17.sp,
+                                textAlign = TextAlign.Center
                             )
                             Button(
-                                onClick = { navController.navigate(Routes.FARM) },
+                                onClick = {
+                                    if (isAllGardens) {
+                                        navController.navigate(Routes.FARM)
+                                    } else {
+                                        navController.navigate(Routes.farmRoute(selectedGarden?.id))
+                                    }
+                                },
                                 colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Pumunta sa Farm Canvas", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = if (isAllGardens) {
+                                        "Pumunta sa Hardin Screen"
+                                    } else {
+                                        "Pumunta sa Farm Canvas 2D ($currentGardenName)"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
                 }
             } else {
-                items(displayedCrops, key = { it.plotId }) { crop ->
+                items(displayedCrops, key = { "${it.plotId}_${it.cropName}_${it.plotLabel}" }) { crop ->
                     val profile = remember(crop.cropName) { BackyardCropAgroData.getProfile(crop.cropName) }
                     val totalDays = profile.baseDaysToHarvest
 
@@ -552,13 +643,17 @@ fun GrowingScreen(
                         } ?: "Hindi pa itinakda"
                     }
 
+                    val cropGardenLabel = remember(crop.plotLabel, selectedGarden?.name) {
+                        crop.plotLabel.substringBefore(" (Z").takeIf { it.isNotBlank() } ?: (selectedGarden?.name ?: "Garden")
+                    }
+
                     Surface(
                         onClick = {
                             // User clicks Card of vegetable -> go to Calendar screen
                             activeCalendarTarget = CalendarTarget(
                                 cropName = crop.cropName,
                                 varietyName = crop.cropVariety,
-                                gardenLabel = selectedGarden?.name ?: "Garden",
+                                gardenLabel = cropGardenLabel,
                                 plotId = crop.plotId,
                                 plantedDateStr = crop.plantedDateStr ?: LocalDate.now().toString(),
                                 isPlanningMode = (activeGrowingTab == GrowingScreenTab.PLANNING) || !crop.isCalendarStarted
@@ -602,12 +697,32 @@ fun GrowingScreen(
                                 }
 
                                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(
-                                        text = crop.cropName,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = DeepBlack
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = crop.cropName,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepBlack
+                                        )
+                                        if (selectedGarden?.id == "all_gardens") {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = SurfaceBg,
+                                                border = BorderStroke(0.6.dp, CardBorderColor)
+                                            ) {
+                                                Text(
+                                                    text = cropGardenLabel,
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = ForestGreen,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                    }
 
                                     if (activeGrowingTab == GrowingScreenTab.GROWING) {
                                         // Growth stage badge for Growing
@@ -640,6 +755,47 @@ fun GrowingScreen(
                                                 fontSize = 11.sp,
                                                 color = Charcoal,
                                                 fontWeight = FontWeight.Medium
+                                            )
+                                        }
+
+                                        // Last Check-up info for Growing tab
+                                        val latestLog = remember(allLogs, crop.cropName, crop.plotId) {
+                                            allLogs.firstOrNull {
+                                                it.cropName.equals(crop.cropName, ignoreCase = true) || it.cropPlantingId == crop.plotId
+                                            }
+                                        }
+                                        if (latestLog != null) {
+                                            val summary = remember(latestLog) { CheckUpRecorder.summarize(latestLog) }
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = summary.severity.color.copy(alpha = 0.09f),
+                                                border = BorderStroke(0.6.dp, summary.severity.color.copy(alpha = 0.4f))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(summary.severity.color)
+                                                    )
+                                                    Text(
+                                                        text = "Huling check-up: ${latestLog.date} • ${summary.severity.label}",
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = summary.severity.color
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "Wala pang check-up ngayon",
+                                                fontSize = 10.5.sp,
+                                                color = MutedText.copy(alpha = 0.7f),
+                                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                             )
                                         }
                                     } else {
@@ -687,7 +843,7 @@ fun GrowingScreen(
                                 }
                             }
 
-                            // Right side: Action Button only for Growing tab
+                            // Right side: Action Button (Check Up) only for Growing tab
                             if (activeGrowingTab == GrowingScreenTab.GROWING) {
                                 FilledTonalButton(
                                     onClick = {
@@ -695,9 +851,11 @@ fun GrowingScreen(
                                         activeCheckUpTarget = CheckUpTarget(
                                             cropName = crop.cropName,
                                             varietyName = crop.cropVariety ?: "",
-                                            gardenLabel = selectedGarden?.name ?: "Garden",
+                                            gardenLabel = cropGardenLabel,
                                             plotId = crop.plotId,
-                                            stage = crop.stage
+                                            stage = crop.scheduleStatus.stageOrNull ?: crop.stage,
+                                            scheduleStatus = crop.scheduleStatus,
+                                            plantedDateStr = crop.plantedDateStr
                                         )
                                     },
                                     shape = RoundedCornerShape(10.dp),
@@ -745,11 +903,34 @@ fun GrowingScreen(
             initialTab = if (target.isPlanningMode) CalendarScreenTab.CALENDAR else CalendarScreenTab.TODAYS_TASK,
             isPlanningMode = target.isPlanningMode,
             onStartSchedule = {
-                homeViewModel.startPlantingSchedule(target.plotId, LocalDate.now())
+                homeViewModel.startPlantingSchedule(target.plotId, target.cropName, LocalDate.now())
                 activeCalendarTarget = null
             },
+            onNavigateToCanvas = { targetPlotId ->
+                activeCalendarTarget = null
+                navController.navigate(Routes.farmRoute(targetPlotId))
+            },
             onDismiss = { activeCalendarTarget = null },
-            onReschedule = { /* Kept resilient */ }
+            onReschedule = {
+                showSetPlantingDateForTarget = target
+            }
+        )
+    }
+
+    // Modal SetPlantingDateDialog opened from Reschedule action in Calendar
+    showSetPlantingDateForTarget?.let { target ->
+        SetPlantingDateDialog(
+            cropName = target.cropName,
+            varietyName = target.varietyName,
+            gardenLabel = target.gardenLabel,
+            initialDate = target.plantedDateStr,
+            isReschedule = true,
+            onDismiss = { showSetPlantingDateForTarget = null },
+            onSaveDate = { chosenDate ->
+                homeViewModel.startPlantingSchedule(target.plotId, target.cropName, LocalDate.parse(chosenDate.take(10)))
+                showSetPlantingDateForTarget = null
+                activeCalendarTarget = target.copy(plantedDateStr = chosenDate, isPlanningMode = false)
+            }
         )
     }
 
@@ -761,6 +942,18 @@ fun GrowingScreen(
             gardenLabel = checkUp.gardenLabel,
             plotId = checkUp.plotId,
             currentStage = checkUp.stage,
+            scheduleStatus = checkUp.scheduleStatus,
+            onOpenSchedule = {
+                activeCheckUpTarget = null
+                activeCalendarTarget = CalendarTarget(
+                    cropName = checkUp.cropName,
+                    varietyName = checkUp.varietyName,
+                    gardenLabel = checkUp.gardenLabel,
+                    plotId = checkUp.plotId,
+                    plantedDateStr = checkUp.plantedDateStr ?: "",
+                    isPlanningMode = false
+                )
+            },
             onDismiss = { activeCheckUpTarget = null }
         )
     }

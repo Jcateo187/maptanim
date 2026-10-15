@@ -7,39 +7,101 @@
   "taxonomic_family": "Brassicaceae",
   "crop_type": "Leafy / Brassica",
   "growing_specifications": {
-    "days_to_harvest": "60 days",
+    "days_to_harvest": "70-90 days",
     "optimal_soil_ph": "6.0 - 6.8",
-    "optimal_temperature_c": "15 - 25 C",
-    "description": "Cool-season highland head vegetable cultivated in CAR and Bukidnon plateau regions."
+    "optimal_temperature_c": "15 - 20 C",
+    "watering_interval_days": 2,
+    "fertilize_interval_days": 10,
+    "description": "High-value temperate brassica crop cultivated in Cordillera highlands (Benguet, Mountain Province) and Bukidnon plateau, as well as lowland cool dry season. Produces compact, layered heads of crisp leaves."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Cabbage classified under Leafy / Brassica?",
+      "summary": "Cabbage is a head-forming cruciferous leafy vegetable belonging to the Brassicaceae (mustard) family alongside pechay, broccoli, and cauliflower.",
+      "points": [
+        "Cruciferous Family Morphology: Possesses cross-shaped flowers and produces overlapping waxy rosette leaves rich in glucosinolates and sulfur compounds.",
+        "Head-Forming Rosette: Central leaves fold tightly inward to form a compact spherical or flat-round head protecting the tender inner growing point.",
+        "Clubroot Susceptibility: Shares genetic vulnerability to Plasmodiophora brassicae (Clubroot), strictly requiring 2–3 year crop rotation away from brassicas."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is the harvest maturity set to 70–90 days?",
+      "summary": "Captures dense, rock-solid heads at full weight (1.5–3 kg) before outer leaves crack or internal stem bolting occurs.",
+      "points": [
+        "Nursery Germination & Plugs (Days 1–30): Seeds germinate in 4–7 days; seedlings develop 4–5 sturdy true leaves in plug trays before transplanting.",
+        "Vegetative Rosette Expansion (Days 31–50): Broad outer leaves expand outward collecting maximum sunlight for energy storage.",
+        "Head Initiation & Filling (Days 51–75): Center leaves curl inward forming a tight ball; requires high moisture and potassium (potash).",
+        "Firm Head Harvest Window (Days 75–90): Heads feel completely solid and firm to thumb pressure; cut in early morning leaving 2–3 protective wrapper leaves."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Cabbage require consistent watering every 2–3 days?",
+      "summary": "Consistent root-zone moisture is required for rapid cell expansion in overlapping head leaves and to prevent head splitting and tip-burn.",
+      "points": [
+        "High Transpiration & Water Volume: 92% of the cabbage head is water; uneven drought cycles cause bitter, fibrous leaves and small loose heads.",
+        "Head Splitting Prevention: Sudden heavy rain after prolonged dry spells causes explosive internal leaf growth that ruptures the outer head.",
+        "Calcium Tip-Burn Defense: Calcium moves only through xylem water flow; erratic watering starves inner leaf margins, turning them brown and necrotic."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Cabbage require well-drained loam with pH 6.0–6.8?",
+      "summary": "Slightly acidic to neutral fertile soil prevents Clubroot infection while providing balanced macronutrient uptake.",
+      "points": [
+        "Clubroot Suppression: Soil pH below 5.5 triggers rapid germination of dormant Plasmodiophora resting spores; applying agricultural lime keeps pH safely above 6.5.",
+        "Heavy Nutrient Mining: Deep, rich organic loam supplies substantial nitrogen for leafy canopy and potassium for dense head packing."
+      ]
+    }
   },
   "varieties": [
     {
-      "variety_id": "var_repolyo_ks_cross_f1",
-      "variety_name": "K-S Cross F1",
-      "local_name_ph": "Repolyo K-S Cross F1",
-      "growth_duration_days": 60,
+      "variety_id": "var_repolyo_kk_cross_f1",
+      "variety_name": "KK Cross F1",
+      "local_name_ph": "Repolyo KK Cross F1",
+      "growth_duration_days": 75,
       "stage_days": {
         "stage1_sprout": 5,
-        "stage2_seedling": 13,
+        "stage2_seedling": 25,
         "stage3_vegetative": 20,
-        "stage4_flowering": 16,
-        "stage5_harvest": 6
+        "stage4_flowering": 0,
+        "stage5_harvest": 25
       },
       "optimal_seasons": [
         "LOWLAND",
+        "HIGHLAND",
         "YEAR_ROUND"
       ],
       "watering_interval_days": 2,
       "fertilize_interval_days": 10,
-      "description": "Heat-tolerant flat-headed cabbage hybrid performing well in lowland tropical Philippine field conditions.",
+      "description": "Leading heat-tolerant flat-headed cabbage hybrid in the Philippines. Produces dense 1.5–2.5 kg heads with excellent shipping endurance and mild sweet flavor.",
       "sample_planted_date": "2026-08-06",
-      "sample_expected_harvest_date": "2026-10-05"
+      "sample_expected_harvest_date": "2026-10-20"
+    },
+    {
+      "variety_id": "var_repolyo_scorpio_f1",
+      "variety_name": "Scorpio F1",
+      "local_name_ph": "Repolyo Scorpio F1",
+      "growth_duration_days": 80,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 25,
+        "stage3_vegetative": 22,
+        "stage4_flowering": 0,
+        "stage5_harvest": 28
+      },
+      "optimal_seasons": [
+        "HIGHLAND"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Premier highland hybrid with strong tolerance to tip-burn and bolting, producing heavy spherical dark-green heads.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-25"
     }
   ],
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/cabbage.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/cabbage.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "author": "MapTanim Original AI Visuals",
     "license": "MapTanim Original Asset",
     "hash_sha256": "337a4b091bf2d8858dd7c9c3d1ae1a53efb320e9d4bcfb388203f472d69a129f"
   }

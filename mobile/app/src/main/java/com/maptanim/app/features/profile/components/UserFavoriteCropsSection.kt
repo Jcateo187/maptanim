@@ -1,7 +1,7 @@
 package com.maptanim.app.features.profile.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,7 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maptanim.app.features.farm.dialogs.CropEncyclopediaRegistry
-import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
+import androidx.compose.ui.res.painterResource
+import com.maptanim.app.features.farm.components.getCropHeroDrawable
 
 private val LushGreen = Color(0xFF2E7D32)
 private val DeepBlack = Color(0xFF111813)
@@ -128,6 +129,7 @@ fun UserFavoriteCropsSection(
 
 /**
  * Single Crop Card Item in the Favorite Crops horizontal list.
+ * Displays high-resolution canonical hero photograph with rounded corners and gradient scrim.
  */
 @Composable
 private fun FavoriteCropCardItem(
@@ -135,6 +137,8 @@ private fun FavoriteCropCardItem(
     localName: String,
     onClick: () -> Unit
 ) {
+    val heroResId = getCropHeroDrawable("$cropName $localName")
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
@@ -146,19 +150,13 @@ private fun FavoriteCropCardItem(
             .height(132.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // SVG vector illustration in center
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-            ) {
-                CropSvgRenderer.drawCropSvg(
-                    drawScope = this,
-                    cropName = cropName,
-                    center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
-                    sizePx = minOf(size.width, size.height) * 0.85f
-                )
-            }
+            // Full-bleed canonical hero photograph
+            Image(
+                painter = painterResource(id = heroResId),
+                contentDescription = cropName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Small red heart badge at top right
             Box(
@@ -187,12 +185,12 @@ private fun FavoriteCropCardItem(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color(0xB3000000),
-                                Color(0xE6000000)
+                                Color(0x66000000),
+                                Color(0xCC000000)
                             )
                         )
                     )
-                    .padding(horizontal = 6.dp, vertical = 5.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
             ) {
                 Column {
                     Text(
@@ -209,7 +207,7 @@ private fun FavoriteCropCardItem(
                             text = local,
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFFC8E6C9),
+                            color = Color(0xFFD4E6D2),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

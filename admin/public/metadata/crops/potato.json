@@ -1,0 +1,110 @@
+{
+  "id": "crop_potato",
+  "category": "crop",
+  "common_name": "Potato",
+  "local_name_ph": "Patatas",
+  "scientific_name": "Solanum tuberosum",
+  "taxonomic_family": "Solanaceae",
+  "crop_type": "Tuber / Highland Root & Tuber Crop",
+  "growing_specifications": {
+    "days_to_harvest": "90-105 days",
+    "optimal_soil_ph": "5.0 - 6.0",
+    "optimal_temperature_c": "15 - 22 C",
+    "watering_interval_days": 3,
+    "fertilize_interval_days": 14,
+    "description": "Premier highland cash crop in Benguet and Mountain Province, producing dense yellow and cream-fleshed tubers on deep volcanic ridges."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Potato classified under Tuber Vegetables (Solanaceae)?",
+      "summary": "Solanum tuberosum develops modified swollen underground stem structures (tubers) serving as carbohydrate energy reserves.",
+      "points": [
+        "Underground Stem Tubers: Develops on the tips of stolons, distinct from true root crops like carrots and sweet potatoes.",
+        "Solanaceous Characteristics: Compound pinnate foliage and star-shaped flowers typical of the nightshade family.",
+        "Highland Photoperiod & Thermal Adaptation: Requires cool night temperatures (15°C–20°C) to trigger tuberization."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is Potato harvested at 90–105 days following de-haulming?",
+      "summary": "Vine cutting (de-haulming) 10–14 days prior to harvest allows the tender skin to cure and set, preventing skin feathering and storage rots.",
+      "points": [
+        "Sprouting & Emergence (Days 10–20): Chitted seed tubers produce robust dark green shoots in friable soil ridges.",
+        "Stolon & Tuber Initiation (Days 35–50): Flowering coincides with rapid swelling of stolon tips into marble-sized tubers.",
+        "Tuber Bulking (Days 50–85): Maximum starch deposition and potassium uptake; requires steady moisture.",
+        "De-Haulming (Days 85–95): Cutting vines stops late blight spread and initiates suberization (skin hardening).",
+        "Dry Harvest (Days 95–105): Careful digging in dry soil preserves unblemished Grade A tubers."
+      ]
+    },
+    "watering_why": {
+      "title": "Why do Potatoes demand uniform moisture without drought-deluge cycles?",
+      "summary": "Fluctuating moisture triggers internal physiological defects including Hollow Heart and severe tuber splitting.",
+      "points": [
+        "Hollow Heart Prevention: Steady irrigation prevents irregular core expansion and star-shaped internal cavities.",
+        "Soft Rot Mitigation: Avoiding waterlogged furrows protects lenticels from asphyxiation and bacterial soft rot.",
+        "Pre-Harvest Soil Drydown: Halting irrigation 10 days before digging promotes clean, rot-resistant skins."
+      ]
+    },
+    "soil_why": {
+      "title": "Why do Potatoes thrive in slightly acidic volcanic sandy loam (pH 5.0–6.0)?",
+      "summary": "Acidic pH suppresses Common Scab bacteria while deep friable ridges facilitate unhindered tuber expansion and earthing-up.",
+      "points": [
+        "Common Scab Suppression: Streptomyces scabies thrives at pH > 6.5; acidic soil maintains clean, smooth skin.",
+        "Earthing-Up Protection: 20–25 cm ridges shield tubers from sunlight, preventing toxic solanine greening.",
+        "Zero Physical Resistance: Stone-free loam prevents deformed, cracked, and misshapen tubers."
+      ]
+    }
+  },
+  "varieties": [
+    {
+      "variety_id": "var_potato_granola",
+      "variety_name": "Granola",
+      "local_name_ph": "Patatas Granola (Benguet Standard)",
+      "growth_duration_days": 100,
+      "stage_days": {
+        "stage1_sprout": 15,
+        "stage2_seedling": 25,
+        "stage3_vegetative": 25,
+        "stage4_flowering": 20,
+        "stage5_harvest": 15
+      },
+      "optimal_seasons": [
+        "DRY",
+        "WET"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Dominant commercial table potato in the Cordillera with smooth yellow skin, deep yellow flesh, high yield, and excellent boiling quality.",
+      "sample_planted_date": "2026-10-01",
+      "sample_expected_harvest_date": "2027-01-10"
+    },
+    {
+      "variety_id": "var_potato_igorota",
+      "variety_name": "Igorota",
+      "local_name_ph": "Patatas Igorota (BPI Selection)",
+      "growth_duration_days": 105,
+      "stage_days": {
+        "stage1_sprout": 16,
+        "stage2_seedling": 24,
+        "stage3_vegetative": 28,
+        "stage4_flowering": 22,
+        "stage5_harvest": 15
+      },
+      "optimal_seasons": [
+        "DRY",
+        "WET"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "High-yielding BPI-BNCRDC release selected for superior tolerance to late blight (Phytophthora infestans) during the monsoon season.",
+      "sample_planted_date": "2026-10-01",
+      "sample_expected_harvest_date": "2027-01-15"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/potato.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/potato.png",
+    "author": "MapTanim Original Agricultural Visuals",
+    "license": "MapTanim Asset",
+    "hash_sha256": "potato_patatas_asset_hash_2026"
+  }
+}

@@ -13,9 +13,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +33,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.maptanim.app.domain.model.CommunityComment
 import com.maptanim.app.domain.model.CommunityPost
@@ -39,6 +46,7 @@ private val DeepBlack = Color(0xFF111813)
 private val CardBorderColor = Color(0xFFE0E0E0)
 private val MutedText = Color(0xFF555555)
 private val LightSurface = Color(0xFFF9FAF8)
+private val AlertRed = Color(0xFFD32F2F)
 
 /**
  * PostDetailView — Edge-to-edge discussion thread screen.
@@ -57,105 +65,176 @@ fun PostDetailView(
     onReportPost: (CommunityPost) -> Unit,
     onReportComment: (CommunityComment) -> Unit,
     onSelectRelatedPost: (CommunityPost) -> Unit = {},
+    isAuthor: Boolean = false,
+    onEditClick: () -> Unit = {},
+    onDeleteClick: () -> Unit = {},
+    onAuthorClick: () -> Unit = {},
+    onCommentAuthorClick: (authorId: String?, authorName: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var newCommentText by remember { mutableStateOf("") }
+    var showFullImageDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // ── TOP: Back Navigation & Author info & Report ──────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // ── TOP: Back Navigation & Author info & Menu/Report ─────────────
+        Surface(
+            color = Color.White,
+            shadowElevation = 1.dp,
+            border = BorderStroke(1.dp, CardBorderColor),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = DeepBlack,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(getAvatarColor(post.authorName)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Text(
-                        text = post.authorName.take(1).uppercase(),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                    IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = DeepBlack,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
 
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.clickable { onAuthorClick() }
                     ) {
-                        Text(
-                            text = post.authorName,
-                            color = DeepBlack,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val hashtag = when (post.category.uppercase()) {
-                            "GENERAL" -> "#General"
-                            "PEST_ALERT" -> "#PestControl"
-                            "FARMING_TIP" -> "#FarmingTips"
-                            "EQUIPMENT" -> "#Equipment"
-                            else -> if (post.category.startsWith("#")) post.category else "#${post.category.replace("_", "")}"
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = LightSurface,
-                            border = BorderStroke(1.dp, CardBorderColor)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(getAvatarColor(post.authorName)),
+                            contentAlignment = Alignment.Center
                         ) {
+                            if (!post.authorAvatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = post.authorAvatarUrl,
+                                    contentDescription = post.authorName,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = post.authorName.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = post.authorName,
+                                    color = DeepBlack,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val hashtag = when (post.category.uppercase()) {
+                                    "GENERAL" -> "#General"
+                                    "PEST_ALERT" -> "#PestControl"
+                                    "FARMING_TIP" -> "#FarmingTips"
+                                    "EQUIPMENT" -> "#Equipment"
+                                    else -> if (post.category.startsWith("#")) post.category else "#${post.category.replace("_", "")}"
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = LightSurface,
+                                    border = BorderStroke(1.dp, CardBorderColor)
+                                ) {
+                                    Text(
+                                        text = hashtag,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = LushGreen,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
-                                text = hashtag,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = LushGreen,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                text = post.timestamp,
+                                color = MutedText,
+                                fontSize = 11.sp
                             )
                         }
                     }
-                    Text(
-                        text = post.timestamp,
-                        color = MutedText,
-                        fontSize = 11.sp
-                    )
+                }
+
+                // Top right: Author options or Report
+                if (isAuthor) {
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Post options",
+                                tint = DeepBlack,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("I-edit ang Post", fontSize = 12.sp, color = DeepBlack) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null, tint = LushGreen, modifier = Modifier.size(16.dp))
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onEditClick()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Burahin ang Post", fontSize = 12.sp, color = AlertRed, fontWeight = FontWeight.Bold) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.DeleteForever, contentDescription = null, tint = AlertRed, modifier = Modifier.size(16.dp))
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onDeleteClick()
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    IconButton(
+                        onClick = { onReportPost(post) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = "Report post",
+                            tint = MutedText,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
                 }
             }
-
-            IconButton(
-                onClick = { onReportPost(post) },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Flag,
-                    contentDescription = "Report post",
-                    tint = MutedText,
-                    modifier = Modifier.size(17.dp)
-                )
-            }
         }
-
-        HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
 
         // ── SCROLLABLE BODY: Full Width Post Details + Comments ──────────
         LazyColumn(
@@ -189,30 +268,112 @@ fun PostDetailView(
                         fontWeight = FontWeight.Normal
                     )
 
-                    // Full Size Photo (Bounded height, never cut)
-                    if (!post.imageUrl.isNullOrBlank()) {
+                    // Full Size Photo (Bounded height, never cut in portrait or landscape)
+                    val rawUrl = post.imageUrl
+                    val isValidImage = remember(rawUrl) {
+                        if (rawUrl.isNullOrBlank()) false
+                        else if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("content://") || rawUrl.startsWith("file://")) true
+                        else try { File(rawUrl).exists() } catch (_: Exception) { false }
+                    }
+
+                    if (isValidImage && !rawUrl.isNullOrBlank()) {
+                        val imageModel: Any = remember(rawUrl) {
+                            if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+                                rawUrl
+                            } else if (rawUrl.startsWith("content://") || rawUrl.startsWith("file://")) {
+                                android.net.Uri.parse(rawUrl)
+                            } else {
+                                File(rawUrl)
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 140.dp, max = 280.dp)
+                                .heightIn(min = 140.dp, max = 480.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(LightSurface)
-                                .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp)),
+                                .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp))
+                                .clickable { showFullImageDialog = true },
                             contentAlignment = Alignment.Center
                         ) {
-                            val imageModel: Any = if (post.imageUrl.startsWith("/") || post.imageUrl.startsWith("content://") || post.imageUrl.startsWith("file://")) {
-                                File(post.imageUrl)
-                            } else {
-                                post.imageUrl
-                            }
                             AsyncImage(
                                 model = imageModel,
                                 contentDescription = "Post image",
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 280.dp),
+                                    .heightIn(max = 480.dp),
                                 contentScale = ContentScale.Fit
                             )
+
+                            // Subtle Fullscreen Hint Badge
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color.Black.copy(alpha = 0.65f),
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "Tingnan nang Buo",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+
+                        // Fullscreen Image Lightbox Dialog
+                        if (showFullImageDialog) {
+                            Dialog(
+                                onDismissRequest = { showFullImageDialog = false },
+                                properties = DialogProperties(usePlatformDefaultWidth = false)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.94f))
+                                        .clickable { showFullImageDialog = false },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = imageModel,
+                                        contentDescription = "Full-screen photo view",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(12.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    IconButton(
+                                        onClick = { showFullImageDialog = false },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .statusBarsPadding()
+                                            .padding(16.dp)
+                                            .size(38.dp)
+                                            .background(Color.White.copy(alpha = 0.25f), CircleShape)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Close full view",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -320,7 +481,8 @@ fun PostDetailView(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.clickable { onCommentAuthorClick(comment.authorId, comment.authorName) }
                             ) {
                                 Box(
                                     modifier = Modifier

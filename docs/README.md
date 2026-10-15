@@ -79,7 +79,7 @@ This documentation suite consists of **44 technical chapters** covering setup, s
 - 📄 [**12. UI / UX Guidelines & Visual Identity**](file:///d:/Development/MapTanim/docs/12_UI_UX_GUIDELINES.md) — Dark mode palette, landscape-first UI rules, accessibility standards, and typography.
 - 📄 [**13. Design System & Theme Tokens**](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md) — Color tokens, spacing metrics, typography hierarchy, and shape specs.
 - 📄 [**14. Jetpack Compose Component Library**](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md) — Reusable HUD cards, pill chips, dialog modals, custom buttons, and sliders.
-- 📄 [**15. 2D Isometric Render Engine**](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md) — Canvas projection algorithms (Cartesian grid to Isometric screen coordinates), tile rendering, and z-ordering.
+- 📄 [**15. 2D Top-Down Render Engine**](file:///d:/Development/MapTanim/docs/15_RENDER_ENGINE.md) — Flat 2D orthographic projection algorithms, TopDownFarmCanvas, CropSvgRenderer vector pipeline, and metric yard rulers.
 - 📄 [**16. Interactive Plot Mapping Specifications**](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md) — 45m x 45m loam soil grid specs, boundary bounds, background scenery objects, and touch interaction handling.
 - 📄 [**18. View Mode & Dashboard Specifications**](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md) — Non-destructive inspection mode, crop info tooltips, 5-stage growth previews, and companion proximity overlays.
 - 📄 [**19. Edit Mode & Farm Layout Tooling**](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md) — Crop placement tray, active edit controls, save/exit handlers, and placement validation overlays.

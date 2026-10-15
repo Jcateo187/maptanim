@@ -2,44 +2,154 @@
   "id": "crop_pechay",
   "category": "crop",
   "common_name": "Pechay / Bok Choy",
-  "local_name_ph": "Pechay",
+  "local_name_ph": "Pechay / Petsay",
   "scientific_name": "Brassica rapa subsp. chinensis",
   "taxonomic_family": "Brassicaceae",
-  "crop_type": "Leafy Green",
+  "crop_type": "Leafy Green / Brassica Crop",
   "growing_specifications": {
-    "days_to_harvest": "28 days",
-    "optimal_soil_ph": "5.8 - 6.8",
-    "optimal_temperature_c": "20 - 30 C",
-    "description": "Fast-growing short-duration leafy green staple in urban and rural Philippine market gardens."
+    "days_to_harvest": "25-45 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "20 - 28 C",
+    "watering_interval_days": 1,
+    "fertilize_interval_days": 7,
+    "description": "Rapid-cycling leafy brassica staple across Philippine lowlands, highlands, and urban container gardens. Features upright rosettes with succulent porcelain-white petioles, glossy dark green foliage, shallow fibrous roots, and year-round commercial harvest versatility."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Pechay classified under Leafy Greens (Brassicaceae)?",
+      "summary": "Brassica rapa subsp. chinensis is an upright leafy rosette vegetable harvested for its succulent white petioles and dark green leaves before reproductive flowering.",
+      "points": [
+        "Upright Rosette Growth: Forms a 20–30 cm tall cluster of broad, glossy dark green leaves connected to thick, crisp white petioles (stalks).",
+        "Rapid Vegetative Cycling: One of the fastest-cycling crops in the Philippines, reaching early harvest in 25–35 days and full maturity in 30–45 days.",
+        "Culinary & Economic Staple: Vital fresh ingredient in Philippine cooking (nilaga, bulalo, sinigang, stir-fries), enabling 8 to 10 sequential cropping cycles annually."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is Pechay harvested at 25–40 days before bolting?",
+      "summary": "Harvesting at peak rosette expansion preserves tender, crisp, succulent petioles before high temperatures trigger yellow flower stalk development.",
+      "points": [
+        "Sprout & Emergence (Days 3–7): Small true seeds sprout quickly at 0.5–1.0 cm shallow planting depth.",
+        "Seedling & Nursery Phase (Days 7–14): Seedlings develop 3–4 true leaves with heart-shaped cotyledons, ready for transplanting or thinning.",
+        "Rapid Vegetative Expansion (Days 14–25): Fast foliar expansion and petiole thickening driven by nitrogen and soil moisture.",
+        "Early Harvest & Baby Pechay (Days 25–30): Tender 150–250 g bunches ideal for quick stir-fry and light soups.",
+        "Full Market Maturity (Days 30–40): Robust 250–400 g bunches with thick, porcelain-white crisp petioles.",
+        "Bolting Deterioration Post-40–45 Days: Prolonged heat and photoperiods trigger yellow flowering (bolting), turning petioles tough, fibrous, and bitter."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Pechay require daily to alternate-day shallow irrigation?",
+      "summary": "A shallow fibrous root system (5–10 cm depth) demands steady topsoil moisture to sustain succulent white stems without leaf wilting or toughness.",
+      "points": [
+        "Surface Root Fragility: Roots concentrate strictly within the upper 10 cm of the soil profile, rapidly depleting surface moisture on hot sunny days.",
+        "Crispness & Tenderness: Water deficits cause petioles to become stringy, tough, and fibrous with premature flowering.",
+        "Morning Irrigation Protocol: Watering at 6:00–7:30 AM avoids splashing muddy soil into inner leaf axes and ensures foliage dries before nightfall, suppressing bacterial soft rot."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Pechay thrive in well-drained loam (pH 6.0–6.8) on 15–20 cm raised beds?",
+      "summary": "Loose organic-rich loam supports fast root penetration while raised beds safeguard against waterlogging, damping-off, and bacterial soft rot.",
+      "points": [
+        "Raised Bed Drainage: 15–20 cm raised beds with 30 cm drainage furrows prevent stagnant standing water during heavy tropical downpours.",
+        "Nitrogen & Boron Balance: Rich compost and pH 6.0–6.8 ensure balanced uptake of Nitrogen (100–150 kg/ha) for lush leaves and Boron to prevent Hollow Stem (cracked petioles).",
+        "Soil Aeration & Damping-off Control: Friable loose loam prevents compaction, reducing seedling mortality from soil-borne Pythium and Rhizoctonia."
+      ]
+    }
   },
   "varieties": [
     {
+      "variety_id": "var_pechay_black_behi",
+      "variety_name": "Black Behi",
+      "local_name_ph": "Pechay Black Behi (OPV Standard)",
+      "growth_duration_days": 30,
+      "stage_days": {
+        "stage1_sprout": 3,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 12,
+        "stage4_flowering": 4,
+        "stage5_harvest": 3
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY_SEASON",
+        "WET_SEASON_RAISED_BEDS"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 7,
+      "description": "The premier nationwide commercial open-pollinated variety in the Philippines. Features broad, glossy, dark green leaves and thick, pure white, crisp petioles with excellent heat and moderate rain tolerance.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-05"
+    },
+    {
       "variety_id": "var_pechay_pavon",
-      "variety_name": "Pavon",
-      "local_name_ph": "Pechay Pavon",
+      "variety_name": "Pavon / Pavito",
+      "local_name_ph": "Pechay Pavon / Pavito (Hybrid)",
       "growth_duration_days": 28,
       "stage_days": {
         "stage1_sprout": 3,
-        "stage2_seedling": 7,
-        "stage3_vegetative": 10,
-        "stage4_flowering": 5,
-        "stage5_harvest": 3
+        "stage2_seedling": 8,
+        "stage3_vegetative": 12,
+        "stage4_flowering": 3,
+        "stage5_harvest": 2
       },
       "optimal_seasons": [
         "YEAR_ROUND"
       ],
       "watering_interval_days": 1,
       "fertilize_interval_days": 7,
-      "description": "Standard dark green broad-leaved Philippine pechay cultivar with thick white petiole.",
+      "description": "High-vigor hybrid cultivar bred for rapid establishment, uniform growth, heavy bunch weight, and resilience against common leaf spots.",
       "sample_planted_date": "2026-08-06",
       "sample_expected_harvest_date": "2026-09-03"
+    },
+    {
+      "variety_id": "var_pechay_shanghai",
+      "variety_name": "Shanghai Green Baby Bok Choy",
+      "local_name_ph": "Shanghai Green (Baby Bok Choy)",
+      "growth_duration_days": 25,
+      "stage_days": {
+        "stage1_sprout": 3,
+        "stage2_seedling": 7,
+        "stage3_vegetative": 11,
+        "stage4_flowering": 2,
+        "stage5_harvest": 2
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "URBAN_CONTAINER"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 5,
+      "description": "Compact, spoon-shaped variety with tender jade-green petioles and sweet flavor. Extremely popular for rapid-cycle urban hydroponics and gourmet stir-fries.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-08-31"
+    },
+    {
+      "variety_id": "var_pechay_baguio",
+      "variety_name": "Baguio Pechay / Ching Chiang",
+      "local_name_ph": "Baguio Pechay (Highland / Cool Season)",
+      "growth_duration_days": 35,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 10,
+        "stage3_vegetative": 15,
+        "stage4_flowering": 4,
+        "stage5_harvest": 2
+      },
+      "optimal_seasons": [
+        "HIGHLAND",
+        "COOL_SEASON"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 8,
+      "description": "Thick, succulent variety adapted to cooler mountain microclimates in Benguet and highland plateaus, producing heavy, dense 300–400 g bunches with superior crispness.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-10"
     }
   ],
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/pechay.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/pechay.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
-    "license": "MapTanim Original Asset",
+    "author": "MapTanim Original Agronomic Asset",
+    "license": "MapTanim Open Agricultural Asset",
     "hash_sha256": "0eeb9dd94c58225cfcbc1b5e9975860f9acd91e695d82bdb388327cf18266d13"
   }
 }

@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.components
+package com.maptanim.app.features.farm.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -97,16 +97,17 @@ fun CropInfoCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    val cropEmoji = when (cropName.lowercase()) {
-                        "tomato" -> "🍅"
-                        "eggplant" -> "🍆"
-                        "carrot" -> "🥕"
-                        "chili", "pepper" -> "🌶️"
-                        "corn" -> "🌽"
-                        "cucumber" -> "🥒"
-                        "onion" -> "🧅"
-                        "garlic" -> "🧄"
-                        "lettuce", "cabbage", "pechay" -> "🥬"
+                    val cropEmoji = when (cropName.lowercase().replace(" ", "")) {
+                        "tomato", "kamatis" -> "🍅"
+                        "eggplant", "talong" -> "🍆"
+                        "carrot", "karot" -> "🥕"
+                        "bellpepper", "sweetpepper", "silingatsal", "atsal", "pepper", "sili" -> "🫑"
+                        "potato", "patatas" -> "🥔"
+                        "cucumber", "pipino", "ampalaya", "bittergourd" -> "🥒"
+                        "squash", "kalabasa", "pumpkin" -> "🎃"
+                        "sitaw", "stringbeans", "yardlong", "beans" -> "🫘"
+                        "greenonion", "scallion", "dahonngsibuyas", "onion", "sibuyas" -> "🧅"
+                        "lettuce", "litsugas", "cabbage", "repolyo", "pechay", "petsay" -> "🥬"
                         else -> "🌱"
                     }
                     Text(

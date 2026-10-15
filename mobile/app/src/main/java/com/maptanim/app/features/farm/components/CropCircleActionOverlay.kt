@@ -1,6 +1,13 @@
 package com.maptanim.app.features.farm.components
 
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -8,11 +15,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,17 +34,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maptanim.app.R
+import com.maptanim.app.features.farm.renderer.model.cropSinglePlantSpacingM
 import java.util.Locale
 import kotlin.math.roundToInt
-import com.maptanim.app.features.farm.renderer.model.cropSinglePlantSpacingM
 
 private val LushGreen = Color(0xFF2E7D32)
+private val EmeraldBorder = Color(0xFF81C784)
 private val LimeRing = Color(0xFFCCFF90)
 private val DarkCircleBg = Color(0xFF142917)
 private val DeepBlack = Color(0xFF111813)
@@ -46,13 +60,37 @@ private val AlertRed = Color(0xFFE53935)
 private const val INCH_IN_METERS = 0.0254f
 
 /**
- * CropCircleActionOverlay — 6 floating overlay user actions for each crop area:
- * 1. Center (0:00 Center): Info (white circular button with lush green ring)
- * 2. 9:00 (Straight Left): Check Up (lime green ring)
- * 3. ~10:45 (Top-Left): Calendar (lush green ring)
- * 4. ~12:30 (Top): Resize (lush green / lime ring, with interactive size bar)
- * 5. ~2:15 (Top-Right): Copy (lush green ring)
- * 6. 4:00 (Bottom-Right): Delete (alert red ring)
+ * Returns high-resolution hero drawable for each of the 13 canonical vegetables.
+ */
+fun getCropHeroDrawable(cropName: String): Int {
+    val lower = cropName.lowercase()
+    return when {
+        lower.contains("bell pepper") || lower.contains("pepper") || lower.contains("atsal") -> R.drawable.ph_bell_pepper_hero
+        lower.contains("ampalaya") || lower.contains("bitter") || lower.contains("gourd") -> R.drawable.ph_ampalaya_hero
+        lower.contains("cabbage") || lower.contains("repolyo") -> R.drawable.ph_cabbage_hero
+        lower.contains("carrot") || lower.contains("karot") -> R.drawable.ph_carrot_hero
+        lower.contains("cucumber") || lower.contains("pipino") -> R.drawable.ph_cucumber_hero
+        lower.contains("eggplant") || lower.contains("talong") -> R.drawable.ph_eggplant_hero
+        lower.contains("onion") || lower.contains("scallion") || lower.contains("sibuyas") -> R.drawable.ph_green_onion_hero
+        lower.contains("lettuce") || lower.contains("litsugas") -> R.drawable.ph_lettuce_hero
+        lower.contains("pechay") || lower.contains("petsay") || lower.contains("bok choy") || lower.contains("pak choi") -> R.drawable.ph_pechay_hero
+        lower.contains("potato") || lower.contains("patatas") -> R.drawable.ph_potato_hero
+        lower.contains("squash") || lower.contains("kalabasa") || lower.contains("pumpkin") -> R.drawable.ph_squash_hero
+        lower.contains("string") || lower.contains("sitaw") || lower.contains("beans") || lower.contains("yardlong") -> R.drawable.ph_sitaw_hero
+        lower.contains("tomato") || lower.contains("kamatis") -> R.drawable.ph_tomato_hero
+        else -> R.drawable.ph_tomato_hero
+    }
+}
+
+/**
+ * CropCircleActionOverlay — 6 floating overlay user actions positioned symmetrically at clock hours:
+ * - 12:00: See Info (Icons.Default.Info)
+ * - 2:00:  Check Up (Icons.Default.MedicalServices)
+ * - 4:00:  Calendar (Icons.Default.CalendarMonth)
+ * - 6:00:  Resize (Icons.Default.AspectRatio)
+ * - 8:00:  Copy (Icons.Default.ContentCopy)
+ * - 10:00: Delete (Icons.Default.DeleteOutline)
+ * - Center: Vegetable avatar with inner/outer circular layer and circular name display.
  */
 @Composable
 fun CropCircleActionOverlay(
@@ -71,6 +109,22 @@ fun CropCircleActionOverlay(
     modifier: Modifier = Modifier
 ) {
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    // Spring bounce animation on tap
+    var isSpawned by remember { mutableStateOf(false) }
+    LaunchedEffect(cropName) {
+        isSpawned = false
+        isSpawned = true
+    }
+
+    val bounceScale by animateFloatAsState(
+        targetValue = if (isSpawned) 1f else 0.2f,
+        animationSpec = spring(
+            dampingRatio = 0.52f, // Tactile bouncy spring!
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "CropOverlayBounce"
+    )
 
     AnimatedVisibility(
         visible = cropName.isNotBlank(),
@@ -94,7 +148,7 @@ fun CropCircleActionOverlay(
                     border = BorderStroke(1.5.dp, LimeRing),
                     shadowElevation = 10.dp,
                     modifier = Modifier
-                        .padding(bottom = 10.dp)
+                        .padding(bottom = 12.dp)
                         .wrapContentWidth()
                 ) {
                     Column(
@@ -105,7 +159,6 @@ fun CropCircleActionOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // [-] 2 inches
                             IconButton(
                                 onClick = {
                                     val newW = (cropWidthM - (2f * INCH_IN_METERS)).coerceAtLeast(0.127f)
@@ -132,7 +185,6 @@ fun CropCircleActionOverlay(
                                 fontSize = 12.sp
                             )
 
-                            // [+] 2 inches
                             IconButton(
                                 onClick = {
                                     val newW = (cropWidthM + (2f * INCH_IN_METERS)).coerceAtMost(3.0f)
@@ -183,77 +235,81 @@ fun CropCircleActionOverlay(
                 }
             }
 
-            // ── The 6 Circular Action Buttons (9 to 4 o'clock radial arc) ─────
+            // ── The 5 Circular Action Buttons & Center Vegetable Display ─────
             Box(
-                modifier = Modifier.size(240.dp),
+                modifier = Modifier
+                    .size(260.dp)
+                    .graphicsLayer {
+                        scaleX = bounceScale
+                        scaleY = bounceScale
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                // 1. CENTER (0:00 Center): INFO
-                FloatingCropActionButton(
-                    icon = Icons.Default.Info,
-                    contentDescription = "Info",
-                    ringColor = LushGreen,
-                    bgColor = Color.White,
-                    iconTint = LushGreen,
-                    sizeDp = 48.dp,
-                    iconSizeDp = 24.dp,
-                    onClick = onOpenInfo,
-                    modifier = Modifier.offset(x = 0.dp, y = 0.dp)
+                // ── CENTER: VEGETABLE AVATAR + CIRCULAR NAME + INFO BADGE (Clickable) ─
+                CenterVegetableCircleDisplay(
+                    cropName = cropName,
+                    varietyName = varietyName,
+                    onClick = onOpenInfo
                 )
 
-                // 2. 9 O'CLOCK: CHECK UP (Straight Left)
+                // ── 1. 10:00: CHECK UP (Top-Left) ──────────────────────────────
                 FloatingCropActionButton(
                     icon = Icons.Default.MedicalServices,
+                    label = "Check Up",
                     contentDescription = "Check Up",
                     ringColor = LimeRing,
-                    bgColor = DarkCircleBg,
+                    bgColor = LushGreen,
                     iconTint = Color.White,
                     onClick = onOpenCheckUp,
-                    modifier = Modifier.offset(x = (-76).dp, y = 0.dp)
+                    modifier = Modifier.offset(x = (-75).dp, y = (-43).dp)
                 )
 
-                // 3. ~10:45: CALENDAR (Top-Left)
+                // ── 2. 11:45: CALENDAR (Top / 11:45) ───────────────────────────
                 FloatingCropActionButton(
                     icon = Icons.Default.CalendarMonth,
+                    label = "Calendar",
                     contentDescription = "Calendar",
                     ringColor = LushGreen,
                     bgColor = DarkCircleBg,
                     iconTint = Color.White,
                     onClick = onOpenCalendar,
-                    modifier = Modifier.offset(x = (-46).dp, y = (-60).dp)
+                    modifier = Modifier.offset(x = (-11).dp, y = (-85).dp)
                 )
 
-                // 4. ~12:30: RESIZE (Top)
+                // ── 3. 1:30: RESIZE (Top-Right) ────────────────────────────────
                 FloatingCropActionButton(
                     icon = Icons.Default.AspectRatio,
+                    label = "Resize",
                     contentDescription = "Resize",
                     ringColor = if (isResizeActive) LimeRing else LushGreen,
                     bgColor = if (isResizeActive) LushGreen else DarkCircleBg,
                     iconTint = Color.White,
                     onClick = onResizeCrop,
-                    modifier = Modifier.offset(x = 20.dp, y = (-73).dp)
+                    modifier = Modifier.offset(x = 61.dp, y = (-61).dp)
                 )
 
-                // 5. ~2:15: COPY (Top-Right)
+                // ── 4. 3:15: COPY (Middle-Right) ───────────────────────────────
                 FloatingCropActionButton(
                     icon = Icons.Default.ContentCopy,
+                    label = "Copy",
                     contentDescription = "Copy",
                     ringColor = LushGreen,
                     bgColor = DarkCircleBg,
                     iconTint = Color.White,
                     onClick = onCopyCrop,
-                    modifier = Modifier.offset(x = 70.dp, y = (-29).dp)
+                    modifier = Modifier.offset(x = 85.dp, y = 11.dp)
                 )
 
-                // 6. 4 O'CLOCK: DELETE (Bottom-Right)
+                // ── 5. 5:00: DELETE (Bottom-Right) ─────────────────────────────
                 FloatingCropActionButton(
                     icon = Icons.Default.DeleteOutline,
+                    label = "Delete",
                     contentDescription = "Delete",
                     ringColor = AlertRed,
                     bgColor = DarkCircleBg,
                     iconTint = Color.White,
                     onClick = { showDeleteConfirmation = true },
-                    modifier = Modifier.offset(x = 66.dp, y = 38.dp)
+                    modifier = Modifier.offset(x = 43.dp, y = 75.dp)
                 )
             }
         }
@@ -322,32 +378,158 @@ fun CropCircleActionOverlay(
     }
 }
 
+/**
+ * Center Vegetable Display with inner/outer circular layer and circular name display.
+ * The entire center circle is clickable and acts as the "Info" entrypoint.
+ */
+@Composable
+private fun CenterVegetableCircleDisplay(
+    cropName: String,
+    varietyName: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val heroRes = remember(cropName) { getCropHeroDrawable(cropName) }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(80.dp)
+            .clickable(onClick = onClick)
+    ) {
+        // Outer glowing circular track (Green ring layer)
+        Surface(
+            shape = CircleShape,
+            color = Color(0xF2102413),
+            border = BorderStroke(2.dp, EmeraldBorder),
+            shadowElevation = 10.dp,
+            modifier = Modifier.size(80.dp)
+        ) {}
+
+        // Circular Name Track drawn in the annular layer between inner white border and outer green border
+        Canvas(modifier = Modifier.size(80.dp)) {
+            val r = size.minDimension / 2f
+            val textR = r * (33f / 40f) // Centered between inner white radius (26dp) and outer green (40dp)
+            val path = Path().apply {
+                addArc(
+                    RectF(r - textR, r - textR, r + textR, r + textR),
+                    180f,
+                    180f
+                )
+            }
+            val textPaint = Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 17f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+                letterSpacing = 0.08f
+            }
+            drawIntoCanvas { canvas ->
+                val displayLabel = cropName.uppercase(Locale.US)
+                canvas.nativeCanvas.drawTextOnPath(displayLabel, path, 0f, 0f, textPaint)
+            }
+        }
+
+        // Inner circular layer: High-res vegetable image with white circular border
+        Surface(
+            shape = CircleShape,
+            color = DarkCircleBg,
+            border = BorderStroke(1.8.dp, Color.White),
+            shadowElevation = 4.dp,
+            modifier = Modifier.size(52.dp)
+        ) {
+            Image(
+                painter = painterResource(id = heroRes),
+                contentDescription = cropName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            )
+        }
+
+        // Center bottom "INFO" badge pill
+        Surface(
+            shape = CircleShape,
+            color = Color(0xEE142917),
+            border = BorderStroke(0.8.dp, LimeRing),
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = 2.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = LimeRing,
+                    modifier = Modifier.size(11.dp)
+                )
+                Text(
+                    text = "INFO",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun FloatingCropActionButton(
     icon: ImageVector,
+    label: String,
     contentDescription: String,
     ringColor: Color,
     bgColor: Color,
     iconTint: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    sizeDp: Dp = 46.dp,
-    iconSizeDp: Dp = 22.dp
+    sizeDp: Dp = 44.dp,
+    iconSizeDp: Dp = 20.dp
 ) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = bgColor,
-        border = BorderStroke(2.5.dp, ringColor),
-        shadowElevation = 8.dp,
-        modifier = modifier.size(sizeDp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(iconSizeDp)
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = bgColor,
+            border = BorderStroke(2.dp, ringColor),
+            shadowElevation = 8.dp,
+            modifier = Modifier.size(sizeDp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = iconTint,
+                    modifier = Modifier.size(iconSizeDp)
+                )
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = Color(0xD90D1C10),
+            border = BorderStroke(0.6.dp, ringColor.copy(alpha = 0.75f)),
+            modifier = Modifier.padding(top = 2.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
             )
         }
     }

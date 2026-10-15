@@ -32,97 +32,52 @@ class SoilEvaluator(
 
             val dbSoil = input.referenceData.soilCompatibilities.firstOrNull {
                 it.cropName.equals(crop.name, ignoreCase = true) &&
-                it.soilType.equals(plot.soilType.name, ignoreCase = true)
+                (it.soilType.equals(plot.soilType.name, ignoreCase = true) ||
+                 it.soilType.replace(" ", "_").equals(plot.soilType.name, ignoreCase = true))
             }
 
-            if (isTomato) {
-                when (plot.soilType) {
-                    SoilType.CLAY -> {
-                        decisions.add(
-                            DssDecision(
-                                id = "dss_soil_clay_alert_${plot.id}",
-                                farmId = farmId,
-                                plotId = plot.id,
-                                plotLabel = plot.plotLabel,
-                                cropName = crop.name,
-                                decisionType = DssDecisionType.ALERT,
-                                category = DssCategory.SOIL_COMPATIBILITY,
-                                priority = DssPriority.CRITICAL,
-                                title = "Heavy Clay Waterlogging & Bacterial Wilt Alert (${plot.plotLabel})",
-                                summary = dbSoil?.alertWarning ?: "Tomato in heavy clay soil risks rapid bacterial wilting (Ralstonia). Elevate beds by 25–30 cm and mix carbonized rice hull.",
-                                explanation = dbSoil?.agronomicRationale ?: "Published DA-BPI trials demonstrate that saturated clay suffocates solanaceous roots within 48 hours, facilitating vascular infection. Incorporating carbonized rice hull (CRH) at 1:1 with compost restores internal porosity.",
-                                source = dbSoil?.sourceCitation ?: "DA-BPI Technical Bulletin No. 14 & BSWM Soil Management",
-                                actionText = "Build Raised Furrows & Add CRH",
-                                actionTaskType = TaskType.SOIL_AMENDMENT,
-                                evaluatedAt = today.toString()
-                            )
+            if (dbSoil != null) {
+                if (dbSoil.suitabilityRating == "POOR" || dbSoil.suitabilityRating == "MARGINAL" || dbSoil.suitabilityScore < 0.65f) {
+                    val isCritical = plot.soilType == SoilType.CLAY && dbSoil.alertWarning != null
+                    decisions.add(
+                        DssDecision(
+                            id = "dss_soil_alert_${plot.id}",
+                            farmId = farmId,
+                            plotId = plot.id,
+                            plotLabel = plot.plotLabel,
+                            cropName = crop.name,
+                            decisionType = if (isCritical) DssDecisionType.ALERT else DssDecisionType.RECOMMENDATION,
+                            category = DssCategory.SOIL_COMPATIBILITY,
+                            priority = if (isCritical) DssPriority.CRITICAL else DssPriority.HIGH,
+                            title = if (isCritical) "Soil Hazard: ${plot.soilType.name} Alert for ${crop.name}" else "Soil Amendment Needed for ${crop.name} on ${plot.plotLabel}",
+                            summary = dbSoil.alertWarning ?: dbSoil.amendmentAction ?: "Amend ${plot.soilType.name} soil with compost to meet ${crop.name} root aeration requirements.",
+                            explanation = dbSoil.agronomicRationale,
+                            source = dbSoil.sourceCitation,
+                            actionText = "Apply Soil Amendment",
+                            actionTaskType = TaskType.SOIL_AMENDMENT,
+                            evaluatedAt = today.toString()
                         )
-                    }
-                    SoilType.SANDY -> {
-                        decisions.add(
-                            DssDecision(
-                                id = "dss_soil_sandy_mulch_${plot.id}",
-                                farmId = farmId,
-                                plotId = plot.id,
-                                plotLabel = plot.plotLabel,
-                                cropName = crop.name,
-                                decisionType = DssDecisionType.RECOMMENDATION,
-                                category = DssCategory.SOIL_COMPATIBILITY,
-                                priority = DssPriority.MEDIUM,
-                                title = "Organic Mulch Recommendation (Camiguin Study Citation)",
-                                summary = dbSoil?.amendmentAction ?: "Apply 5 cm sawdust or rice straw mulch to retain moisture and prevent nutrient leaching in sandy soil.",
-                                explanation = dbSoil?.agronomicRationale ?: "Camiguin research trials (Solis et al., 2016) demonstrated that sawdust mulch significantly conserves soil moisture and increases Diamante Max F1 tomato yield to 5.08 t/ha compared to unmulched bare soil (4.28 t/ha).",
-                                source = dbSoil?.sourceCitation ?: "Camiguin Agronomic Field Trial 2015-2016 (Solis et al.)",
-                                actionText = "Apply Organic Mulch",
-                                actionTaskType = TaskType.SOIL_AMENDMENT,
-                                evaluatedAt = today.toString()
-                            )
+                    )
+                } else if (dbSoil.suitabilityRating == "OPTIMAL" || dbSoil.suitabilityScore >= 0.85f) {
+                    decisions.add(
+                        DssDecision(
+                            id = "dss_soil_opt_${plot.id}",
+                            farmId = farmId,
+                            plotId = plot.id,
+                            plotLabel = plot.plotLabel,
+                            cropName = crop.name,
+                            decisionType = DssDecisionType.RECOMMENDATION,
+                            category = DssCategory.SOIL_COMPATIBILITY,
+                            priority = DssPriority.INFO,
+                            title = "Optimal Soil Match: ${plot.soilType.name} on ${plot.plotLabel}",
+                            summary = dbSoil.amendmentAction ?: "${plot.soilType.name} provides optimal aeration and moisture balance for ${crop.name}.",
+                            explanation = dbSoil.agronomicRationale ?: "Natural ${plot.soilType.name} texture supports healthy root expansion and steady nutrient uptake.",
+                            source = dbSoil.sourceCitation ?: "Bureau of Soils and Water Management (BSWM) Standards 2026",
+                            actionText = "Maintain Organic Topdressing",
+                            actionTaskType = TaskType.SOIL_AMENDMENT,
+                            evaluatedAt = today.toString()
                         )
-                    }
-                    SoilType.LOAM -> {
-                        decisions.add(
-                            DssDecision(
-                                id = "dss_soil_loam_opt_${plot.id}",
-                                farmId = farmId,
-                                plotId = plot.id,
-                                plotLabel = plot.plotLabel,
-                                cropName = crop.name,
-                                decisionType = DssDecisionType.RECOMMENDATION,
-                                category = DssCategory.SOIL_COMPATIBILITY,
-                                priority = DssPriority.INFO,
-                                title = "Optimal Soil Match: Loam on ${plot.plotLabel}",
-                                summary = dbSoil?.amendmentAction ?: "Loam soil provides an optimal 40-40-20 balance of drainage and nutrients for Tomato root expansion.",
-                                explanation = dbSoil?.agronomicRationale ?: "Natural loam texture maintains continuous root aeration without waterlogging, supporting steady blossom development and vigorous fruit set.",
-                                source = dbSoil?.sourceCitation ?: "BSWM Soil Fertility Standards 2024",
-                                actionText = "Maintain Organic Topdressing",
-                                actionTaskType = TaskType.SOIL_AMENDMENT,
-                                evaluatedAt = today.toString()
-                            )
-                        )
-                    }
-                    else -> {
-                        if (score <= 0.50f) {
-                            decisions.add(
-                                DssDecision(
-                                    id = "dss_soil_${plot.id}",
-                                    farmId = farmId,
-                                    plotId = plot.id,
-                                    plotLabel = plot.plotLabel,
-                                    cropName = crop.name,
-                                    decisionType = DssDecisionType.RECOMMENDATION,
-                                    category = DssCategory.SOIL_COMPATIBILITY,
-                                    priority = DssPriority.MEDIUM,
-                                    title = "Soil Conditioning Advised: ${plot.soilType.name} (${(score * 100).toInt()}%)",
-                                    summary = "Apply organic compost and agricultural lime if soil is acidic.",
-                                    explanation = "Tomato requires pH 6.0–6.8 for proper calcium uptake to avoid blossom end rot.",
-                                    source = "DA-BPI Solanaceous Production Standards",
-                                    actionText = "Apply Soil Amendment",
-                                    actionTaskType = TaskType.SOIL_AMENDMENT,
-                                    evaluatedAt = today.toString()
-                                )
-                            )
-                        }
-                    }
+                    )
                 }
             } else if (score <= 0.50f) {
                 val rule = if (plot.soilType == SoilType.CLAY) {

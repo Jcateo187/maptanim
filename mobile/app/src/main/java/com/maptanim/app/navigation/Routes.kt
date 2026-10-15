@@ -29,4 +29,5 @@ object Routes {
     fun profileRoute(tab: Int = 0) = "profile?tab=$tab"
     fun libraryRoute(cropName: String? = null) = if (cropName.isNullOrBlank()) LIBRARY else "$LIBRARY?cropName=$cropName"
     fun growingRoute(gardenId: String? = null) = if (gardenId.isNullOrBlank()) GROWING else "$GROWING?gardenId=$gardenId"
+    fun farmRoute(plotId: String? = null) = if (plotId.isNullOrBlank()) FARM else "$FARM?plotId=$plotId"
 }

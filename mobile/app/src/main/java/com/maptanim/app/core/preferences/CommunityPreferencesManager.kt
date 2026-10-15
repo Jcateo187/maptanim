@@ -52,6 +52,13 @@ class CommunityPreferencesManager(context: Context? = null) {
         prefs?.edit()?.putStringSet(key, currentSet)?.apply()
     }
 
+    fun removeMyPostId(userId: String?, postId: String) {
+        val key = getAuthoredKeyForUser(userId)
+        val currentSet = prefs?.getStringSet(key, emptySet())?.toMutableSet() ?: mutableSetOf()
+        currentSet.remove(postId)
+        prefs?.edit()?.putStringSet(key, currentSet)?.apply()
+    }
+
     fun getFriendIds(userId: String?): Set<String> {
         val key = getFriendsKeyForUser(userId)
         return prefs?.getStringSet(key, emptySet())?.toSet() ?: emptySet()

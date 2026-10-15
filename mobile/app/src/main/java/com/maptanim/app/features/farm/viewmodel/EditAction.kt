@@ -19,4 +19,5 @@ sealed interface EditAction {
     data class MoveCropToBed(val zoneId: String, val oldPlotId: String, val oldOffset: Offset, val newPlotId: String, val newOffset: Offset) : EditAction
     data class RemoveCropFromBed(val zone: CropZoneRenderData) : EditAction
     data class ResizeCropZone(val zoneId: String, val oldOffset: Offset, val oldW: Float, val oldH: Float, val newOffset: Offset, val newW: Float, val newH: Float) : EditAction
+    data class RotatePlot(val plotId: String, val oldPlot: CropPlot, val newPlot: CropPlot, val oldZones: List<CropZoneRenderData>, val newZones: List<CropZoneRenderData>) : EditAction
 }
