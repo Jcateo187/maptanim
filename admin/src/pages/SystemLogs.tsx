@@ -22,19 +22,19 @@ export const SystemLogs: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Action Header Card */}
-      <div className="bg-[#2B3136] border border-[#38434D] rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-l-4 border-l-[#4CAF50] shadow-md">
+      <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-l-4 border-l-[#2E7D32] shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#4CAF50]/15 text-[#4CAF50] flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center font-bold">
             <FileText className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-extrabold text-sm text-[#F4F4F4]">
+              <h3 className="font-extrabold text-sm text-[#111813]">
                 Administrative System Audit Trail
               </h3>
               <Badge variant="purple">{logs.length} Immutable Logs</Badge>
             </div>
-            <p className="text-xs text-[#8A9BA8] mt-0.5">
+            <p className="text-xs text-[#6B7280] mt-0.5">
               State modifications, rule updates, and security authorization event records
             </p>
           </div>
@@ -49,9 +49,9 @@ export const SystemLogs: React.FC = () => {
       {/* Mobile Audit Logs Cards View (< sm) */}
       <div className="block sm:hidden space-y-3">
         {logs.map((log) => (
-          <div key={log.id} className="bg-[#2B3136] border border-[#38434D] rounded-xl p-4 space-y-2 text-xs shadow-md">
+          <div key={log.id} className="bg-white border border-[#E5E7EB] rounded-xl p-4 space-y-2 text-xs shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-[#4CAF50]">
+              <span className="font-mono font-bold text-[#2E7D32]">
                 {log.action}
               </span>
               <Badge variant={log.status === 'SUCCESS' ? 'success' : 'danger'}>
@@ -59,9 +59,9 @@ export const SystemLogs: React.FC = () => {
               </Badge>
             </div>
 
-            <p className="text-[#F4F4F4] font-semibold">{log.details}</p>
+            <p className="text-[#111813] font-semibold">{log.details}</p>
 
-            <div className="flex items-center justify-between text-[11px] text-[#8A9BA8] font-mono pt-1">
+            <div className="flex items-center justify-between text-[11px] text-[#6B7280] font-mono pt-1">
               <span>{log.adminEmail}</span>
               <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
             </div>
@@ -70,7 +70,7 @@ export const SystemLogs: React.FC = () => {
       </div>
 
       {/* Desktop Audit Logs Table (>= sm) */}
-      <div className="hidden sm:block table-container bg-[#2B3136] border border-[#38434D] rounded-xl overflow-hidden shadow-md">
+      <div className="hidden sm:block table-container bg-white border border-[#E5E7EB] rounded-xl overflow-hidden shadow-sm">
         <table>
           <thead>
             <tr>
@@ -86,20 +86,20 @@ export const SystemLogs: React.FC = () => {
           <tbody>
             {logs.map((log) => (
               <tr key={log.id}>
-                <td className="font-mono text-xs text-[#8A9BA8]">
+                <td className="font-mono text-xs text-[#6B7280]">
                   {new Date(log.timestamp).toLocaleString()}
                 </td>
-                <td className="font-bold text-xs text-[#F4F4F4]">
+                <td className="font-bold text-xs text-[#111813]">
                   {log.adminEmail}
                 </td>
-                <td className="font-mono text-xs text-[#4CAF50] font-bold">
+                <td className="font-mono text-xs text-[#2E7D32] font-bold">
                   {log.action}
                 </td>
-                <td className="text-xs font-semibold text-[#C7D0D8]">{log.targetModule}</td>
-                <td className="text-xs text-[#C7D0D8] max-w-sm">
+                <td className="text-xs font-semibold text-[#374151]">{log.targetModule}</td>
+                <td className="text-xs text-[#4B5563] max-w-sm">
                   {log.details}
                 </td>
-                <td className="font-mono text-xs text-[#8A9BA8]">{log.ipAddress}</td>
+                <td className="font-mono text-xs text-[#6B7280]">{log.ipAddress}</td>
                 <td>
                   <Badge variant={log.status === 'SUCCESS' ? 'success' : 'danger'}>
                     {log.status}

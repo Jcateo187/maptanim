@@ -129,89 +129,95 @@ fun CreatePostSheet(
             .background(Color.White)
     ) {
         // ── TOP BAR: Back Navigation + User Info (left) + Publish Button (right) ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = Color.White,
+            shadowElevation = 1.dp,
+            border = BorderStroke(1.dp, CardBorderColor),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onCancel,
-                    enabled = !isPublishing,
-                    modifier = Modifier.size(36.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = DeepBlack,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(LushGreen),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = currentUserName.take(1).uppercase().ifBlank { "Y" },
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Create Post",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = DeepBlack
-                    )
-                    Text(
-                        text = "Posting as $currentUserName",
-                        fontSize = 11.sp,
-                        color = MutedText
-                    )
-                }
-            }
-
-            // Publish Post Button (Cancel button removed per requirement)
-            Button(
-                onClick = {
-                    if (content.isNotBlank() && !isPublishing) {
-                        val derivedTitle = content.lineSequence().firstOrNull { it.isNotBlank() }?.take(60)?.trim()
-                            ?: "Community Post"
-                        val finalCategory = selectedCategory?.removePrefix("#") ?: "General"
-                        onSubmit(derivedTitle, finalCategory, content.trim(), currentUserName, attachedImagePath)
+                    IconButton(
+                        onClick = onCancel,
+                        enabled = !isPublishing,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = DeepBlack,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
-                enabled = content.isNotBlank() && !isPublishing,
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
-            ) {
-                if (isPublishing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(14.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Publishing...", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                } else {
-                    Text("Publish Post", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(LushGreen),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = currentUserName.take(1).uppercase().ifBlank { "Y" },
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Create Post",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = DeepBlack
+                        )
+                        Text(
+                            text = "Posting as $currentUserName",
+                            fontSize = 11.sp,
+                            color = MutedText
+                        )
+                    }
+                }
+
+                // Publish Post Button (Cancel button removed per requirement)
+                Button(
+                    onClick = {
+                        if (content.isNotBlank() && !isPublishing) {
+                            val derivedTitle = content.lineSequence().firstOrNull { it.isNotBlank() }?.take(60)?.trim()
+                                ?: "Community Post"
+                            val finalCategory = selectedCategory?.removePrefix("#") ?: "General"
+                            onSubmit(derivedTitle, finalCategory, content.trim(), currentUserName, attachedImagePath)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LushGreen),
+                    enabled = content.isNotBlank() && !isPublishing,
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    if (isPublishing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Publishing...", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    } else {
+                        Text("Publish Post", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
-
-        HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
 
         // ── SCROLLABLE BODY ──────────────────────────────────────────────────
         Column(
@@ -372,7 +378,7 @@ fun CreatePostSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 140.dp, max = 240.dp)
+                            .heightIn(min = 140.dp, max = 340.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(LightSurface)
                             .border(1.dp, CardBorderColor, RoundedCornerShape(8.dp)),
@@ -383,7 +389,7 @@ fun CreatePostSheet(
                             contentDescription = "Attached photo",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 240.dp),
+                                .heightIn(max = 340.dp),
                             contentScale = ContentScale.Fit
                         )
                         IconButton(

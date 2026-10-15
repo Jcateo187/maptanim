@@ -1,6 +1,5 @@
-﻿package com.maptanim.app.features.auth.screen
+package com.maptanim.app.features.auth.screen
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,13 +7,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.maptanim.app.R
 import com.maptanim.app.features.auth.components.RegisterCard
 import com.maptanim.app.features.shared.support.CustomerServiceChatDialog
 import com.maptanim.app.features.shared.support.ModernCustomerServiceButton
@@ -26,23 +21,10 @@ fun WelcomeScreen(
     var showCustomerSupport by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
     ) {
-        Image(
-            painter = painterResource(R.drawable.onboarding_background),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(16.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-        )
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,4 +57,3 @@ fun WelcomeScreen(
         }
     }
 }
-

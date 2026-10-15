@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.profile.utils
+package com.maptanim.app.features.profile.utils
 
 import java.time.Duration
 import java.time.LocalDate
@@ -8,17 +8,17 @@ import java.time.format.DateTimeFormatter
 
 fun getCropEmoji(name: String): String = when (name.lowercase().replace(" ", "")) {
     "carrot", "karot" -> "🥕"
-    "stringbeans", "sitaw", "beans" -> "🫘"
+    "potato", "patatas" -> "🥔"
+    "stringbeans", "sitaw", "beans", "yardlong", "yardlongbean", "yardlongbeans", "polebean" -> "🫘"
     "eggplant", "talong" -> "🍆"
     "tomato", "kamatis" -> "🍅"
-    "onion", "sibuyas" -> "🧅"
+    "greenonion", "scallion", "springonion", "dahonngsibuyas", "onion", "sibuyas" -> "🧅"
     "pumpkin", "squash", "kalabasa" -> "🎃"
-    "corn", "mais" -> "🌽"
     "cabbage", "repolyo" -> "🥬"
-    "pechay" -> "🥬"
-    "ampalaya" -> "🥒"
-    "okra" -> "🌿"
-    "sili", "chilipepper", "chili" -> "🌶️"
+    "pechay", "petsay", "bokchoy" -> "🥬"
+    "lettuce", "litsugas" -> "🥬"
+    "ampalaya", "bittergourd" -> "🥒"
+    "bellpepper", "sweetpepper", "silingatsal", "atsal", "silingpari", "pepper", "sili", "chilipepper", "chili" -> "🫑"
     "cucumber", "pipino" -> "🥒"
     else -> "🌱"
 }

@@ -6,7 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link --project-ref ojilvcglpzbtpjxguhzj",
+    "supabase:status": "supabase status",
+    "supabase:pull": "supabase db pull",
+    "supabase:push": "supabase db push",
+    "supabase:gen-types": "supabase gen types typescript --project-id ojilvcglpzbtpjxguhzj > src/types/supabase.ts",
+    "supabase:test": "node scripts/test-connection.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",

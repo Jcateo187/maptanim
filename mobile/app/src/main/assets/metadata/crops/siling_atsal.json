@@ -1,0 +1,69 @@
+{
+  "id": "crop_bell_pepper",
+  "category": "crop",
+  "common_name": "Bell Pepper",
+  "local_name_ph": "Bell Pepper / Siling Atsal",
+  "scientific_name": "Capsicum annuum var. grossum",
+  "taxonomic_family": "Solanaceae",
+  "crop_type": "Solanaceous Fruit",
+  "growing_specifications": {
+    "days_to_harvest": "75-90 days",
+    "optimal_soil_ph": "5.5 - 6.8",
+    "optimal_temperature_c": "18 - 28 C",
+    "description": "High-value Solanaceous fruit crop thriving in Benguet, Bukidnon, and cool upland microclimates, producing thick-walled, blocky, sweet culinary peppers."
+  },
+  "varieties": [
+    {
+      "variety_id": "var_bell_pepper_california_wonder",
+      "variety_name": "California Wonder",
+      "local_name_ph": "California Wonder Open-Pollinated",
+      "growth_duration_days": 80,
+      "stage_days": {
+        "stage1_sprout": 12,
+        "stage2_seedling": 30,
+        "stage3_vegetative": 20,
+        "stage4_flowering": 25,
+        "stage5_harvest": 15
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Classic thick-walled blocky green-to-red bell pepper with crisp sweet flesh and sturdy bush habit.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-25"
+    },
+    {
+      "variety_id": "var_bell_pepper_sultan_f1",
+      "variety_name": "Sultan F1",
+      "local_name_ph": "Sultan F1 Hybrid (East-West Seed)",
+      "growth_duration_days": 75,
+      "stage_days": {
+        "stage1_sprout": 10,
+        "stage2_seedling": 28,
+        "stage3_vegetative": 18,
+        "stage4_flowering": 22,
+        "stage5_harvest": 17
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "High-yielding commercial F1 hybrid with thick walls, uniform 3-4 lobed fruits, and high field tolerance to bacterial wilt and blossom-end rot.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-20"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/bell_pepper.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/bell_pepper.png",
+    "source_url": "file:///android_asset/metadata/crops_images/bell_pepper.png",
+    "author": "MapTanim Original AI Visuals",
+    "license": "MapTanim Original Asset",
+    "hash_sha256": "maptanim_bell_pepper_asset_2026"
+  }
+}

@@ -57,9 +57,9 @@ class PlaceBasedCropEvaluator {
         val challenges = mutableListOf<String>()
         val methods = mutableListOf<AlternativeMethod>()
 
-        val isCoolSeason = cleanName in listOf("lettuce", "litsugas", "cabbage", "repolyo", "carrot", "karot")
-        val isWarmFruiting = cleanName in listOf("tomato", "kamatis", "eggplant", "talong", "chili", "sili", "okra", "corn", "mais", "sitaw", "cucumber", "pipino", "squash", "kalabasa", "ampalaya")
-        val isLeafyFast = cleanName in listOf("pechay", "kangkong", "water_spinach")
+        val isCoolSeason = cleanName in listOf("lettuce", "litsugas", "cabbage", "repolyo", "carrot", "karot", "potato", "patatas")
+        val isWarmFruiting = cleanName in listOf("tomato", "kamatis", "eggplant", "talong", "bell_pepper", "bellpepper", "sweet_pepper", "sweetpepper", "siling_atsal", "atsal", "sitaw", "stringbeans", "yardlong_bean", "yardlong", "cucumber", "pipino", "squash", "kalabasa", "ampalaya")
+        val isLeafyFast = cleanName in listOf("pechay", "petsay", "green_onion", "scallion", "dahon_ng_sibuyas")
 
         // ── 1. Agro-Zone Evaluation ──────────────────────────────────────────
         if (zone == AgroZone.HIGHLAND) {
@@ -114,7 +114,7 @@ class PlaceBasedCropEvaluator {
                             stepByStepRemediation = listOf(
                                 "Plant exclusively certified heat-tolerant lowland F1 hybrids (e.g. K-S Cross F1 or KK Cross).",
                                 "Cover the bed with 32-mesh fine insect netting to exclude Diamondback Moths without pesticides.",
-                                "Plant taller companion borders (Okra or Sweet Corn) on the western edge to provide natural afternoon shade."
+                                "Plant taller companion borders (e.g. Trellised Yardlong Beans or High Netting) on the western edge to provide natural afternoon shade."
                             ),
                             materialList = listOf("Lowland hybrid seeds (K-S Cross F1)", "32-mesh insect barrier netting", "Bamboo hoops"),
                             agronomicRationale = "DA-BPI trials demonstrate that K-S Cross F1 initiates head firming even at 32°C when protected from moth defoliation.",
@@ -150,7 +150,7 @@ class PlaceBasedCropEvaluator {
                 positives.add("Loam soil offers a balanced 40-40-20 texture with ideal aeration, root anchorage, and nutrient holding capacity.")
             }
             SoilType.CLAY -> {
-                if (cleanName in listOf("tomato", "kamatis", "eggplant", "talong", "chili", "sili") || isCoolSeason) {
+                if (cleanName in listOf("tomato", "kamatis", "eggplant", "talong", "bell_pepper", "bellpepper", "sweet_pepper", "siling_atsal") || isCoolSeason) {
                     score -= 25
                     challenges.add("Heavy clay retains excess water during rains, suffocating roots and predisposing crops to Bacterial Wilt (Ralstonia).")
                     methods.add(
@@ -172,7 +172,7 @@ class PlaceBasedCropEvaluator {
                 }
             }
             SoilType.SANDY -> {
-                if (cleanName in listOf("tomato", "kamatis", "corn", "mais", "pechay", "kangkong")) {
+                if (cleanName in listOf("tomato", "kamatis", "pechay", "petsay", "lettuce", "litsugas")) {
                     score -= 20
                     challenges.add("Sandy soil drains rapidly, resulting in frequent water stress and rapid nutrient leaching.")
                     methods.add(
@@ -220,17 +220,17 @@ class PlaceBasedCropEvaluator {
         }
 
         if (SiteConstraint.WIND_EXPOSURE in constraints) {
-            if (cleanName in listOf("corn", "mais", "sitaw", "tomato", "kamatis")) {
+            if (cleanName in listOf("sitaw", "stringbeans", "yardlong_bean", "yardlong", "tomato", "kamatis", "bell_pepper", "bellpepper", "sweet_pepper", "sweetpepper")) {
                 score -= 15
                 challenges.add("High wind gusts cause stalk lodging and trellis displacement.")
                 methods.add(
                     AlternativeMethod(
                         title = "Bamboo A-Frame Trellis with Guy-Wire Bracing",
-                        challengeDescription = "Strong winds can topple tall corn stalks or rip heavy vining plants from their supports.",
+                        challengeDescription = "Strong winds can topple tall staked crops or rip heavy vining plants from their supports.",
                         stepByStepRemediation = listOf(
                             "Build an A-frame structure using seasoned bamboo poles sunk at least 40 cm into the ground.",
                             "Fasten diagonal guy-wires tied to corner ground pegs.",
-                            "For corn, hill-up soil around the base at Day 25 to stimulate anchoring prop roots."
+                            "Hill-up soil around the base of plants to stimulate anchoring root growth and bury the lower stem."
                         ),
                         materialList = listOf("Bamboo poles (2.5m)", "Sturdy nylon tie wire", "Wooden ground pegs"),
                         agronomicRationale = "Triangular A-frame geometry distributes wind loads evenly, preventing stem fracturing.",
@@ -241,7 +241,7 @@ class PlaceBasedCropEvaluator {
         }
 
         if (SiteConstraint.SHADY in constraints) {
-            if (isWarmFruiting || cleanName in listOf("corn", "mais")) {
+            if (isWarmFruiting) {
                 score -= 30
                 challenges.add("Fruiting crops require at least 6 hours of full direct sunlight to produce flowers and fruit.")
                 methods.add(
@@ -258,7 +258,7 @@ class PlaceBasedCropEvaluator {
                         expectedOutcome = "Boosts light availability by 25–35%, sustaining flowering in partial shade."
                     )
                 )
-            } else if (cleanName in listOf("pechay", "kangkong", "lettuce", "litsugas")) {
+            } else if (cleanName in listOf("pechay", "lettuce", "litsugas", "green_onion", "scallion")) {
                 positives.add("Leafy greens tolerate partial shade (4–5 hours sun) with less heat stress.")
             }
         }

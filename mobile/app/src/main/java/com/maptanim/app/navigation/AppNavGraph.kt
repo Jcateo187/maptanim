@@ -157,13 +157,21 @@ fun AppNavGraph() {
         }
 
         composable(
-            route = Routes.FARM,
+            route = "${Routes.FARM}?plotId={plotId}",
+            arguments = listOf(
+                navArgument("plotId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
             enterTransition = { EnterTransition.None },
             exitTransition = { ExitTransition.None },
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }
-        ) {
-            FarmHubScreen(navController = navController)
+        ) { backStackEntry ->
+            val plotId = backStackEntry.arguments?.getString("plotId")
+            FarmHubScreen(navController = navController, initialPlotId = plotId)
         }
 
         composable(

@@ -2,28 +2,92 @@
   "id": "crop_carrot",
   "category": "crop",
   "common_name": "Carrot",
-  "local_name_ph": "Karots",
-  "scientific_name": "Daucus carota",
+  "local_name_ph": "Karot",
+  "scientific_name": "Daucus carota subsp. sativus",
   "taxonomic_family": "Apiaceae",
   "crop_type": "Root",
   "growing_specifications": {
-    "days_to_harvest": "85-95 days",
+    "days_to_harvest": "90-110 days",
     "optimal_soil_ph": "6.0 - 6.8",
-    "optimal_temperature_c": "15 - 24 C",
-    "description": "High-value root crop cultivated extensively in high-altitude zones of Benguet and Mountain Province, Philippines."
+    "optimal_temperature_c": "16 - 21 C",
+    "watering_interval_days": 3,
+    "fertilize_interval_days": 14,
+    "description": "High-value temperate root crop cultivated extensively in high-altitude zones of Benguet (La Trinidad, Atok, Buguias), Mountain Province, and Bukidnon plateau, Philippines. Requires deep, stone-free sandy loam for smooth, straight taproots."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Carrot classified under Root Vegetable?",
+      "summary": "Carrot belongs to the Umbelliferae (Apiaceae) family, harvested for its swollen primary taproot that stores massive carbohydrates and carotenoids.",
+      "points": [
+        "Taproot Morphology: Produces a single enlarged storage taproot developing directly from the radicle seedling axis.",
+        "Strict Direct Seeding: Unlike transplanted crops, taproots cannot tolerate root disturbance; transplanting bends the root tip, causing irreversible forking.",
+        "Soil Texture Sensitivity: Even tiny stones, soil clods, or fresh animal manure split the growing root cap into deformed, multi-legged roots."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is the harvest maturity set to 90–110 days?",
+      "summary": "Captures optimal sugar accumulation and maximum beta-carotene pigmentation before the core turns woody or develops hollow heart.",
+      "points": [
+        "Slow Germination & Nursery Emergence (Days 1–21): Slow initial emergence; surface soil moisture must be maintained continuously.",
+        "Thinning Window (Days 25–35): Essential thinning to 5–8 cm spacing allows individual taproots to expand sideways.",
+        "Taproot Elongation & Deep Penetration (Days 36–65): Taproot mines downward 20–25 cm into deep loose beds.",
+        "Root Bulking & Carotene Accumulation (Days 66–95): Roots swell in girth; shoulders expand to 2–4 cm diameter.",
+        "Crisp Harvest Window (Days 90–110): Full orange coloration with sweet flavor; lifted with garden fork to prevent snapping."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Carrot require consistent watering every 2–3 days?",
+      "summary": "Moisture stability is critical to prevent taproot splitting, cracking, and woody fibrous bitterness.",
+      "points": [
+        "Root Splitting Prevention: Sudden downpours after drought cause rapid inner core swelling that ruptures outer carrot skin.",
+        "Surface Moisture for Germination: The top 1 cm must stay moist for 14–21 days for the tiny seeds to establish.",
+        "Root Rot Defense: Saturated, stagnant soil causes rapid fungal root rot (Pythium, Rhizoctonia, Sclerotinia)."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Carrot require deep stone-free sandy loam with pH 6.0–6.8?",
+      "summary": "Loose, porous soil provides zero physical resistance, allowing smooth downward elongation without bending or forking.",
+      "points": [
+        "Forking Prevention: Rocks, hardpan soil, or fresh manure cause multi-legged 'octopus' carrots.",
+        "Nutrient Uptake: pH 6.0–6.8 maximizes potassium for carotene color and boron to prevent internal black heart."
+      ]
+    }
   },
   "varieties": [
     {
-      "variety_id": "var_karots_terracotta_f1",
-      "variety_name": "Terracotta F1",
-      "local_name_ph": "Karots Terracotta F1",
-      "growth_duration_days": 85,
+      "variety_id": "var_karot_new_kuroda",
+      "variety_name": "New Kuroda",
+      "local_name_ph": "Karot New Kuroda",
+      "growth_duration_days": 95,
       "stage_days": {
-        "stage1_sprout": 7,
-        "stage2_seedling": 17,
-        "stage3_vegetative": 32,
-        "stage4_flowering": 22,
-        "stage5_harvest": 7
+        "stage1_sprout": 14,
+        "stage2_seedling": 21,
+        "stage3_vegetative": 30,
+        "stage4_flowering": 0,
+        "stage5_harvest": 30
+      },
+      "optimal_seasons": [
+        "COOL",
+        "HIGHLAND",
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Standard commercial open-pollinated carrot variety in the Philippines. Highly resistant to heat and Alternaria blight, producing sweet cylindrical deep orange roots.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-09"
+    },
+    {
+      "variety_id": "var_karot_terracotta_f1",
+      "variety_name": "Terracotta F1",
+      "local_name_ph": "Karot Terracotta F1",
+      "growth_duration_days": 90,
+      "stage_days": {
+        "stage1_sprout": 12,
+        "stage2_seedling": 20,
+        "stage3_vegetative": 28,
+        "stage4_flowering": 0,
+        "stage5_harvest": 30
       },
       "optimal_seasons": [
         "COOL",
@@ -31,36 +95,15 @@
       ],
       "watering_interval_days": 3,
       "fertilize_interval_days": 14,
-      "description": "Smooth cylindrical hybrid carrot cultivar with intense orange root core, preferred in highland Benguet farms.",
+      "description": "High-yield commercial hybrid with uniform root length, intense carotene coloration, and exceptional shipping firmness.",
       "sample_planted_date": "2026-08-06",
-      "sample_expected_harvest_date": "2026-10-30"
-    },
-    {
-      "variety_id": "var_karots_kuroda_improved",
-      "variety_name": "Kuroda Improved",
-      "local_name_ph": "Karots Kuroda Improved",
-      "growth_duration_days": 95,
-      "stage_days": {
-        "stage1_sprout": 8,
-        "stage2_seedling": 20,
-        "stage3_vegetative": 36,
-        "stage4_flowering": 24,
-        "stage5_harvest": 7
-      },
-      "optimal_seasons": [
-        "HIGHLAND"
-      ],
-      "watering_interval_days": 3,
-      "fertilize_interval_days": 14,
-      "description": "Heat-tolerant tropical carrot cultivar producing thick, stump-rooted carrots suitable for medium-elevation soils.",
-      "sample_planted_date": "2026-08-06",
-      "sample_expected_harvest_date": "2026-11-09"
+      "sample_expected_harvest_date": "2026-11-04"
     }
   ],
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/carrot.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/carrot.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "author": "MapTanim Original AI Visuals",
     "license": "MapTanim Original Asset",
     "hash_sha256": "76811cacc4a9f1e9bcec55ec9c54687768c042dbc5b1bfdef53fc3cf978a7ffc"
   }

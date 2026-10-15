@@ -70,27 +70,37 @@ class CropRepositoryImpl(
 
 private fun CropDto.toDomain(): Crop {
     CropMetadataAssetDataSource.registerCropImageUrl(id, name, image_url)
+    val existingDefault = defaultPhilippineCrops.firstOrNull {
+        it.name.equals(name, ignoreCase = true) ||
+        it.localName?.equals(local_name, ignoreCase = true) == true ||
+        it.id.equals(id, ignoreCase = true)
+    }
+
     return Crop(
         id = id.ifBlank { name.lowercase().replace(" ", "_") },
         name = name.ifBlank { "Crop" },
-        localName = local_name,
-        botanicalName = botanical_name,
-        category = category,
-        daysToHarvest = days_to_harvest ?: 60,
-        wateringIntervalDays = watering_interval_days ?: 2,
-        fertilizeIntervalDays = fertilize_interval_days ?: 14,
-        nRatio = npk_n ?: 1.0f,
-        pRatio = npk_p ?: 1.0f,
-        kRatio = npk_k ?: 1.0f,
-        optimalPhMin = optimal_ph_min ?: 6.0f,
-        optimalPhMax = optimal_ph_max ?: 7.0f,
-        idealSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
-        suitableSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) },
-        toleratedSoils = emptyList(),
+        localName = local_name ?: existingDefault?.localName,
+        botanicalName = botanical_name ?: existingDefault?.botanicalName,
+        category = category.ifBlank { existingDefault?.category ?: "FRUIT" },
+        daysToHarvest = days_to_harvest ?: existingDefault?.daysToHarvest ?: 60,
+        wateringIntervalDays = watering_interval_days ?: existingDefault?.wateringIntervalDays ?: 2,
+        fertilizeIntervalDays = fertilize_interval_days ?: existingDefault?.fertilizeIntervalDays ?: 14,
+        nRatio = npk_n ?: existingDefault?.nRatio ?: 1.0f,
+        pRatio = npk_p ?: existingDefault?.pRatio ?: 1.0f,
+        kRatio = npk_k ?: existingDefault?.kRatio ?: 1.0f,
+        optimalPhMin = optimal_ph_min ?: existingDefault?.optimalPhMin ?: 6.0f,
+        optimalPhMax = optimal_ph_max ?: existingDefault?.optimalPhMax ?: 7.0f,
+        idealSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) }.ifEmpty { existingDefault?.idealSoils ?: listOf(SoilType.LOAM) },
+        suitableSoils = (suitable_soils ?: emptyList()).mapNotNull { parseSoilType(it) }.ifEmpty { existingDefault?.suitableSoils ?: emptyList() },
+        toleratedSoils = existingDefault?.toleratedSoils ?: emptyList(),
         pestRiskSeason = if (season?.uppercase() == "DRY") listOf("DRY") else listOf("WET"),
         seasonality = listOf(season?.uppercase() ?: "YEAR_ROUND"),
-        imageUrl = image_url,
-        description = description
+        imageUrl = CropMetadataAssetDataSource.resolveCropImage(id, name, image_url ?: existingDefault?.imageUrl),
+        companionPlants = companion_plants_good?.takeIf { it.isNotEmpty() } ?: existingDefault?.companionPlants ?: emptyList(),
+        avoidPlants = companion_plants_bad?.takeIf { it.isNotEmpty() } ?: existingDefault?.avoidPlants ?: emptyList(),
+        commonPests = common_pests?.takeIf { it.isNotEmpty() } ?: existingDefault?.commonPests ?: emptyList(),
+        harvestIndicators = harvest_indicators ?: existingDefault?.harvestIndicators,
+        description = description ?: existingDefault?.description
     )
 }
 
@@ -104,7 +114,16 @@ internal fun getCropsWithAssetMetadata(context: Context?): List<Crop> {
     val metaList = CropMetadataAssetDataSource.loadAllCropMetadata(context)
     if (metaList.isEmpty()) return defaultPhilippineCrops
 
-    return metaList.map { meta ->
+    val canonicalCropIds = setOf(
+        "crop_tomato", "crop_eggplant", "crop_bell_pepper", "crop_cabbage",
+        "crop_pechay", "crop_carrot", "crop_string_beans", "crop_lettuce",
+        "crop_cucumber", "crop_squash", "crop_ampalaya", "crop_potato", "crop_green_onion"
+    )
+
+    return metaList
+        .filter { it.id.lowercase() in canonicalCropIds }
+        .distinctBy { it.id.lowercase() }
+        .map { meta ->
         val existingDefault = defaultPhilippineCrops.firstOrNull {
             it.name.equals(meta.commonName, ignoreCase = true) ||
             it.localName?.equals(meta.localNamePh, ignoreCase = true) == true ||
@@ -159,6 +178,7 @@ private fun parsePhRange(phStr: String, defaultMin: Float, defaultMax: Float): P
 }
 
 internal val defaultPhilippineCrops = listOf(
+    // 1. Tomato
     Crop(
         id = "crop_tomato",
         name = "Tomato",
@@ -176,12 +196,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("YEAR_ROUND", "DRY"),
         imageUrl = "file:///android_asset/metadata/crops_images/tomato.png",
-        companionPlants = listOf("Lettuce", "Carrot", "Onion"),
-        avoidPlants = listOf("Eggplant", "Cabbage", "Corn"),
-        commonPests = listOf("Fruit Borer", "Tomato Leaf Curl Virus"),
+        companionPlants = listOf("Lettuce", "Carrot", "Green Onion"),
+        avoidPlants = listOf("Eggplant", "Cabbage"),
+        commonPests = listOf("Tomato Fruit Borer", "Bacterial Wilt", "Tomato Leaf Curl Virus"),
         harvestIndicators = "Fruit turns bright red/orange; firm to touch",
         description = "High-value fruit vegetable sensitive to excessive moisture."
     ),
+    // 2. Eggplant
     Crop(
         id = "crop_eggplant",
         name = "Eggplant",
@@ -199,35 +220,37 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET", "DRY"),
         seasonality = listOf("YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/eggplant.png",
-        companionPlants = listOf("String Beans", "Chili Pepper"),
+        companionPlants = listOf("Yardlong String Bean", "Bell Pepper"),
         avoidPlants = listOf("Tomato"),
         commonPests = listOf("Fruit Borer", "Flea Beetle"),
         harvestIndicators = "Glossy deep purple skin, firm flesh",
         description = "Popular lowland vegetable, warm-season heavy cropper."
     ),
+    // 3. Bell Pepper
     Crop(
-        id = "crop_chili_pepper",
-        name = "Chili Pepper",
-        localName = "Siling Haba / Labuyo",
-        botanicalName = "Capsicum frutescens",
+        id = "crop_bell_pepper",
+        name = "Bell Pepper",
+        localName = "Siling Atsal",
+        botanicalName = "Capsicum annuum var. grossum",
         category = "FRUIT",
-        daysToHarvest = 65,
+        daysToHarvest = 70,
         wateringIntervalDays = 2,
         fertilizeIntervalDays = 14,
-        nRatio = 1.2f, pRatio = 1.0f, kRatio = 2.0f,
-        optimalPhMin = 6.0f, optimalPhMax = 7.0f,
+        nRatio = 1.5f, pRatio = 1.0f, kRatio = 2.0f,
+        optimalPhMin = 6.0f, optimalPhMax = 6.8f,
         idealSoils = listOf(SoilType.LOAM),
         suitableSoils = listOf(SoilType.SANDY, SoilType.SILTY),
         toleratedSoils = listOf(SoilType.CLAY),
         pestRiskSeason = listOf("WET"),
-        seasonality = listOf("YEAR_ROUND"),
-        imageUrl = "file:///android_asset/metadata/crops_images/sili.png",
-        companionPlants = listOf("Eggplant", "Tomato", "Basil"),
+        seasonality = listOf("YEAR_ROUND", "COOL"),
+        imageUrl = "file:///android_asset/metadata/crops_images/bell_pepper.png",
+        companionPlants = listOf("Carrot", "Tomato", "Lettuce"),
         avoidPlants = listOf("Fennel"),
-        commonPests = listOf("Thrips", "Anthracnose"),
-        harvestIndicators = "Pods turn bright green or deep red and firm",
-        description = "Hot spice crop resilient to high heat and warm weather."
+        commonPests = listOf("Thrips", "Anthracnose", "Bacterial Spot"),
+        harvestIndicators = "Firm, glossy, thick-walled blocky pods",
+        description = "High-value crisp sweet pepper suitable for cool highland and protected lowland production."
     ),
+    // 4. Cabbage
     Crop(
         id = "crop_cabbage",
         name = "Cabbage",
@@ -245,16 +268,17 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("DRY"),
         seasonality = listOf("DRY", "LOWLAND", "YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/cabbage.png",
-        companionPlants = listOf("Onion", "Celery"),
-        avoidPlants = listOf("Tomato", "String Beans"),
+        companionPlants = listOf("Green Onion", "Lettuce"),
+        avoidPlants = listOf("Tomato", "Yardlong String Bean"),
         commonPests = listOf("Diamondback Moth", "Cabbage Looper"),
         harvestIndicators = "Firm, solid head formed at plant center",
         description = "Cool-season leafy crop high in Vitamin C."
     ),
+    // 5. Pechay
     Crop(
         id = "crop_pechay",
         name = "Pechay",
-        localName = "Pechay",
+        localName = "Petsay / Bok Choy",
         botanicalName = "Brassica rapa subsp. chinensis",
         category = "LEAFY",
         daysToHarvest = 28,
@@ -268,35 +292,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("DRY"),
         seasonality = listOf("YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/pechay.png",
-        companionPlants = listOf("Onion", "Carrot", "Cucumber"),
+        companionPlants = listOf("Green Onion", "Carrot", "Cucumber"),
         avoidPlants = listOf("Strawberry"),
         commonPests = listOf("Flea Beetle", "Cutworm"),
         harvestIndicators = "Crisp upright green petioles at 25-30 days",
         description = "Fastest turnaround leafy brassica widely grown in lowland beds."
     ),
-    Crop(
-        id = "crop_onion",
-        name = "Onion",
-        localName = "Sibuyas",
-        botanicalName = "Allium cepa",
-        category = "BULB",
-        daysToHarvest = 110,
-        wateringIntervalDays = 3,
-        fertilizeIntervalDays = 20,
-        nRatio = 1.0f, pRatio = 1.5f, kRatio = 1.5f,
-        optimalPhMin = 6.0f, optimalPhMax = 7.0f,
-        idealSoils = listOf(SoilType.LOAM),
-        suitableSoils = listOf(SoilType.SANDY, SoilType.SILTY),
-        toleratedSoils = listOf(SoilType.PEATY),
-        pestRiskSeason = listOf("WET"),
-        seasonality = listOf("DRY"),
-        imageUrl = "file:///android_asset/metadata/crops_images/onion.png",
-        companionPlants = listOf("Cabbage", "Tomato", "Carrot"),
-        avoidPlants = listOf("String Beans"),
-        commonPests = listOf("Thrips", "Purple Blotch"),
-        harvestIndicators = "Tops turn yellow and dryly fall over",
-        description = "High-value bulb crop sensitive to weed competition."
-    ),
+    // 6. Carrot
     Crop(
         id = "crop_carrot",
         name = "Carrot",
@@ -314,12 +316,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("DRY", "COOL", "HIGHLAND"),
         imageUrl = "file:///android_asset/metadata/crops_images/carrot.png",
-        companionPlants = listOf("Lettuce", "Tomato", "Onion"),
+        companionPlants = listOf("Lettuce", "Tomato", "Green Onion"),
         avoidPlants = listOf("Parsnip"),
         commonPests = listOf("Root-knot Nematode", "Cutworm"),
         harvestIndicators = "Root crown reaches 1 inch diameter, bright orange",
         description = "Deep loose soil preferred for straight root development."
     ),
+    // 7. Yardlong String Bean
     Crop(
         id = "crop_string_beans",
         name = "Yardlong String Bean",
@@ -337,12 +340,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/sitaw.png",
-        companionPlants = listOf("Corn", "Cucumber", "Eggplant"),
-        avoidPlants = listOf("Onion"),
+        companionPlants = listOf("Cucumber", "Eggplant", "Squash"),
+        avoidPlants = listOf("Green Onion"),
         commonPests = listOf("Bean Pod Borer", "Black Aphids"),
         harvestIndicators = "Long tender pods snap easily before seeds bulge",
         description = "Nitrogen-fixing legume vegetable providing soil enrichment."
     ),
+    // 8. Lettuce
     Crop(
         id = "crop_lettuce",
         name = "Lettuce",
@@ -360,12 +364,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("DRY"),
         seasonality = listOf("WET", "YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/lettuce.png",
-        companionPlants = listOf("Carrot", "Tomato", "Onion"),
+        companionPlants = listOf("Carrot", "Tomato", "Green Onion"),
         avoidPlants = listOf("Celery"),
         commonPests = listOf("Snails and Slugs", "Aphids"),
         harvestIndicators = "Full compact leaf rosette, crisp tender leaves",
         description = "Fast-growing tender salad crop requiring cool moist root zone."
     ),
+    // 9. Cucumber
     Crop(
         id = "crop_cucumber",
         name = "Cucumber",
@@ -383,58 +388,13 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/pipino.png",
-        companionPlants = listOf("Corn", "String Beans", "Okra"),
+        companionPlants = listOf("Yardlong String Bean", "Pechay"),
         avoidPlants = listOf("Potato"),
         commonPests = listOf("Cucumber Beetle", "Downy Mildew"),
         harvestIndicators = "Medium size green fruit with firm non-bitter skin",
         description = "Vining fruit crop requiring support structure or ground mulch."
     ),
-    Crop(
-        id = "crop_okra",
-        name = "Okra",
-        localName = "Okra",
-        botanicalName = "Abelmoschus esculentus",
-        category = "PODDED",
-        daysToHarvest = 45,
-        wateringIntervalDays = 2,
-        fertilizeIntervalDays = 14,
-        nRatio = 1.2f, pRatio = 1.0f, kRatio = 1.5f,
-        optimalPhMin = 6.0f, optimalPhMax = 7.5f,
-        idealSoils = listOf(SoilType.LOAM),
-        suitableSoils = listOf(SoilType.CLAY, SoilType.SANDY),
-        toleratedSoils = listOf(SoilType.SILTY),
-        pestRiskSeason = listOf("DRY"),
-        seasonality = listOf("WET", "YEAR_ROUND"),
-        imageUrl = "file:///android_asset/metadata/crops_images/okra.png",
-        companionPlants = listOf("Pepper", "Eggplant", "Cucumber"),
-        avoidPlants = listOf("Squash"),
-        commonPests = listOf("Cotton Leafhopper", "Fruit Borer"),
-        harvestIndicators = "Pods 3–4 inches long, tip snaps cleanly",
-        description = "Drought-tolerant tropical vegetable producing continuous harvest."
-    ),
-    Crop(
-        id = "crop_corn",
-        name = "Corn",
-        localName = "Mais",
-        botanicalName = "Zea mays",
-        category = "GRAIN",
-        daysToHarvest = 65,
-        wateringIntervalDays = 3,
-        fertilizeIntervalDays = 14,
-        nRatio = 2.5f, pRatio = 1.0f, kRatio = 1.5f,
-        optimalPhMin = 5.8f, optimalPhMax = 7.0f,
-        idealSoils = listOf(SoilType.LOAM),
-        suitableSoils = listOf(SoilType.CLAY, SoilType.SILTY),
-        toleratedSoils = listOf(SoilType.SANDY),
-        pestRiskSeason = listOf("WET"),
-        seasonality = listOf("YEAR_ROUND"),
-        imageUrl = "file:///android_asset/metadata/crops_images/corn.png",
-        companionPlants = listOf("Cucumber", "String Beans", "Squash"),
-        avoidPlants = listOf("Tomato"),
-        commonPests = listOf("Fall Armyworm", "Corn Earworm"),
-        harvestIndicators = "Silks turn brown/dry, kernels exude milky sap",
-        description = "Heavy feeder cereal crop providing trellis support for beans."
-    ),
+    // 10. Squash
     Crop(
         id = "crop_squash",
         name = "Squash",
@@ -452,41 +412,19 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("WET", "YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/pumpkin.png",
-        companionPlants = listOf("Corn", "String Beans"),
+        companionPlants = listOf("Yardlong String Bean"),
         avoidPlants = listOf("Potato"),
         commonPests = listOf("Squash Bug", "Powdery Mildew"),
         harvestIndicators = "Rind hardens into deep yellowish-tan, stem turns dry",
         description = "Sprawling vine crop rich in Vitamin A and long-storing fruit."
     ),
-    Crop(
-        id = "crop_kangkong",
-        name = "Water Spinach",
-        localName = "Kangkong",
-        botanicalName = "Ipomoea aquatica",
-        category = "LEAFY",
-        daysToHarvest = 30,
-        wateringIntervalDays = 1,
-        fertilizeIntervalDays = 7,
-        nRatio = 2.0f, pRatio = 1.0f, kRatio = 1.0f,
-        optimalPhMin = 5.5f, optimalPhMax = 7.0f,
-        idealSoils = listOf(SoilType.LOAM),
-        suitableSoils = listOf(SoilType.SILTY, SoilType.PEATY),
-        toleratedSoils = listOf(SoilType.CLAY),
-        pestRiskSeason = listOf("DRY"),
-        seasonality = listOf("YEAR_ROUND"),
-        imageUrl = "file:///android_asset/metadata/crops_images/kangkong.png",
-        companionPlants = listOf("Pechay", "Cucumber"),
-        avoidPlants = emptyList(),
-        commonPests = listOf("Leafminer"),
-        harvestIndicators = "Tender leafy stems 20-30cm tall",
-        description = "Fast-growing semi-aquatic leafy green staple."
-    ),
+    // 11. Bitter Gourd
     Crop(
         id = "crop_ampalaya",
         name = "Bitter Gourd",
         localName = "Ampalaya",
         botanicalName = "Momordica charantia",
-        category = "CUCURBIT / VINE",
+        category = "FRUIT",
         daysToHarvest = 55,
         wateringIntervalDays = 2,
         fertilizeIntervalDays = 10,
@@ -498,10 +436,58 @@ internal val defaultPhilippineCrops = listOf(
         pestRiskSeason = listOf("WET"),
         seasonality = listOf("YEAR_ROUND"),
         imageUrl = "file:///android_asset/metadata/crops_images/ampalaya.png",
-        companionPlants = listOf("Eggplant", "String Beans", "Corn"),
+        companionPlants = listOf("Eggplant", "Yardlong String Bean"),
         avoidPlants = emptyList(),
         commonPests = listOf("Fruit Fly", "Powdery Mildew", "Aphids"),
         harvestIndicators = "Firm ribbed fruit before turning yellow/orange",
         description = "High-value medicinal bitter gourd vining crop cultivated with bamboo trellises nationwide."
+    ),
+    // 12. Potato
+    Crop(
+        id = "crop_potato",
+        name = "Potato",
+        localName = "Patatas",
+        botanicalName = "Solanum tuberosum",
+        category = "TUBER",
+        daysToHarvest = 90,
+        wateringIntervalDays = 3,
+        fertilizeIntervalDays = 14,
+        nRatio = 1.0f, pRatio = 2.0f, kRatio = 2.5f,
+        optimalPhMin = 5.0f, optimalPhMax = 6.2f,
+        idealSoils = listOf(SoilType.LOAM),
+        suitableSoils = listOf(SoilType.SANDY, SoilType.SILTY),
+        toleratedSoils = listOf(SoilType.PEATY),
+        pestRiskSeason = listOf("WET"),
+        seasonality = listOf("COOL", "HIGHLAND"),
+        imageUrl = "file:///android_asset/metadata/crops_images/potato.png",
+        companionPlants = listOf("Cabbage", "Yardlong String Bean"),
+        avoidPlants = listOf("Tomato", "Eggplant", "Squash", "Cucumber"),
+        commonPests = listOf("Late Blight", "Potato Tuber Moth", "Bacterial Wilt"),
+        harvestIndicators = "Vines yellow and senesce; firm tuber skin set after 10-day dehaulming",
+        description = "Premier cool-climate caloric staple and high-value highland tuber crop."
+    ),
+    // 13. Green Onion
+    Crop(
+        id = "crop_green_onion",
+        name = "Green Onion",
+        localName = "Dahon ng Sibuyas / Scallion",
+        botanicalName = "Allium fistulosum",
+        category = "BULB",
+        daysToHarvest = 60,
+        wateringIntervalDays = 1,
+        fertilizeIntervalDays = 12,
+        nRatio = 2.0f, pRatio = 1.0f, kRatio = 1.5f,
+        optimalPhMin = 6.0f, optimalPhMax = 7.0f,
+        idealSoils = listOf(SoilType.LOAM),
+        suitableSoils = listOf(SoilType.SANDY, SoilType.SILTY),
+        toleratedSoils = listOf(SoilType.PEATY),
+        pestRiskSeason = listOf("WET"),
+        seasonality = listOf("YEAR_ROUND"),
+        imageUrl = "file:///android_asset/metadata/crops_images/green_onion.png",
+        companionPlants = listOf("Cabbage", "Tomato", "Carrot", "Lettuce"),
+        avoidPlants = listOf("Yardlong String Bean"),
+        commonPests = listOf("Onion Thrips", "Purple Blotch"),
+        harvestIndicators = "Crisp upright green tubular leaves and firm white base stalks",
+        description = "High-value bunching allium with non-bulbing stalks and continuous ratoon harvesting."
     )
 )

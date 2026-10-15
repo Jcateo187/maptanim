@@ -5,41 +5,150 @@
   "local_name_ph": "Litsugas",
   "scientific_name": "Lactuca sativa",
   "taxonomic_family": "Asteraceae",
-  "crop_type": "Leafy Green",
+  "crop_type": "Leafy Green / Salad Crop",
   "growing_specifications": {
-    "days_to_harvest": "45 days",
-    "optimal_soil_ph": "6.0 - 7.0",
-    "optimal_temperature_c": "15 - 25 C",
-    "description": "High-value crisp leafy salad crop cultivated in highland and urban greenhouse soil beds."
+    "days_to_harvest": "55-70 days",
+    "optimal_soil_ph": "6.0 - 6.8",
+    "optimal_temperature_c": "15 - 24 C",
+    "watering_interval_days": 1,
+    "fertilize_interval_days": 10,
+    "description": "High-value, fast-cycling crisp leafy salad vegetable cultivated extensively in Philippine highland terraces (Benguet, Mountain Province, Bukidnon) and cool-season lowland raised beds. Features shallow root systems, high moisture requirements, and sensitivity to heat-induced bolting."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Lettuce classified under Salad Greens (Asteraceae)?",
+      "summary": "Lactuca sativa belongs to the Asteraceae (sunflower) family, growing in a compact rosette of tender, crisp leaves harvested prior to the reproductive bolting phase.",
+      "points": [
+        "Compact Rosette Growth: Forms a 15–25 cm wide low-lying cluster of succulent leaves packed with water (95%) and fiber.",
+        "Vegetative Harvest Priority: Harvested strictly during the vegetative stage before central stem elongation and flower bud development.",
+        "Rapid Lifecycle: Completes emergence to harvest maturity in 55 to 70 days, ideal for intensive sequential cropping cycles."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is harvest maturity timed to 55–70 days before bolting?",
+      "summary": "Harvesting at full rosette expansion preserves crispness, tenderness, and natural sweetness before temperatures trigger bitter lactucarium sap.",
+      "points": [
+        "Germination & Emergence (Days 3–7): Fine seeds sprout rapidly under shallow 0.5 cm sowing.",
+        "Nursery Tray Establishment (Days 7–25): Seedlings develop 3–4 true leaves in 104-hole trays before transplanting.",
+        "Rosette Expansion (Days 25–50): Rapid leaf expansion and heart formation supported by consistent soil moisture.",
+        "Peak Market Maturity (Days 55–70): Rosettes reach 300–600 g per head with crisp, tender, sweet leaves.",
+        "Bolting Risk Post-70 Days: Temperatures exceeding 28–30°C induce central stalk elongation, tough foliage, and unpalatable bitter milky sap."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Lettuce require daily to alternate-day light irrigation?",
+      "summary": "With 95% moisture content and a shallow fibrous root zone (5–15 cm), lettuce cannot tolerate dry topsoil without wilting and bittering.",
+      "points": [
+        "Shallow Root Vulnerability: Fibrous feeder roots occupy only the top 10 cm of soil, rapidly exhausting surface moisture.",
+        "Lactucarium & Bitterness Prevention: Water stress immediately triggers defense alkaloids that make salad greens astringent and bitter.",
+        "Tip-Burn Suppression: Steady transpiration flow is required to transport immobile calcium to expanding inner leaf margins."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Lettuce prefer well-drained loam with pH 6.0–6.8 on raised beds?",
+      "summary": "Requires loose, humus-rich soil for delicate feeder roots and 15–20 cm bed elevation to prevent waterlogging and soft rot.",
+      "points": [
+        "Drainage & Aeration: Raised beds prevent root asphyxiation and damping-off during tropical rain downpours.",
+        "Nutrient Absorption: pH 6.0–6.8 optimizes uptake of Nitrogen (100–150 kg/ha) for fast leaf formation and Calcium to prevent tip-burn.",
+        "Bottom Rot Prevention: Mulched raised beds keep lower leaves elevated away from muddy, pathogen-laden soil."
+      ]
+    }
   },
   "varieties": [
     {
       "variety_id": "var_lettuce_grand_rapids",
       "variety_name": "Grand Rapids",
-      "local_name_ph": "Litsugas Grand Rapids",
-      "growth_duration_days": 45,
+      "local_name_ph": "Litsugas Grand Rapids (Loose-Leaf)",
+      "growth_duration_days": 50,
       "stage_days": {
         "stage1_sprout": 4,
-        "stage2_seedling": 10,
+        "stage2_seedling": 18,
         "stage3_vegetative": 18,
-        "stage4_flowering": 9,
+        "stage4_flowering": 6,
         "stage5_harvest": 4
       },
       "optimal_seasons": [
-        "COOL",
+        "COOL_SEASON",
+        "HIGHLAND",
+        "YEAR_ROUND_GREENHOUSE"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 10,
+      "description": "Leading commercial loose-leaf cultivar in the Philippines with light green, deeply frilled crisp leaves, high heat tolerance, and cut-and-come-again harvesting suitability.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-25"
+    },
+    {
+      "variety_id": "var_lettuce_great_lakes",
+      "variety_name": "Great Lakes 54",
+      "local_name_ph": "Litsugas Great Lakes (Crisphead Iceberg)",
+      "growth_duration_days": 65,
+      "stage_days": {
+        "stage1_sprout": 5,
+        "stage2_seedling": 20,
+        "stage3_vegetative": 25,
+        "stage4_flowering": 10,
+        "stage5_harvest": 5
+      },
+      "optimal_seasons": [
+        "HIGHLAND",
+        "COOL_SEASON"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 12,
+      "description": "Classic crisphead (iceberg) variety grown extensively in Benguet highland farms (Atok, La Trinidad). Forms dense, firm 400–600 g heads with crunchy, sweet leaves.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-10"
+    },
+    {
+      "variety_id": "var_lettuce_general_romaine",
+      "variety_name": "General (Green Span)",
+      "local_name_ph": "Litsugas General (Romaine / Cos)",
+      "growth_duration_days": 55,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 18,
+        "stage3_vegetative": 21,
+        "stage4_flowering": 8,
+        "stage5_harvest": 4
+      },
+      "optimal_seasons": [
+        "LOWLAND_COOL",
         "HIGHLAND"
       ],
       "watering_interval_days": 1,
-      "fertilize_interval_days": 7,
-      "description": "Loose-leaf light green frilly lettuce cultivar widely grown in Benguet and Bukidnon hydro/soil farms.",
+      "fertilize_interval_days": 10,
+      "description": "Upright, heat-tolerant Romaine/Cos lettuce with thick, sweet ribs and dark green outer leaves. Highly adaptable to lowland cool-season garden beds.",
       "sample_planted_date": "2026-08-06",
-      "sample_expected_harvest_date": "2026-09-20"
+      "sample_expected_harvest_date": "2026-09-30"
+    },
+    {
+      "variety_id": "var_lettuce_red_sails",
+      "variety_name": "Red Sails / Lollo Rossa",
+      "local_name_ph": "Litsugas Red Sails (Red Loose-Leaf)",
+      "growth_duration_days": 52,
+      "stage_days": {
+        "stage1_sprout": 4,
+        "stage2_seedling": 18,
+        "stage3_vegetative": 20,
+        "stage4_flowering": 6,
+        "stage5_harvest": 4
+      },
+      "optimal_seasons": [
+        "COOL_SEASON",
+        "HIGHLAND"
+      ],
+      "watering_interval_days": 1,
+      "fertilize_interval_days": 10,
+      "description": "Specialty frilly loose-leaf with stunning burgundy-red leaf edges rich in anthocyanin antioxidants. Slow to bolt and high culinary market value.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-09-27"
     }
   ],
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/lettuce.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/lettuce.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "author": "MapTanim Agronomic Visuals",
     "license": "MapTanim Original Asset",
     "hash_sha256": "02ab228e90d05f4c6cd893dee2ecb77a4ec73b88e74501fd27084449c57d6ea2"
   }

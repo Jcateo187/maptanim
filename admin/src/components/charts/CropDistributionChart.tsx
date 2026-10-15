@@ -8,12 +8,12 @@ interface CropDistributionChartProps {
 
 export const CropDistributionChart: React.FC<CropDistributionChartProps> = ({ data }) => {
   return (
-    <div className="bg-[#2B3136] p-6 sm:p-7 rounded-2xl border border-[#38434D] shadow-sm space-y-4 h-full flex flex-col box-border">
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-4 h-full flex flex-col box-border">
       <div className="flex items-center justify-between">
-        <h4 className="font-bold text-sm text-[#F4F4F4]">
+        <h4 className="font-bold text-sm text-[#111813]">
           Crops Cultivated
         </h4>
-        <button className="text-[#8A9BA8] hover:text-[#F4F4F4] transition cursor-pointer">
+        <button className="text-[#6B7280] hover:text-[#111813] transition cursor-pointer">
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
@@ -21,21 +21,21 @@ export const CropDistributionChart: React.FC<CropDistributionChartProps> = ({ da
       <div className="flex-1 min-h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-            <XAxis dataKey="category" stroke="#8A9BA8" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8A9BA8" fontSize={11} tickLine={false} axisLine={false} />
+            <XAxis dataKey="category" stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#183145',
-                border: '1px solid #38434D',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB',
                 borderRadius: '8px',
-                color: '#F4F4F4',
+                color: '#111813',
                 fontSize: '12px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
               }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={18}>
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color || '#00BCD4'} />
+                <Cell key={`cell-${index}`} fill={entry.color || '#2E7D32'} />
               ))}
             </Bar>
           </BarChart>

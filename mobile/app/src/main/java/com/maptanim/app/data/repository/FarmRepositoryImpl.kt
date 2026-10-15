@@ -38,29 +38,46 @@ class FarmRepositoryImpl(
 
     override suspend fun upsertFarm(farm: Farm) = withContext(Dispatchers.IO) {
         farmDao?.upsertFarm(farm.toEntity())
+        farmsCache.value = farmsCache.value.filter { it.id != farm.id } + farm
+
+        // Guest accounts operate local-only to prevent RLS violations and queue pollution
+        if (farm.farmerId.equals("guest", ignoreCase = true)) {
+            return@withContext
+        }
+
         try {
-            val res = remoteRepository.upsertFarm(farm.toDto())
+            val dto = farm.toDto()
+            val res = remoteRepository.upsertFarm(dto)
             if (res.isFailure) {
+                val jsonPayload = kotlinx.serialization.json.Json.encodeToString(FarmDto.serializer(), dto)
                 RepositoryProvider.syncRepository.enqueueSyncItem(
                     tableName = "farms",
                     recordId = farm.id,
                     operation = "UPSERT",
-                    payload = farm.id
+                    payload = jsonPayload
                 )
             }
         } catch (_: Exception) {
-            RepositoryProvider.syncRepository.enqueueSyncItem(
-                tableName = "farms",
-                recordId = farm.id,
-                operation = "UPSERT",
-                payload = farm.id
-            )
+            try {
+                val jsonPayload = kotlinx.serialization.json.Json.encodeToString(FarmDto.serializer(), farm.toDto())
+                RepositoryProvider.syncRepository.enqueueSyncItem(
+                    tableName = "farms",
+                    recordId = farm.id,
+                    operation = "UPSERT",
+                    payload = jsonPayload
+                )
+            } catch (_: Exception) {}
         }
-        farmsCache.value = farmsCache.value.filter { it.id != farm.id } + farm
     }
 
     override suspend fun deleteFarm(farmId: String) = withContext(Dispatchers.IO) {
         farmDao?.deleteFarm(farmId)
+        farmsCache.value = farmsCache.value.filter { it.id != farmId }
+
+        if (farmId.contains("guest", ignoreCase = true)) {
+            return@withContext
+        }
+
         try {
             val res = remoteRepository.deleteFarm(farmId)
             if (res.isFailure) {
@@ -79,7 +96,6 @@ class FarmRepositoryImpl(
                 payload = farmId
             )
         }
-        farmsCache.value = farmsCache.value.filter { it.id != farmId }
     }
 
     suspend fun fetchFromRemote(farmerId: String): List<Farm> = withContext(Dispatchers.IO) {
@@ -100,7 +116,6 @@ private fun Farm.toDto() = FarmDto(
     id = id,
     farmer_id = farmerId,
     farm_name = farmName,
-    garden_name = farmName,
     created_at = createdAt,
     updated_at = updatedAt
 )
@@ -108,7 +123,7 @@ private fun Farm.toDto() = FarmDto(
 private fun FarmDto.toDomain(): Farm = Farm(
     id = id,
     farmerId = farmer_id,
-    farmName = garden_name?.takeIf { it.isNotBlank() } ?: farm_name,
+    farmName = farm_name.takeIf { it.isNotBlank() } ?: "My Farm",
     createdAt = created_at ?: "",
     updatedAt = updated_at ?: ""
 )

@@ -1,0 +1,110 @@
+{
+  "id": "crop_green_onion",
+  "category": "crop",
+  "common_name": "Green Onion / Scallion",
+  "local_name_ph": "Dahon ng Sibuyas / Sibuyas Tagalog",
+  "scientific_name": "Allium fistulosum",
+  "taxonomic_family": "Amaryllidaceae",
+  "crop_type": "Alliums / Bunching Green Allium",
+  "growing_specifications": {
+    "days_to_harvest": "45-60 days",
+    "optimal_soil_ph": "6.0 - 7.0",
+    "optimal_temperature_c": "18 - 32 C",
+    "watering_interval_days": 2,
+    "fertilize_interval_days": 10,
+    "description": "High-value bunching allium prized across the Philippines for its aromatic hollow tubular green foliage and crisp blanched white pseudostems. Highly suitable for commercial raised beds, container gardens, companion planting, and continuous ratoon harvesting."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Green Onion classified under Green Alliums (Amaryllidaceae)?",
+      "summary": "Allium fistulosum is a perennial bunching monocot harvested for its succulent non-bulbing tubular leaves and elongated white leaf sheaths.",
+      "points": [
+        "Non-Bulbing Pseudostem: Forms dense upright clusters with elongated white shafts (10–18 cm) rather than large underground bulbs.",
+        "Aromatic Sulfur Defense: Produces allicin and volatile sulfur oils that naturally deter insect pests from companion solanaceous and brassica crops.",
+        "Tillering & Clumping Habit: High vegetative tillering capacity allowing continuous propagation via clump division."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why can Green Onions be harvested in 45–60 days or via continuous ratoon?",
+      "summary": "Fast foliar elongation allows early bunched market harvesting or cut-and-come-again regrowth every 10–15 days.",
+      "points": [
+        "Emergence (Days 7–12): Slender grass-like shoots emerge from true seeds or rapid sprouting from root divisions.",
+        "Seedling & Tillering (Days 20–35): Active tillering produces 4 to 8 daughter shoots per hill.",
+        "Blanching & Elongation (Days 35–48): Earthing-up covers lower stems to develop tender, sweet, porcelain-white stalks.",
+        "Whole Plant Harvest (Days 45–60): Robust 30–50 cm clumps uprooted with clean white roots for fresh market bunching.",
+        "Ratoon Regrowth: Cutting foliage 2.5 cm above the basal plate allows 4 to 6 successive harvest flushes."
+      ]
+    },
+    "watering_why": {
+      "title": "Why do Green Onions need steady moisture without waterlogging?",
+      "summary": "A shallow fibrous root system requires regular moisture in the upper 10–15 cm of soil, while waterlogging induces rapid basal plate rot.",
+      "points": [
+        "Shallow Root Vulnerability: Fibrous roots cannot reach deep water tables, necessitating 2–3 weekly irrigations.",
+        "Tip Burn Prevention: Consistent soil moisture prevents foliar desiccation and browning of tubular leaf tips.",
+        "Raised Bed Aeration: 15–20 cm elevated beds prevent root rot caused by standing rainwater during monsoon."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Green Onion excel in loose sandy loam with organic matter and CRH?",
+      "summary": "Friable, aerated soil allows vigorous tillering, rapid root expansion, and clean, easy earthing-up during blanching.",
+      "points": [
+        "Earthing-Up Ease: Friable loam combined with carbonized rice hull (CRH) mounds cleanly around stalks without crusting.",
+        "Nutrient Uptake: Soil pH 6.0–7.0 guarantees optimal assimilation of Nitrogen for green leaf growth and Potassium for stem crunch.",
+        "Fusarium Suppression: Organic compost with beneficial Trichoderma suppresses soil-borne Fusarium basal rot."
+      ]
+    }
+  },
+  "varieties": [
+    {
+      "variety_id": "var_green_onion_paragon_f1",
+      "variety_name": "Paragon F1",
+      "local_name_ph": "Dahon ng Sibuyas Paragon F1",
+      "growth_duration_days": 50,
+      "stage_days": {
+        "stage1_sprout": 8,
+        "stage2_seedling": 14,
+        "stage3_vegetative": 18,
+        "stage4_flowering": 0,
+        "stage5_harvest": 10
+      },
+      "optimal_seasons": [
+        "DRY",
+        "WET"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Leading Philippine bunching hybrid by East-West Seed with thick erect foliage, uniform 15 cm blanched white pseudostems, and heavy tillering capacity.",
+      "sample_planted_date": "2026-08-01",
+      "sample_expected_harvest_date": "2026-09-20"
+    },
+    {
+      "variety_id": "var_green_onion_batanes_native",
+      "variety_name": "Batanes Bunching Native",
+      "local_name_ph": "Sibuyas Tagalog Batanes",
+      "growth_duration_days": 55,
+      "stage_days": {
+        "stage1_sprout": 7,
+        "stage2_seedling": 15,
+        "stage3_vegetative": 23,
+        "stage4_flowering": 0,
+        "stage5_harvest": 10
+      },
+      "optimal_seasons": [
+        "DRY",
+        "WET"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 14,
+      "description": "Hardy heirloom Philippine allium producing robust clumps, highly resistant to pests and ideal for vegetative division propagation.",
+      "sample_planted_date": "2026-08-01",
+      "sample_expected_harvest_date": "2026-09-25"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/green_onion.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/green_onion.png",
+    "author": "MapTanim Original Agricultural Visuals",
+    "license": "MapTanim Asset",
+    "hash_sha256": "green_onion_scallion_asset_hash_2026"
+  }
+}

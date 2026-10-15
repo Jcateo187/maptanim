@@ -75,10 +75,20 @@ fun LibraryScreen(
                 selectedRoute = Routes.LIBRARY,
                 onNavigate = { route ->
                     if (route != Routes.LIBRARY) {
-                        navController.navigate(route) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                        if (route == Routes.HOME) {
+                            val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+                            if (!popped) {
+                                navController.navigate(Routes.HOME) {
+                                    popUpTo(0) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        } else {
+                            navController.navigate(route) {
+                                popUpTo(Routes.HOME) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     }
                 }

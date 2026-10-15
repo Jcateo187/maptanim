@@ -4,10 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { DashboardOverview } from './pages/DashboardOverview';
 import { UserManagement } from './pages/UserManagement';
-import { CropLibrary } from './pages/CropLibrary';
-import { DSSRuleEditor } from './pages/DSSRuleEditor';
 import { CommunityHub } from './pages/CommunityHub';
-import { FeedbackManagement } from './pages/FeedbackManagement';
+import { CustomerService } from './pages/CustomerService';
 import { SystemLogs } from './pages/SystemLogs';
 import { Login } from './pages/Login';
 
@@ -20,26 +18,23 @@ const MainContent: React.FC = () => {
 
   return (
     <Layout>
-      {(activeTab) => {
+      {(activeTab, setActiveTab) => {
         switch (activeTab) {
           case 'overview':
-            return <DashboardOverview />;
+            return <DashboardOverview onNavigate={setActiveTab} />;
           case 'users':
             return <UserManagement />;
           case 'farmers':
             return <UserManagement initialTab="directory" />;
-          case 'crops':
-            return <CropLibrary />;
-          case 'dss':
-            return <DSSRuleEditor />;
           case 'community':
             return <CommunityHub />;
           case 'feedback':
-            return <FeedbackManagement />;
+          case 'service':
+            return <CustomerService />;
           case 'logs':
             return <SystemLogs />;
           default:
-            return <DashboardOverview />;
+            return <DashboardOverview onNavigate={setActiveTab} />;
         }
       }}
     </Layout>

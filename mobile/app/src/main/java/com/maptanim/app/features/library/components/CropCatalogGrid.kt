@@ -34,12 +34,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.maptanim.app.domain.model.Crop
 import com.maptanim.app.features.farm.components.CropFamilyInfo
 import com.maptanim.app.features.farm.components.getCropFamily
-import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
+import com.maptanim.app.features.farm.components.getCropHeroDrawable
 import com.maptanim.app.features.library.model.LibraryCategory
 
 private val LushGreen = Color(0xFF2E7D32)
@@ -66,7 +66,8 @@ fun CropCatalogGrid(
 
     // Group crops by their botanical family type and sort by canonical family order
     val groupedCrops = remember(crops) {
-        crops.groupBy { getCropFamily(it) }
+        crops.distinctBy { it.id }
+            .groupBy { getCropFamily(it) }
             .toSortedMap(compareBy { it.sortOrder })
     }
 
@@ -74,13 +75,25 @@ fun CropCatalogGrid(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        // Clean Title Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+        // ── TOP HEADER (Takes Phone Status Bar) ─────────────────────────
+        Surface(
+            color = Color.White,
+            shadowElevation = 1.dp,
+            border = BorderStroke(1.dp, CardBorderColor),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                // Clean Title Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -273,15 +286,18 @@ fun CropCatalogGrid(
                 }
             }
         }
+            }
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // ── Crops 3-Column Grid Grouped by Family Type ────────────────────────
         if (crops.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -295,7 +311,8 @@ fun CropCatalogGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .padding(horizontal = 14.dp),
                 contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -390,7 +407,7 @@ fun CropFamilyHeading(
 
 /**
  * 3-Column Clean Crop Card Item
- * The image takes the whole card with high-contrast bottom scrim.
+ * Displays the high-resolution hero image taking the entire card with a high-contrast bottom scrim.
  */
 @Composable
 fun Crop3ColumnCardItem(
@@ -398,6 +415,8 @@ fun Crop3ColumnCardItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val heroResId = getCropHeroDrawable("${crop.name} ${crop.id} ${crop.localName ?: ""}")
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
@@ -408,19 +427,13 @@ fun Crop3ColumnCardItem(
             .height(130.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Whole card SVG illustration
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 10.dp)
-            ) {
-                CropSvgRenderer.drawCropSvg(
-                    drawScope = this,
-                    cropName = crop.name,
-                    center = Offset(size.width / 2f, (size.height / 2f) - 10.dp.toPx()),
-                    sizePx = minOf(size.width, size.height) * 0.88f
-                )
-            }
+            // Full-bleed canonical hero photograph
+            Image(
+                painter = painterResource(id = heroResId),
+                contentDescription = crop.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Bottom Gradient Scrim Overlay with Crop Name & Local Name
             Box(
@@ -431,12 +444,12 @@ fun Crop3ColumnCardItem(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color(0xB3000000),
-                                Color(0xE6000000)
+                                Color(0x66000000),
+                                Color(0xCC000000)
                             )
                         )
                     )
-                    .padding(horizontal = 6.dp, vertical = 5.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
             ) {
                 Column {
                     Text(

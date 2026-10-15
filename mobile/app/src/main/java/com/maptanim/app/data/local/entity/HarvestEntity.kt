@@ -21,7 +21,7 @@ data class HarvestEntity(
     @ColumnInfo(name = "quality_rating") val qualityRating: Int,
     @ColumnInfo(name = "notes") val notes: String?,
     // New fields from Crop Management flow spec
-    @ColumnInfo(name = "harvest_method", defaultValue = "") val harvestMethod: String? = null,
+    @ColumnInfo(name = "harvest_method") val harvestMethod: String? = null,
     @ColumnInfo(name = "quantity", defaultValue = "0") val quantity: Float = 0f,
     @ColumnInfo(name = "unit", defaultValue = "kg") val unit: String = "kg",
     @ColumnInfo(name = "marketable_pct") val marketablePct: Float? = null,

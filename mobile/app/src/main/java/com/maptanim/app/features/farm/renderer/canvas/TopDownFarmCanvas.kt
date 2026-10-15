@@ -1,8 +1,12 @@
 package com.maptanim.app.features.farm.renderer.canvas
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -172,7 +176,7 @@ internal val PlantedBedFill   = Color(0xFF3E2723)
 // Gesture state tracking
 // ═══════════════════════════════════════════════════════════════════════════════
 
-private enum class DragMode { IDLE, PAN, MOVE_CROP, RESIZE_HANDLE }
+private enum class DragMode { IDLE, PAN, MOVE_CROP, RESIZE_HANDLE, PENDING_CROP_HOLD }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TopDownFarmCanvas — Professional 2D orthographic top-down farm canvas
@@ -215,6 +219,7 @@ fun TopDownFarmCanvas(
     val effectiveShowRulers = (showYardRulers || showBoundary) && showMeasurement
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
+    val coroutineScope = rememberCoroutineScope()
 
     var camera by remember { mutableStateOf(TopDownCamera(zoom = initialZoom)) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -226,6 +231,9 @@ fun TopDownFarmCanvas(
     var dragAccumWorld by remember { mutableStateOf(Offset.Zero) }
     var activeHandle by remember { mutableStateOf<HandleType?>(null) }
     var activeDragCropId by remember { mutableStateOf<String?>(null) }
+    var dragPressTimeMs by remember { mutableLongStateOf(0L) }
+    var pendingHoldCropId by remember { mutableStateOf<String?>(null) }
+    var pendingHoldCrop by remember { mutableStateOf<CropZoneRenderData?>(null) }
     var lastPointerCount by remember { mutableIntStateOf(0) }
     var lastPinchDist by remember { mutableFloatStateOf(0f) }
 
@@ -315,10 +323,12 @@ fun TopDownFarmCanvas(
                                             }
                                         }
                                         hitCrop != null -> {
-                                            // Directly allow holding and dragging any crop on the grid!
-                                            dragMode = DragMode.MOVE_CROP
-                                            activeDragCropId = hitCrop.id
-                                            editViewModel.onCropZoneDragStart(hitCrop.id)
+                                            // Placed vegetable: Hold-to-drag requires press threshold (~220ms)
+                                            // Quick tap opens 6-clock overlay and auto-centers/zooms camera without moving crop
+                                            dragMode = DragMode.PENDING_CROP_HOLD
+                                            dragPressTimeMs = System.currentTimeMillis()
+                                            pendingHoldCropId = hitCrop.id
+                                            pendingHoldCrop = hitCrop
                                         }
                                         else -> {
                                             dragMode = DragMode.PAN
@@ -370,6 +380,23 @@ fun TopDownFarmCanvas(
                                     val change = changes.firstOrNull { it.pressed } ?: continue
                                     val delta = change.position - dragStartScreenPos
                                     val totalScreenDist = dist(change.position, dragStartScreenPos)
+                                    val elapsed = System.currentTimeMillis() - dragPressTimeMs
+
+                                    // Check hold-to-drag threshold for placed vegetable
+                                    if (dragMode == DragMode.PENDING_CROP_HOLD) {
+                                        if (elapsed >= 220L) {
+                                            // Hold time satisfied: activate MOVE_CROP mode!
+                                            dragMode = DragMode.MOVE_CROP
+                                            val cropId = pendingHoldCropId
+                                            if (cropId != null) {
+                                                activeDragCropId = cropId
+                                                editViewModel.onCropZoneDragStart(cropId)
+                                            }
+                                        } else if (totalScreenDist > touchSlop) {
+                                            // Quick swipe before hold threshold: user is panning the canvas
+                                            dragMode = DragMode.PAN
+                                        }
+                                    }
 
                                     if (totalScreenDist > touchSlop) {
                                         val screenDelta = change.position - change.previousPosition
@@ -409,7 +436,7 @@ fun TopDownFarmCanvas(
                                                 )
                                                 change.consume()
                                             }
-                                            DragMode.IDLE -> {}
+                                            DragMode.PENDING_CROP_HOLD, DragMode.IDLE -> {}
                                         }
                                     }
                                 }
@@ -420,14 +447,53 @@ fun TopDownFarmCanvas(
                                     val releasePos = changes.firstOrNull()?.position ?: dragStartScreenPos
                                     val totalDist = dist(releasePos, dragStartScreenPos)
 
-                                    if (totalDist < touchSlop && dragMode != DragMode.IDLE) {
-                                        // TAP — no significant drag
+                                    if ((dragMode == DragMode.PENDING_CROP_HOLD || totalDist < touchSlop) && dragMode != DragMode.IDLE) {
+                                        // TAP — no drag
                                         val worldPos = TopDownProjection.screenToWorld(
                                             dragStartScreenPos.x, dragStartScreenPos.y, camera
                                         )
                                         val activePlotId = currentSelectedPlotId ?: currentPlots.firstOrNull()?.id
-                                        val hitCrop = hitTestCropZone(worldPos, currentCropZones, activePlotId)
+                                        val hitCrop = pendingHoldCrop ?: hitTestCropZone(worldPos, currentCropZones, activePlotId)
                                         val hitPlot = hitTestPlot(worldPos, currentPlots)
+
+                                        // Auto-framing: zoom in if low, zoom out if high, center exact zone of vegetable
+                                        if (hitCrop != null && activeCropName.isEmpty()) {
+                                            val cropCenterX = hitCrop.offsetX + hitCrop.widthM / 2f
+                                            val cropCenterY = hitCrop.offsetY + hitCrop.heightM / 2f
+
+                                            val targetZoom = when {
+                                                camera.zoom < 0.80f -> 1.05f  // Zoom in if low
+                                                camera.zoom > 1.30f -> 1.05f  // Zoom out if high
+                                                else -> 1.05f                 // Optimal framing zone
+                                            }
+                                            val targetPanX = (canvasSize.width / 2f) - (cropCenterX * TopDownProjection.PPM * targetZoom)
+                                            val targetPanY = ((canvasSize.height / 2f) - with(density) { 15.dp.toPx() }) - (cropCenterY * TopDownProjection.PPM * targetZoom)
+
+                                            val targetCam = TopDownProjection.clampCamera(
+                                                TopDownCamera(panX = targetPanX, panY = targetPanY, zoom = targetZoom),
+                                                farmW = yardWidthM, farmH = yardHeightM,
+                                                screenW = canvasSize.width.toFloat(), screenH = canvasSize.height.toFloat(),
+                                                topPadding = topPaddingPx, bottomPadding = bottomPaddingPx,
+                                                leftPadding = leftPaddingPx, rightPadding = rightPaddingPx
+                                            )
+
+                                            coroutineScope.launch {
+                                                val startCam = camera
+                                                val anim = Animatable(0f)
+                                                anim.animateTo(
+                                                    targetValue = 1f,
+                                                    animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+                                                ) {
+                                                    val f = value
+                                                    camera = TopDownCamera(
+                                                        panX = startCam.panX + (targetCam.panX - startCam.panX) * f,
+                                                        panY = startCam.panY + (targetCam.panY - startCam.panY) * f,
+                                                        zoom = startCam.zoom + (targetCam.zoom - startCam.zoom) * f
+                                                    )
+                                                }
+                                            }
+                                        }
+
                                         handleTap(
                                             worldPos = worldPos,
                                             hitCrop = hitCrop,
@@ -464,6 +530,8 @@ fun TopDownFarmCanvas(
                                     dragMode = DragMode.IDLE
                                     activeHandle = null
                                     activeDragCropId = null
+                                    pendingHoldCropId = null
+                                    pendingHoldCrop = null
                                     dragAccumWorld = Offset.Zero
                                     lastPointerCount = 0
                                     lastPinchDist = 0f
@@ -1450,9 +1518,9 @@ private fun DrawScope.drawPlotBed(
     val labelText = when {
         isBed && bedCrops.isNotEmpty() -> {
             val cropsSummary = bedCrops.mapNotNull { it.cropName }.distinct().joinToString(", ")
-            "${plot.plotLabel.ifBlank { "Bed" }} • $cropsSummary"
+            "${plot.plotLabel.ifBlank { "Garden" }} • $cropsSummary"
         }
-        isBed -> plot.plotLabel.ifBlank { "Bed" }
+        isBed -> plot.plotLabel.ifBlank { "Garden" }
         else -> plot.cropName ?: plot.plotLabel
     }
     if (labelText.isNotBlank() && bedW > 30f && bedH > 18f) {
@@ -1734,18 +1802,16 @@ internal fun cropColor(cropName: String): Color = when (cropName.lowercase()) {
     "carrot", "karot" -> Color(0xFFFF8A65)
     "tomato", "kamatis" -> Color(0xFFEF5350)
     "eggplant", "talong" -> Color(0xFF7E57C2)
-    "pechay" -> Color(0xFF66BB6A)
-    "corn", "mais" -> Color(0xFFFFCA28)
-    "onion", "sibuyas" -> Color(0xFFFFAB91)
+    "pechay", "petsay", "bokchoy" -> Color(0xFF66BB6A)
+    "bell_pepper", "bellpepper", "sweet_pepper", "sweetpepper", "siling_atsal", "atsal", "pepper", "sili" -> Color(0xFFD32F2F)
+    "green_onion", "greenonion", "scallion", "spring_onion", "dahon_ng_sibuyas", "onion", "sibuyas" -> Color(0xFF4CAF50)
+    "potato", "patatas" -> Color(0xFFD4A373)
     "cabbage", "repolyo" -> Color(0xFF81C784)
     "lettuce", "litsugas" -> Color(0xFFA5D6A7)
-    "ampalaya" -> Color(0xFF43A047)
-    "okra" -> Color(0xFF66BB6A)
-    "kangkong" -> Color(0xFF26A69A)
+    "ampalaya", "bittergourd" -> Color(0xFF43A047)
     "squash", "pumpkin", "kalabasa" -> Color(0xFFFFB74D)
-    "sili", "chili" -> Color(0xFFE53935)
     "cucumber", "pipino" -> Color(0xFF26A69A)
-    "sitaw", "stringbeans" -> Color(0xFF66BB6A)
+    "sitaw", "stringbeans", "yardlong", "yardlong_bean" -> Color(0xFF66BB6A)
     "bed" -> Color(0xFF8D6E63)
     else -> Color(0xFF81C784)
 }

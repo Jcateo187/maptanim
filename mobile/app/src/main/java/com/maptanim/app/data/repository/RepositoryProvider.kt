@@ -97,9 +97,18 @@ object RepositoryProvider {
         try {
             // Preserve user terms/privacy policy consent so it remains accepted after logout
             val savedConsent = database?.policyConsentDao()?.getDefaultConsent()
+            // Preserve pending sync mutations so offline edits are not lost on logout
+            val pendingSyncItems = try { database?.syncQueueDao()?.getPendingItems() } catch (_: Exception) { null }
+
             database?.clearAllTables()
+
             if (savedConsent != null) {
                 database?.policyConsentDao()?.saveConsent(savedConsent)
+            }
+            if (!pendingSyncItems.isNullOrEmpty()) {
+                pendingSyncItems.forEach { item ->
+                    database?.syncQueueDao()?.insertItem(item)
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()

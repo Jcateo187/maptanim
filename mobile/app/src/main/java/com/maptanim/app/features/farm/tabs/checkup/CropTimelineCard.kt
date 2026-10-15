@@ -1,4 +1,4 @@
-﻿package com.maptanim.app.features.farm.tabs.checkup
+package com.maptanim.app.features.farm.tabs.checkup
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -19,10 +19,33 @@ import androidx.compose.ui.unit.sp
 import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.ui.theme.White
 
+private fun resolveStageLabelForCrop(stage: ManagementStage, cropName: String?): String {
+    if (cropName.isNullOrBlank()) return stage.label
+    val c = cropName.lowercase().trim()
+    return when (stage) {
+        ManagementStage.FLOWERING_FRUIT_DEVELOPMENT -> when {
+            c.contains("pechay") || c.contains("petsay") || c.contains("lettuce") || c.contains("litsugas") ||
+            c.contains("kangkong") || c.contains("cabbage") || c.contains("repolyo") || c.contains("mustasa") || c.contains("bok choy") ->
+                "Rosette & Head Maturation"
+            c.contains("potato") || c.contains("patatas") || c.contains("carrot") || c.contains("karot") ||
+            c.contains("radish") || c.contains("labanos") ->
+                "Tuber / Root Bulking"
+            c.contains("green onion") || c.contains("scallion") || c.contains("onion") || c.contains("sibuyas") ->
+                "Stem Elongation & Blanching"
+            c.contains("corn") || c.contains("mais") ->
+                "Tasseling & Silking"
+            else -> stage.label
+        }
+        else -> stage.label
+    }
+}
+
 @Composable
 fun CropTimelineCard(
     currentStage: ManagementStage,
     isExpanded: Boolean,
+    cropName: String? = null,
+    varietyName: String? = null,
     canGoPrevious: Boolean = false,
     canGoNext: Boolean = false,
     onPreviousStage: (() -> Unit)? = null,
@@ -114,7 +137,7 @@ fun CropTimelineCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = stage.label,
+                                    text = resolveStageLabelForCrop(stage, cropName),
                                     color = if (isCurrent) White else if (isPast) Color(0xFFA0B09A) else Color(0xFF6B7B67),
                                     fontSize = 13.sp,
                                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal

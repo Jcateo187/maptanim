@@ -47,25 +47,31 @@ object BackyardCropAgroData {
         val lower = cropName.lowercase().trim()
         return when {
             lower.contains("tomato") || lower.contains("kamatis") ->
-                CropMaturityProfile(75, 3, 45, 2.0f, true)
+                CropMaturityProfile(70, 3, 45, 2.0f, true)
             lower.contains("eggplant") || lower.contains("talong") ->
-                CropMaturityProfile(85, 4, 90, 1.5f, true)
-            lower.contains("chili") || lower.contains("sili") ->
-                CropMaturityProfile(85, 6, 150, 0.5f, true)
-            lower.contains("okra") ->
-                CropMaturityProfile(55, 2, 90, 0.8f, true)
-            lower.contains("pechay") || lower.contains("bok choy") ->
-                CropMaturityProfile(30, 0, 0, 0.15f, false)
+                CropMaturityProfile(80, 4, 90, 1.5f, true)
+            lower.contains("bell pepper") || lower.contains("bell_pepper") || lower.contains("sweet pepper") || lower.contains("atsal") || lower.contains("pepper") || lower.contains("sili") ->
+                CropMaturityProfile(75, 4, 60, 1.2f, true)
+            lower.contains("cabbage") || lower.contains("repolyo") ->
+                CropMaturityProfile(65, 0, 0, 1.0f, false)
+            lower.contains("carrot") || lower.contains("karot") ->
+                CropMaturityProfile(85, 0, 0, 0.15f, false)
+            lower.contains("potato") || lower.contains("patatas") ->
+                CropMaturityProfile(90, 0, 0, 1.2f, false)
+            lower.contains("pechay") || lower.contains("petsay") || lower.contains("bok choy") ->
+                CropMaturityProfile(28, 0, 0, 0.15f, false)
             lower.contains("lettuce") || lower.contains("litsugas") ->
                 CropMaturityProfile(45, 0, 0, 0.20f, false)
-            lower.contains("kangkong") ->
-                CropMaturityProfile(28, 12, 120, 0.20f, true)
+            lower.contains("green onion") || lower.contains("scallion") || lower.contains("dahon ng sibuyas") || lower.contains("onion") || lower.contains("sibuyas") ->
+                CropMaturityProfile(60, 14, 90, 0.10f, true)
             lower.contains("cucumber") || lower.contains("pipino") ->
                 CropMaturityProfile(50, 2, 30, 1.5f, true)
             lower.contains("sitaw") || lower.contains("yardlong") || lower.contains("beans") ->
-                CropMaturityProfile(55, 3, 40, 0.6f, true)
-            lower.contains("corn") || lower.contains("mais") ->
-                CropMaturityProfile(75, 0, 0, 0.4f, false)
+                CropMaturityProfile(50, 2, 45, 0.6f, true)
+            lower.contains("ampalaya") || lower.contains("bitter") ->
+                CropMaturityProfile(55, 3, 45, 1.0f, true)
+            lower.contains("squash") || lower.contains("kalabasa") ->
+                CropMaturityProfile(85, 7, 30, 3.0f, true)
             else ->
                 CropMaturityProfile(60, 3, 30, 1.0f, true)
         }
@@ -111,13 +117,37 @@ fun CropHarvestTimelineCard(
         count * profile.yieldKgPerPlant
     }
 
-    val currentStage = remember(progress) {
+    val cropStages = remember(cropName, totalDays) {
+        com.maptanim.app.features.farm.schedule.buildCropSpecificStages(
+            cropName = cropName,
+            totalDays = totalDays
+        )
+    }
+
+    val currentStageInfo = remember(cropStages, daysPlanted) {
+        cropStages.firstOrNull { daysPlanted in it.startDay..it.endDay }
+            ?: if (daysPlanted <= 0) cropStages.firstOrNull() else cropStages.lastOrNull()
+    }
+
+    val currentStage = remember(currentStageInfo, progress) {
         when {
-            progress < 0.20f -> CropGrowthStage.GERMINATION
-            progress < 0.40f -> CropGrowthStage.SEEDLING
-            progress < 0.70f -> CropGrowthStage.VEGETATIVE
-            progress < 0.90f -> CropGrowthStage.FLOWERING
-            else -> CropGrowthStage.HARVEST
+            daysRemaining == 0 || progress >= 1f -> CropGrowthStage.HARVEST
+            currentStageInfo != null -> {
+                val key = currentStageInfo.stageKey.lowercase()
+                when {
+                    key.contains("pagtatanim") || key.contains("buto") -> CropGrowthStage.GERMINATION
+                    key.contains("punla") || key.contains("pagsibol") -> CropGrowthStage.SEEDLING
+                    key.contains("lago") || key.contains("balag") || key.contains("hilling") ||
+                    key.contains("bulking") || key.contains("rosette") || key.contains("blanching") ||
+                    key.contains("frame") || key.contains("thin") -> CropGrowthStage.VEGETATIVE
+                    key.contains("bulaklak") || key.contains("flower") -> CropGrowthStage.FLOWERING
+                    key.contains("bunga") || key.contains("kalaman") || key.contains("cupping") ||
+                    key.contains("dehaulm") -> CropGrowthStage.RIPENING
+                    key.contains("ani") || key.contains("harvest") -> CropGrowthStage.HARVEST
+                    else -> if (progress < 0.30f) CropGrowthStage.SEEDLING else CropGrowthStage.VEGETATIVE
+                }
+            }
+            else -> if (progress < 0.30f) CropGrowthStage.SEEDLING else CropGrowthStage.VEGETATIVE
         }
     }
 
@@ -159,9 +189,11 @@ fun CropHarvestTimelineCard(
                             color = DeepBlack
                         )
                         Text(
-                            text = "Stage: ${currentStage.name.lowercase().replaceFirstChar { it.uppercase() }} • Day $daysPlanted of $totalDays",
+                            text = "Stage: ${currentStageInfo?.stageTitle ?: currentStage.name.lowercase().replaceFirstChar { it.uppercase() }} • Day $daysPlanted of $totalDays",
                             fontSize = 10.5.sp,
-                            color = Color(0xFF666666)
+                            color = Color(0xFF666666),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -195,10 +227,19 @@ fun CropHarvestTimelineCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Sown / Planted", fontSize = 9.sp, color = Color(0xFF888888))
-                    Text("Vegetative", fontSize = 9.sp, color = Color(0xFF888888))
-                    Text("Flowering", fontSize = 9.sp, color = Color(0xFF888888))
-                    Text("Harvest", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = LushGreen)
+                    val nonPlantingStages = remember(cropStages) {
+                        cropStages.filter { it.stageKey != "Pagtatanim" }.ifEmpty { cropStages }
+                    }
+                    nonPlantingStages.forEachIndexed { idx, stageItem ->
+                        val isLast = idx == nonPlantingStages.size - 1
+                        val isCurrent = currentStageInfo?.stageKey == stageItem.stageKey
+                        Text(
+                            text = stageItem.stageKey,
+                            fontSize = 9.sp,
+                            fontWeight = if (isCurrent || isLast) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) LushGreen else if (isLast) TimelineOrange else Color(0xFF888888)
+                        )
+                    }
                 }
             }
 

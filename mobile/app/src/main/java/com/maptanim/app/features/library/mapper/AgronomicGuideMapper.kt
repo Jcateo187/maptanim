@@ -253,90 +253,100 @@ object AgronomicGuideMapper {
     private fun resolveBotanicalName(crop: String): String = when {
         crop.contains("Tomato", true) -> "Solanum lycopersicum"
         crop.contains("Eggplant", true) -> "Solanum melongena"
-        crop.contains("Chili", true) || crop.contains("Sili", true) -> "Capsicum annuum / C. frutescens"
-        crop.contains("Okra", true) -> "Abelmoschus esculentus"
-        crop.contains("Pechay", true) -> "Brassica rapa subsp. chinensis"
-        crop.contains("Lettuce", true) -> "Lactuca sativa"
-        crop.contains("Kangkong", true) -> "Ipomoea aquatica"
+        crop.contains("Bell Pepper", true) || crop.contains("Pepper", true) || crop.contains("Atsal", true) -> "Capsicum annuum var. grossum"
+        crop.contains("Potato", true) || crop.contains("Patatas", true) -> "Solanum tuberosum"
+        crop.contains("Cabbage", true) || crop.contains("Repolyo", true) -> "Brassica oleracea var. capitata"
+        crop.contains("Carrot", true) || crop.contains("Karot", true) -> "Daucus carota"
+        crop.contains("Pechay", true) || crop.contains("Petsay", true) -> "Brassica rapa subsp. chinensis"
+        crop.contains("Lettuce", true) || crop.contains("Litsugas", true) -> "Lactuca sativa"
         crop.contains("Cucumber", true) || crop.contains("Pipino", true) -> "Cucumis sativus"
         crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> "Vigna unguiculata subsp. sesquipedalis"
-        crop.contains("Corn", true) || crop.contains("Mais", true) -> "Zea mays var. saccharata"
+        crop.contains("Ampalaya", true) || crop.contains("Bitter", true) -> "Momordica charantia"
+        crop.contains("Squash", true) || crop.contains("Kalabasa", true) -> "Cucurbita moschata"
+        crop.contains("Green Onion", true) || crop.contains("Scallion", true) || crop.contains("Sibuyas", true) -> "Allium fistulosum"
         else -> "Horticultural Cultivar"
     }
 
     private fun resolveFamily(crop: String): String = when {
-        crop.contains("Tomato", true) || crop.contains("Eggplant", true) || crop.contains("Chili", true) -> "Solanaceae (Nightshade Family)"
-        crop.contains("Okra", true) -> "Malvaceae (Mallow Family)"
-        crop.contains("Pechay", true) -> "Brassicaceae (Mustard Family)"
+        crop.contains("Tomato", true) || crop.contains("Eggplant", true) || crop.contains("Pepper", true) || crop.contains("Potato", true) -> "Solanaceae (Nightshade Family)"
+        crop.contains("Cabbage", true) || crop.contains("Pechay", true) -> "Brassicaceae (Mustard Family)"
         crop.contains("Lettuce", true) -> "Asteraceae (Daisy / Lettuce Family)"
-        crop.contains("Kangkong", true) -> "Convolvulaceae (Morning Glory Family)"
-        crop.contains("Cucumber", true) || crop.contains("Pipino", true) -> "Cucurbitaceae (Gourd Family)"
+        crop.contains("Cucumber", true) || crop.contains("Pipino", true) || crop.contains("Ampalaya", true) || crop.contains("Squash", true) -> "Cucurbitaceae (Gourd Family)"
         crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> "Fabaceae (Legume Family)"
-        crop.contains("Corn", true) || crop.contains("Mais", true) -> "Poaceae (Grass Family)"
+        crop.contains("Green Onion", true) || crop.contains("Scallion", true) || crop.contains("Sibuyas", true) -> "Amaryllidaceae (Allium Family)"
+        crop.contains("Carrot", true) -> "Apiaceae (Carrot Family)"
         else -> "Vegetable Crop"
     }
 
     private fun resolveCulinaryUses(crop: String): String = when {
         crop.contains("Tomato", true) -> "Fresh in ensaladas, sauteed in sinigang, pinakbet, and traditional sauces."
         crop.contains("Eggplant", true) -> "Tortang talong, pinakbet, ensaladang talong, and grilled dishes."
-        crop.contains("Chili", true) -> "Sinigang, sawsawan, Bicol express, and fresh culinary spicing."
-        crop.contains("Okra", true) -> "Sinigang, pinakbet, steamed with bagoong, and healthy broths."
+        crop.contains("Bell Pepper", true) || crop.contains("Pepper", true) -> "Menudo, afritada, kaldereta, and fresh crisp salads."
+        crop.contains("Potato", true) || crop.contains("Patatas", true) -> "Nilagang baka, afritada, menudo, potato soup, and fried snacks."
+        crop.contains("Cabbage", true) || crop.contains("Repolyo", true) -> "Nilaga, pansit guisado, pesang isda, and egg-roll fillings."
+        crop.contains("Carrot", true) -> "Afritada, chopsuey, fried lumpia, and fresh carrot juicing."
         crop.contains("Pechay", true) -> "Nilaga, bulalo, stir-fries, and quick nutritious vegetable soups."
         crop.contains("Lettuce", true) -> "Fresh garden salads, samgyupsal wraps, burgers, and spring rolls."
-        crop.contains("Kangkong", true) -> "Adobong kangkong, sinigang sa sampalok, and crispy deep-fried leaves."
-        crop.contains("Cucumber", true) -> "Refreshing salads, atsara pickling, fresh juicing, and cold dips."
-        crop.contains("Yardlong", true) -> "Adobong sitaw, pinakbet, sinigang, and sauteed with ground meat."
-        crop.contains("Corn", true) -> "Boiled sweet corn on the cob, corn soup with moringa, and fresh snacks."
+        crop.contains("Cucumber", true) || crop.contains("Pipino", true) -> "Refreshing salads, atsara pickling, fresh juicing, and cold dips."
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> "Adobong sitaw, pinakbet, sinigang, and sauteed with ground meat."
+        crop.contains("Ampalaya", true) -> "Ginisang ampalaya with egg, pinakbet, and medicinal dietary teas."
+        crop.contains("Squash", true) || crop.contains("Kalabasa", true) -> "Ginataang kalabasa with sitaw, pinakbet, and nutritious baby mash."
+        crop.contains("Green Onion", true) || crop.contains("Scallion", true) -> "Aromatic garnish for lugaw, tinola, soups, and dipping sawsawan."
         else -> "Nutritious Philippine home-cooked dishes."
     }
 
     private fun resolveNpkRatio(crop: String): String = when {
-        crop.contains("Pechay", true) || crop.contains("Kangkong", true) || crop.contains("Lettuce", true) -> "3-1-2 (High Nitrogen for foliar leaf growth)"
-        crop.contains("Tomato", true) || crop.contains("Eggplant", true) || crop.contains("Chili", true) || crop.contains("Cucumber", true) -> "1-2-2 (High Phosphorus & Potassium for flowering and fruiting)"
-        crop.contains("Yardlong", true) -> "1-2-1 (Low Nitrogen; legumes fix own nitrogen via root nodules)"
-        crop.contains("Corn", true) -> "3-1-2 (High Nitrogen & Potassium for strong stalks and full ears)"
+        crop.contains("Pechay", true) || crop.contains("Cabbage", true) || crop.contains("Lettuce", true) || crop.contains("Green Onion", true) -> "3-1-2 (High Nitrogen for foliar leaf growth)"
+        crop.contains("Tomato", true) || crop.contains("Eggplant", true) || crop.contains("Pepper", true) || crop.contains("Cucumber", true) || crop.contains("Ampalaya", true) || crop.contains("Squash", true) -> "1-2-2 (High Phosphorus & Potassium for flowering and fruiting)"
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> "1-2-1 (Low Nitrogen; legumes fix own nitrogen via root nodules)"
+        crop.contains("Potato", true) || crop.contains("Carrot", true) -> "1-2-2 (High Potassium & Phosphorus for tuber/root bulking)"
         else -> "2-1-2 (Balanced Complete Nutrition)"
     }
 
     private fun isDirectSeeded(crop: String): Boolean =
-        crop.contains("Corn", true) || crop.contains("Okra", true) ||
-        crop.contains("Yardlong", true) || crop.contains("Kangkong", true) ||
-        crop.contains("Cucumber", true)
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) ||
+        crop.contains("Cucumber", true) || crop.contains("Carrot", true) ||
+        crop.contains("Squash", true)
 
     private fun resolvePlantSpacing(crop: String): Int = when {
-        crop.contains("Corn", true) -> 25
-        crop.contains("Eggplant", true) || crop.contains("Tomato", true) -> 50
-        crop.contains("Chili", true) || crop.contains("Sili", true) -> 40
-        crop.contains("Okra", true) || crop.contains("Cucumber", true) || crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> 30
+        crop.contains("Eggplant", true) || crop.contains("Tomato", true) || crop.contains("Bell Pepper", true) -> 50
+        crop.contains("Potato", true) || crop.contains("Cucumber", true) || crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> 30
+        crop.contains("Cabbage", true) -> 40
+        crop.contains("Squash", true) -> 90
         crop.contains("Pechay", true) || crop.contains("Lettuce", true) -> 15
-        crop.contains("Kangkong", true) -> 10
+        crop.contains("Carrot", true) || crop.contains("Green Onion", true) -> 10
         else -> 30
     }
 
     private fun needsTrellis(crop: String): Boolean =
-        crop.contains("Yardlong", true) || crop.contains("Cucumber", true)
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) ||
+        crop.contains("Cucumber", true) || crop.contains("Pipino", true) ||
+        crop.contains("Ampalaya", true)
 
     private fun resolveCompanions(crop: String): List<String> = when {
-        crop.contains("Tomato", true) -> listOf("Sweet Basil", "Marigold", "Garlic", "Onion")
-        crop.contains("Eggplant", true) -> listOf("Marigold", "Bush Beans", "Basil")
-        crop.contains("Chili", true) -> listOf("Onion", "Garlic", "Basil", "Carrot")
-        crop.contains("Okra", true) -> listOf("Sweet Pepper", "Eggplant", "Melon")
-        crop.contains("Pechay", true) -> listOf("Mint", "Lemongrass", "Garlic", "Celery")
-        crop.contains("Lettuce", true) -> listOf("Chives", "Carrot", "Radish", "Cucumber")
-        crop.contains("Kangkong", true) -> listOf("Pechay", "Mustard", "Spring Onion")
-        crop.contains("Cucumber", true) -> listOf("Corn", "Radish", "Sunflower", "Marigold")
-        crop.contains("Yardlong", true) -> listOf("Corn", "Cucumber", "Radish", "Eggplant")
-        crop.contains("Corn", true) -> listOf("Yardlong Bean", "Squash", "Cucumber", "Melon")
-        else -> listOf("Marigold", "Basil", "Green Onion")
+        crop.contains("Tomato", true) -> listOf("Lettuce", "Carrot", "Green Onion")
+        crop.contains("Eggplant", true) -> listOf("Yardlong String Bean", "Bell Pepper")
+        crop.contains("Bell Pepper", true) -> listOf("Carrot", "Tomato", "Lettuce")
+        crop.contains("Cabbage", true) -> listOf("Green Onion", "Lettuce")
+        crop.contains("Pechay", true) -> listOf("Green Onion", "Carrot", "Cucumber")
+        crop.contains("Lettuce", true) -> listOf("Carrot", "Tomato", "Green Onion")
+        crop.contains("Cucumber", true) -> listOf("Yardlong String Bean", "Pechay")
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> listOf("Cucumber", "Eggplant", "Squash")
+        crop.contains("Squash", true) -> listOf("Yardlong String Bean")
+        crop.contains("Ampalaya", true) -> listOf("Eggplant", "Yardlong String Bean")
+        crop.contains("Potato", true) -> listOf("Cabbage", "Yardlong String Bean")
+        crop.contains("Carrot", true) -> listOf("Lettuce", "Tomato", "Green Onion")
+        crop.contains("Green Onion", true) -> listOf("Cabbage", "Tomato", "Carrot", "Lettuce")
+        else -> listOf("Green Onion", "Lettuce")
     }
 
     private fun resolveAntagonists(crop: String): List<String> = when {
-        crop.contains("Tomato", true) -> listOf("Corn (shares earworm)", "Fennel", "Potato")
-        crop.contains("Eggplant", true) -> listOf("Fennel")
-        crop.contains("Chili", true) -> listOf("Fennel")
-        crop.contains("Pechay", true) -> listOf("Tomato (flea beetles)", "Strawberry")
-        crop.contains("Yardlong", true) -> listOf("Onion (inhibits rhizobia)", "Garlic")
-        crop.contains("Corn", true) -> listOf("Tomato (shared corn earworm / fruit borer)")
-        else -> listOf("Fennel")
+        crop.contains("Tomato", true) -> listOf("Eggplant", "Cabbage")
+        crop.contains("Eggplant", true) -> listOf("Tomato")
+        crop.contains("Potato", true) -> listOf("Tomato", "Eggplant", "Squash", "Cucumber")
+        crop.contains("Pechay", true) -> listOf("Strawberry")
+        crop.contains("Yardlong", true) || crop.contains("Sitaw", true) -> listOf("Green Onion")
+        crop.contains("Green Onion", true) -> listOf("Yardlong String Bean")
+        else -> emptyList()
     }
 }

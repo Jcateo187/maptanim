@@ -84,6 +84,10 @@ fun TodayTasksCard(
                 } else {
                     // Maximum 2 task rows visible on HomeScreen as requested
                     tasks.take(2).forEach { task ->
+                        val isOverdue = try {
+                            java.time.LocalDate.parse(task.dueDate).isBefore(java.time.LocalDate.now()) && !task.isCompleted
+                        } catch (_: Exception) { false }
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -95,16 +99,102 @@ fun TodayTasksCard(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
+                                val formattedTitle = buildString {
+                                    val crop = task.cropName?.trim()?.takeIf { it.isNotBlank() }
+                                    val plot = task.plotLabel.trim().takeIf { it.isNotBlank() && !it.equals("PLOT", ignoreCase = true) }
+                                    val title = task.title.trim()
+
+                                    val prefix = when {
+                                        crop != null && plot != null -> "$crop ($plot)"
+                                        crop != null -> crop
+                                        plot != null -> plot
+                                        else -> null
+                                    }
+
+                                    if (prefix != null) {
+                                        if (title.startsWith(prefix, ignoreCase = true)) {
+                                            append(title)
+                                        } else if (crop != null && title.contains(crop, ignoreCase = true) && plot != null) {
+                                            append("$plot: $title")
+                                        } else {
+                                            append("$prefix: $title")
+                                        }
+                                    } else {
+                                        append(title)
+                                    }
+                                }
+
+                                val taskTypeLabel = when (task.taskType) {
+                                    com.maptanim.app.domain.model.TaskType.WATER -> "Pagdidilig (Watering)"
+                                    com.maptanim.app.domain.model.TaskType.FERTILIZE -> "Pagpapataba (Fertilizing)"
+                                    com.maptanim.app.domain.model.TaskType.HARVEST -> "Pag-aani (Harvesting)"
+                                    com.maptanim.app.domain.model.TaskType.PEST_ALERT -> "Babala sa Peste (Pest Alert)"
+                                    com.maptanim.app.domain.model.TaskType.APPLY_PESTICIDE -> "Peste at Gamot (Pest Care)"
+                                    com.maptanim.app.domain.model.TaskType.WEED -> "Pag-aalis ng Damo (Weeding)"
+                                    com.maptanim.app.domain.model.TaskType.TRELLIS -> "Paglalagay ng Balag (Trellising)"
+                                    com.maptanim.app.domain.model.TaskType.NUTRITION -> "Sustansya ng Halaman (Nutrition)"
+                                    com.maptanim.app.domain.model.TaskType.ROTATION_ALERT -> "Palit-tanim (Crop Rotation)"
+                                    com.maptanim.app.domain.model.TaskType.SOIL_AMENDMENT -> "Pangangalaga ng Lupa (Soil Care)"
+                                    com.maptanim.app.domain.model.TaskType.PRUNING -> "Pagpupungos (Pruning)"
+                                    com.maptanim.app.domain.model.TaskType.OBSERVATION -> "Pagsusuri (Observation / Check-up)"
+                                }
+
+                                val titleColor = when {
+                                    task.isCompleted -> LushGreen
+                                    isOverdue -> Color(0xFFD32F2F)
+                                    else -> DeepBlack
+                                }
+
+                                val titleDecoration = when {
+                                    task.isCompleted || isOverdue -> TextDecoration.LineThrough
+                                    else -> TextDecoration.None
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (isOverdue) {
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = Color(0xFFFFEBEE)
+                                        ) {
+                                            Text(
+                                                text = "Hindi Nagawa",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFC62828),
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    } else if (task.isCompleted) {
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = Color(0xFFE8F5E9)
+                                        ) {
+                                            Text(
+                                                text = "Tapos Na",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = LushGreen,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = formattedTitle,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = titleColor,
+                                        textDecoration = titleDecoration
+                                    )
+                                }
+
                                 Text(
-                                    text = "${task.cropName} (${task.plotLabel}): ${task.title}",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp,
-                                    color = DeepBlack
-                                )
-                                Text(
-                                    text = task.taskType.name,
+                                    text = taskTypeLabel,
                                     fontSize = 11.sp,
-                                    color = LushGreen,
+                                    color = if (task.isCompleted) LushGreen.copy(alpha = 0.7f) else if (isOverdue) Color(0xFFD32F2F).copy(alpha = 0.7f) else LushGreen,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
@@ -113,9 +203,9 @@ fun TodayTasksCard(
                                 onClick = { onCompleteTask(task.id) }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CheckCircleOutline,
-                                    contentDescription = "Complete task",
-                                    tint = LushGreen,
+                                    imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.CheckCircleOutline,
+                                    contentDescription = if (task.isCompleted) "Tapos na" else "Complete task",
+                                    tint = if (task.isCompleted) LushGreen else if (isOverdue) Color(0xFFE53935) else LushGreen,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

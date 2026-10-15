@@ -24,6 +24,7 @@ export interface Farmer {
   deviceInfo?: string;
   isOnline?: boolean;
   activitySummary?: string;
+  password?: string;
 }
 
 export interface UserActivityLog {
@@ -48,7 +49,7 @@ export interface UserTrackingMetrics {
   weeklyActiveUsers: number;
   statusDistribution: { name: string; value: number; color: string; count: number }[];
   activityTrends: { period: string; active: number; inactive: number; newRegistrations: number }[];
-  activityByModule: { module: string; count: number; color: string }[];
+  activityByModule: { module: string; count?: number; color?: string; eventCount?: number; uniqueUsers?: number; percentage?: number }[];
 }
 
 export interface Farm {
@@ -172,13 +173,69 @@ export interface FeedbackItem {
   id: string;
   farmerId: string;
   farmerName: string;
-  category: 'BUG' | 'FEATURE_REQUEST' | 'AGRONOMIC_QUERY' | 'GENERAL';
+  farmName?: string;
+  category: 'BUG' | 'FEATURE_REQUEST' | 'AGRONOMIC_QUERY' | 'GENERAL' | 'ACCOUNT_SUPPORT' | 'PEST_DISEASE';
   subject: string;
   message: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED';
   createdAt: string;
   resolvedAt?: string;
   adminReply?: string;
+  serviceRating?: number;
+  wasHelpful?: boolean;
+  ratedAt?: string;
+  ratingComment?: string;
+}
+
+export interface CheckUpProblemStat {
+  problem: string;
+  count: number;
+  percentage: number;
+  severity: 'URGENT' | 'NEEDS_CARE' | 'NORMAL';
+  color: string;
+  topAffectedCrop: string;
+}
+
+export interface FavoriteCropStat {
+  cropName: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export interface GardenSizeStat {
+  bracket: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export interface GardenSizeAnalytics {
+  distribution: GardenSizeStat[];
+  avgAreaSqm: number;
+  avgAreaSqFt: number;
+  mostPopularDimension: string;
+  totalGardensAnalyzed: number;
+}
+
+export interface PlantingEffectivenessStat {
+  averageRating: number;
+  totalEvaluations: number;
+  ratingBreakdown: { star: number; count: number; percentage: number }[];
+  highQualityPercent: number;
+  topEffectiveCrops: { cropName: string; avgRating: number; totalYieldKg: number }[];
+}
+
+export interface CustomerServiceSlaStat {
+  totalTickets: number;
+  resolvedTickets: number;
+  resolutionRate: number;
+  averageCsatRating: number;
+  ratedCount: number;
+  helpfulPercent: number;
+  avgResolutionTimeHours: number;
+  categoryBreakdown: { category: string; label: string; count: number; color: string }[];
+  serviceMeetsNeedsStatus: 'EXCELLENT' | 'GOOD' | 'NEEDS_ATTENTION';
 }
 
 export interface SystemAuditLog {
@@ -230,13 +287,31 @@ export interface DashboardStats {
   totalFeedback: number;
   totalPostReports: number;
   pendingReports: number;
-  topPlantedCrops: { cropName: string; plantCount: number; color: string; varietyName?: string }[];
+  topPlantedCrops: { cropName: string; plantCount: number; color: string; varietyName?: string; year?: string }[];
   topPlantedVarieties: TopPlantedVariety[];
   harvestDateAnalytics: HarvestDateAnalytics;
   weeklyRegistrations: { day: string; newUsers: number; returningUsers: number }[];
   activeUsersToday: number;
   totalCommunityPosts: number;
   systemNotificationsCount: number;
+  // Year-filtered plantings
+  plantingsByYear: Record<string, {
+    crops: { cropName: string; plantCount: number; color: string; varietyName?: string }[];
+    varieties: TopPlantedVariety[];
+  }>;
+  availablePlantingYears: string[];
+  // Check-Up agronomic problems
+  checkUpProblems: CheckUpProblemStat[];
+  totalCheckUpsRecorded: number;
+  // Favorite vegetables
+  favoriteCropsStats: FavoriteCropStat[];
+  totalFavoritesRecorded: number;
+  // Garden size usage
+  gardenSizeAnalytics: GardenSizeAnalytics;
+  // System effectiveness in real-life planting
+  plantingEffectiveness: PlantingEffectivenessStat;
+  // Feedback & Customer Service satisfaction
+  customerServiceSla: CustomerServiceSlaStat;
 }
 
 export type CommunityCategory = 'PEST_ALERT' | 'FARMING_TIP' | 'EQUIPMENT' | 'GENERAL' | 'OFFICIAL_ADVISORY';

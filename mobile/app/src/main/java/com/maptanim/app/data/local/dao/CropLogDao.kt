@@ -27,6 +27,10 @@ interface CropLogDao {
     @Query("SELECT * FROM crop_logs WHERE farm_id = :farmId ORDER BY created_at DESC")
     fun observeLogsForFarm(farmId: String): Flow<List<CropLogEntity>>
 
+    /** Every log on this device, newest first (profile Activity History). */
+    @Query("SELECT * FROM crop_logs ORDER BY created_at DESC")
+    fun observeAllLogs(): Flow<List<CropLogEntity>>
+
     /** Count of logs per stage for a planting (for stage progression checks). */
     @Query("SELECT COUNT(*) FROM crop_logs WHERE crop_planting_id = :cropPlantingId AND current_stage = :stage")
     fun countLogsForStage(cropPlantingId: String, stage: String): Int

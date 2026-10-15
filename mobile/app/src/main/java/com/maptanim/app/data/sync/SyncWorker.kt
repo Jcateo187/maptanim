@@ -9,6 +9,7 @@ import com.maptanim.app.data.remote.dto.HarvestRecordDto
 import com.maptanim.app.data.remote.dto.TaskDto
 import com.maptanim.app.data.repository.*
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -89,6 +90,19 @@ class SyncWorker(
                         if (!item.payload.isNullOrBlank()) {
                             val dto = json.decodeFromString(HarvestRecordDto.serializer(), item.payload)
                             harvestRemote.recordHarvest(dto)
+                        }
+                        syncRepo.markSynced(item.id)
+                    }
+                    "crop_logs" -> {
+                        if (item.operation == "DELETE") {
+                            if (item.recordId.isNotBlank()) {
+                                SupabaseClient.client.from("crop_logs").delete {
+                                    filter { eq("id", item.recordId) }
+                                }
+                            }
+                        } else if (!item.payload.isNullOrBlank()) {
+                            val dto = json.decodeFromString(CropLogRemoteDto.serializer(), item.payload)
+                            SupabaseClient.client.from("crop_logs").upsert(dto)
                         }
                         syncRepo.markSynced(item.id)
                     }

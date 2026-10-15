@@ -128,7 +128,91 @@ object CropPestDiseaseSeeds {
             "FUNGAL", "WET", 1,
             "Distinct yellow-white chlorotic stripes along leaf length; downy white growth under morning dew; stunted crazy-top tassels.",
             "Seed treatment with biological biocontrol agents (metalaxyl or Trichoderma) before sowing.",
-            "Rogue out and burn infected plants early before spores disperse to neighboring plants; avoid planting downwind of old corn fields.")
+            "Rogue out and burn infected plants early before spores disperse to neighboring plants; avoid planting downwind of old corn fields."),
+
+        // ── 11. Bitter Gourd (Ampalaya) ──────────────────────────────────────
+        pest("Bitter Gourd", "Melon Fruit Fly", "Langaw ng Prutas sa Ampalaya", "Bactrocera cucurbitae",
+            "INSECT", "YEAR_ROUND", 3,
+            "Punctures on young fruits weeping amber sap; curved, deformed fruits with internal feeding maggots causing premature yellowing and rotting.",
+            "Install cue-lure pheromone traps (1 trap per 50 sqm) and protein bait sprays on border corn plants.",
+            "Bag young fruits (5–7 cm long) with paper sleeves or mesh bags immediately after female flower closure; bury all fallen infested fruits at least 50 cm deep."),
+        pest("Bitter Gourd", "Downy Mildew of Cucurbits", "Amag sa Dahon ng Ampalaya", "Pseudoperonospora cubensis",
+            "FUNGAL", "WET", 2,
+            "Angular yellow chlorotic lesions bound by leaf veins on upper leaf surface; purplish-gray velvety downy mold underneath in humid mornings.",
+            "Spray baking soda solution (5g/L with mild soap) or bio-fungicide Bacillus subtilis upon first sign of angular spots.",
+            "Maintain wide 1.8m bamboo trellis spacing; prune lower lateral vines up to 1 meter for maximum aeration; avoid overhead sprinkler watering."),
+
+        // ── 12. Squash (Kalabasa) ────────────────────────────────────────────
+        pest("Squash", "Yellow Squash Beetle", "Kuwang ng Kalabasa", "Aulacophora foveicollis",
+            "INSECT", "DRY", 1,
+            "Bright orange-yellow beetles chewing circular trenches in cotyledons and leaves; subterranean grubs boring into root collar and base.",
+            "Dust wood ash mixed with fine neem cake powder around the base of young seedlings.",
+            "Handpick beetles into soapy water in early morning when sluggish; cover young seedlings with floating row covers until flowering begins."),
+        pest("Squash", "Powdery Mildew of Squash", "Puting Pulbos sa Kalabasa", "Podosphaera xanthii",
+            "FUNGAL", "DRY", 2,
+            "White talcum-powder-like fungal patches expanding over upper leaf surfaces, petioles, and stems; leaves turn yellow, brown, and brittle.",
+            "Foliar spray with diluted cow's milk solution (1 part milk to 9 parts water) or wettable sulfur in early morning under sunlight.",
+            "Space hills 2 meters apart; mulch ground with clean rice straw; avoid wetting foliage during irrigation; plant in full sun locations."),
+
+        // ── 13. Carrot (Karot) ───────────────────────────────────────────────
+        pest("Carrot", "Alternaria Leaf Blight", "Batik sa Dahon ng Karot", "Alternaria dauci",
+            "FUNGAL", "WET", 2,
+            "Small dark brown to black irregular spots with yellow halos on leaf margins; older leaves turn brown, wither, and die resembling frost damage.",
+            "Foliar spray with copper bordeaux mixture (1%) or fermented equisetum / horsetail extract.",
+            "Use certified clean seed; maintain wide row spacing (20–25 cm); water between rows with furrow irrigation rather than overhead sprinklers."),
+        pest("Carrot", "Black Cutworm", "Harabas sa Karot", "Agrotis ipsilon",
+            "INSECT", "YEAR_ROUND", 1,
+            "Plump dark caterpillars hiding in topsoil by day and severing young carrot seedlings at soil level at night.",
+            "Apply beneficial entomopathogenic nematodes (Steinernema carpocapsae) or Bt bait around seedlings at dusk.",
+            "Clear all crop residue and weeds 2 weeks before sowing; place paper collars (5 cm high) around vulnerable garden patches."),
+
+        // ── 14. Potato (Patatas) ─────────────────────────────────────────────
+        pest("Potato", "Potato Tuber Moth", "Gamu-gamo ng Patatas", "Phthorimaea operculella",
+            "INSECT", "DRY", 3,
+            "Transparent blotch leaf mines on foliage; pinkish-white larvae tunneling into exposed tubers near soil cracks leaving dark frass.",
+            "Foliar spray with Bacillus thuringiensis (Bt kurstaki) or neem seed kernel extract in late afternoon.",
+            "Perform thorough hilling-up (tambak lupa) keeping tubers buried at least 5 cm deep; close soil cracks with light mulch; store harvested tubers in moth-proof diffuse light."),
+        pest("Potato", "Late Blight of Potato", "Late Blight ng Patatas", "Phytophthora infestans",
+            "FUNGAL", "WET", 3,
+            "Rapidly expanding water-soaked pale green lesions on leaves turning dark brown/purplish with white fungal mold under leaf edges in humid weather; brown rot in tubers.",
+            "Preventive spray with Trichoderma harzianum or copper hydroxide bio-fungicide during foggy, wet monsoon periods.",
+            "Plant certified disease-free seed tubers (e.g., Igorota variety); mound soil well over tubers; de-haulm (cut and remove stems) 10 days before digging tubers."),
+
+        // ── 15. Green Onion (Sibuyas Dahon) ──────────────────────────────────
+        pest("Green Onion", "Onion Thrips", "Tungaw / Thrips sa Sibuyas", "Thrips tabaci",
+            "INSECT", "DRY", 1,
+            "Tiny slender yellowish-brown insects in leaf sheaths; leaves show silvery patches, white speckles, and tip dieback.",
+            "Spray mild potassium soap solution (1 tbsp/L) or neem oil emulsion directly into leaf sheaths at dawn.",
+            "Install blue sticky insect monitoring cards; overhead fine sprinkler misting in hot dry mornings suppresses thrips populations; mulch with reflective silver plastic or straw."),
+        pest("Green Onion", "Purple Blotch of Alliums", "Lilang Batik sa Sibuyas", "Alternaria porri",
+            "FUNGAL", "WET", 2,
+            "Small water-soaked sunken lesions on hollow leaves rapidly expanding into oval purplish-brown blotches with dark concentric rings.",
+            "Foliar spray with Trichoderma biological suspension or dilute copper fungicide.",
+            "Ensure excellent bed drainage with 20 cm raised beds; avoid overhead watering in late afternoon; clear all infected onion debris immediately."),
+
+        // ── 16. Bell Pepper (Siling Atsal) ───────────────────────────────────
+        pest("Bell Pepper", "Broad Mite of Pepper", "Tungaw ng Atsal", "Polyphagotarsonemus latus",
+            "INSECT", "DRY", 2,
+            "Terminal leaves curl tightly downward, becoming rigid, brittle, bronzed, and stunted; flower buds abort and drop.",
+            "Spray wettable sulfur (3g/L) or neem oil (5 ml/L with soap) targeting leaf undersides where microscopic mites congregate.",
+            "Isolate and discard heavily infested nursery plants; overhead sprinkler misting during hot dry weather discourages mite proliferation."),
+        pest("Bell Pepper", "Bacterial Spot of Pepper", "Bacterial Spot ng Sili", "Xanthomonas campestris pv. vesicatoria",
+            "BACTERIAL", "WET", 2,
+            "Small circular water-soaked dark spots on leaves with pale centers; leaves turn yellow and drop prematurely; scabby raised spots on green peppers.",
+            "Preventive spray with copper soap fungicide combined with Bacillus amyloliquefaciens biocontrol.",
+            "Use certified hot-water-treated seeds; maintain wide plant spacing (45–50 cm); avoid touching or working among wet pepper foliage."),
+
+        // ── 17. Cabbage (Repolyo) ────────────────────────────────────────────
+        pest("Cabbage", "Diamondback Moth (DBM)", "Uod ng Repolyo / DBM", "Plutella xylostella",
+            "INSECT", "YEAR_ROUND", 1,
+            "Small green caterpillars feeding on leaf undersides leaving transparent 'window pane' patches and ragged holes; silk cocoons attached to leaves.",
+            "Release Diadegma semiclausum parasitoid wasps; spray Bacillus thuringiensis (Bt) or neem oil during early evening.",
+            "Intercrop with strong-scented alliums, tomato, or coriander; inspect underside of frame leaves every 3 days; destroy old crop residues promptly."),
+        pest("Cabbage", "Clubroot Disease", "Pamamaga ng Ugat / Clubroot", "Plasmodiophora brassicae",
+            "FUNGAL", "WET", 1,
+            "Daytime wilting of leaves despite moist soil; plants severely stunted; roots develop large, spindle-shaped club-like galls and rot.",
+            "Soil drench with biological Trichoderma or compost tea; maintain high organic matter.",
+            "Incorporate agricultural lime (calcium carbonate) to raise soil pH strictly to 7.0–7.2; ensure excellent drainage; practice minimum 4-year non-brassica crop rotation.")
     )
 
     private fun pest(

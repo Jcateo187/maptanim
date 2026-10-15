@@ -21,6 +21,11 @@ data class HarvestRecordDto(
     @SerialName("harvested_date") val harvestedDate: String? = null,
     @SerialName("growing_duration_days") val growingDurationDays: Int = 0,
     @SerialName("yield_kg") val yieldKg: Float = 0f,
+    @SerialName("yield_units") val yieldUnits: Int? = null,
+    @SerialName("quality_grade") val qualityGrade: String? = "Grade A",
     @SerialName("quality_rating") val qualityRating: Int = 5,
+    @SerialName("seasonal_insight") val seasonalInsight: String? = null,
+    @SerialName("rotation_suggestion") val rotationSuggestion: String? = null,
+    @SerialName("fallow_until_date") val fallowUntilDate: String? = null,
     val notes: String? = null
 )

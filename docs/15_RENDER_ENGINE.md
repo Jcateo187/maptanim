@@ -1,86 +1,77 @@
-# 15. 2D Isometric Render Engine Specifications
+# 15. 2D Top-Down Render Engine Specifications
 
 > 📌 **Navigation**: [◀ 14. Component Library](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md) | [🏠 Master Index](file:///d:/Development/MapTanim/docs/README.md) | [16. Interactive Plot Mapping ▶](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md)
 
 ---
 ## 📌 Overview
-The **MapTanim 2D Isometric Render Engine** (`FarmCanvasRenderer` & `IsometricProjection`) is a custom Compose `Canvas` rendering system built for 60 FPS performance, high-resolution direct crop sprite rendering, and Clash of Clans (CoC) inspired drag-and-drop mechanics.
+The **MapTanim 2D Top-Down Render Engine** ([`TopDownFarmCanvas.kt`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/TopDownFarmCanvas.kt), [`CropSvgRenderer.kt`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/CropSvgRenderer.kt), and [`FarmCanvasView.kt`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/canvas/FarmCanvasView.kt)) is a flat, orthographic 2D canvas rendering system designed for 60 FPS performance, direct-to-soil drag-and-drop vegetable planting, and sub-inch precision bounding box manipulation.
+
+The engine uses flat **2D Top-Down Orthographic Projection** instead of isometric geometry. Farmers view their garden beds and crop placements from a true aerial bird's-eye perspective, matching real-world yard measurements in inches, feet, and yards.
 
 ---
 
-## 📐 Isometric Coordinate Systems
+## 📐 2D Top-Down Orthographic Coordinate System
 
-### Tile Metrics & Projection
-- **Standard Tile Width (`TILE_W`)**: `64.0f` pixels
-- **Standard Tile Height (`TILE_H`)**: `32.0f` pixels
-- **Farm Grid Bounds**: `45.0f` meters x `45.0f` meters (0f to 45f world space)
+### Screen & World Coordinate Transformation (`TopDownProjection`)
+- **Pixels Per Meter (`PPM`)**: `40.0f` pixels per world meter at `zoom = 1.0f`.
+- **TopDownCamera**: Stores viewport translation (`panX`, `panY`) and magnification (`zoom`).
 
-### Projection Formulas (`IsometricProjection`)
-- **World to Screen**:
-  $$\text{screenX} = (X - Y) \times \frac{\text{TILE\_W}}{2} \times \text{zoom} + \text{panX}$$
-  $$\text{screenY} = (X + Y) \times \frac{\text{TILE\_H}}{2} \times \text{zoom} + \text{panY}$$
+#### World to Screen Mapping:
+$$\text{screenX} = \text{worldX} \times \text{PPM} \times \text{zoom} + \text{panX}$$
+$$\text{screenY} = \text{worldY} \times \text{PPM} \times \text{zoom} + \text{panY}$$
 
-- **Screen to World**:
-  $$\text{unpannedX} = \frac{\text{screenX} - \text{panX}}{\text{zoom}}, \quad \text{unpannedY} = \frac{\text{screenY} - \text{panY}}{\text{zoom}}$$
-  $$\text{worldX} = \frac{\text{unpannedX}}{\text{TILE\_W}} + \frac{\text{unpannedY}}{\text{TILE\_H}}$$
-  $$\text{worldY} = \frac{\text{unpannedY}}{\text{TILE\_H}} - \frac{\text{unpannedX}}{\text{TILE\_W}}$$
+#### Screen to World Mapping:
+$$\text{worldX} = \frac{\text{screenX} - \text{panX}}{\text{PPM} \times \text{zoom}}$$
+$$\text{worldY} = \frac{\text{screenY} - \text{panY}}{\text{PPM} \times \text{zoom}}$$
+
+#### Grid Snapping:
+Snaps world coordinates to 6-inch increments (`SIX_INCHES_IN_METERS = 0.1524f`) or 1-foot increments (`FOOT_IN_METERS = 0.3048f`):
+$$\text{snapped} = \text{round}\left(\frac{\text{worldPos}}{\text{snap}}\right) \times \text{snap}$$
 
 ---
 
-## 🎨 Layered Rendering Architecture (`FarmCanvasRenderer.render`)
+## 🎨 Layered 2D Canvas Pipeline (`TopDownFarmCanvas`)
 
-The renderer executes a streamlined high-performance depth-sorted rendering pipeline focused on custom background scenery and direct crop sprites:
+The top-down canvas draws in strict z-order layers:
 
-| Layer | Component | Description |
+| Layer | Component | Implementation |
 |---|---|---|
-| **Layer 0** | **Background Scenery** | Renders high-resolution custom isometric background scenery image (`background_scenery/backgound_1.png`) centered on the farm map. |
-| **Layer 1.5** | **CoC Tile Highlight** | Glowing semi-transparent blue (`#1E88E5`) or red (`#E53935`) rhombus preview overlay for active touch placement. Rendered in both **HomeScreen** (`CanvasMode.VIEW`) and **EditScreen** (`CanvasMode.EDIT`). |
-| **Layer 2** | **Direct Planted Crops** | Crop Zone plant instances generated dynamically via `PlantInstanceGenerator` rendering 5 crop stage sprites (`1` to `5`) directly over the background scenery. |
-| **Layer 3.5** | **Crop Zone Top Labels** | Floating crop name, variety, and growth day status pill badges rendered at top edge center of placed crop plots (e.g. `🥕 Carrot`, `🍆 Eggplant`). |
-| **Layer 4** | **Status Pins (View Mode)** | Interactive task pins (Water, Fertilize, Harvest, Pest Alert, Unstarted Calendar Badge `📅`) floating above crops. |
-| **Layer 5** | **Selection & Grid** | Selected Crop Zone white border outline, 8 interactive resize handles (Edit Mode), and 45×45 isometric white grid overlay (always visible in Edit screen; visible when crop selected in Home screen). |
-
-> 💡 **Note**: All procedural grass/soil tile loops, procedural trees, rocks, flowers, perimeter fences, and separate trellis objects have been removed in favor of the high-res background scenery asset with direct crop sprite rendering.
-
-## 🌾 Crop Zone & Plant Instance Rendering (MD 34 Architecture)
-
-1. **Crop Zone Loop**: `FarmCanvasRenderer` iterates through all `CropZoneRenderData` instances in the layout.
-2. **Dynamic Generation**: `PlantInstanceGenerator.generate()` calculates individual plant coordinates for every tile within `[0 until width]` and `[0 until height]`.
-3. **5 Growth Stage Lifecycles**: Plant sprites dynamically select growth stage images from `crops/${cropClean}_${stage}.png` matching the 5 lifecycle phases:
-   - **Stage 1**: Sprout / Germination
-   - **Stage 2**: Seedling
-   - **Stage 3**: Vegetative Growth
-   - **Stage 4**: Flowering / Podding
-   - **Stage 5**: Harvest Ready
-4. **No Sprite Scaling**: Plant sprites render at constant scale `1.0f`. Resizing expands grid coverage rather than scaling images.
-5. **8-Handle Bounding Box Overlay**: Selecting **Resize** from the bottom toolbar renders 8 interactive resize handles (4 corners + 4 edge midpoints) over the Crop Zone bounds.
+| **Layer 0** | **Soil Grid Canvas** | Centered rich dark brown loam soil background (`#261814`) with crisp top-down grid lines. |
+| **Layer 1** | **Metric Yard Rulers** | Dynamic top (width) and left (height) yard measurement rulers with foot/inch tick marks. |
+| **Layer 2** | **Garden Plot Outlines** | Rectangular boundaries with crisp borders and dimension labels (e.g. $10\text{ ft} \times 8\text{ ft}$). |
+| **Layer 3** | **Direct Planted Crops** | Vector SVG vegetable rendering via [`CropSvgRenderer`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/canvas/CropSvgRenderer.kt) with grounding shadow and plant spacing. |
+| **Layer 4** | **Focus Dimming & Ring** | Soft background tint upon selecting a crop, highlighting the active plant. |
+| **Layer 5** | **Radial Action Overlay** | [`CropCircleActionOverlay`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/components/CropCircleActionOverlay.kt) positioning 6 tactile clock-hour action buttons around the crop. |
+| **Layer 6** | **8-Handle Resize Box** | Interactive corner and midpoint handles for expanding/shrinking crop zones in real-time. |
 
 ---
 
-## ⚡ Low-Level 60 FPS Gesture Engine (`awaitPointerEventScope`)
+## 🥦 Real-Life Vegetable Spacing & Canopy Scaling
 
-Replaces high-level Compose gesture wrappers with low-level pointer event handling:
-1. **Selection-First Crop Drag**: Pressing down on an already-selected crop locks onto it instantly (`onDragStart`), tracking finger movement 1:1 using grid snapping. Sliding across unselected crops pans the camera smoothly without accidental crop movement.
-2. **Deferred Overlap Reversion**: Releasing a finger over an overlapping location leaves the crop sitting in its **RED** floating state. Farmers can freely drag/pan the map and pinch zoom in/out while in RED state. Tapping empty map ground or tapping another crop automatically reverts the RED floating crop back to its pre-drag location (`startPos`).
-3. **2-Finger Pinch Zoom**: Computes pointer distance and centroid to scale zoom smoothly between **70% minimum zoom (`0.70f`)** and **400% maximum zoom (`4.00f`)**.
-4. **1-Finger Camera Pan**: Dragging empty ground pans the camera across the 45×45 farm map with 0 lag or touch-slop delay.
-5. **Boundary Containment**: All crop movements and tile highlights are strictly clamped to `[0f, 45f - cropSize]` meters.
+Vegetables are rendered using authentic physiological dimensions in meters ([`RenderModels.kt`](file:///d:/Development/MapTanim/mobile/app/src/main/java/com/maptanim/app/features/farm/renderer/model/RenderModels.kt)):
+
+| Crop | Diameter (Inches / Meters) | Single Plant Spacing |
+|---|---|---|
+| **Carrot** | 1 inch ($0.0254\text{m}$) | 3 inches ($0.0762\text{m}$) |
+| **Green Onion / Scallion** | 3 inches ($0.0762\text{m}$) | 3 inches ($0.0762\text{m}$) |
+| **Pechay / Bok Choy** | 6 inches ($0.1524\text{m}$) | 6 inches ($0.1524\text{m}$) |
+| **Lettuce** | 8 inches ($0.2032\text{m}$) | 8 inches ($0.2032\text{m}$) |
+| **String Beans (Sitaw)** | 12 inches / 1 ft ($0.3048\text{m}$) | 12 inches / 1 ft ($0.3048\text{m}$) |
+| **Potato** | 12 inches / 1 ft ($0.3048\text{m}$) | 12 inches / 1 ft ($0.3048\text{m}$) |
+| **Cabbage** | 15 inches ($0.381\text{m}$) | 15 inches ($0.381\text{m}$) |
+| **Tomato / Eggplant / Cucumber / Bell Pepper** | 18 inches / 1.5 ft ($0.4572\text{m}$) | 18 inches / 1.5 ft ($0.4572\text{m}$) |
+| **Squash / Kalabasa** | 36 inches / 1 yard ($0.9144\text{m}$) | 36 inches / 1 yard ($0.9144\text{m}$) |
 
 ---
 
-## 📚 Related Documentation & Cross References
-- 📄 [Master Documentation Hub](file:///d:/Development/MapTanim/docs/README.md)
-- 📄 [00. Getting Started Guide](file:///d:/Development/MapTanim/docs/00_GETTING_STARTED.md)
-- 📄 [03. System Architecture](file:///d:/Development/MapTanim/docs/03_SYSTEM_ARCHITECTURE.md)
-- 📄 [11. App Navigation](file:///d:/Development/MapTanim/docs/11_NAVIGATION.md)
-- 📄 [12. UI/UX Guidelines](file:///d:/Development/MapTanim/docs/12_UI_UX_GUIDELINES.md)
-- 📄 [13. Design System](file:///d:/Development/MapTanim/docs/13_DESIGN_SYSTEM.md)
-- 📄 [14. Component Library](file:///d:/Development/MapTanim/docs/14_COMPONENT_LIBRARY.md)
-- 📄 [16. Interactive Plot Mapping](file:///d:/Development/MapTanim/docs/16_INTERACTIVE_PLOT_MAPPING.md)
-- 📄 [18. View Mode](file:///d:/Development/MapTanim/docs/18_VIEW_MODE.md)
-- 📄 [19. Edit Mode](file:///d:/Development/MapTanim/docs/19_EDIT_MODE.md)
-- 📄 [34. Direct Soil Crop Planting & Resize System](file:///d:/Development/MapTanim/docs/34_CROP_PLANTING_AND_RESIZE_SYSTEM.md)
-- 📄 [35. Asset Planning & Sprites](file:///d:/Development/MapTanim/docs/35_ASSETS_PLANNING.md)
-- 📄 [38. Audio & Sound Assets Planning](file:///d:/Development/MapTanim/docs/38_AUDIO_AND_SOUND_ASSETS_PLANNING.md)
-- 📄 [39. Crop View Interaction & Variety Simulation](file:///d:/Development/MapTanim/docs/39_CROP_VIEW_INTERACTION_AND_VARIETY_SIMULATION.md)
-- 📄 [43. 2D Isometric Projection Reference & Developer Cookbook](file:///d:/Development/MapTanim/docs/43_ISOMETRIC_PROJECTION_GUIDE.md)
+## 🎯 Direct Touch Interactions
+
+1. **Tap to Select**: Tapping a planted crop opens the 6-action radial overlay ring.
+2. **Radial Actions**:
+   - **12:00 (Info)**: Cultural guide and variety information.
+   - **2:00 (Check Up)**: Health diagnostics and symptom examination.
+   - **4:00 (Calendar)**: Sowing date, growth timeline, and harvest window.
+   - **6:00 (Resize)**: 8-handle bounding box expansion.
+   - **8:00 (Copy)**: Duplicate to adjacent tile.
+   - **10:00 (Delete)**: Remove plant from soil grid.
+3. **Pinch-to-Zoom & Pan**: Orthographic camera zoom from whole-yard overview down to 10-inch single-plant close-up.

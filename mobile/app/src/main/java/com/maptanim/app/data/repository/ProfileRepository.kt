@@ -29,7 +29,10 @@ data class FeedbackDto(
     val status: String = "PENDING",
     @SerialName("admin_reply") val adminReply: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("resolved_at") val resolvedAt: String? = null
+    @SerialName("resolved_at") val resolvedAt: String? = null,
+    @SerialName("service_rating") val serviceRating: Int? = null,
+    @SerialName("was_helpful") val wasHelpful: Boolean? = null,
+    @SerialName("rated_at") val ratedAt: String? = null
 )
 
 @Serializable
@@ -46,22 +49,41 @@ data class NotificationDto(
 class ProfileRepository {
 
     suspend fun getFeedbackRepliesForUser(userId: String?): List<FeedbackDto> {
+        if (userId.isNullOrBlank() || userId == "guest") return emptyList()
         return try {
-            val all = SupabaseClient.client
+            val list = SupabaseClient.client
                 .from("feedback")
                 .select {
+                    filter {
+                        eq("user_id", userId)
+                    }
                     order(column = "created_at", order = Order.DESCENDING)
                 }
                 .decodeList<FeedbackDto>()
 
-            if (!userId.isNullOrBlank()) {
-                all.filter { it.userId == userId && !it.adminReply.isNullOrBlank() }
-            } else {
-                all.filter { !it.adminReply.isNullOrBlank() }
-            }
+            list.filter { !it.adminReply.isNullOrBlank() }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+
+    suspend fun rateFeedbackReply(feedbackId: String, rating: Int, wasHelpful: Boolean): Boolean {
+        if (feedbackId.isBlank()) return false
+        return try {
+            SupabaseClient.client.from("feedback").update(
+                mapOf(
+                    "service_rating" to rating,
+                    "was_helpful" to wasHelpful,
+                    "rated_at" to java.time.Instant.now().toString()
+                )
+            ) {
+                filter { eq("id", feedbackId) }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 

@@ -2,8 +2,10 @@ package com.maptanim.app.data.api
 
 import com.maptanim.app.data.remote.SupabaseClient
 import com.maptanim.app.data.remote.dto.UserStatusDto
+import com.maptanim.app.data.repository.CropLogRepositoryImpl
 import com.maptanim.app.data.repository.CropPlotRepositoryImpl
 import com.maptanim.app.data.repository.CropRepositoryImpl
+import com.maptanim.app.data.repository.CropZoneRepositoryImpl
 import com.maptanim.app.data.repository.FarmRepositoryImpl
 import com.maptanim.app.data.repository.HarvestRepositoryImpl
 import com.maptanim.app.data.repository.RepositoryProvider
@@ -67,10 +69,20 @@ class AppInitializationController {
                     val plotRepo = RepositoryProvider.cropPlotRepository as? CropPlotRepositoryImpl
                     val taskRepo = RepositoryProvider.taskRepository as? TaskRepositoryImpl
                     val harvestRepo = RepositoryProvider.harvestRepository as? HarvestRepositoryImpl
+                    val cropLogRepo = RepositoryProvider.cropLogRepository as? CropLogRepositoryImpl
+                    val zoneRepo = RepositoryProvider.cropZoneRepository as? CropZoneRepositoryImpl
 
                     for (farm in remoteFarms) {
                         try {
-                            plotRepo?.fetchFromRemote(farm.id)
+                            val plots = plotRepo?.fetchFromRemote(farm.id) ?: emptyList()
+                            val plotIds = plots.map { it.id }.filter { it.isNotBlank() }
+                            if (plotIds.isNotEmpty()) {
+                                try {
+                                    zoneRepo?.fetchFromRemote(plotIds)
+                                } catch (ze: Exception) {
+                                    ze.printStackTrace()
+                                }
+                            }
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
@@ -81,6 +93,11 @@ class AppInitializationController {
                         }
                         try {
                             harvestRepo?.fetchFromRemote(farm.id)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        try {
+                            cropLogRepo?.syncLogsForFarm(farm.id)
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }

@@ -1,17 +1,18 @@
-﻿package com.maptanim.app.features.auth.components
+package com.maptanim.app.features.auth.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun GuestButton(
@@ -24,18 +25,24 @@ fun GuestButton(
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .height(50.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.primary,
-            disabledContentColor = Color(0xFF9E9E9E),
-            disabledContainerColor = Color(0xFF9E9E9E).copy(alpha = 0.12f)
+            containerColor = if (enabled) Color.White else Color(0xFFF3F4F6),
+            contentColor = Color(0xFF2E7D32),
+            disabledContainerColor = Color(0xFFF3F4F6),
+            disabledContentColor = Color(0xFF9CA3AF)
         ),
         border = BorderStroke(
-            width = 1.dp,
-            color = if (enabled) MaterialTheme.colorScheme.outline else Color(0xFFBDBDBD)
+            width = 1.2.dp,
+            color = if (enabled) Color(0xFF2E7D32) else Color(0xFFE5E7EB)
         )
     ) {
-        Text("Continue as Guest")
+        Text(
+            text = "Continue as Guest",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) Color(0xFF2E7D32) else Color(0xFF9CA3AF)
+        )
     }
 }

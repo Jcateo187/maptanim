@@ -1,10 +1,13 @@
-﻿package com.maptanim.app.features.notifications.screen
+package com.maptanim.app.features.notifications.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,12 +23,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.features.profile.ProfileViewModel
 import com.maptanim.app.features.profile.tabs.NotificationsTabContent
-import com.maptanim.app.ui.theme.ForestGreen
-import com.maptanim.app.ui.theme.White
 
-private val MonitoringBg = Color(0xFF10160F)
-private val MonitoringCard = Color(0xFF1B2317)
-private val MonitoringBorder = Color(0xFF2E4D3E)
+private val ScreenBg = Color(0xFFF9FAF8)
+private val DeepBlack = Color(0xFF111813)
+private val LushGreen = Color(0xFF2E7D32)
+private val CardBorderColor = Color(0xFFE5E7EB)
 
 /**
  * NotificationsScreen — Full screen notification center.
@@ -38,85 +40,113 @@ fun NotificationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val unreadCount = uiState.notifications.count { !it.isRead }
+    val totalCount = uiState.notifications.size
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MonitoringBg
+        color = ScreenBg
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header Bar
             Surface(
-                color = MonitoringCard,
-                shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MonitoringBorder),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
+                color = Color.White,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.size(36.dp)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        tint = ForestGreen,
-                        modifier = Modifier.size(22.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "Notifications",
-                        color = White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    if (unreadCount > 0) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            color = Color(0xFFE53935),
-                            shape = RoundedCornerShape(12.dp)
+                        // Left: Back button + Title + Counter badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "$unreadCount new",
-                                color = White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            IconButton(
+                                onClick = { navController.popBackStack() },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = DeepBlack,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = LushGreen,
+                                modifier = Modifier.size(22.dp)
                             )
+
+                            Text(
+                                text = "Notifications",
+                                color = DeepBlack,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Number badge
+                            Surface(
+                                color = if (unreadCount > 0) Color(0xFFE53935) else Color(0xFFE8F5E9),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 0) "$unreadCount" else "$totalCount",
+                                    color = if (unreadCount > 0) Color.White else LushGreen,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Right: Mark all as read button with icon
+                        TextButton(
+                            onClick = { viewModel.markAllNotificationsAsRead() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            enabled = unreadCount > 0
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DoneAll,
+                                    contentDescription = "Mark all as read",
+                                    tint = if (unreadCount > 0) LushGreen else Color(0xFF9E9E9E),
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Text(
+                                    text = "Mark all as read",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (unreadCount > 0) LushGreen else Color(0xFF9E9E9E)
+                                )
+                            }
                         }
                     }
+
+                    // Clean dividing line that separates header from bottom
+                    HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
                 }
             }
 
-            // Notification Tab Content (Filters, Cards, and Actions)
+            // Notification Tab Content (Filters, Clean List, See More Button)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .padding(horizontal = 14.dp)
             ) {
                 NotificationsTabContent(uiState = uiState, viewModel = viewModel)
             }

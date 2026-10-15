@@ -43,7 +43,9 @@ fun CommunityCommentDto.toDomain(): CommunityComment {
         postId = post_id,
         authorName = author_name,
         content = content,
-        timestamp = relativeTime
+        timestamp = relativeTime,
+        authorId = author_id,
+        authorAvatarUrl = author_avatar_url
     )
 }
 
@@ -51,7 +53,9 @@ fun CommunityComment.toDto(): CommunityCommentDto {
     return CommunityCommentDto(
         id = id,
         post_id = postId,
+        author_id = authorId,
         author_name = authorName,
+        author_avatar_url = authorAvatarUrl,
         content = content
     )
 }

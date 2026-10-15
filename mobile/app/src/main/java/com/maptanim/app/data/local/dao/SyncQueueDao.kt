@@ -9,10 +9,10 @@ import com.maptanim.app.data.local.entity.SyncQueueEntity
 @Dao
 interface SyncQueueDao {
 
-    @Query("SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY attempt_count ASC")
+    @Query("SELECT * FROM sync_queue WHERE (status = 'PENDING' OR (status = 'FAILED' AND attempt_count < 5)) ORDER BY attempt_count ASC")
     fun getPendingItems(): List<SyncQueueEntity>
 
-    @Query("SELECT COUNT(*) FROM sync_queue WHERE status = 'PENDING'")
+    @Query("SELECT COUNT(*) FROM sync_queue WHERE (status = 'PENDING' OR (status = 'FAILED' AND attempt_count < 5))")
     fun hasPendingItems(): Int
 
     @Query("UPDATE sync_queue SET status = 'SYNCED' WHERE id = :id")

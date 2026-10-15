@@ -29,7 +29,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
-    CREATE TYPE category_enum AS ENUM ('BULB', 'STEM', 'SHOOT', 'LEAFY', 'FLOWER', 'FRUIT', 'ROOT', 'TUBER');
+    CREATE TYPE category_enum AS ENUM ('BULB', 'STEM', 'SHOOT', 'LEAFY', 'FLOWER', 'FRUIT', 'ROOT', 'TUBER', 'PODDED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TYPE category_enum ADD VALUE IF NOT EXISTS 'PODDED';
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
@@ -73,21 +77,40 @@ DROP TABLE IF EXISTS public.activities CASCADE;
 -- Table 1: public.users (Supabase user records & roles)
 CREATE TABLE IF NOT EXISTS public.users (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    email           VARCHAR(255)    UNIQUE NOT NULL,
+    email           VARCHAR(255)    UNIQUE,
     role            role_enum       NOT NULL DEFAULT 'FARMER',
+    status          VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING')),
     avatar_url      TEXT,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE';
+ALTER TABLE public.users ALTER COLUMN email DROP NOT NULL;
 
 ALTER TABLE public.users DROP COLUMN IF EXISTS full_name;
 ALTER TABLE public.users DROP COLUMN IF EXISTS phone_number;
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+-- Helper function: public.is_admin()
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT (
+    (current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role'
+    OR
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id::text = (auth.uid())::text 
+        AND role::text IN ('ADMINISTRATOR', 'ADMIN', 'SUPER_ADMIN')
+        AND status::text = 'ACTIVE'
+    )
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
 DROP POLICY IF EXISTS "users_own_data" ON public.users;
 CREATE POLICY "users_own_data" ON public.users
-    FOR ALL USING (auth.uid() = id);
+    FOR ALL USING (id::text = (auth.uid())::text OR public.is_admin());
 
 DROP POLICY IF EXISTS "users_read_all" ON public.users;
 CREATE POLICY "users_read_all" ON public.users
@@ -117,10 +140,10 @@ DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
 CREATE POLICY "profiles_select_all" ON public.profiles FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
-CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (id::text = (auth.uid())::text OR public.is_admin());
 
 DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
-CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (id::text = (auth.uid())::text OR public.is_admin());
 
 -- Auto-profile trigger on new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -256,10 +279,20 @@ DROP POLICY IF EXISTS "farms_read_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_insert_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_update_all" ON public.farms;
 DROP POLICY IF EXISTS "farms_delete_all" ON public.farms;
-CREATE POLICY "farms_read_all" ON public.farms FOR SELECT USING (true);
-CREATE POLICY "farms_insert_all" ON public.farms FOR INSERT WITH CHECK (true);
-CREATE POLICY "farms_update_all" ON public.farms FOR UPDATE USING (true);
-CREATE POLICY "farms_delete_all" ON public.farms FOR DELETE USING (true);
+DROP POLICY IF EXISTS "farms_select_policy" ON public.farms;
+DROP POLICY IF EXISTS "farms_insert_policy" ON public.farms;
+DROP POLICY IF EXISTS "farms_update_policy" ON public.farms;
+DROP POLICY IF EXISTS "farms_delete_policy" ON public.farms;
+
+CREATE POLICY "farms_select_policy" ON public.farms FOR SELECT
+    USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "farms_insert_policy" ON public.farms FOR INSERT
+    WITH CHECK (farmer_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "farms_update_policy" ON public.farms FOR UPDATE
+    USING (farmer_id::text = (auth.uid())::text OR public.is_admin())
+    WITH CHECK (farmer_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "farms_delete_policy" ON public.farms FOR DELETE
+    USING (farmer_id::text = (auth.uid())::text OR public.is_admin());
 
 
 -- Table 6: public.crop_plots (Direct-to-Soil Planted Plots on Isometric Canvas)
@@ -278,14 +311,37 @@ CREATE TABLE IF NOT EXISTS public.crop_plots (
     rotation_deg    FLOAT           NOT NULL DEFAULT 0.0,
     notes           TEXT,
     planted_date    TEXT,
+    current_stage   VARCHAR(50)     NOT NULL DEFAULT 'PREPARATION',
+    harvest_count   INT             NOT NULL DEFAULT 0,
+    total_yield_kg  FLOAT           NOT NULL DEFAULT 0.0,
+    previous_crops_history TEXT     NOT NULL DEFAULT '',
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS current_stage VARCHAR(50) NOT NULL DEFAULT 'PREPARATION';
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS harvest_count INT NOT NULL DEFAULT 0;
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS total_yield_kg FLOAT NOT NULL DEFAULT 0.0;
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS previous_crops_history TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.crop_plots ADD COLUMN IF NOT EXISTS crop_variety VARCHAR(100);
+
 ALTER TABLE public.crop_plots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "crop_plots_all" ON public.crop_plots;
-CREATE POLICY "crop_plots_all" ON public.crop_plots FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "crop_plots_select_policy" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_insert_policy" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_update_policy" ON public.crop_plots;
+DROP POLICY IF EXISTS "crop_plots_delete_policy" ON public.crop_plots;
+
+CREATE POLICY "crop_plots_select_policy" ON public.crop_plots FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = crop_plots.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "crop_plots_insert_policy" ON public.crop_plots FOR INSERT
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = crop_plots.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "crop_plots_update_policy" ON public.crop_plots FOR UPDATE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = crop_plots.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = crop_plots.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "crop_plots_delete_policy" ON public.crop_plots FOR DELETE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = crop_plots.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
 
 
 -- Table 7: public.crop_zones (Sub-regions within plots for fine-grained multi-crop layout)
@@ -330,7 +386,20 @@ ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS crop_name VARCHAR(100);
 
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "tasks_all" ON public.tasks;
-CREATE POLICY "tasks_all" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "tasks_select_policy" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_insert_policy" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_update_policy" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_delete_policy" ON public.tasks;
+
+CREATE POLICY "tasks_select_policy" ON public.tasks FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = tasks.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "tasks_insert_policy" ON public.tasks FOR INSERT
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = tasks.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "tasks_update_policy" ON public.tasks FOR UPDATE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = tasks.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = tasks.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "tasks_delete_policy" ON public.tasks FOR DELETE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = tasks.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
 
 
 -- Table 9: public.harvest_records (Harvest Logs & Post-Harvest Seasonal Insights)
@@ -371,7 +440,20 @@ ALTER TABLE public.harvest_records ADD COLUMN IF NOT EXISTS fallow_until_date TE
 
 ALTER TABLE public.harvest_records ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "harvest_records_all" ON public.harvest_records;
-CREATE POLICY "harvest_records_all" ON public.harvest_records FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "harvest_records_select_policy" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_insert_policy" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_update_policy" ON public.harvest_records;
+DROP POLICY IF EXISTS "harvest_records_delete_policy" ON public.harvest_records;
+
+CREATE POLICY "harvest_records_select_policy" ON public.harvest_records FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = harvest_records.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "harvest_records_insert_policy" ON public.harvest_records FOR INSERT
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = harvest_records.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "harvest_records_update_policy" ON public.harvest_records FOR UPDATE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = harvest_records.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = harvest_records.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
+CREATE POLICY "harvest_records_delete_policy" ON public.harvest_records FOR DELETE
+    USING (EXISTS (SELECT 1 FROM public.farms WHERE farms.id::text = harvest_records.farm_id::text AND (farms.farmer_id::text = (auth.uid())::text OR public.is_admin())));
 
 
 -- Table 10: public.crop_rotation_log (Plant Family History for Soil Health)
@@ -409,7 +491,19 @@ CREATE TABLE IF NOT EXISTS public.feedback (
 
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "feedback_all" ON public.feedback;
-CREATE POLICY "feedback_all" ON public.feedback FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "feedback_select_policy" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_insert_policy" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_update_policy" ON public.feedback;
+DROP POLICY IF EXISTS "feedback_delete_policy" ON public.feedback;
+
+CREATE POLICY "feedback_select_policy" ON public.feedback FOR SELECT
+    USING (user_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "feedback_insert_policy" ON public.feedback FOR INSERT
+    WITH CHECK (user_id::text = (auth.uid())::text OR user_id IS NULL OR public.is_admin());
+CREATE POLICY "feedback_update_policy" ON public.feedback FOR UPDATE
+    USING (public.is_admin() OR user_id::text = (auth.uid())::text);
+CREATE POLICY "feedback_delete_policy" ON public.feedback FOR DELETE
+    USING (public.is_admin() OR user_id::text = (auth.uid())::text);
 
 
 -- Table 12: public.notifications (System Updates & Broadcast Alerts)
@@ -426,7 +520,19 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "notifications_all" ON public.notifications;
-CREATE POLICY "notifications_all" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "notifications_select_policy" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_insert_policy" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_update_policy" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_delete_policy" ON public.notifications;
+
+CREATE POLICY "notifications_select_policy" ON public.notifications FOR SELECT
+    USING (user_id IS NULL OR user_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "notifications_insert_policy" ON public.notifications FOR INSERT
+    WITH CHECK (public.is_admin());
+CREATE POLICY "notifications_update_policy" ON public.notifications FOR UPDATE
+    USING (user_id::text = (auth.uid())::text OR public.is_admin());
+CREATE POLICY "notifications_delete_policy" ON public.notifications FOR DELETE
+    USING (public.is_admin() OR user_id::text = (auth.uid())::text);
 
 
 -- Table 13: public.community_posts (Farmer Community Forum Discussions)
@@ -438,6 +544,7 @@ CREATE TABLE IF NOT EXISTS public.community_posts (
     category            VARCHAR(50)     NOT NULL DEFAULT 'GENERAL',
     title               VARCHAR(255)    NOT NULL,
     content             TEXT            NOT NULL,
+    image_url           TEXT,
     likes_count         INT             NOT NULL DEFAULT 0,
     comments_count      INT             NOT NULL DEFAULT 0,
     is_pinned           BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -446,6 +553,7 @@ CREATE TABLE IF NOT EXISTS public.community_posts (
     updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.community_posts ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE public.community_posts DROP COLUMN IF EXISTS author_location;
 ALTER TABLE public.community_posts ALTER COLUMN author_name DROP DEFAULT;
 

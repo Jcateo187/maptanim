@@ -80,6 +80,36 @@ class FarmPreferencesManager(context: Context? = null) {
             ?.apply()
     }
 
+    fun getCropPlantedDate(cropKey: String): String? {
+        val date = prefs?.getString("crop_planted_date_$cropKey", null)
+        return if (date.isNullOrBlank()) null else date
+    }
+
+    fun saveCropPlantedDate(cropKey: String, plantedDate: String) {
+        prefs?.edit()?.putString("crop_planted_date_$cropKey", plantedDate)?.apply()
+    }
+
+    fun removeCropPlantedDate(cropKey: String) {
+        prefs?.edit()?.remove("crop_planted_date_$cropKey")?.apply()
+    }
+
+    fun resolveCropPlantedDate(zoneId: String?, plotId: String?, cropName: String?): String? {
+        if (!zoneId.isNullOrBlank()) {
+            val d1 = getCropPlantedDate(zoneId)
+            if (!d1.isNullOrBlank()) return d1
+        }
+        if (!plotId.isNullOrBlank() && !cropName.isNullOrBlank()) {
+            val d2 = getCropPlantedDate("${plotId}_${cropName}")
+            if (!d2.isNullOrBlank()) return d2
+        }
+        // Only fall back to plotId if cropName is completely unspecified (e.g. single dedicated plot query)
+        if (!plotId.isNullOrBlank() && cropName.isNullOrBlank()) {
+            val d3 = getCropPlantedDate(plotId)
+            if (!d3.isNullOrBlank()) return d3
+        }
+        return null
+    }
+
     private fun getKeyForUser(userId: String?): String {
         return if (userId.isNullOrBlank()) "active_farm_id_guest" else "active_farm_id_$userId"
     }

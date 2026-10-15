@@ -93,8 +93,8 @@ class EditViewModel(
                         farmId = activeFarmId,
                         cropName = primaryName,
                         cropId = primaryId,
-                        plantedDate = plot.plantedDate ?: java.time.LocalDate.now().toString(),
-                        notes = "Crops: " + cropNames.joinToString(", ")
+                        plantedDate = plot.plantedDate,
+                        notes = if (plot.notes?.startsWith("DELETED_AT:") == true || plot.notes?.startsWith("ARCHIVED_AT:") == true) plot.notes else "Crops: " + cropNames.joinToString(", ")
                     )
                 } else {
                     plot.copy(farmId = activeFarmId)
@@ -159,11 +159,21 @@ class EditViewModel(
     init {
         resolveActiveFarmId()
         observeAvailableCrops()
+        purgeExpiredArchivedGardens()
+    }
+
+    private fun purgeExpiredArchivedGardens() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                cropPlotRepository.purgeExpiredArchivedPlots(olderThanDays = 30)
+            } catch (_: Exception) {}
+        }
     }
 
     fun refresh() {
         resolveActiveFarmId()
         refreshCropsFromRemote()
+        purgeExpiredArchivedGardens()
     }
 
     private fun observeAvailableCrops() {
@@ -239,6 +249,9 @@ class EditViewModel(
                     emptyList()
                 }
 
+                val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+                val loadedDates = mutableMapOf<String, String>()
+
                 val zones = if (existingDomainZones.isNotEmpty()) {
                     existingDomainZones.mapNotNull { domainZone ->
                         val parentPlot = plots.firstOrNull { it.id == domainZone.plotId } ?: return@mapNotNull null
@@ -247,6 +260,11 @@ class EditViewModel(
                             return@mapNotNull null
                         }
                         val realCropDiam = realLifeCropDiameterM(cName)
+                        val zPlanted = farmPrefs.resolveCropPlantedDate(domainZone.id, domainZone.plotId, cName)
+                        if (!zPlanted.isNullOrBlank()) {
+                            loadedDates[domainZone.id] = zPlanted
+                            loadedDates["${domainZone.plotId}_$cName"] = zPlanted
+                        }
                         CropZoneRenderData(
                             id = domainZone.id,
                             plotId = domainZone.plotId,
@@ -255,16 +273,28 @@ class EditViewModel(
                             offsetY = domainZone.offsetY,
                             widthM = realCropDiam,
                             heightM = realCropDiam,
-                            spacingM = realCropDiam
+                            spacingM = realCropDiam,
+                            plantedDate = zPlanted
                         )
                     }
                 } else emptyList()
+
+                plots.forEach { p ->
+                    val pPlanted = farmPrefs.resolveCropPlantedDate(null, p.id, p.cropName)
+                    if (!pPlanted.isNullOrBlank()) {
+                        loadedDates[p.id] = pPlanted
+                        if (!p.cropName.isNullOrBlank()) {
+                            loadedDates["${p.id}_${p.cropName}"] = pPlanted
+                        }
+                    }
+                }
 
                 _uiState.update { state ->
                     state.copy(
                         editedPlots = plots,
                         plots = renderPlots,
                         cropZones = zones,
+                        cropPlantedDates = loadedDates,
                         isLoading = false,
                         hasUnsavedChanges = false
                     )
@@ -555,8 +585,19 @@ class EditViewModel(
     fun setPlotDimensions(plotId: String, newWidthM: Float, newHeightM: Float) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
-        val clampedW = newWidthM.coerceIn(0.6f, 15f)
-        val clampedH = newHeightM.coerceIn(0.6f, 15f)
+        val currentVegZones = _uiState.value.cropZones.filter {
+            it.plotId == plotId &&
+            !it.cropName.isNullOrBlank() &&
+            !it.cropName.equals("Bed", ignoreCase = true)
+        }
+        val hasVegetables = currentVegZones.isNotEmpty()
+
+        // If vegetables are present inside garden, size cannot be reduced below current dimensions
+        val finalW = if (hasVegetables) newWidthM.coerceAtLeast(plot.widthM) else newWidthM
+        val finalH = if (hasVegetables) newHeightM.coerceAtLeast(plot.heightM) else newHeightM
+
+        val clampedW = finalW.coerceIn(0.6f, 15f)
+        val clampedH = finalH.coerceIn(0.6f, 15f)
         val updated = currentPlots.map {
             if (it.id == plotId) it.copy(widthM = clampedW, heightM = clampedH) else it
         }
@@ -565,29 +606,80 @@ class EditViewModel(
     }
 
     /**
-     * Rename a garden bed.
+     * Rename a garden bed and persist directly to database.
      */
     fun renamePlot(plotId: String, newName: String) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val nowStr = Instant.now().toString()
         val updated = currentPlots.map {
-            if (it.id == plotId) it.copy(plotLabel = newName) else it
+            if (it.id == plotId) it.copy(plotLabel = newName, updatedAt = nowStr) else it
         }
         updatePlotsState(updated)
-        triggerAutoSave(0L)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            cropPlotRepository.renamePlot(plotId, newName)
+        }
     }
 
     /**
-     * Archive or unarchive a garden bed.
+     * Archive or unarchive a garden bed and persist directly to database.
      */
     fun setPlotArchived(plotId: String, isArchived: Boolean) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val nowStr = Instant.now().toString()
+        val newNotes = if (isArchived) {
+            "DELETED_AT:$nowStr"
+        } else {
+            if (plot.notes?.startsWith("DELETED_AT:") == true || plot.notes?.startsWith("ARCHIVED_AT:") == true) null else plot.notes
+        }
         val updated = currentPlots.map {
-            if (it.id == plotId) it.copy(isActive = !isArchived) else it
+            if (it.id == plotId) it.copy(isActive = !isArchived, notes = newNotes, updatedAt = nowStr) else it
         }
         updatePlotsState(updated)
-        triggerAutoSave(0L)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            cropPlotRepository.setPlotArchived(plotId, isArchived, nowStr)
+        }
+    }
+
+    /**
+     * Soft-delete a garden bed: hides it into Archive with 30-day retention countdown.
+     */
+    fun deletePlotSoft(plotId: String) {
+        setPlotArchived(plotId, isArchived = true)
+    }
+
+    /**
+     * Permanently delete a garden bed from database (Room & Supabase).
+     */
+    fun deletePlotPermanently(plotId: String) {
+        val currentPlots = _uiState.value.editedPlots
+        val plotToDelete = currentPlots.firstOrNull { it.id == plotId } ?: return
+        val childZones = _uiState.value.cropZones.filter { it.plotId == plotId }
+
+        undoStack.addLast(EditAction.DeletePlot(plotToDelete, childZones))
+        redoStack.clear()
+
+        val updatedPlots = currentPlots.filter { it.id != plotId }
+        val updatedZones = _uiState.value.cropZones.filter { it.plotId != plotId }
+
+        _uiState.update { state ->
+            state.copy(
+                editedPlots = updatedPlots,
+                plots = updatedPlots.map { it.toRenderData() },
+                cropZones = updatedZones,
+                selectedPlotId = if (state.selectedPlotId == plotId) null else state.selectedPlotId,
+                selectedZoneId = if (childZones.any { it.id == state.selectedZoneId }) null else state.selectedZoneId,
+                isResizeMode = if (state.selectedPlotId == plotId) false else state.isResizeMode,
+                hasUnsavedChanges = false,
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty()
+            )
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            childZones.forEach { cropZoneRepository.deleteZone(it.id) }
+            cropPlotRepository.deletePlot(plotId)
+        }
     }
 
     // ── Individual Crop Zone Drag & Resize (User rules 6, 7, 8, 9) ─────────
@@ -978,7 +1070,7 @@ class EditViewModel(
             widthM      = safeW,
             heightM     = safeH,
             rotationDeg = 0f,
-            plantedDate = java.time.LocalDate.now().toString(),
+            plantedDate = null,
             isActive    = true,
             notes       = null,
             createdAt   = Instant.now().toString(),
@@ -1303,8 +1395,10 @@ class EditViewModel(
     fun rotatePlot(plotId: String) {
         val currentPlots = _uiState.value.editedPlots
         val plot = currentPlots.firstOrNull { it.id == plotId } ?: return
-        val newW = plot.heightM
-        val newH = plot.widthM
+        val oldW = plot.widthM
+        val oldH = plot.heightM
+        val newW = oldH
+        val newH = oldW
         val newX = plot.posX.coerceIn(0f, (45.0f - newW).coerceAtLeast(0f))
         val newY = plot.posY.coerceIn(0f, (45.0f - newH).coerceAtLeast(0f))
         val updatedPlot = plot.copy(
@@ -1314,11 +1408,69 @@ class EditViewModel(
             heightM = newH,
             updatedAt = Instant.now().toString()
         )
-        undoStack.addLast(EditAction.ModifyPlot(plot, updatedPlot))
+
+        // Rotate all crop zones inside this plot by 90 degrees clockwise:
+        // Clockwise transformation: x' = oldH - (y + zH), y' = x
+        val oldZones = _uiState.value.cropZones.filter { it.plotId == plotId }
+        val rotatedZones = _uiState.value.cropZones.map { zone ->
+            if (zone.plotId == plotId) {
+                val zW = if (zone.widthM > 0.05f) zone.widthM else realLifeCropDiameterM(zone.cropName)
+                val zH = if (zone.heightM > 0.05f) zone.heightM else realLifeCropDiameterM(zone.cropName)
+                val newZW = zH
+                val newZH = zW
+                val rawNewX = oldH - zone.offsetY - zH
+                val rawNewY = zone.offsetX
+                val snapStep = INCH_IN_METERS
+                val snappedX = (Math.round(rawNewX / snapStep) * snapStep).coerceIn(0f, (newW - newZW).coerceAtLeast(0f))
+                val snappedY = (Math.round(rawNewY / snapStep) * snapStep).coerceIn(0f, (newH - newZH).coerceAtLeast(0f))
+
+                val plantSpacing = cropSinglePlantSpacingM(zone.cropName ?: "").coerceAtLeast(0.06f)
+                val cols = maxOf(1, kotlin.math.round(newZW / plantSpacing).toInt())
+                val rows = maxOf(1, kotlin.math.round(newZH / plantSpacing).toInt())
+                val cellW = newZW / cols
+                val cellH = newZH / rows
+                val instances = mutableListOf<PlantInstanceRender>()
+                for (r in 0 until rows) {
+                    for (c in 0 until cols) {
+                        instances.add(
+                            PlantInstanceRender(
+                                worldX = snappedX + (c + 0.5f) * cellW,
+                                worldY = snappedY + (r + 0.5f) * cellH,
+                                scaleFactor = 1f,
+                                cropName = zone.cropName ?: "",
+                                growthStage = zone.growthStage
+                            )
+                        )
+                    }
+                }
+
+                zone.copy(
+                    offsetX = snappedX,
+                    offsetY = snappedY,
+                    widthM = newZW,
+                    heightM = newZH,
+                    plantInstances = instances
+                )
+            } else {
+                zone
+            }
+        }
+        val newZones = rotatedZones.filter { it.plotId == plotId }
+
+        undoStack.addLast(EditAction.RotatePlot(plotId, plot, updatedPlot, oldZones, newZones))
         redoStack.clear()
         val updatedPlots = currentPlots.map { if (it.id == plotId) updatedPlot else it }
-        updatePlotsState(updatedPlots)
-        triggerAutoSave()
+        _uiState.update { state ->
+            state.copy(
+                editedPlots = updatedPlots,
+                plots = updatedPlots.map { it.toRenderData() },
+                cropZones = rotatedZones,
+                hasUnsavedChanges = true,
+                canUndo = undoStack.isNotEmpty(),
+                canRedo = redoStack.isNotEmpty()
+            )
+        }
+        triggerAutoSave(0L)
     }
 
     fun bringPlotToFront(plotId: String) {
@@ -1437,6 +1589,14 @@ class EditViewModel(
                     state.copy(cropZones = updatedZones)
                 }
             }
+            is EditAction.RotatePlot -> {
+                val idx = currentPlots.indexOfFirst { it.id == action.plotId }
+                if (idx != -1) currentPlots[idx] = action.oldPlot
+                val otherZones = _uiState.value.cropZones.filter { it.plotId != action.plotId }
+                _uiState.update { state ->
+                    state.copy(cropZones = otherZones + action.oldZones)
+                }
+            }
         }
         redoStack.addLast(action)
         updatePlotsState(currentPlots)
@@ -1514,6 +1674,14 @@ class EditViewModel(
                         } else zone
                     }
                     state.copy(cropZones = updatedZones)
+                }
+            }
+            is EditAction.RotatePlot -> {
+                val idx = currentPlots.indexOfFirst { it.id == action.plotId }
+                if (idx != -1) currentPlots[idx] = action.newPlot
+                val otherZones = _uiState.value.cropZones.filter { it.plotId != action.plotId }
+                _uiState.update { state ->
+                    state.copy(cropZones = otherZones + action.newZones)
                 }
             }
         }
@@ -1777,150 +1945,38 @@ class EditViewModel(
                         c.contains("cucumber") || c.contains("squash") || c.contains("beans")
                     }
 
-                    // 1. Monitoring Dates
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "mon_germ_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
-                            title = "Monitoring: Pagpapatubo (Germination Check)",
-                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
-                            dueDate = anchorDate.plusDays(4).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "mon_scout_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
-                            title = "Monitoring: Kalusugan ng Dahon at Peste",
-                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
-                            dueDate = anchorDate.plusDays((daysToHarvest * 0.40f).toLong().coerceAtLeast(10)).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "mon_preharvest_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.OBSERVATION,
-                            title = "Monitoring: Kahandaan sa Pag-ani (Pre-Harvest Check)",
-                            subLabel = "${draft.cropName} (${draft.variety}) • ${draft.bedLabel}",
-                            dueDate = harvestDate.minusDays(3).coerceAtLeast(anchorDate.plusDays(1)).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
+                    // Generate key milestone & scheduled care tasks from the vegetable's authentic agronomic agenda
+                    val agendaSchedule = com.maptanim.app.features.farm.schedule.generateCropAgendaSchedule(
+                        cropName = draft.cropName,
+                        varietyName = draft.variety,
+                        plantedDate = anchorDate,
+                        profile = com.maptanim.app.features.farm.components.BackyardCropAgroData.getProfile(draft.cropName)
                     )
 
-                    // 2. Crop Care Dates
-                    scheduledTasks.add(
+                    val tasksFromAgenda = agendaSchedule.filter { it.isKeyMilestone || it.dayNumber in 1..14 }.map { item ->
+                        val taskType = when (item.type) {
+                            com.maptanim.app.features.farm.schedule.AgendaTaskType.WATERING -> com.maptanim.app.domain.model.TaskType.WATER
+                            com.maptanim.app.features.farm.schedule.AgendaTaskType.FERTILIZER -> com.maptanim.app.domain.model.TaskType.FERTILIZE
+                            com.maptanim.app.features.farm.schedule.AgendaTaskType.PEST_SCOUT -> com.maptanim.app.domain.model.TaskType.OBSERVATION
+                            com.maptanim.app.features.farm.schedule.AgendaTaskType.PRUNING_TRELLIS -> com.maptanim.app.domain.model.TaskType.TRELLIS
+                            com.maptanim.app.features.farm.schedule.AgendaTaskType.HARVEST -> com.maptanim.app.domain.model.TaskType.HARVEST
+                            else -> com.maptanim.app.domain.model.TaskType.OBSERVATION
+                        }
                         com.maptanim.app.domain.model.FarmTask(
-                            id = "care_water_${draft.id}",
+                            id = "task_${draft.id}_${item.id}",
                             farmId = activeFarmId,
                             plotId = draft.bedId,
                             plotLabel = draft.bedLabel,
                             cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.WATER,
-                            title = "Crop Care: Dilig at Pag-aalaga ng Lupa",
-                            subLabel = "${draft.cropName} • Unang Pagdilig",
-                            dueDate = anchorDate.plusDays(1).toString(),
+                            taskType = taskType,
+                            title = item.title,
+                            subLabel = "${draft.cropName} (${draft.variety}) • ${item.tagalogInstruction.take(60)}...",
+                            dueDate = item.date.toString(),
                             isCompleted = false,
                             completedAt = null
-                        )
-                    )
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "care_fert_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.FERTILIZE,
-                            title = "Crop Care: Paglalagay ng Abono (Fertilizer)",
-                            subLabel = "${draft.cropName} • Side-dressing",
-                            dueDate = anchorDate.plusDays((daysToHarvest * 0.25f).toLong().coerceAtLeast(7)).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "care_weed_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.WEED,
-                            title = "Crop Care: Pag-aalis ng Damo (Weeding)",
-                            subLabel = "${draft.cropName} • Weed & Soil Check",
-                            dueDate = anchorDate.plusDays((daysToHarvest * 0.45f).toLong().coerceAtLeast(14)).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
-
-                    // 3. Other Tasks
-                    if (isClimbing) {
-                        scheduledTasks.add(
-                            com.maptanim.app.domain.model.FarmTask(
-                                id = "task_trellis_${draft.id}",
-                                farmId = activeFarmId,
-                                plotId = draft.bedId,
-                                plotLabel = draft.bedLabel,
-                                cropName = draft.cropName,
-                                taskType = com.maptanim.app.domain.model.TaskType.TRELLIS,
-                                title = "Gawain: Paglalagay ng Balag / Trellis",
-                                subLabel = "${draft.cropName} (${draft.variety})",
-                                dueDate = anchorDate.plusDays(10).toString(),
-                                isCompleted = false,
-                                completedAt = null
-                            )
                         )
                     }
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "task_prune_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.PRUNING,
-                            title = "Gawain: Pagsasaayos at Pag-prune ng Sanga",
-                            subLabel = "${draft.cropName} • Thinning/Pruning",
-                            dueDate = anchorDate.plusDays((daysToHarvest * 0.50f).toLong().coerceAtLeast(15)).toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
-
-                    // 4. Expected Harvest
-                    scheduledTasks.add(
-                        com.maptanim.app.domain.model.FarmTask(
-                            id = "task_harvest_${draft.id}",
-                            farmId = activeFarmId,
-                            plotId = draft.bedId,
-                            plotLabel = draft.bedLabel,
-                            cropName = draft.cropName,
-                            taskType = com.maptanim.app.domain.model.TaskType.HARVEST,
-                            title = "Inaasahang Pag-ani: ${draft.cropName}",
-                            subLabel = "${draft.cropName} (${draft.variety}) • $daysToHarvest araw",
-                            dueDate = harvestDate.toString(),
-                            isCompleted = false,
-                            completedAt = null
-                        )
-                    )
+                    scheduledTasks.addAll(tasksFromAgenda)
                 }
 
                 if (scheduledTasks.isNotEmpty()) {
@@ -1967,19 +2023,19 @@ class EditViewModel(
     fun getDaysToHarvestEstimate(cropName: String): Int {
         val clean = cropName.lowercase()
         return when {
-            clean.contains("pechay") || clean.contains("kangkong") -> 30
-            clean.contains("lettuce") -> 45
-            clean.contains("okra") -> 50
-            clean.contains("sitaw") || clean.contains("stringbean") -> 55
-            clean.contains("ampalaya") || clean.contains("bitter") -> 60
-            clean.contains("tomato") || clean.contains("kamatis") -> 65
-            clean.contains("eggplant") || clean.contains("talong") -> 70
-            clean.contains("corn") || clean.contains("mais") -> 75
+            clean.contains("pechay") || clean.contains("petsay") || clean.contains("bokchoy") -> 28
+            clean.contains("lettuce") || clean.contains("litsugas") -> 45
+            clean.contains("pipino") || clean.contains("cucumber") -> 50
+            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("yardlong") -> 48
+            clean.contains("ampalaya") || clean.contains("bitter") -> 55
+            clean.contains("tomato") || clean.contains("kamatis") -> 60
+            clean.contains("cabbage") || clean.contains("repolyo") -> 60
+            clean.contains("greenonion") || clean.contains("scallion") || clean.contains("dahonngsibuyas") || clean.contains("onion") || clean.contains("sibuyas") -> 60
+            clean.contains("bellpepper") || clean.contains("sweetpepper") || clean.contains("atsal") || clean.contains("pepper") || clean.contains("sili") -> 70
+            clean.contains("eggplant") || clean.contains("talong") -> 75
+            clean.contains("squash") || clean.contains("kalabasa") || clean.contains("pumpkin") -> 80
             clean.contains("carrot") || clean.contains("karot") -> 85
-            clean.contains("cabbage") || clean.contains("repolyo") -> 85
-            clean.contains("pumpkin") || clean.contains("squash") -> 90
-            clean.contains("onion") || clean.contains("sibuyas") -> 100
-            clean.contains("sili") || clean.contains("chili") -> 75
+            clean.contains("potato") || clean.contains("patatas") -> 90
             else -> 60
         }
     }
@@ -1990,17 +2046,16 @@ class EditViewModel(
             clean.contains("ampalaya") || clean.contains("bitter") -> "Galaxy Max F1"
             clean.contains("tomato") || clean.contains("kamatis") -> "Diamante Max F1"
             clean.contains("eggplant") || clean.contains("talong") -> "Fortuner F1"
+            clean.contains("bellpepper") || clean.contains("sweetpepper") || clean.contains("atsal") || clean.contains("pepper") -> "Sultan F1"
             clean.contains("carrot") || clean.contains("karot") -> "Terracotta F1"
             clean.contains("cabbage") || clean.contains("repolyo") -> "Rare Ball F1"
             clean.contains("pechay") || clean.contains("bokchoy") -> "Black Behi"
-            clean.contains("onion") || clean.contains("sibuyas") -> "Red Pinoy F1"
+            clean.contains("greenonion") || clean.contains("scallion") || clean.contains("dahonngsibuyas") || clean.contains("onion") || clean.contains("sibuyas") -> "Scallion Green"
             clean.contains("pumpkin") || clean.contains("squash") || clean.contains("kalabasa") -> "Suprema F1"
-            clean.contains("corn") || clean.contains("mais") -> "Macho Sweet F1"
-            clean.contains("okra") -> "Smooth Green F1"
-            clean.contains("sili") || clean.contains("chili") || clean.contains("pepper") -> "Django F1"
-            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") -> "Sandigan F1"
-            clean.contains("lettuce") -> "General F1"
-            clean.contains("kangkong") -> "Upland Green"
+            clean.contains("pipino") || clean.contains("cucumber") -> "Pilgrim F1"
+            clean.contains("sitaw") || clean.contains("stringbean") || clean.contains("beans") || clean.contains("yardlong") -> "Sandigan F1"
+            clean.contains("lettuce") || clean.contains("litsugas") -> "General F1"
+            clean.contains("potato") || clean.contains("patatas") -> "Igorota"
             else -> "East-West Standard F1"
         }
     }
@@ -2018,7 +2073,7 @@ class EditViewModel(
                 val chosenDate = plantedDatesMap?.get(plot.id)
                 val chosenVariety = varietiesMap?.get(plot.id)
                 plot.copy(
-                    plantedDate = if (!chosenDate.isNullOrBlank()) chosenDate else if (plot.plantedDate.isNullOrBlank()) java.time.LocalDate.now().toString() else plot.plantedDate,
+                    plantedDate = if (!chosenDate.isNullOrBlank()) chosenDate else plot.plantedDate,
                     cropVariety = if (!chosenVariety.isNullOrBlank()) chosenVariety else plot.cropVariety
                 )
             }
@@ -2139,6 +2194,13 @@ class EditViewModel(
             val inZoneMap = _uiState.value.cropPlantedDates[zoneId]
             if (!inZoneMap.isNullOrBlank()) return inZoneMap
         }
+        val targetCrop = _uiState.value.cropZones.firstOrNull { it.id == zoneId }?.cropName
+            ?: _uiState.value.editedPlots.firstOrNull { it.id == plotId }?.cropName
+        val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+        val fromPrefs = farmPrefs.resolveCropPlantedDate(zoneId, plotId, targetCrop)
+            ?: farmPrefs.getCropPlantedDate(cropKey)
+        if (!fromPrefs.isNullOrBlank()) return fromPrefs
+
         return null
     }
 
@@ -2146,17 +2208,41 @@ class EditViewModel(
      * Persists the planting date for a specific crop/zone and triggers auto-save.
      */
     fun saveCropPlantedDate(cropKey: String, zoneId: String?, plotId: String, plantedDate: String) {
+        val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+        val targetPlot = _uiState.value.editedPlots.firstOrNull { it.id == plotId }
+        val hasMultipleCropsInNotes = targetPlot?.notes?.startsWith("Crops: ") == true && targetPlot.notes.contains(",")
+        val hasMultipleCropsInPlot = hasMultipleCropsInNotes ||
+            _uiState.value.cropZones.count { it.plotId == plotId } > 1 ||
+            (!zoneId.isNullOrBlank() && _uiState.value.cropZones.any { it.plotId == plotId })
+
+        if (cropKey != plotId || !hasMultipleCropsInPlot) {
+            farmPrefs.saveCropPlantedDate(cropKey, plantedDate)
+        }
+        if (!zoneId.isNullOrBlank()) {
+            farmPrefs.saveCropPlantedDate(zoneId, plantedDate)
+        }
+        val targetCrop = _uiState.value.cropZones.firstOrNull { it.id == zoneId }?.cropName
+            ?: targetPlot?.cropName
+        if (!targetCrop.isNullOrBlank()) {
+            farmPrefs.saveCropPlantedDate("${plotId}_${targetCrop}", plantedDate)
+        }
+
         _uiState.update { state ->
             val newDates = state.cropPlantedDates.toMutableMap()
-            newDates[cropKey] = plantedDate
+            if (cropKey != plotId || !hasMultipleCropsInPlot) {
+                newDates[cropKey] = plantedDate
+            }
             if (!zoneId.isNullOrBlank()) {
                 newDates[zoneId] = plantedDate
+            }
+            if (!targetCrop.isNullOrBlank()) {
+                newDates["${plotId}_${targetCrop}"] = plantedDate
             }
             val updatedZones = state.cropZones.map { zone ->
                 if (zone.id == zoneId) zone.copy(plantedDate = plantedDate) else zone
             }
             val updatedPlots = state.editedPlots.map { plot ->
-                if (plot.id == plotId) plot.copy(plantedDate = plantedDate) else plot
+                if (plot.id == plotId && !hasMultipleCropsInPlot) plot.copy(plantedDate = plantedDate) else plot
             }
             state.copy(
                 cropPlantedDates = newDates,

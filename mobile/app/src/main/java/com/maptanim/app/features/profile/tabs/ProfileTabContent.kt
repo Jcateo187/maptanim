@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.maptanim.app.core.preferences.FavoriteCropsManager
+import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.features.farm.dialogs.CropInformationDialog
 import com.maptanim.app.features.profile.ProfileViewModel
 import com.maptanim.app.features.profile.components.ConfirmChoiceDialog
@@ -51,14 +52,16 @@ fun ProfileTabContent(
             )
         }
 
-        // MIDDLE: Favorite Crops horizontal row (bottom of avatar card)
-        item {
-            UserFavoriteCropsSection(
-                favoriteCrops = favoriteCrops.toList(),
-                onCropClick = { cropName ->
-                    selectedCropDialog = cropName
-                }
-            )
+        // MIDDLE: Favorite Crops horizontal row (bottom of avatar card - only if user has favorites)
+        if (favoriteCrops.isNotEmpty()) {
+            item {
+                UserFavoriteCropsSection(
+                    favoriteCrops = favoriteCrops.toList(),
+                    onCropClick = { cropName ->
+                        selectedCropDialog = cropName
+                    }
+                )
+            }
         }
 
         // BOTTOM: User Activity History (heading is outside on top of the card)
@@ -66,6 +69,7 @@ fun ProfileTabContent(
             UserCommunityActivityCard(
                 userPosts = uiState.userPosts,
                 userProfile = uiState.userProfile,
+                checkUpLogs = uiState.checkUpLogs,
                 onSeeMoreClick = { isForumExpanded = true }
             )
         }

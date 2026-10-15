@@ -49,6 +49,15 @@ interface CropPlotRepository {
 
     /** Record harvest event, log harvest activity, and update or reset plot crop state for next cycle. */
     suspend fun recordHarvest(plotId: String, yieldKg: Float? = null, notes: String? = null, isFinalHarvest: Boolean = true)
+
+    /** Rename a plot / garden and persist to Room and Supabase. */
+    suspend fun renamePlot(plotId: String, newLabel: String)
+
+    /** Archive or restore a plot / garden with optional deletion timestamp and persist to database. */
+    suspend fun setPlotArchived(plotId: String, isArchived: Boolean, archiveTimestamp: String? = null)
+
+    /** Purge plots that have been archived for more than olderThanDays (default 30 days). */
+    suspend fun purgeExpiredArchivedPlots(olderThanDays: Int = 30)
 }
 
 // ─── TaskRepository ────────────────────────────────────────────────────────
@@ -168,6 +177,7 @@ interface CropLogRepository {
     fun observeLogsForPlanting(cropPlantingId: String): Flow<List<CropLog>>
     fun observeLogsForBed(bedId: String): Flow<List<CropLog>>
     fun observeLogsForFarm(farmId: String): Flow<List<CropLog>>
+    fun observeAllLogs(): Flow<List<CropLog>> = kotlinx.coroutines.flow.flowOf(emptyList())
     suspend fun getLogsForPlanting(cropPlantingId: String): List<CropLog>
     suspend fun getLatestLog(cropPlantingId: String): CropLog?
     suspend fun countLogsForStage(cropPlantingId: String, stage: ManagementStage): Int

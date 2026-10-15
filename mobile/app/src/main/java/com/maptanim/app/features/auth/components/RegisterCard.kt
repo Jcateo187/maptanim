@@ -1,5 +1,6 @@
-﻿package com.maptanim.app.features.auth.components
+package com.maptanim.app.features.auth.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -122,7 +123,11 @@ fun RegisterCard(
         modifier = Modifier
             .width(430.dp)
             .padding(24.dp),
-        elevation = CardDefaults.cardElevation(10.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF7FAF7)
+        ),
+        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -133,14 +138,16 @@ fun RegisterCard(
             Text(
                 text = "Create Account",
                 fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF111813)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Start your smart farming journey.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF4B5563)
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -287,7 +294,7 @@ fun RegisterCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Please accept the Terms & Privacy Policy to continue as guest",
-                    color = MaterialTheme.colorScheme.outline,
+                    color = Color(0xFF6B7280),
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 11.sp
                 )
@@ -296,10 +303,13 @@ fun RegisterCard(
             Spacer(modifier = Modifier.height(24.dp))
 
             Row {
-                Text("Already have an account? ")
+                Text(
+                    text = "Already have an account? ",
+                    color = Color(0xFF4B5563)
+                )
                 Text(
                     text = "Sign In",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32),
                     fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable {

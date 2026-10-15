@@ -26,10 +26,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maptanim.app.R
 import com.maptanim.app.domain.model.ManagementStage
-import com.maptanim.app.features.farm.dialogs.CalendarScreenTab
+import com.maptanim.app.features.farm.schedule.CalendarScreenTab
 import com.maptanim.app.features.farm.dialogs.CropCareDssDialog
 import com.maptanim.app.features.farm.dialogs.CropInformationDialog
 import com.maptanim.app.features.farm.dialogs.CropScheduleCalendarScreen
+import com.maptanim.app.features.farm.schedule.CropScheduleStatus
+import com.maptanim.app.features.farm.schedule.resolveScheduleStatus
 import com.maptanim.app.features.home.components.*
 import com.maptanim.app.features.home.viewmodel.HomeViewModel
 import com.maptanim.app.navigation.MainBottomNavBar
@@ -44,7 +46,8 @@ private data class ActiveCheckUpTarget(
     val varietyName: String,
     val gardenLabel: String,
     val plotId: String,
-    val stage: ManagementStage
+    val stage: ManagementStage,
+    val scheduleStatus: CropScheduleStatus? = null
 )
 
 private data class CalendarLaunchTarget(
@@ -170,11 +173,11 @@ fun HomeScreen(
                         }
                     }
 
-                    // Notification Button with shadow pill
+                    // Notification Button with sleek small circle background
                     IconButton(
                         onClick = { navController.navigate(Routes.NOTIFICATIONS) },
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(30.dp)
                             .background(Color.Black.copy(alpha = 0.28f), CircleShape)
                     ) {
                         BadgedBox(
@@ -184,7 +187,7 @@ fun HomeScreen(
                                         containerColor = Color(0xFFE53935),
                                         contentColor = Color.White
                                     ) {
-                                        Text("${uiState.notificationCount}")
+                                        Text("${uiState.notificationCount}", fontSize = 9.sp)
                                     }
                                 }
                             }
@@ -192,7 +195,8 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = "Notifications",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -203,6 +207,7 @@ fun HomeScreen(
                     selectedRoute = Routes.HOME,
                     onNavigate = { route ->
                         if (route != Routes.HOME) {
+                            activeCheckUp = null
                             navController.navigate(route) {
                                 popUpTo(Routes.HOME) { saveState = true }
                                 launchSingleTop = true
@@ -226,11 +231,29 @@ fun HomeScreen(
             item {
                 VegetableCheckUpCard(
                     plots = uiState.plots,
+                    farmName = uiState.activeFarm?.farmName,
                     onStartCheckUp = { cropName, variety, gardenLabel, plotId, stage ->
-                        activeCheckUp = ActiveCheckUpTarget(cropName, variety, gardenLabel, plotId, stage)
+                        val matchingPlot = uiState.plots.firstOrNull { it.id == plotId }
+                        val schedStatus = resolveScheduleStatus(
+                            plantedDate = matchingPlot?.plantedDate,
+                            cropName = cropName,
+                            isMonitoringStarted = matchingPlot?.isMonitoringStarted ?: true
+                        )
+                        activeCheckUp = ActiveCheckUpTarget(
+                            cropName = cropName,
+                            varietyName = variety,
+                            gardenLabel = gardenLabel,
+                            plotId = plotId,
+                            stage = schedStatus.stageOrNull ?: stage,
+                            scheduleStatus = schedStatus
+                        )
                     },
-                    onOpenFarmHub = { navController.navigate(Routes.FARM) },
+                    onOpenFarmHub = {
+                        activeCheckUp = null
+                        navController.navigate(Routes.FARM)
+                    },
                     onGardenClick = { gardenId ->
+                        activeCheckUp = null
                         navController.navigate(Routes.growingRoute(gardenId))
                     }
                 )
@@ -243,14 +266,36 @@ fun HomeScreen(
                     onCompleteTask = { taskId -> homeViewModel.completeTask(taskId) },
                     onTaskClick = { task ->
                         val matchingPlot = uiState.plots.firstOrNull {
-                            it.id == task.plotId || (!task.cropName.isNullOrBlank() && it.cropName.equals(task.cropName, ignoreCase = true))
+                            it.id == task.plotId ||
+                            it.id.startsWith("${task.plotId}_") ||
+                            task.plotId.startsWith("${it.id}_") ||
+                            (!task.cropName.isNullOrBlank() && it.cropName.equals(task.cropName, ignoreCase = true)) ||
+                            (!task.plotLabel.isBlank() && it.plotLabel.equals(task.plotLabel, ignoreCase = true))
                         }
-                        val plantedDateStr = matchingPlot?.plantedDate ?: LocalDate.now().minusDays(matchingPlot?.daysPlanted?.toLong() ?: 15L).toString()
+                        val resolvedCropName = task.cropName?.takeIf { it.isNotBlank() }
+                            ?: matchingPlot?.cropName?.takeIf { it.isNotBlank() && !it.equals("Bed", ignoreCase = true) && !it.equals("Garden", ignoreCase = true) }
+                            ?: uiState.plots.firstOrNull { !it.cropName.isNullOrBlank() && !it.cropName.equals("Bed", ignoreCase = true) && !it.cropName.equals("Garden", ignoreCase = true) }?.cropName
+                            ?: "Pananim"
+                        val resolvedVariety = matchingPlot?.cropVariety?.takeIf { it.isNotBlank() }
+                            ?: com.maptanim.app.data.local.seeds.CropVarietySeeds.list.firstOrNull {
+                                it.cropName.equals(resolvedCropName, ignoreCase = true) ||
+                                (it.localNamePh?.contains(resolvedCropName, ignoreCase = true) == true)
+                            }?.varietyName
+                        val resolvedGardenLabel = matchingPlot?.plotLabel?.substringBefore(" (Z")?.takeIf { it.isNotBlank() }
+                            ?: task.plotLabel.takeIf { it.isNotBlank() && !it.equals("PLOT", ignoreCase = true) }
+                            ?: "Garden"
+                        val farmPrefs = com.maptanim.app.core.preferences.FarmPreferencesManager.getInstance()
+                        val prefDate = farmPrefs.resolveCropPlantedDate(task.plotId, matchingPlot?.id ?: task.plotId, resolvedCropName)
+                        val plantedDateStr = matchingPlot?.plantedDate?.takeIf { it.isNotBlank() }
+                            ?: prefDate
+                            ?: if ((matchingPlot?.daysPlanted ?: 0) > 0) LocalDate.now().minusDays(matchingPlot!!.daysPlanted.toLong()).toString()
+                            else LocalDate.now().toString()
+
                         activeCalendarTarget = CalendarLaunchTarget(
-                            cropName = task.cropName?.ifBlank { "Kamatis" } ?: "Kamatis",
-                            varietyName = null,
-                            gardenLabel = task.plotLabel.ifBlank { "Garden" },
-                            plotId = task.plotId,
+                            cropName = resolvedCropName,
+                            varietyName = resolvedVariety,
+                            gardenLabel = resolvedGardenLabel,
+                            plotId = task.plotId.ifBlank { matchingPlot?.id ?: "plot-1" },
                             plantedDateStr = plantedDateStr
                         )
                     },
@@ -279,6 +324,7 @@ fun HomeScreen(
             gardenLabel = checkUp.gardenLabel,
             plotId = checkUp.plotId,
             currentStage = checkUp.stage,
+            scheduleStatus = checkUp.scheduleStatus,
             onDismiss = { activeCheckUp = null }
         )
     }
@@ -301,6 +347,23 @@ fun HomeScreen(
             initialTab = CalendarScreenTab.TODAYS_TASK,
             onDismiss = { activeCalendarTarget = null },
             onReschedule = { /* Kept resilient */ }
+        )
+    }
+
+    // Celebration & Next Action Dialog when all daily tasks are completed
+    if (uiState.showTaskCompletionOverlay) {
+        TaskCompletionCelebrationDialog(
+            completedPlot = uiState.completedTaskPlotTarget,
+            onDismiss = { homeViewModel.dismissTaskCompletionOverlay() },
+            onReplant = { plotId, cropName ->
+                homeViewModel.replantCropOnPlot(plotId, cropName)
+            },
+            onCompostAndFallow = { plotId ->
+                homeViewModel.compostAndFallowPlot(plotId)
+            },
+            onRotateCrop = { plotId, newCropName ->
+                homeViewModel.rotateCropOnPlot(plotId, newCropName)
+            }
         )
     }
     }

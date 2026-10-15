@@ -17,32 +17,52 @@ android {
         applicationId = "com.maptanim.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.2.9"
+        versionCode = 7
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("distribution") {
+            storeFile = file("distribution.keystore")
+            storePassword = "maptanimdistribution"
+            keyAlias = "maptanim"
+            keyPassword = "maptanimdistribution"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (file("distribution.keystore").exists()) {
+                signingConfigs.getByName("distribution")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             optimization {
                 enable = false
             }
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.9 Release Test Build - Community Hub photo sharing, single-row chat tray, full post detail feed, Planter action ring, and GrowIt 8-stage crop dossier"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.3.0 Release Test Build - 2D Top-Down Garden Bed, Complete 15 Philippine Crops, Community Hub, and Supabase Live Sync"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }
             }
         }
         debug {
+            signingConfig = if (file("distribution.keystore").exists()) {
+                signingConfigs.getByName("distribution")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             firebaseAppDistribution {
                 appId = "1:605883983200:android:1e5411b580262a2b422a05"
                 groups = "testers"
-                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.2.9 Debug Test Build - Community Hub photo sharing, single-row chat tray, full post detail feed, Planter action ring, and GrowIt 8-stage crop dossier"
+                releaseNotes = System.getenv("FIREBASE_RELEASE_NOTES") ?: "MapTanim v1.3.0 Debug Test Build - 2D Top-Down Garden Bed, Complete 15 Philippine Crops, Community Hub, and Supabase Live Sync"
                 System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_PATH")?.takeIf { it.isNotBlank() }?.let {
                     serviceCredentialsFile = it
                 }
@@ -73,6 +93,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.material3)
     implementation(libs.coil.compose)
 
     // Navigation

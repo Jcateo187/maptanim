@@ -71,8 +71,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
 
   // New User Form State
   const [newEmail, setNewEmail] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
   const [newRole, setNewRole] = useState<UserRole>('FARMER');
   const [newFarmName, setNewFarmName] = useState<string>('');
+  const [isSubmittingNewUser, setIsSubmittingNewUser] = useState<boolean>(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -143,22 +145,32 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
     e.preventDefault();
     if (!newEmail.trim()) return;
 
+    setIsSubmittingNewUser(true);
     const emailPrefix = newEmail.trim().split('@')[0];
 
-    await apiService.addFarmer({
-      fullName: emailPrefix,
-      email: newEmail.trim(),
-      role: newRole,
-      status: 'ACTIVE',
-      farmName: newFarmName.trim() || `${emailPrefix}'s Smallholder Farm`,
-      activePlotsCount: 4,
-      deviceInfo: 'Android Mobile (Pending Activation)',
-    });
+    try {
+      await apiService.addFarmer({
+        fullName: emailPrefix,
+        email: newEmail.trim(),
+        role: newRole,
+        status: 'ACTIVE',
+        farmName: newFarmName.trim() || (newRole === 'ADMINISTRATOR' ? 'MapTanim Operations' : `${emailPrefix}'s Smallholder Farm`),
+        activePlotsCount: newRole === 'ADMINISTRATOR' ? 0 : 4,
+        deviceInfo: newRole === 'ADMINISTRATOR' ? 'Web Admin Console' : 'Android Mobile (Active)',
+        password: newPassword.trim() || undefined,
+      });
 
-    setIsAddModalOpen(false);
-    setNewEmail('');
-    setNewFarmName('');
-    loadData();
+      setIsAddModalOpen(false);
+      setNewEmail('');
+      setNewPassword('');
+      setNewFarmName('');
+      setNewRole('FARMER');
+      await loadData();
+    } catch (err) {
+      console.error('Failed to create account:', err);
+    } finally {
+      setIsSubmittingNewUser(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -421,11 +433,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#183145',
-                    borderColor: '#38434D',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E5E7EB',
                     borderRadius: '8px',
-                    color: '#F4F4F4',
+                    color: '#111813',
                     fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                   }}
                   formatter={(val: number, name: string) => [`${val} smallholders`, name]}
                 />
@@ -434,24 +447,24 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
 
             {/* Centered Donut KPI Metric */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-black text-[#F4F4F4] font-mono leading-none">
+              <span className="text-2xl font-black text-[#111813] font-mono leading-none">
                 {activeRate}%
               </span>
-              <span className="text-[10px] text-[#4CAF50] font-bold mt-1">
+              <span className="text-[10px] text-[#2E7D32] font-bold mt-1">
                 Active Rate
               </span>
             </div>
           </div>
 
           {/* Donut Legend */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#38434D]">
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E5E7EB]">
             {donutData.map((item) => (
               <div key={item.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-[#C7D0D8] truncate text-[11px]">{item.name}</span>
+                  <span className="text-[#6B7280] truncate text-[11px]">{item.name}</span>
                 </div>
-                <span className="font-mono font-bold text-[#F4F4F4] text-xs shrink-0 pl-1">
+                <span className="font-mono font-bold text-[#111813] text-xs shrink-0 pl-1">
                   {item.value}
                 </span>
               </div>
@@ -460,23 +473,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
         </div>
 
         {/* Chart 2: Active vs Inactive Over Time (Area Chart) */}
-        <div className="bg-[#2B3136] p-5 rounded-2xl border border-[#38434D] shadow-xs flex flex-col justify-between lg:col-span-2">
+        <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-xs flex flex-col justify-between lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-[#F4F4F4] flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#00BCD4]" />
+              <h3 className="text-sm font-bold text-[#111813] flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#0284C7]" />
                 <span>User Activity & Dormancy Trend (7-Day Tracking)</span>
               </h3>
-              <p className="text-xs text-[#C7D0D8] mt-0.5">
+              <p className="text-xs text-[#6B7280] mt-0.5">
                 Comparison of daily engaged active users vs dormant smallholders
               </p>
             </div>
-            <div className="flex items-center gap-3 text-[11px] text-[#C7D0D8]">
+            <div className="flex items-center gap-3 text-[11px] text-[#6B7280]">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" /> Active Users
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2E7D32]" /> Active Users
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F4A261]" /> Inactive / Dormant
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" /> Inactive / Dormant
               </span>
             </div>
           </div>
@@ -486,31 +499,32 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
               <AreaChart data={metrics?.activityTrends || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#4CAF50" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#2E7D32" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#2E7D32" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="inactiveGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F4A261" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#F4A261" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#38434D" />
-                <XAxis dataKey="period" stroke="#8A9BA8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#8A9BA8" fontSize={11} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis dataKey="period" stroke="#6B7280" fontSize={11} tickLine={false} />
+                <YAxis stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#183145',
-                    borderColor: '#38434D',
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#E5E7EB',
                     borderRadius: '8px',
-                    color: '#F4F4F4',
+                    color: '#111813',
                     fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="active"
                   name="Active Users"
-                  stroke="#4CAF50"
+                  stroke="#2E7D32"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#activeGradient)"
@@ -519,7 +533,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
                   type="monotone"
                   dataKey="inactive"
                   name="Inactive / Dormant"
-                  stroke="#F4A261"
+                  stroke="#F59E0B"
                   strokeWidth={2}
                   strokeDasharray="4 4"
                   fillOpacity={1}
@@ -1180,7 +1194,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Register New Smallholder or Field Officer"
+        title="Provision MapTanim User or Administrator"
         size="md"
       >
         <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
@@ -1191,11 +1205,27 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
             <input
               type="email"
               required
-              placeholder="e.g., juan.delacruz@gmail.com"
+              placeholder="e.g., admin@maptanim.com or farmer@gmail.com"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
+              Initial Password (Optional — creates Supabase Auth login credentials)
+            </label>
+            <input
+              type="password"
+              placeholder="Minimum 6 characters for direct Supabase Auth"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
+            />
+            <p className="text-[10px] text-[#8A9BA8] mt-1">
+              Providing a password creates their real-time Supabase Auth credentials for direct portal or app login.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1209,20 +1239,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
                 className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] font-semibold text-[#F4F4F4]"
               >
                 <option value="FARMER" className="bg-[#2B3136]">Smallholder Farmer</option>
+                <option value="ADMINISTRATOR" className="bg-[#2B3136]">Portal Administrator</option>
                 <option value="GUEST" className="bg-[#2B3136]">Guest / Trial Account</option>
               </select>
-              <p className="text-[10px] text-[#8A9BA8] mt-1">
-                Admin credentials are configured via Vercel Environment Variables.
-              </p>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#F4F4F4] mb-1">
-                Farm Name
+                {newRole === 'ADMINISTRATOR' ? 'Operational Unit' : 'Farm Name'}
               </label>
               <input
                 type="text"
-                placeholder="e.g., Murcia Organic Farm"
+                placeholder={newRole === 'ADMINISTRATOR' ? 'e.g., Central Command' : 'e.g., Murcia Organic Farm'}
                 value={newFarmName}
                 onChange={(e) => setNewFarmName(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-[#38434D] bg-[#1D2429] text-[#F4F4F4] focus:outline-none focus:border-[#4CAF50]"
@@ -1240,10 +1268,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ initialTab = 'di
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#4CAF50] text-white hover:bg-[#388E3C] cursor-pointer flex items-center gap-1.5"
+              disabled={isSubmittingNewUser}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#4CAF50] text-white hover:bg-[#388E3C] cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Confirm & Register</span>
+              <span>{isSubmittingNewUser ? 'Provisioning...' : 'Confirm & Register'}</span>
             </button>
           </div>
         </form>

@@ -37,14 +37,35 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.maptanim.app.data.local.entity.CropVarietyEntity
+import com.maptanim.app.data.local.seeds.CropVarietySeeds
 import com.maptanim.app.data.repository.RepositoryProvider
 import com.maptanim.app.domain.model.CropGrowthStage
 import com.maptanim.app.domain.model.CropLog
+import com.maptanim.app.domain.model.ManagementStage
 import com.maptanim.app.features.farm.components.BackyardCropAgroData
 import com.maptanim.app.features.farm.dialogs.CropCareDssDialog
 import com.maptanim.app.features.farm.renderer.canvas.CropSvgRenderer
+import com.maptanim.app.features.farm.schedule.CheckUpRecorder
+import com.maptanim.app.features.farm.schedule.CheckUpSeverity
+import com.maptanim.app.features.farm.schedule.CropScheduleStatus
+import com.maptanim.app.features.farm.schedule.TaskCompletionStore
+import com.maptanim.app.features.farm.schedule.dayNumberOn
+import com.maptanim.app.features.farm.schedule.parsePlantedDate
+import com.maptanim.app.features.farm.schedule.resolveScheduleStatus
+import com.maptanim.app.features.farm.schedule.AgendaScheduleItem
+import com.maptanim.app.features.farm.schedule.AgendaTaskType
+import com.maptanim.app.features.farm.schedule.BottomScheduleViewMode
+import com.maptanim.app.features.farm.schedule.CalendarScreenTab
+import com.maptanim.app.features.farm.schedule.CropAgronomicCategory
+import com.maptanim.app.features.farm.schedule.StageBannerInfo
+import com.maptanim.app.features.farm.schedule.buildCropSpecificStages
+import com.maptanim.app.features.farm.schedule.detectCropCategory
+import com.maptanim.app.features.farm.schedule.findStageName
+import com.maptanim.app.features.farm.schedule.generateCropAgendaSchedule
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -70,55 +91,13 @@ private val PurpleAccent = Color(0xFF6A1B9A)
 private val GoldHarvest = Color(0xFFF9A825)
 private val RedAlert = Color(0xFFC62828)
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Agenda Task Models & View Modes
-// ═══════════════════════════════════════════════════════════════════════════════
-enum class AgendaTaskType(
-    val tagalogLabel: String,
-    val icon: ImageVector,
-    val color: Color,
-    val dotColor: Color
-) {
-    WATERING("Pagdidilig", Icons.Default.WaterDrop, LushGreen, LushGreen),
-    FERTILIZER("Pagpapataba", Icons.Default.Science, AmberAlert, AmberAlert),
-    PEST_SCOUT("Pagsusuri sa Peste", Icons.Default.BugReport, RedAlert, RedAlert),
-    PRUNING_TRELLIS("Pruning at Trellis", Icons.Default.ContentCut, PurpleAccent, PurpleAccent),
-    HARVEST("Pag-aani", Icons.Default.Eco, GoldHarvest, GoldHarvest),
-    MILESTONE("Mahalagang Yugto", Icons.Default.Stars, BlueAccent, BlueAccent)
-}
-
-enum class BottomScheduleViewMode(val label: String, val icon: ImageVector) {
-    SPLIT_AGENDA("Daily Agenda", Icons.Default.Checklist),
-    CHECKUP_HISTORY("Check Up history", Icons.Default.History)
-}
-
-enum class CalendarScreenTab(val label: String, val icon: ImageVector) {
-    CALENDAR("Calendar", Icons.Default.CalendarMonth),
-    GROWTH_TIMELINE("Growth Timeline", Icons.Default.Timeline),
-    TODAYS_TASK("Today's Task", Icons.Default.Checklist)
-}
-
-data class StageBannerInfo(
-    val stageKey: String,
-    val stageTitle: String,
-    val dayRange: String,
-    val description: String,
-    val gradientColors: List<Color>,
-    val icon: ImageVector
-)
-
-data class AgendaScheduleItem(
-    val id: String,
-    val date: LocalDate,
-    val timeStr: String,
-    val dayNumber: Int,
-    val type: AgendaTaskType,
-    val title: String,
-    val tagalogInstruction: String,
-    val stageName: String,
-    val isKeyMilestone: Boolean = false,
-    var isDone: Boolean = false
-)
+// Typealiases for backward compatibility
+typealias CalendarScreenTab = com.maptanim.app.features.farm.schedule.CalendarScreenTab
+typealias AgendaTaskType = com.maptanim.app.features.farm.schedule.AgendaTaskType
+typealias BottomScheduleViewMode = com.maptanim.app.features.farm.schedule.BottomScheduleViewMode
+typealias AgendaScheduleItem = com.maptanim.app.features.farm.schedule.AgendaScheduleItem
+typealias StageBannerInfo = com.maptanim.app.features.farm.schedule.StageBannerInfo
+typealias CropAgronomicCategory = com.maptanim.app.features.farm.schedule.CropAgronomicCategory
 
 /**
  * CropScheduleCalendarScreen — Full-screen dedicated view for:
@@ -138,16 +117,17 @@ fun CropScheduleCalendarScreen(
     initialTab: CalendarScreenTab = CalendarScreenTab.CALENDAR,
     isPlanningMode: Boolean = false,
     onStartSchedule: (() -> Unit)? = null,
+    onNavigateToCanvas: ((plotId: String) -> Unit)? = null,
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
     val today = remember { LocalDate.now() }
-    val effectivePlanningMode = isPlanningMode || remember(plantedDateStr, today) {
+    val effectivePlanningMode = isPlanningMode || plantedDateStr.isBlank() || remember(plantedDateStr, today) {
         try {
             val parsed = LocalDate.parse(plantedDateStr.take(10))
             parsed.isAfter(today)
         } catch (_: Exception) {
-            false
+            true
         }
     }
 
@@ -159,8 +139,23 @@ fun CropScheduleCalendarScreen(
         }
     }
 
+    val matchedVariety = remember(cropName, varietyName) {
+        if (!varietyName.isNullOrBlank()) {
+            CropVarietySeeds.list.firstOrNull {
+                it.varietyName.equals(varietyName, ignoreCase = true) ||
+                it.localNamePh?.contains(varietyName, ignoreCase = true) == true
+            }
+        } else {
+            CropVarietySeeds.list.firstOrNull {
+                it.cropName.equals(cropName, ignoreCase = true)
+            }
+        }
+    }
+
     val maturityProfile = remember(cropName) { BackyardCropAgroData.getProfile(cropName) }
-    val totalDays = maturityProfile.baseDaysToHarvest
+    val totalDays = remember(maturityProfile, matchedVariety) {
+        matchedVariety?.growthDurationDays ?: maturityProfile.baseDaysToHarvest
+    }
     val harvestDate = remember(plantedDate, totalDays) { plantedDate.plusDays(totalDays.toLong()) }
 
     val daysPlanted = remember(plantedDate, today) {
@@ -186,6 +181,7 @@ fun CropScheduleCalendarScreen(
     var activeNavTab by remember { mutableStateOf(initialTab) }
     var isProgrammaticScroll by remember { mutableStateOf(false) }
     var showCheckUpDssDialog by remember { mutableStateOf(false) }
+    var showPostHarvestDialog by remember { mutableStateOf(false) }
 
     // Scroll to initial tab on launch if requested
     LaunchedEffect(initialTab) {
@@ -237,13 +233,49 @@ fun CropScheduleCalendarScreen(
         }.sortedByDescending { it.createdAt.ifBlank { it.date } }
     }
 
-    // Generate chronological agenda events
-    val scheduleItems = remember(plantedDate, cropName, maturityProfile) {
-        generateCropAgendaSchedule(cropName, plantedDate, maturityProfile).sortedBy { it.date }
+    val stageInfoList = remember(cropName, varietyName, totalDays, matchedVariety) {
+        buildCropSpecificStages(
+            cropName = cropName,
+            varietyName = varietyName,
+            totalDays = totalDays,
+            variety = matchedVariety
+        )
     }
 
-    // State for task completion toggles
-    var completedTaskIds by remember { mutableStateOf(setOf<String>()) }
+    // Generate chronological agenda events
+    val scheduleItems = remember(plantedDate, cropName, varietyName, maturityProfile, matchedVariety, stageInfoList) {
+        generateCropAgendaSchedule(
+            cropName = cropName,
+            varietyName = varietyName,
+            plantedDate = plantedDate,
+            profile = maturityProfile,
+            variety = matchedVariety,
+            stages = stageInfoList
+        ).sortedBy { it.date }
+    }
+
+    // State for task completion toggles — persisted per plot and vegetable
+    val context = LocalContext.current
+    val scheduleKey = remember(plotId, cropName) { "${plotId.ifBlank { "plot-1" }}_${cropName}" }
+    var completedTaskIds by remember(scheduleKey) {
+        mutableStateOf(TaskCompletionStore.load(context, scheduleKey))
+    }
+
+    // Set of dates with recorded check-up evaluations
+    val checkUpDates = remember(checkUpLogs) {
+        checkUpLogs.mapNotNull { parsePlantedDate(it.date) }.toSet()
+    }
+
+    // Single source of truth for schedule status
+    val scheduleStatus = remember(plantedDateStr, cropName, varietyName, effectivePlanningMode, today) {
+        resolveScheduleStatus(
+            plantedDate = plantedDateStr,
+            cropName = cropName,
+            varietyName = varietyName,
+            isMonitoringStarted = !effectivePlanningMode,
+            today = today
+        )
+    }
 
     // Group items by date for monthly calendar indicator dots (empty in planning mode so color coding is hidden)
     val tasksByDate = remember(scheduleItems, effectivePlanningMode) {
@@ -267,59 +299,6 @@ fun CropScheduleCalendarScreen(
             }
             dates
         }
-    }
-
-    val stageInfoList = remember {
-        listOf(
-            StageBannerInfo(
-                stageKey = "Pagtatanim",
-                stageTitle = "Pagtatanim at Paghahanda",
-                dayRange = "Araw 0 • Paghahanda ng Kama",
-                description = "Buhaghag na lupa, compost, at starter drench",
-                gradientColors = listOf(Color(0xFF1B3B2B), Color(0xFF2E5D43), Color(0xFF437A5B)),
-                icon = Icons.Default.Spa
-            ),
-            StageBannerInfo(
-                stageKey = "Punla",
-                stageTitle = "Yugto 1: Punla / Seedling",
-                dayRange = "Araw 1 – 14 • Pagsibol at Ugat",
-                description = "Pagsibol ng unang dahon at regular na pagdidilig",
-                gradientColors = listOf(Color(0xFF143D1A), Color(0xFF235A29), Color(0xFF387A3E)),
-                icon = Icons.Default.Yard
-            ),
-            StageBannerInfo(
-                stageKey = "Paglago",
-                stageTitle = "Yugto 2: Paglago / Vegetative",
-                dayRange = "Araw 15 – 34 • Paglaki ng Tangkay",
-                description = "Trellis, mulching, at foliar feeding (FPJ)",
-                gradientColors = listOf(Color(0xFF0F3818), Color(0xFF1C5225), Color(0xFF2E6B39)),
-                icon = Icons.Default.Agriculture
-            ),
-            StageBannerInfo(
-                stageKey = "Pamumulaklak",
-                stageTitle = "Yugto 3: Pamumulaklak / Flowering",
-                dayRange = "Araw 35 – 49 • Pagsulpot ng Bulaklak",
-                description = "Calcium boost, maingat na pagdidilig sa ugat",
-                gradientColors = listOf(Color(0xFF2C1947), Color(0xFF4A2B6F), Color(0xFF70459E)),
-                icon = Icons.Default.LocalFlorist
-            ),
-            StageBannerInfo(
-                stageKey = "Pamumunga",
-                stageTitle = "Yugto 4: Pamumunga at Pagkahinog",
-                dayRange = "Araw 50 – 74 • Paglaki ng Bunga",
-                description = "Potassium feed (FFJ) at suporta sa mabigat na sanga",
-                gradientColors = listOf(Color(0xFF4A2010), Color(0xFF7B3B18), Color(0xFFA65825)),
-                icon = Icons.Default.Eco
-            ),
-            StageBannerInfo(
-                stageKey = "Pag-aani",
-                stageTitle = "Yugto 5: Panahon ng Pag-aani",
-                dayRange = "Araw 75+ • Regular na Pagpitas",
-                description = "Pitasin sa umaga gamit ang malinis na gunting",
-                gradientColors = listOf(Color(0xFF1C2833), Color(0xFF2C3E50), Color(0xFFD35400)),
-                icon = Icons.Default.Stars
-            )
-        )
     }
 
     // Filter agenda items based on user selection
@@ -356,11 +335,12 @@ fun CropScheduleCalendarScreen(
             decorFitsSystemWindows = false
         )
     ) {
+        ConfigureDialogSystemBars(isLightStatusBar = true, isLightNavigationBar = true)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SurfaceBg)
-                .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -377,6 +357,7 @@ fun CropScheduleCalendarScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .statusBarsPadding()
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -421,8 +402,13 @@ fun CropScheduleCalendarScreen(
                                     letterSpacing = (-0.2).sp
                                 )
                                 Text(
-                                    text = if (effectivePlanningMode) "$gardenLabel • Pagpaplano (Hindi pa Nagsisimula)"
-                                           else "$gardenLabel • Itinanim: $formattedPlantedDate",
+                                    text = if (effectivePlanningMode) {
+                                        val vInfo = if (!varietyName.isNullOrBlank()) " • $varietyName" else ""
+                                        "$gardenLabel$vInfo • Pagpaplano (Hindi pa Nagsisimula)"
+                                    } else {
+                                        val vInfo = if (!varietyName.isNullOrBlank()) " • $varietyName" else ""
+                                        "$gardenLabel$vInfo • Itinanim: $formattedPlantedDate"
+                                    },
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MutedText
@@ -430,7 +416,7 @@ fun CropScheduleCalendarScreen(
                             }
                         }
 
-                        // Right side: RESCHEDULE ICON BUTTON (as requested by user)
+                        // Right side: RESCHEDULE ICON BUTTON
                         FilledTonalButton(
                             onClick = onReschedule,
                             shape = RoundedCornerShape(20.dp),
@@ -517,6 +503,7 @@ fun CropScheduleCalendarScreen(
                                 showAllTasksInAgenda = false
                             },
                             tasksByDate = tasksByDate,
+                            checkUpDates = checkUpDates,
                             plantedDate = plantedDate,
                             harvestDate = harvestDate,
                             isPlanningMode = effectivePlanningMode
@@ -528,6 +515,7 @@ fun CropScheduleCalendarScreen(
                         item {
                             GrowthTimelineCard(
                                 cropName = cropName,
+                                varietyName = varietyName,
                                 plantedDate = plantedDate,
                                 totalDays = totalDays,
                                 daysPlanted = daysPlanted,
@@ -535,7 +523,8 @@ fun CropScheduleCalendarScreen(
                                 progressRatio = stageProgressRatio,
                                 formattedPlantedDate = formattedPlantedDate,
                                 formattedHarvestDate = formattedHarvestDate,
-                                maturityProfile = maturityProfile
+                                maturityProfile = maturityProfile,
+                                stages = stageInfoList
                             )
                         }
                     }
@@ -767,9 +756,22 @@ fun CropScheduleCalendarScreen(
                                     TeamsStyleAgendaTaskItem(
                                         item = item,
                                         isChecked = isChecked,
+                                        isPast = item.date.isBefore(today),
+                                        today = today,
                                         onToggleCheck = {
-                                            completedTaskIds = if (isChecked) completedTaskIds - item.id else completedTaskIds + item.id
-                                        }
+                                            if (item.date.isAfter(today)) {
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    "Hindi pa takdang panahon para sa gawaing ito (Nakatakda sa ${item.date}). Hintayin ang takdang araw.",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                val newIds = if (isChecked) completedTaskIds - item.id else completedTaskIds + item.id
+                                                completedTaskIds = newIds
+                                                TaskCompletionStore.save(context, scheduleKey, newIds)
+                                            }
+                                        },
+                                        onHarvestClick = if (item.type == AgendaTaskType.HARVEST) { { showPostHarvestDialog = true } } else null
                                     )
                                 }
                             }
@@ -810,7 +812,7 @@ fun CropScheduleCalendarScreen(
                                             color = DeepBlack
                                         )
                                         Text(
-                                            text = "Wala pang naitalang ulat sa pagsusuri para sa $cropName. Magsagawa ng Crop Check Up upang maitala ang mga problema at solusyon dito.",
+                                            text = "Wala pang naitalang ulat sa pagsusuri para sa $cropName. Magsagawa ng Vegetables Check Up upang maitala ang mga problema at solusyon dito.",
                                             fontSize = 12.sp,
                                             color = MutedText,
                                             textAlign = TextAlign.Center
@@ -836,7 +838,7 @@ fun CropScheduleCalendarScreen(
                             }
                         } else {
                             items(checkUpLogs, key = { it.id }) { log ->
-                                CheckUpHistoryLogCard(log = log)
+                                CheckUpHistoryLogCard(log = log, plantedDate = plantedDate)
                             }
                         }
                     }
@@ -849,7 +851,31 @@ fun CropScheduleCalendarScreen(
                     varietyName = varietyName ?: "",
                     gardenLabel = gardenLabel,
                     plotId = plotId,
+                    currentStage = scheduleStatus.stageOrNull ?: ManagementStage.VEGETATIVE_GROWTH,
+                    scheduleStatus = scheduleStatus,
+                    onOpenSchedule = { showCheckUpDssDialog = false },
                     onDismiss = { showCheckUpDssDialog = false }
+                )
+            }
+
+            if (showPostHarvestDialog) {
+                PostHarvestRotationDialog(
+                    cropName = cropName,
+                    varietyName = varietyName,
+                    gardenLabel = gardenLabel,
+                    plotId = plotId,
+                    daysPlanted = daysPlanted,
+                    onDismiss = { showPostHarvestDialog = false },
+                    onHarvestRecorded = { isFinal ->
+                        showPostHarvestDialog = false
+                        if (isFinal) {
+                            onDismiss()
+                        }
+                    },
+                    onNavigateToCanvas = { targetPlotId ->
+                        showPostHarvestDialog = false
+                        onNavigateToCanvas?.invoke(targetPlotId) ?: onDismiss()
+                    }
                 )
             }
         }
@@ -1064,6 +1090,7 @@ private fun MonthlyCalendarCard(
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
     tasksByDate: Map<LocalDate, List<AgendaScheduleItem>>,
+    checkUpDates: Set<LocalDate> = emptySet(),
     plantedDate: LocalDate,
     harvestDate: LocalDate,
     isPlanningMode: Boolean = false
@@ -1244,13 +1271,22 @@ private fun MonthlyCalendarCard(
                                             }
                                         )
 
-                                        // Task Indicator Dots
-                                        if (tasksOnDay.isNotEmpty() && !isSelected) {
+                                        // Task Indicator Dots + Check-Up Dot
+                                        val hasCheckUp = cellDate in checkUpDates
+                                        if ((tasksOnDay.isNotEmpty() || hasCheckUp) && !isSelected) {
                                             Row(
                                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                                                 modifier = Modifier.padding(top = 1.dp)
                                             ) {
-                                                val distinctTypes = tasksOnDay.map { it.type }.distinct().take(3)
+                                                if (hasCheckUp) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(4.5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFE65100))
+                                                    )
+                                                }
+                                                val distinctTypes = tasksOnDay.map { it.type }.distinct().take(if (hasCheckUp) 2 else 3)
                                                 distinctTypes.forEach { type ->
                                                     Box(
                                                         modifier = Modifier
@@ -1363,6 +1399,7 @@ private fun LegendDot(color: Color, label: String) {
 @Composable
 private fun GrowthTimelineCard(
     cropName: String,
+    varietyName: String? = null,
     plantedDate: LocalDate,
     totalDays: Int,
     daysPlanted: Int,
@@ -1370,43 +1407,17 @@ private fun GrowthTimelineCard(
     progressRatio: Float,
     formattedPlantedDate: String,
     formattedHarvestDate: String,
-    maturityProfile: com.maptanim.app.features.farm.components.CropMaturityProfile
+    maturityProfile: com.maptanim.app.features.farm.components.CropMaturityProfile,
+    stages: List<StageBannerInfo> = emptyList()
 ) {
-    val currentStage = remember(progressRatio) {
-        when {
-            progressRatio < 0.20f -> CropGrowthStage.SEEDLING
-            progressRatio < 0.48f -> CropGrowthStage.VEGETATIVE
-            progressRatio < 0.70f -> CropGrowthStage.FLOWERING
-            progressRatio < 0.90f -> CropGrowthStage.RIPENING
-            else -> CropGrowthStage.HARVEST
-        }
+    val activeStage = remember(daysPlanted, stages) {
+        stages.firstOrNull { daysPlanted in it.startDay..it.endDay }
+            ?: if (daysPlanted <= 0) stages.firstOrNull() else stages.lastOrNull()
     }
 
-    val stageTagalogTitle = remember(currentStage) {
-        when (currentStage) {
-            CropGrowthStage.GERMINATION -> "Pagsibol (Germination)"
-            CropGrowthStage.SEEDLING -> "Punla / Pagsibol (Seedling)"
-            CropGrowthStage.VEGETATIVE -> "Paglago ng Dahon at Sangay (Vegetative)"
-            CropGrowthStage.FLOWERING -> "Pamumulaklak (Flowering)"
-            CropGrowthStage.RIPENING -> "Pamumunga at Pagkahinog (Fruiting / Ripening)"
-            CropGrowthStage.HARVEST -> "Handa nang Anihin (Harvest)"
-        }
-    }
-
-    val stageAdvice = remember(currentStage) {
-        when (currentStage) {
-            CropGrowthStage.SEEDLING, CropGrowthStage.GERMINATION ->
-                "Siguraduhing protektado ang punla sa malalakas na ulan. Magdilig sa umaga lamang upang hindi mababad ang ugat."
-            CropGrowthStage.VEGETATIVE ->
-                "Maglagay ng rice straw mulch at patatagin ang bamboo stake. Lagyan ng organikong pataba (vermicast o FPJ)."
-            CropGrowthStage.FLOWERING ->
-                "Iwasang basain ang bulaklak tuwing nagdidilig upang hindi malaglag ang pollen. Panatilihing katamtaman ang basa sa ugat."
-            CropGrowthStage.RIPENING ->
-                "Palakasin ang alalay ng trellis sa mga sangang may mabibigat na bunga. Mag-spray ng calcium phosphate / FFJ."
-            CropGrowthStage.HARVEST ->
-                "Pitasin sa umaga habang sariwa gamit ang malinis na gunting. Iwanan ang peduncle upang tumagal ang shelf-life."
-        }
-    }
+    val stageDisplayName = activeStage?.stageTitle ?: "Yugto ng Paglago"
+    val stageAdvice = activeStage?.description
+        ?: "Panatilihing regular ang pagdidilig at pag-aalaga ayon sa kasalukuyang yugto ng tanim."
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1419,7 +1430,7 @@ private fun GrowthTimelineCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header: Title and Countdown Badge
+            // Header: Title, Variety Tag, and Countdown Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1435,12 +1446,22 @@ private fun GrowthTimelineCard(
                         tint = ForestGreen,
                         modifier = Modifier.size(20.dp)
                     )
-                    Text(
-                        text = "Yugto ng Paglago (Growth Timeline)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepBlack
-                    )
+                    Column {
+                        Text(
+                            text = "Yugto ng Paglago (Growth Timeline)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        if (!varietyName.isNullOrBlank()) {
+                            Text(
+                                text = "Barayti: $varietyName",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ForestGreen
+                            )
+                        }
+                    }
                 }
 
                 Surface(
@@ -1470,54 +1491,126 @@ private fun GrowthTimelineCard(
                     trackColor = SurfaceBg
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Punla (Day 1)", fontSize = 9.sp, color = MutedText)
-                    Text("Paglago", fontSize = 9.sp, color = MutedText)
-                    Text("Bulaklak", fontSize = 9.sp, color = MutedText)
-                    Text("Bunga", fontSize = 9.sp, color = MutedText)
-                    Text("Ani (Day $totalDays)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = ForestGreen)
+                // Dynamic Stage Labels based on the crop's actual stages
+                if (stages.isNotEmpty()) {
+                    val displayStages = stages.filter { it.startDay > 0 || stages.size <= 4 }.ifEmpty { stages }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        displayStages.forEachIndexed { index, stage ->
+                            val isCur = activeStage?.stageKey == stage.stageKey
+                            Text(
+                                text = if (index == 0) "${stage.stageKey} (1d)" else if (index == displayStages.lastIndex) "Ani (${totalDays}d)" else stage.stageKey,
+                                fontSize = 8.5.sp,
+                                fontWeight = if (isCur) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isCur) ForestGreen else MutedText
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Punla (Day 1)", fontSize = 9.sp, color = MutedText)
+                        Text("Paglago", fontSize = 9.sp, color = MutedText)
+                        Text("Ani (Day $totalDays)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = ForestGreen)
+                    }
                 }
             }
 
-            // Current Stage Highlight Box
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = SurfaceBg,
-                border = BorderStroke(1.dp, CardBorderColor),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Active Stage Scenic / Highlight Box
+            if (activeStage != null) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    shadowElevation = 1.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Brush.horizontalGradient(activeStage.gradientColors))
+                            .padding(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = activeStage.icon,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.16f),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .align(Alignment.CenterEnd)
+                                .offset(x = 6.dp, y = 2.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier.align(Alignment.CenterStart),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.White.copy(alpha = 0.25f)
+                                ) {
+                                    Text(
+                                        text = activeStage.dayRange,
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "Araw $daysPlanted ng $totalDays (${(progressRatio * 100).toInt()}%)",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+
+                            Text(
+                                text = activeStage.stageTitle,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+
+                            Text(
+                                text = activeStage.description,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                color = Color.White.copy(alpha = 0.95f)
+                            )
+                        }
+                    }
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = SurfaceBg,
+                    border = BorderStroke(1.dp, CardBorderColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Kasalukuyan: $stageTagalogTitle",
+                            text = "Kasalukuyan: $stageDisplayName",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = ForestGreen
                         )
                         Text(
-                            text = "Araw $daysPlanted ng $totalDays (${(progressRatio * 100).toInt()}%)",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = DeepBlack
+                            text = stageAdvice,
+                            fontSize = 11.5.sp,
+                            lineHeight = 15.sp,
+                            color = Charcoal
                         )
                     }
-
-                    Text(
-                        text = stageAdvice,
-                        fontSize = 11.5.sp,
-                        lineHeight = 15.sp,
-                        color = Charcoal
-                    )
                 }
             }
 
@@ -1649,217 +1742,6 @@ private fun AgendaScheduleItemCard(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Agronomic Schedule Generator Engine (Philippine Climate & BPI Standards)
-// ═══════════════════════════════════════════════════════════════════════════════
-private fun generateCropAgendaSchedule(
-    cropName: String,
-    plantedDate: LocalDate,
-    profile: com.maptanim.app.features.farm.components.CropMaturityProfile
-): List<AgendaScheduleItem> {
-    val items = mutableListOf<AgendaScheduleItem>()
-    val totalDays = profile.baseDaysToHarvest
-
-    // Day 0: Planting / Transplanting Day
-    items.add(
-        AgendaScheduleItem(
-            id = "task-0-morning",
-            date = plantedDate,
-            timeStr = "6:30 AM",
-            dayNumber = 0,
-            type = AgendaTaskType.WATERING,
-            title = "Paghahanda ng Lupa at Kamang Taniman",
-            tagalogInstruction = "Basain ang kama o paso nang banayad. Siguraduhing buhaghag at may sapat na drainage ang lupa.",
-            stageName = "Pagtatanim",
-            isKeyMilestone = true
-        )
-    )
-    items.add(
-        AgendaScheduleItem(
-            id = "task-0-afternoon",
-            date = plantedDate,
-            timeStr = "4:30 PM",
-            dayNumber = 0,
-            type = AgendaTaskType.MILESTONE,
-            title = "Pagtatanim / Paglilipat-tanim sa Hapon",
-            tagalogInstruction = "Itanim ang punla sa dakong hapon upang maiwasan ang init ng araw. Diligan ng banayad sa ugat (Starter Drench).",
-            stageName = "Pagtatanim",
-            isKeyMilestone = true
-        )
-    )
-
-    // Routine Morning Watering: Every 2 days
-    for (day in 1..totalDays + 20 step 2) {
-        val taskDate = plantedDate.plusDays(day.toLong())
-        items.add(
-            AgendaScheduleItem(
-                id = "water-$day",
-                date = taskDate,
-                timeStr = "6:30 AM",
-                dayNumber = day,
-                type = AgendaTaskType.WATERING,
-                title = "Masinsing Pagdidilig sa Umaga",
-                tagalogInstruction = "Idilig sa base ng lupa bago mag-init ang araw. Huwag basain ang mga dahon upang maiwasan ang fungal blight.",
-                stageName = if (day < 14) "Punla" else if (day < 35) "Paglago" else "Pamumunga"
-            )
-        )
-    }
-
-    // Routine Pest & Leaf Scout: Every 3 days starting Day 3
-    for (day in 3..totalDays + 20 step 3) {
-        val taskDate = plantedDate.plusDays(day.toLong())
-        items.add(
-            AgendaScheduleItem(
-                id = "pest-$day",
-                date = taskDate,
-                timeStr = "7:30 AM",
-                dayNumber = day,
-                type = AgendaTaskType.PEST_SCOUT,
-                title = "Pagsusuri sa Dahon at Peste sa Umaga",
-                tagalogInstruction = "Suriin ang ilalim ng dahon habang malamig pa ang panahon. Maghanap ng aphids, whitefly, o uod ng dahon.",
-                stageName = if (day < 14) "Punla" else if (day < 35) "Paglago" else "Pamumunga"
-            )
-        )
-    }
-
-    // Key Agronomic Milestones & Interventions
-    // Day 7: First Organic Fertilizer
-    items.add(
-        AgendaScheduleItem(
-            id = "fert-7",
-            date = plantedDate.plusDays(7),
-            timeStr = "4:30 PM",
-            dayNumber = 7,
-            type = AgendaTaskType.FERTILIZER,
-            title = "Unang Pagpapataba: Basal / Vermicast",
-            tagalogInstruction = "Maglagay ng 1 dakot ng vermicast o organikong compost sa paligid ng drip line (5cm layo sa tangkay).",
-            stageName = "Punla"
-        )
-    )
-
-    // Day 14: Mulching & Soil Aeration
-    items.add(
-        AgendaScheduleItem(
-            id = "mulch-14",
-            date = plantedDate.plusDays(14),
-            timeStr = "5:00 PM",
-            dayNumber = 14,
-            type = AgendaTaskType.MILESTONE,
-            title = "Paglalagay ng Rice Straw Mulch",
-            tagalogInstruction = "Lagyan ng 2 pulgadang tuyong dayami o damo sa ibabaw ng lupa upang mapanatili ang moisture at pigilan ang damo.",
-            stageName = "Paglago"
-        )
-    )
-
-    // Day 21: Trellis & Staking Setup
-    items.add(
-        AgendaScheduleItem(
-            id = "trellis-21",
-            date = plantedDate.plusDays(21),
-            timeStr = "4:30 PM",
-            dayNumber = 21,
-            type = AgendaTaskType.PRUNING_TRELLIS,
-            title = "Pagtatayo ng Bamboo Stakes / Trellis",
-            tagalogInstruction = "Ibaon ang tukod na kawayan at maluwag na itali ang tangkay gamit ang malambot na panali sa hugis-figure-8.",
-            stageName = "Paglago"
-        )
-    )
-
-    // Day 28: Vegetative Booster (FPJ / Fish Amino)
-    items.add(
-        AgendaScheduleItem(
-            id = "fert-28",
-            date = plantedDate.plusDays(28),
-            timeStr = "4:30 PM",
-            dayNumber = 28,
-            type = AgendaTaskType.FERTILIZER,
-            title = "Pag-spray ng FPJ / Organikong Foliar Feed",
-            tagalogInstruction = "Magtimpla ng 2 kutsarang Fermented Plant Juice sa 1 litrong tubig at i-spray sa dahon sa dakong hapon.",
-            stageName = "Paglago"
-        )
-    )
-
-    // Day 35: Sucker Pruning & Airflow Grooming
-    items.add(
-        AgendaScheduleItem(
-            id = "prune-35",
-            date = plantedDate.plusDays(35),
-            timeStr = "7:30 AM",
-            dayNumber = 35,
-            type = AgendaTaskType.PRUNING_TRELLIS,
-            title = "Pagpupungos ng Mabababang Dahon at Suckers",
-            tagalogInstruction = "Alisin ang mga dahong sumasayad sa lupa at maliliit na suckers sa kili-kili ng sangay para sa magandang sirkulasyon ng hangin.",
-            stageName = "Paglago"
-        )
-    )
-
-    // Day 45: Flowering Boost & Blossom Drop Prevention
-    items.add(
-        AgendaScheduleItem(
-            id = "flower-45",
-            date = plantedDate.plusDays(45),
-            timeStr = "6:30 AM",
-            dayNumber = 45,
-            type = AgendaTaskType.MILESTONE,
-            title = "Pagsusuri sa Unang Pamumulaklak",
-            tagalogInstruction = "Tiyaking pantay ang pagdidilig upang maiwasan ang blossom-end rot. Mag-spray ng eggshell vinegar tea (calcium).",
-            stageName = "Pamumulaklak"
-        )
-    )
-
-    // Day 55: Fruit Support & Potassium Feed (FFJ)
-    items.add(
-        AgendaScheduleItem(
-            id = "fruit-55",
-            date = plantedDate.plusDays(55),
-            timeStr = "5:00 PM",
-            dayNumber = 55,
-            type = AgendaTaskType.FERTILIZER,
-            title = "Pagsuporta sa Bunga at Pagpapataba ng Potassium",
-            tagalogInstruction = "Lagyan ng tali ang mabibigat na kumpol ng bunga. Mag-spray ng Fermented Fruit Juice (FFJ) para sa tamis at laki ng bunga.",
-            stageName = "Pamumunga"
-        )
-    )
-
-    // First Harvest Day ($totalDays)
-    val harvestDate = plantedDate.plusDays(totalDays.toLong())
-    items.add(
-        AgendaScheduleItem(
-            id = "harvest-first",
-            date = harvestDate,
-            timeStr = "6:30 AM",
-            dayNumber = totalDays,
-            type = AgendaTaskType.HARVEST,
-            title = "UNANG ARAW NG PAG-AANI (First Harvest Window)",
-            tagalogInstruction = "Pitasin ang mga hinog na bunga sa umaga gamit ang malinis na gunting. Iwanan ang calyx/tangkay para tumagal ang sariwa.",
-            stageName = "Pag-aani",
-            isKeyMilestone = true
-        )
-    )
-
-    // Multi-pick intervals if applicable
-    if (profile.isMultiPick) {
-        val interval = profile.pickingIntervalDays.coerceAtLeast(2)
-        for (extraDay in (totalDays + interval)..(totalDays + profile.harvestLongevityDays.coerceAtMost(30)) step interval) {
-            val pickDate = plantedDate.plusDays(extraDay.toLong())
-            items.add(
-                AgendaScheduleItem(
-                    id = "pick-$extraDay",
-                    date = pickDate,
-                    timeStr = "6:30 AM",
-                    dayNumber = extraDay,
-                    type = AgendaTaskType.HARVEST,
-                    title = "Regular na Pagpitas / Harvest Interval",
-                    tagalogInstruction = "Pitasin ang mga sumunod na hinog na bunga. Alisin ang anumang may sira o inuod na prutas upang hindi mahawa ang iba.",
-                    stageName = "Pag-aani"
-                )
-            )
-        }
-    }
-
-    return items.sortedBy { it.date }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // Microsoft Teams Style Daily Agenda Helpers (Screenshot 1)
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
@@ -1925,12 +1807,53 @@ private fun TeamsStyleNoEventsRow() {
 private fun TeamsStyleAgendaTaskItem(
     item: AgendaScheduleItem,
     isChecked: Boolean,
-    onToggleCheck: () -> Unit
+    isPast: Boolean = false,
+    today: LocalDate = LocalDate.now(),
+    onToggleCheck: () -> Unit,
+    onHarvestClick: (() -> Unit)? = null
 ) {
+    val isMissed = isPast && !isChecked
+    val isRightTimeDone = isChecked
+    val isFuture = item.date.isAfter(today)
+
+    val itemBg = when {
+        isRightTimeDone -> Color(0xFFF4FAF4)
+        isMissed -> Color(0xFFFFF5F5)
+        isFuture -> Color(0xFFFAFAFA)
+        else -> CardBg
+    }
+
+    val itemBorder = when {
+        isRightTimeDone -> ForestGreen.copy(alpha = 0.35f)
+        isMissed -> Color(0xFFEF5350).copy(alpha = 0.45f)
+        isFuture -> CardBorderColor.copy(alpha = 0.5f)
+        else -> CardBorderColor
+    }
+
+    val stripeColor = when {
+        isRightTimeDone -> ForestGreen
+        isMissed -> Color(0xFFE53935)
+        isFuture -> Color(0xFFBDBDBD)
+        else -> item.type.color
+    }
+
+    val titleColor = when {
+        isRightTimeDone -> ForestGreen
+        isMissed -> Color(0xFFD32F2F)
+        isFuture -> MutedText.copy(alpha = 0.7f)
+        else -> DeepBlack
+    }
+
+    val titleDecoration = when {
+        isRightTimeDone -> TextDecoration.LineThrough
+        isMissed -> TextDecoration.LineThrough
+        else -> TextDecoration.None
+    }
+
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = if (isChecked) Color(0xFFF9FAF8) else CardBg,
-        border = BorderStroke(1.dp, if (isChecked) CardBorderColor.copy(alpha = 0.5f) else CardBorderColor),
+        color = itemBg,
+        border = BorderStroke(1.dp, itemBorder),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
@@ -1952,13 +1875,23 @@ private fun TeamsStyleAgendaTaskItem(
                     text = item.timeStr,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isChecked) MutedText else DeepBlack
+                    color = when {
+                        isRightTimeDone -> ForestGreen
+                        isMissed -> Color(0xFFD32F2F)
+                        isFuture -> MutedText.copy(alpha = 0.6f)
+                        else -> DeepBlack
+                    }
                 )
                 Text(
                     text = item.type.tagalogLabel,
                     fontSize = 9.5.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isChecked) MutedText.copy(alpha = 0.7f) else item.type.color,
+                    color = when {
+                        isRightTimeDone -> ForestGreen.copy(alpha = 0.8f)
+                        isMissed -> Color(0xFFD32F2F).copy(alpha = 0.8f)
+                        isFuture -> MutedText.copy(alpha = 0.5f)
+                        else -> item.type.color
+                    },
                     maxLines = 1
                 )
             }
@@ -1969,7 +1902,7 @@ private fun TeamsStyleAgendaTaskItem(
                     .width(4.dp)
                     .height(38.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(if (isChecked) CardBorderColor else item.type.color)
+                    .background(stripeColor)
             )
 
             // Task Details Body
@@ -1977,32 +1910,119 @@ private fun TeamsStyleAgendaTaskItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
-                    text = item.title,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isChecked) MutedText else DeepBlack,
-                    textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    if (isMissed) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFFFEBEE)
+                        ) {
+                            Text(
+                                text = "Hindi Nagawa",
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFC62828),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    } else if (isRightTimeDone) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE8F5E9)
+                        ) {
+                            Text(
+                                text = "Tapos Na",
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForestGreen,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    } else if (isFuture) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFF5F5F5)
+                        ) {
+                            Text(
+                                text = "Paparating",
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF757575),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = item.title,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor,
+                        textDecoration = titleDecoration
+                    )
+                }
                 Text(
                     text = item.tagalogInstruction,
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
-                    color = if (isChecked) MutedText.copy(alpha = 0.75f) else Charcoal,
+                    color = when {
+                        isRightTimeDone -> ForestGreen.copy(alpha = 0.7f)
+                        isMissed -> Color(0xFFC62828).copy(alpha = 0.75f)
+                        isFuture -> MutedText.copy(alpha = 0.6f)
+                        else -> Charcoal
+                    },
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (item.type == AgendaTaskType.HARVEST && onHarvestClick != null) {
+                    FilledTonalButton(
+                        onClick = onHarvestClick,
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color(0xFFFFF3E0),
+                            contentColor = AmberAlert
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(top = 4.dp).height(28.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Default.Eco, contentDescription = null, tint = AmberAlert, modifier = Modifier.size(13.dp))
+                            Text("Mag-ani at Ihanda ang Lupa", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = AmberAlert)
+                        }
+                    }
+                }
             }
 
-            // Checkbox for task completion
+            // Status icon / Action button
             IconButton(
                 onClick = onToggleCheck,
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
-                    imageVector = if (isChecked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = if (isChecked) "Tapos na" else "Gawin",
-                    tint = if (isChecked) ForestGreen else CardBorderColor,
+                    imageVector = when {
+                        isRightTimeDone -> Icons.Default.CheckCircle
+                        isMissed -> Icons.Default.Cancel
+                        isFuture -> Icons.Default.Lock
+                        else -> Icons.Default.RadioButtonUnchecked
+                    },
+                    contentDescription = when {
+                        isRightTimeDone -> "Tapos na"
+                        isMissed -> "Hindi Nagawa"
+                        isFuture -> "Paparating (Naka-lock)"
+                        else -> "Gawin"
+                    },
+                    tint = when {
+                        isRightTimeDone -> ForestGreen
+                        isMissed -> Color(0xFFE53935)
+                        isFuture -> Color(0xFFBDBDBD)
+                        else -> CardBorderColor
+                    },
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -2203,7 +2223,13 @@ private fun GoogleCalendarScheduleDateRow(
 }
 
 @Composable
-private fun CheckUpHistoryLogCard(log: CropLog) {
+private fun CheckUpHistoryLogCard(log: CropLog, plantedDate: LocalDate? = null) {
+    val summary = remember(log) { CheckUpRecorder.summarize(log) }
+    val logDate = remember(log.date) { parsePlantedDate(log.date) }
+    val dayNumber = remember(logDate, plantedDate) {
+        if (logDate != null && plantedDate != null) dayNumberOn(logDate, plantedDate) else null
+    }
+
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = CardBg,
@@ -2217,7 +2243,7 @@ private fun CheckUpHistoryLogCard(log: CropLog) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row: Inspection Icon + Title + Date & Stage Badge
+            // Header Row: Inspection Icon + Category/Title + Severity + Stage Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -2230,112 +2256,113 @@ private fun CheckUpHistoryLogCard(log: CropLog) {
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = LightGreenBg,
-                        border = BorderStroke(1.dp, ForestGreen.copy(alpha = 0.3f)),
-                        modifier = Modifier.size(32.dp)
+                        color = summary.severity.color.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, summary.severity.color.copy(alpha = 0.35f)),
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.MedicalServices,
                                 contentDescription = null,
-                                tint = ForestGreen,
-                                modifier = Modifier.size(17.dp)
+                                tint = summary.severity.color,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                     Column {
                         Text(
-                            text = log.selectedChoice.ifBlank { "Pagsusuri sa Kalusugan" },
+                            text = summary.category,
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = DeepBlack
                         )
+                        val dateLine = buildString {
+                            append(log.date)
+                            if (dayNumber != null) append(" • Araw $dayNumber")
+                        }
                         Text(
-                            text = "Petsa: ${log.date}",
+                            text = dateLine,
                             fontSize = 11.sp,
                             color = MutedText
                         )
                     }
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = LightGreenBg
-                ) {
-                    Text(
-                        text = log.currentStage.label,
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForestGreen,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (summary.severity != CheckUpSeverity.UNKNOWN) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = summary.severity.color.copy(alpha = 0.12f),
+                            border = BorderStroke(0.8.dp, summary.severity.color.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = summary.severity.label,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = summary.severity.color,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = LightGreenBg
+                    ) {
+                        Text(
+                            text = log.currentStage.label,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForestGreen,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 
             HorizontalDivider(color = CardBorderColor.copy(alpha = 0.6f), thickness = 0.8.dp)
 
             // Problem & Symptoms Identified Section
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.WarningAmber,
-                        contentDescription = null,
-                        tint = AmberAlert,
-                        modifier = Modifier.size(15.dp)
-                    )
+            if (log.selectedCheckboxes.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         text = "Mga Nasuring Problema / Sintomas:",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AmberAlert
+                        color = Charcoal
                     )
-                }
-
-                if (log.selectedCheckboxes.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        log.selectedCheckboxes.forEach { symptom ->
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFFFFF3E0),
-                                border = BorderStroke(0.8.dp, AmberAlert.copy(alpha = 0.5f))
+                    log.selectedCheckboxes.forEach { symptom ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFFFF3E0),
+                            border = BorderStroke(0.8.dp, AmberAlert.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(5.dp)
-                                            .background(AmberAlert, CircleShape)
-                                    )
-                                    Text(
-                                        text = symptom,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFFBF360C)
-                                    )
-                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.dp)
+                                        .background(AmberAlert, CircleShape)
+                                )
+                                Text(
+                                    text = symptom,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFBF360C)
+                                )
                             }
                         }
                     }
-                } else {
-                    Text(
-                        text = "Walang partikular na problemang itinala.",
-                        fontSize = 11.sp,
-                        color = MutedText
-                    )
                 }
             }
 
             // Prescribed Solution / Notes Section
-            if (!log.notes.isNullOrBlank()) {
+            val resultTitle = summary.resultTitle
+            val details = summary.details
+            if (!resultTitle.isNullOrBlank() || !details.isNullOrBlank()) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = SurfaceBg,
@@ -2344,31 +2371,35 @@ private fun CheckUpHistoryLogCard(log: CropLog) {
                 ) {
                     Column(
                         modifier = Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = ForestGreen,
-                                modifier = Modifier.size(14.dp)
-                            )
+                        if (!resultTitle.isNullOrBlank()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = ForestGreen,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = resultTitle,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForestGreen
+                                )
+                            }
+                        }
+                        if (!details.isNullOrBlank()) {
                             Text(
-                                text = "Inirekomendang Hakbang / Lunas:",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ForestGreen
+                                text = details,
+                                fontSize = 11.5.sp,
+                                color = Charcoal,
+                                lineHeight = 16.sp
                             )
                         }
-                        Text(
-                            text = log.notes,
-                            fontSize = 11.5.sp,
-                            color = Charcoal,
-                            lineHeight = 15.sp
-                        )
                     }
                 }
             }

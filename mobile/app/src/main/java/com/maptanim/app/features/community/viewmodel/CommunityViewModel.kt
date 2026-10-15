@@ -15,11 +15,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+import com.maptanim.app.core.preferences.FavoriteCropsManager
+
 data class CommunityMember(
     val id: String,
     val name: String,
     val statusText: String,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val favoriteCrops: List<String> = emptyList()
 )
 
 data class CommunityUiState(
@@ -33,9 +36,11 @@ data class CommunityUiState(
     val currentUserId: String? = null,
     val communityMembers: List<CommunityMember> = emptyList(),
     val friends: List<CommunityMember> = emptyList(),
+    val friendIds: Set<String> = emptySet(),
     val isPublishingPost: Boolean = false,
     val postNotice: String? = null,
-    val postNoticeIsError: Boolean = false
+    val postNoticeIsError: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 class CommunityViewModel(
@@ -54,6 +59,7 @@ class CommunityViewModel(
     private val _isPublishingPost = MutableStateFlow(false)
     private val _postNotice = MutableStateFlow<String?>(null)
     private val _postNoticeIsError = MutableStateFlow(false)
+    private val _isRefreshing = MutableStateFlow(false)
 
     init {
         val authId = try {
@@ -82,19 +88,46 @@ class CommunityViewModel(
 
     private suspend fun loadCommunityMembers() {
         val profiles = profileRepository.getAllProfiles()
-        if (profiles.isNotEmpty()) {
-            val members = profiles.map { p ->
+        val currentUserId = _currentUserId.value
+        val validProfiles = profiles.filter {
+            it.id != currentUserId &&
+            !it.id.contains("guest", ignoreCase = true) &&
+            !it.nickname.isNullOrBlank()
+        }
+        if (validProfiles.isNotEmpty()) {
+            val members = validProfiles.map { p ->
                 val shortId = p.id.replace("-", "").take(6).uppercase()
                 val displayName = p.nickname?.takeIf { it.isNotBlank() } ?: "Ka-Tanim #$shortId"
+                val favs = FavoriteCropsManager.getInstance().getFavoritesForUser(p.id).toList()
                 CommunityMember(
                     id = p.id,
                     name = displayName,
                     statusText = "Active",
-                    avatarUrl = p.avatar
+                    avatarUrl = p.avatar,
+                    favoriteCrops = favs
                 )
             }
             _communityMembers.value = members
+        } else {
+            _communityMembers.value = emptyList()
         }
+    }
+
+    fun getMemberForUser(userId: String?, userName: String, avatarUrl: String? = null): CommunityMember {
+        val existing = _communityMembers.value.firstOrNull { 
+            (userId != null && it.id == userId) || it.name.equals(userName, ignoreCase = true) 
+        }
+        if (existing != null) return existing
+
+        val resolvedId = userId ?: "user_${userName.lowercase().replace(" ", "_")}"
+        val favs = FavoriteCropsManager.getInstance().getFavoritesForUser(resolvedId).toList()
+        return CommunityMember(
+            id = resolvedId,
+            name = userName,
+            statusText = "Active",
+            avatarUrl = avatarUrl,
+            favoriteCrops = favs
+        )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -112,21 +145,24 @@ class CommunityViewModel(
         val reportNotice: String?,
         val isPublishingPost: Boolean,
         val postNotice: String?,
-        val postNoticeIsError: Boolean
+        val postNoticeIsError: Boolean,
+        val isRefreshing: Boolean
     )
 
     private data class PublishingMeta(
         val isPublishingPost: Boolean,
         val postNotice: String?,
-        val postNoticeIsError: Boolean
+        val postNoticeIsError: Boolean,
+        val isRefreshing: Boolean
     )
 
     private val publishingFlow: Flow<PublishingMeta> = combine(
         _isPublishingPost,
         _postNotice,
-        _postNoticeIsError
-    ) { isPub, pn, pnErr ->
-        PublishingMeta(isPub, pn, pnErr)
+        _postNoticeIsError,
+        _isRefreshing
+    ) { isPub, pn, pnErr, isRef ->
+        PublishingMeta(isPub, pn, pnErr, isRef)
     }
 
     private val feedMetaFlow: Flow<FeedMeta> = combine(
@@ -135,7 +171,7 @@ class CommunityViewModel(
         _reportNotice,
         publishingFlow
     ) { q, sp, rn, pub ->
-        FeedMeta(q, sp, rn, pub.isPublishingPost, pub.postNotice, pub.postNoticeIsError)
+        FeedMeta(q, sp, rn, pub.isPublishingPost, pub.postNotice, pub.postNoticeIsError, pub.isRefreshing)
     }
 
     private data class UserMeta(
@@ -181,9 +217,11 @@ class CommunityViewModel(
             currentUserId = user.userId,
             communityMembers = user.members,
             friends = friendMembers,
+            friendIds = user.friendIds,
             isPublishingPost = meta.isPublishingPost,
             postNotice = meta.postNotice,
-            postNoticeIsError = meta.postNoticeIsError
+            postNoticeIsError = meta.postNoticeIsError,
+            isRefreshing = meta.isRefreshing
         )
     }.stateIn(
         scope = viewModelScope,
@@ -295,10 +333,62 @@ class CommunityViewModel(
         _reportNotice.value = null
     }
 
+    fun updatePost(
+        postId: String,
+        title: String,
+        category: String,
+        content: String,
+        onResult: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = repository.updatePost(postId, title, content, category)
+            if (result.isSuccess) {
+                _selectedPost.value?.let { current ->
+                    if (current.id == postId) {
+                        _selectedPost.value = current.copy(title = title, content = content, category = category)
+                    }
+                }
+                _postNotice.value = "Na-update ang post! 🌾"
+                _postNoticeIsError.value = false
+                onResult(true)
+            } else {
+                _postNotice.value = "Hindi na-update ang post. Pakisubukang muli."
+                _postNoticeIsError.value = true
+                onResult(false)
+            }
+        }
+    }
+
+    fun deletePost(
+        postId: String,
+        onResult: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = repository.deletePost(postId)
+            if (result.isSuccess) {
+                if (_selectedPost.value?.id == postId) {
+                    _selectedPost.value = null
+                }
+                _postNotice.value = "Nabura ang post."
+                _postNoticeIsError.value = false
+                onResult(true)
+            } else {
+                _postNotice.value = "Hindi nabura ang post. Pakisubukang muli."
+                _postNoticeIsError.value = true
+                onResult(false)
+            }
+        }
+    }
+
     fun refreshPosts() {
         viewModelScope.launch {
-            repository.refreshPosts()
-            loadCommunityMembers()
+            _isRefreshing.value = true
+            try {
+                repository.refreshPosts()
+                loadCommunityMembers()
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 }

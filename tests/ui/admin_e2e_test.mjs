@@ -38,16 +38,26 @@ if (existsSync(packagePath)) {
   assert(pkg.dependencies['recharts'] !== undefined, 'Recharts dashboard dependency declared');
 }
 
-// Test 2: Verify Mock Data Integrity
-const mockDataPath = join(rootDir, 'admin/src/services/mockData.ts');
-assert(existsSync(mockDataPath), 'admin/src/services/mockData.ts exists');
+// Test 2: Verify Real Supabase Service Layer & API Contracts
+const supabaseServicePath = join(rootDir, 'admin/src/services/supabase.ts');
+assert(existsSync(supabaseServicePath), 'admin/src/services/supabase.ts exists');
 
-if (existsSync(mockDataPath)) {
-  const content = readFileSync(mockDataPath, 'utf8');
-  assert(content.includes('MOCK_FARMERS'), 'Contains MOCK_FARMERS dataset');
-  assert(content.includes('MOCK_CROPS'), 'Contains MOCK_CROPS dataset');
-  assert(content.includes('MOCK_PESTS'), 'Contains MOCK_PESTS dataset');
-  assert(content.includes('MOCK_SOILS'), 'Contains MOCK_SOILS dataset');
+if (existsSync(supabaseServicePath)) {
+  const content = readFileSync(supabaseServicePath, 'utf8');
+  assert(content.includes('createClient'), 'Initializes official Supabase client');
+  assert(content.includes('isSupabaseConfigured'), 'Exports configuration validator');
+}
+
+const apiServicePath = join(rootDir, 'admin/src/services/api.ts');
+assert(existsSync(apiServicePath), 'admin/src/services/api.ts exists');
+
+if (existsSync(apiServicePath)) {
+  const content = readFileSync(apiServicePath, 'utf8');
+  assert(content.includes('getDashboardStats'), 'Declares getDashboardStats contract');
+  assert(content.includes('getFarmers'), 'Declares getFarmers contract');
+  assert(content.includes('getCrops'), 'Declares getCrops contract');
+  assert(content.includes('getDSSRules'), 'Declares getDSSRules contract');
+  assert(content.includes('export const apiService'), 'Exports unified apiService singleton');
 }
 
 console.log('\n---------------------------------------------------------');

@@ -8,12 +8,12 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', size = 'sm' }) => {
   const styles: Record<string, string> = {
-    success: 'bg-[#4CAF50]/20 text-[#4CAF50] border-[#4CAF50]/40',
-    warning: 'bg-[#F4A261]/20 text-[#F4A261] border-[#F4A261]/40',
-    danger: 'bg-[#E76F51]/20 text-[#E76F51] border-[#E76F51]/40',
-    info: 'bg-[#00BCD4]/20 text-[#00BCD4] border-[#00BCD4]/40',
-    purple: 'bg-[#4C579E]/25 text-[#A5D6A7] border-[#4C579E]/40',
-    neutral: 'bg-[#1D2429] text-[#C7D0D8] border-[#38434D]',
+    success: 'bg-[#E8F5E9] text-[#2E7D32] border-[#A5D6A7]',
+    warning: 'bg-[#FEF3C7] text-[#D97706] border-[#FDE68A]',
+    danger: 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]',
+    info: 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD]',
+    purple: 'bg-[#F3E8FF] text-[#7E22CE] border-[#E9D5FF]',
+    neutral: 'bg-[#F3F4F6] text-[#374151] border-[#E5E7EB]',
   };
 
   const pad = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm';

@@ -5,14 +5,80 @@
   "local_name_ph": "Talong",
   "scientific_name": "Solanum melongena",
   "taxonomic_family": "Solanaceae",
-  "crop_type": "Solanaceous",
+  "crop_type": "Solanaceous / Fruit",
   "growing_specifications": {
     "days_to_harvest": "75-85 days",
     "optimal_soil_ph": "5.5 - 6.8",
     "optimal_temperature_c": "22 - 32 C",
-    "description": "The number one vegetable produced in the Philippines by volume, critical to smallholder farm incomes nationwide."
+    "watering_interval_days": 2,
+    "fertilize_interval_days": 10,
+    "description": "Premier commercial vegetable crop in the Philippines by volume and planted area. High-value warm-season solanaceous crop producing long, glossy purple fruits over an extended 6–9 month harvest cycle. Highly amenable to ratooning for a second full harvest cycle."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Eggplant classified under Solanaceous / Fruit?",
+      "summary": "Eggplant belongs to the nightshade family (Solanaceae) alongside tomato and chili pepper. Botanically classified as a fleshy berry with internal edible seeds, developing from flower ovaries.",
+      "points": [
+        "Nightshade Family Lineage: Shares genetics and susceptibility to soil-borne pathogens like Ralstonia solanacearum (Bacterial Wilt), requiring disciplined crop rotation with non-solanaceous crops.",
+        "Fleshy Berry Morphology: True botanical berry composed of smooth glossy outer skin rich in nasunin anthocyanins and tender spongy pulp.",
+        "Semi-Woody Branching Habit: Produces vigorous lateral branches that benefit from vertical bamboo staking (tulos) and post-harvest ratooning (pag-uupod)."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is the harvest maturity set to 75–85 days?",
+      "summary": "Commercial harvesting at 75–85 days captures firm, glossy fruits before internal seeds harden and turn the flesh bitter.",
+      "points": [
+        "Nursery & Hardening Phase (Days 1–35): Seeds germinate in 7–14 days; seedlings develop 3–4 sturdy true leaves in 104-hole trays before field transplanting.",
+        "Vegetative Staking Phase (Days 36–55): Intensive upward stem growth; bamboo stakes are erected before heavy fruit clusters form.",
+        "Anthesis & Flowering Phase (Days 56–70): Distinctive violet-purple star flowers open; rapid fruit elongation starts under warm sunshine.",
+        "Glossy Purple Harvest Window (Days 75–85+): Fruits reach harvest maturity with radiant gloss and springy firmness. Regular picking every 4–6 days stimulates continuous flowering for 6–9 months."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Eggplant need watering every 2–3 days?",
+      "summary": "Eggplant's broad leaves have high transpiration rates, needing steady moisture at the root zone without waterlogging.",
+      "points": [
+        "High Foliar Transpiration: Large broad velvety leaves lose significant moisture in tropical heat; 1.5–2 liters per plant maintains steady turgor pressure.",
+        "Phomopsis Blight Prevention: Direct root-level watering avoids wetting foliage and flowers, preventing water-splash dissemination of Phomopsis vexans fungal spores.",
+        "Bacterial Wilt Defense: While drought-hardy, eggplants are vulnerable to waterlogging. Stagnant moisture promotes Ralstonia bacterial wilt, requiring elevated 20–30 cm raised beds."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Eggplant thrive in pH 5.5–6.8 and Loamy Soil?",
+      "summary": "Deep, fertile, well-draining sandy loam enriched with compost and carbonized rice hull (CRH) provides strong root penetration and balanced nutrient absorption.",
+      "points": [
+        "Acid Tolerance: More tolerant of mildly acidic tropical soils (down to pH 5.5) than tomatoes, with robust taproots capable of mining deeper soil moisture.",
+        "Soil Aeration & Drainage: Adding decomposed compost and carbonized rice hull (CRH) creates loose, porous soil structure preventing root rot during heavy Philippine monsoons."
+      ]
+    }
   },
   "varieties": [
+    {
+      "variety_id": "var_talong_fortuner_f1",
+      "variety_name": "Fortuner F1",
+      "local_name_ph": "Talong Fortuner F1",
+      "growth_duration_days": 75,
+      "stage_days": {
+        "stage1_sprout": 7,
+        "stage2_seedling": 15,
+        "stage3_vegetative": 26,
+        "stage4_flowering": 20,
+        "stage5_harvest": 7
+      },
+      "fruit_length_cm": "28 - 32 cm (Long Cylindrical)",
+      "fruit_weight_g": "120 - 150 g",
+      "disease_resistance": "High resistance to Bacterial Wilt (Ralstonia) and strong heat tolerance",
+      "optimal_seasons": [
+        "YEAR_ROUND",
+        "DRY",
+        "WET"
+      ],
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Premier commercial hybrid developed by East-West Seed Philippines. Produces glossy, deep purple cylindrical fruits with green calyx, firm flesh, and superior shelf life for long-distance transport.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-20"
+    },
     {
       "variety_id": "var_talong_morena_f1",
       "variety_name": "Morena F1",
@@ -25,12 +91,15 @@
         "stage4_flowering": 20,
         "stage5_harvest": 7
       },
+      "fruit_length_cm": "25 - 30 cm (Long Cylindrical)",
+      "fruit_weight_g": "110 - 140 g",
+      "disease_resistance": "Field-proven resistance to Bacterial Wilt and Phomopsis blight",
       "optimal_seasons": [
         "YEAR_ROUND"
       ],
-      "watering_interval_days": 3,
-      "fertilize_interval_days": 14,
-      "description": "Prolific purple hybrid with long cylindrical fruits, strong heat tolerance and high bacterial wilt resistance.",
+      "watering_interval_days": 2,
+      "fertilize_interval_days": 10,
+      "description": "Prolific purple hybrid with long cylindrical fruits, exceptional heat tolerance, and high bacterial wilt resistance.",
       "sample_planted_date": "2026-08-06",
       "sample_expected_harvest_date": "2026-10-20"
     },
@@ -46,8 +115,12 @@
         "stage4_flowering": 23,
         "stage5_harvest": 7
       },
+      "fruit_length_cm": "22 - 26 cm",
+      "fruit_weight_g": "100 - 130 g",
+      "disease_resistance": "Heritage Philippine resilience; traditional open-pollinated seed saver",
       "optimal_seasons": [
-        "WET"
+        "WET",
+        "DRY"
       ],
       "watering_interval_days": 3,
       "fertilize_interval_days": 14,
@@ -59,7 +132,7 @@
   "media": {
     "primary_photo_url": "file:///android_asset/metadata/crops_images/eggplant.png",
     "thumbnail_url": "file:///android_asset/metadata/crops_images/eggplant.png",
-    "author": "MapTanim Original AI Visuals (ChatGPT Generated)",
+    "author": "MapTanim Original Agricultural Visuals",
     "license": "MapTanim Original Asset",
     "hash_sha256": "e2a6d9a3b11ff7a5d8991cdff1f1c1c6c71cc321974b68a0340237ee0ea361e9"
   }

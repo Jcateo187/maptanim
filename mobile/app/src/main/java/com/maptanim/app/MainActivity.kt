@@ -21,8 +21,6 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import com.maptanim.app.core.audio.ProvideSoundManager
-import com.maptanim.app.core.audio.SoundManager
 import com.maptanim.app.core.notification.NotificationHelper
 import com.maptanim.app.core.orientation.OrientationHelper
 import com.maptanim.app.data.repository.RepositoryProvider
@@ -141,7 +139,7 @@ class MainActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).apply {
             show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
             isAppearanceLightStatusBars = true
-            isAppearanceLightNavigationBars = false
+            isAppearanceLightNavigationBars = true
         }
 
         // Initialize farm notification channels
@@ -162,11 +160,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MapTanimTheme {
-                ProvideSoundManager {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        AppNavGraph()
-                        RotationSuggestionOverlay()
-                    }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AppNavGraph()
+                    RotationSuggestionOverlay()
                 }
             }
         }
@@ -187,7 +183,6 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(sensorListener)
-        SoundManager.getInstance(applicationContext).pauseAll()
     }
 
     override fun onResume() {
@@ -195,7 +190,6 @@ class MainActivity : ComponentActivity() {
         accelerometer?.let {
             sensorManager?.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL)
         }
-        SoundManager.getInstance(applicationContext).resumeAll()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

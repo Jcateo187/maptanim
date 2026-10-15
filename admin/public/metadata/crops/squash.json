@@ -1,0 +1,129 @@
+{
+  "id": "crop_squash",
+  "category": "crop",
+  "common_name": "Squash",
+  "local_name_ph": "Kalabasa",
+  "scientific_name": "Cucurbita moschata",
+  "taxonomic_family": "Cucurbitaceae",
+  "crop_type": "Cucurbit / Vine",
+  "growing_specifications": {
+    "days_to_harvest": "90-120 days",
+    "optimal_soil_ph": "5.5 - 6.8",
+    "optimal_temperature_c": "24 - 30 C",
+    "watering_interval_days": 4,
+    "fertilize_interval_days": 14,
+    "description": "Hardy, vigorous trailing vine widely cultivated across lowland and backyard farms in the Philippines. Produces thick, sweet, deep orange flesh rich in Beta-Carotene (Pro-Vitamin A). Edible shoots, flowers, and mature fruit."
+  },
+  "why_reasoning": {
+    "category_why": {
+      "title": "Why is Squash classified under Cucurbits (Vine Crop)?",
+      "summary": "Kalabasa belongs to the Cucurbitaceae family, characterized by vigorous trailing vines (3–6 m), separate male and female flowers on the same plant (monoecious), and large fleshy fruits with a hard rind.",
+      "points": [
+        "Vining Growth Habit: Vines trail 3 to 6 meters across ground beds or simple trellises, rooting at nodes when earthed up.",
+        "Monoecious Pollination: Produces separate male and female flowers; requires active honeybee and stingless bee activity (6:00–9:00 AM) or hand pollination.",
+        "Raised Hill Cultivation: Grown in raised mounds (60–90 cm wide, 20–30 cm high) spaced 2–3 m apart to ensure optimal drainage and root aeration."
+      ]
+    },
+    "harvest_why": {
+      "title": "Why is the harvest maturity set to 90–120 days?",
+      "summary": "Allows full starch-to-sugar conversion and complete beta-carotene synthesis while rinds harden into a protective storage barrier.",
+      "points": [
+        "Seed Germination (Days 5–10): Direct seeding produces sturdy taproots and vigorous cotyledon emergence.",
+        "Vegetative Vining (Days 15–40): Rapid vine elongation and canopy spread that naturally suppresses weed growth.",
+        "Flowering & Pollination (Days 40–55): Male flowers precede female blooms; morning bee visits determine fruit set.",
+        "Fruit Bulking & Pigmentation (Days 55–85): Fruits expand to 2.5–4.5 kg; potassium drives deep orange internal coloration.",
+        "Rind Hardening & Maturity (Days 90–120): Stem peduncle dries into a corky texture; hard rind resists fingernail scratches, allowing 2–4 months storage."
+      ]
+    },
+    "watering_why": {
+      "title": "Why does Squash require moderate watering 1–2 times per week?",
+      "summary": "Deep rooting provides drought tolerance once established, but stable moisture is critical during flowering and rapid fruit sizing.",
+      "points": [
+        "Blossom-End Rot Prevention: Inconsistent water levels disrupt calcium delivery to the expanding fruit tip.",
+        "Flower Abortion Defense: Extreme drought causes premature drop of fertilized female flowers.",
+        "Crown Rot Avoidance: Saturated, poorly drained soil causes Phytophthora rot at the base of the vine; water at hill basin, never on foliage."
+      ]
+    },
+    "soil_why": {
+      "title": "Why does Squash prefer sandy loam to clay loam with pH 5.5–6.8?",
+      "summary": "Responds well to organic compost and loose soil, tolerating heavy soils only when planted on well-aerated raised mounds.",
+      "points": [
+        "Root Aeration: Raised hills prevent root asphyxiation during heavy Philippine monsoon downpours.",
+        "Nutrient Balance: pH 5.5–6.8 optimizes uptake of Nitrogen for vine vigor, Potash for sweet dense flesh, and Boron for fruit set."
+      ]
+    }
+  },
+  "varieties": [
+    {
+      "variety_id": "var_kalabasa_suprema_f1",
+      "variety_name": "Suprema F1",
+      "local_name_ph": "Kalabasa Suprema F1",
+      "growth_duration_days": 85,
+      "stage_days": {
+        "stage1_sprout": 6,
+        "stage2_seedling": 14,
+        "stage3_vegetative": 28,
+        "stage4_flowering": 24,
+        "stage5_harvest": 13
+      },
+      "optimal_seasons": [
+        "YEAR_ROUND"
+      ],
+      "watering_interval_days": 4,
+      "fertilize_interval_days": 14,
+      "description": "Leading commercial hybrid in the Philippines with high resistance to Squash Leaf Curl Virus (SLCV). Thick, sticky, deep orange sweet flesh with average fruit weight of 2.5–4.5 kg.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-10-30"
+    },
+    {
+      "variety_id": "var_kalabasa_rizal_f1",
+      "variety_name": "Rizal F1",
+      "local_name_ph": "Kalabasa Rizal F1",
+      "growth_duration_days": 90,
+      "stage_days": {
+        "stage1_sprout": 7,
+        "stage2_seedling": 15,
+        "stage3_vegetative": 30,
+        "stage4_flowering": 25,
+        "stage5_harvest": 13
+      },
+      "optimal_seasons": [
+        "DRY_SEASON",
+        "WET_SEASON"
+      ],
+      "watering_interval_days": 4,
+      "fertilize_interval_days": 14,
+      "description": "High-yielding commercial hybrid with vigorous vine growth and uniform flat-round ribbed fruits suitable for long-distance transport.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-04"
+    },
+    {
+      "variety_id": "var_kalabasa_golden_nugget",
+      "variety_name": "Golden Nugget",
+      "local_name_ph": "Kalabasa Golden Nugget (Native Kabocha)",
+      "growth_duration_days": 95,
+      "stage_days": {
+        "stage1_sprout": 8,
+        "stage2_seedling": 16,
+        "stage3_vegetative": 32,
+        "stage4_flowering": 24,
+        "stage5_harvest": 15
+      },
+      "optimal_seasons": [
+        "DRY_SEASON"
+      ],
+      "watering_interval_days": 3,
+      "fertilize_interval_days": 14,
+      "description": "Open-pollinated Kabocha-type squash suited for backyard garden beds with rich flavor, sweet texture, and excellent keeping quality.",
+      "sample_planted_date": "2026-08-06",
+      "sample_expected_harvest_date": "2026-11-09"
+    }
+  ],
+  "media": {
+    "primary_photo_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+    "thumbnail_url": "file:///android_asset/metadata/crops_images/pumpkin.png",
+    "author": "MapTanim Agronomic Visuals",
+    "license": "MapTanim Original Asset",
+    "hash_sha256": "403f6b1be6379da001e327f46a9a2b7674c9848cb4734ac4823a6a2463f15179"
+  }
+}

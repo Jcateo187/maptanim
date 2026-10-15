@@ -58,6 +58,7 @@ fun FarmEditTopHeader(
     onToggleVariety: (Boolean) -> Unit,
     onToggleMeasurement: (Boolean) -> Unit = {},
     onToggleCropName: (Boolean) -> Unit = {},
+    onGoHome: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }

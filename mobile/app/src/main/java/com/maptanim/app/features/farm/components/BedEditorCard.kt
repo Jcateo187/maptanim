@@ -37,14 +37,17 @@ data class CropSpacingInfo(
 fun getCropSpacing(cropName: String?): CropSpacingInfo = when (cropName?.lowercase()) {
     "tomato", "kamatis" -> CropSpacingInfo(50, 80, "Heavy Feeder (5 kg/m² compost)")
     "eggplant", "talong" -> CropSpacingInfo(50, 75, "Heavy Feeder (5 kg/m² compost)")
-    "chili", "sili" -> CropSpacingInfo(40, 50, "Medium Feeder (3 kg/m² compost)")
-    "okra" -> CropSpacingInfo(30, 60, "Medium Feeder (3 kg/m² compost)")
-    "pechay" -> CropSpacingInfo(20, 25, "Light Feeder (2–3 kg/m² compost)")
+    "bell pepper", "bell_pepper", "sweet pepper", "siling atsal", "atsal" -> CropSpacingInfo(45, 60, "Medium Feeder (3 kg/m² compost)")
+    "cabbage", "repolyo" -> CropSpacingInfo(40, 50, "Heavy Feeder (4 kg/m² compost)")
+    "carrot", "karot" -> CropSpacingInfo(10, 20, "Light Feeder (2 kg/m² compost)")
+    "potato", "patatas" -> CropSpacingInfo(30, 75, "Heavy Feeder (4 kg/m² compost)")
+    "pechay", "petsay" -> CropSpacingInfo(20, 25, "Light Feeder (2–3 kg/m² compost)")
     "lettuce", "litsugas" -> CropSpacingInfo(20, 25, "Light Feeder (2–3 kg/m² compost)")
-    "kangkong" -> CropSpacingInfo(15, 20, "Medium Feeder (3 kg/m² compost)")
+    "green onion", "scallion", "dahon ng sibuyas" -> CropSpacingInfo(10, 15, "Light Feeder (2 kg/m² compost)")
     "cucumber", "pipino" -> CropSpacingInfo(40, 80, "Heavy Feeder (4 kg/m² compost)")
-    "sitaw" -> CropSpacingInfo(30, 60, "Light Feeder (Fixes Nitrogen)")
-    "corn", "mais", "sweet corn" -> CropSpacingInfo(30, 75, "Heavy Feeder (5 kg/m² compost)")
+    "sitaw", "yardlong bean" -> CropSpacingInfo(30, 60, "Light Feeder (Fixes Nitrogen)")
+    "squash", "kalabasa" -> CropSpacingInfo(90, 150, "Heavy Feeder (5 kg/m² compost)")
+    "ampalaya", "bitter gourd" -> CropSpacingInfo(40, 80, "Heavy Feeder (4 kg/m² compost)")
     else -> CropSpacingInfo(30, 40, "Standard Bed Spacing")
 }
 
@@ -247,7 +250,7 @@ fun BedEditorCard(
                 }
             }
 
-            // Quick Assign Crop: 10 Canonical Philippine Crops with Place Suitability Dot
+            // Quick Assign Crop: 13 Canonical Philippine Crops with Place Suitability Dot
             Text(
                 text = "ASSIGN CROP TO BED (WITH SUITABILITY)",
                 fontWeight = FontWeight.Bold,
@@ -258,14 +261,17 @@ fun BedEditorCard(
             val crops = listOf(
                 "tomato" to "Tomato",
                 "eggplant" to "Eggplant",
-                "chili" to "Chili",
-                "okra" to "Okra",
+                "bell_pepper" to "Bell Pepper",
+                "cabbage" to "Cabbage",
+                "carrot" to "Carrot",
+                "potato" to "Potato",
                 "pechay" to "Pechay",
                 "lettuce" to "Lettuce",
-                "kangkong" to "Kangkong",
+                "green_onion" to "Green Onion",
                 "cucumber" to "Cucumber",
                 "sitaw" to "Sitaw",
-                "corn" to "Sweet Corn"
+                "squash" to "Squash",
+                "ampalaya" to "Ampalaya"
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(crops) { (cId, cName) ->

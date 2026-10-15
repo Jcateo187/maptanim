@@ -1,12 +1,8 @@
 package com.maptanim.app.features.shared.support
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -32,11 +27,21 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.maptanim.app.navigation.Routes
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// ─── Theme Colors ───────────────────────────────────────────────────────────
+private val GreenPrimary = Color(0xFF2E7D32)
+private val GreenContainer = Color(0xFFE8F5E9)
+private val BlackPrimary = Color(0xFF111813)
+private val BlackSecondary = Color(0xFF4B5563)
+private val BlackMuted = Color(0xFF6B7280)
+private val BorderLight = Color(0xFFE5E7EB)
+private val SurfaceWhite = Color(0xFFF9FAF8)
 
 // ─── Data Model ─────────────────────────────────────────────────────────────
 data class SupportChatMessage(
@@ -46,7 +51,10 @@ data class SupportChatMessage(
     val timestamp: String = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date()),
     val quickActionText: String? = null,
     val quickActionRoute: String? = null,
-    val actionType: ActionType? = null
+    val actionType: ActionType? = null,
+    val feedbackTicketId: String? = null,
+    val serviceRating: Int? = null,
+    val wasHelpful: Boolean? = null
 )
 
 enum class MessageSender {
@@ -73,65 +81,64 @@ data class ProblemOption(
 private val PredefinedProblems = listOf(
     ProblemOption(
         id = "forgot_password",
-        title = "Forgot Password",
-        subtitle = "Send a password reset link to your registered Gmail",
+        title = "Nakalimutan ang Password",
+        subtitle = "Magpadala ng password reset link sa Gmail",
         icon = Icons.Default.LockReset,
-        agentReply = "Don't worry! You can easily reset your password. Tap the button below to open the Forgot Password screen, enter your registered @gmail.com address, and we'll send a secure password reset link directly to your inbox.",
-        actionText = "Go to Forgot Password Screen",
+        agentReply = "Maaari mong i-reset ang iyong password gamit ang iyong rehistradong Gmail. Pindutin ang button sa ibaba upang makapunta sa Forgot Password screen.",
+        actionText = "Pumunta sa Forgot Password",
         actionRoute = Routes.FORGOT_PASSWORD,
         actionType = ActionType.NAVIGATE
     ),
     ProblemOption(
         id = "no_reset_link",
-        title = "Didn't Receive Reset Link",
-        subtitle = "Reset email is not arriving in your Gmail inbox",
+        title = "Walang Natanggap na Reset Link",
+        subtitle = "Hindi dumarating ang email sa inbox",
         icon = Icons.Default.Email,
-        agentReply = "If you haven't received your password reset email:\n\n1. Check your Spam, Junk, and Promotions folders in Gmail.\n2. Ensure your email is spelled correctly and ends with @gmail.com.\n3. Wait 60 seconds before requesting another reset email.\n4. Check if your Google account storage is full.",
-        actionText = "Open Forgot Password",
+        agentReply = "Kung hindi pa dumarating ang reset email:\n\n• Tingnan ang Spam o Junk folder sa iyong Gmail.\n• Siguraduhing tama ang spelling ng iyong @gmail.com address.\n• Maghintay ng 1 hanggang 2 minuto bago sumubok muli.",
+        actionText = "Subukan Muli",
         actionRoute = Routes.FORGOT_PASSWORD,
         actionType = ActionType.NAVIGATE
     ),
     ProblemOption(
         id = "locked_account",
-        title = "Account Temporarily Locked",
-        subtitle = "Security cooldown from failed login attempts",
+        title = "Pansamantalang Naka-lock",
+        subtitle = "Na-lock dahil sa 3 maling password",
         icon = Icons.Default.Security,
-        agentReply = "For your account and farm security, logins are temporarily locked for 5 minutes after 3 consecutive failed password attempts.\n\nThe lockout automatically expires after the 5-minute cooldown. You can also reset your password now using your registered Gmail.",
-        actionText = "Reset Password Now",
+        agentReply = "Naka-lock ang account ng 5 minuto matapos ang sunod-sunod na maling password para sa iyong proteksyon.\n\nKusang mawawala ang lock pagkatapos ng 5 minuto, o maaari mo ring i-reset agad ang password gamit ang iyong Gmail.",
+        actionText = "I-reset ang Password",
         actionRoute = Routes.FORGOT_PASSWORD,
         actionType = ActionType.NAVIGATE
     ),
     ProblemOption(
         id = "change_email",
-        title = "Update Registered Gmail",
-        subtitle = "Change or transfer your account email address",
+        title = "Pagpalit ng Gmail Address",
+        subtitle = "Magpalit o maglipat ng email ng account",
         icon = Icons.Default.Person,
-        agentReply = "To update or transfer your registered Gmail address, our support team can assist you after verifying your farm profile.\n\nPlease type your current registered email and the requested new Gmail address in the chat box below.",
+        agentReply = "Upang mapalitan ang iyong Gmail address, i-type sa chat sa ibaba ang iyong kasalukuyang email at ang bagong email na nais gamitin upang mai-update ng aming team.",
         actionText = null
     ),
     ProblemOption(
         id = "registration_trouble",
-        title = "Trouble Creating Account",
-        subtitle = "Sign-up error or email already registered",
+        title = "Problema sa Pag-sign Up",
+        subtitle = "Hindi makagawa ng bagong account",
         icon = Icons.Default.PersonAdd,
-        agentReply = "Common registration requirements:\n\n1. Your email must be a valid @gmail.com address.\n2. Passwords must be at least 8 characters.\n3. If your email is already registered, please log in or request a password reset instead.",
-        actionText = "Go to Login",
+        agentReply = "Paalala sa paggawa ng account:\n\n• Siguraduhing may @gmail.com ang email.\n• Hindi bababa sa 8 characters ang password.\n• Kung may dati ka nang account, mag-Log In o i-reset ang password.",
+        actionText = "Pumunta sa Login",
         actionRoute = Routes.LOGIN,
         actionType = ActionType.NAVIGATE
     ),
     ProblemOption(
         id = "other_issue",
-        title = "Other Account Concern",
-        subtitle = "Chat directly with MapTanim Support Desk",
+        title = "Iba Pang Concern o Tanong",
+        subtitle = "Mag-iwan ng mensahe sa aming team",
         icon = Icons.Default.SupportAgent,
-        agentReply = "Please type your account concern in the chat box below. Our MapTanim agricultural support team will review your inquiry and help you access your farm.",
+        agentReply = "I-type sa chat box sa ibaba ang iyong katanungan o problema, at tutugon ang aming admin sa iyong account.",
         actionText = null
     )
 )
 
 /**
- * Circular customer service launcher button featuring the head with headphone icon.
- * Clean circle with no extra container or text names.
+ * Circular customer service launcher button in MapTanim primary green theme.
  */
 @Composable
 fun ModernCustomerServiceButton(
@@ -144,26 +151,22 @@ fun ModernCustomerServiceButton(
         Surface(
             onClick = onClick,
             shape = CircleShape,
-            color = Color(0xF2122317),
-            border = BorderStroke(1.5.dp, Color(0xFF4CAF50)),
-            shadowElevation = 8.dp,
+            color = GreenPrimary,
+            border = BorderStroke(2.dp, Color.White),
+            shadowElevation = 6.dp,
             modifier = Modifier.fillMaxSize()
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(Color(0xFF2E7D32), Color(0xFF142B1A))
-                        )
-                    ),
+                    .background(GreenPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SupportAgent,
                     contentDescription = "Customer Service",
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }
@@ -171,10 +174,10 @@ fun ModernCustomerServiceButton(
         // Active online indicator dot
         Box(
             modifier = Modifier
-                .size(11.dp)
+                .size(12.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF00E676))
-                .border(1.5.dp, Color(0xFF122317), CircleShape)
+                .background(Color(0xFF22C55E))
+                .border(2.dp, Color.White, CircleShape)
                 .align(Alignment.TopEnd)
         )
     }
@@ -194,7 +197,7 @@ fun CustomerServiceChatDialog(
                 SupportChatMessage(
                     id = "msg_welcome",
                     sender = MessageSender.AGENT,
-                    text = "Kumusta! 👋 Welcome to MapTanim Support Desk.\n\nAre you having trouble with your account? Please select your issue below so we can assist you immediately."
+                    text = "Kumusta! Welcome sa MapTanim Support.\n\nPumili ng concern sa ibaba o mag-iwan ng mensahe para sa aming team."
                 )
             )
         )
@@ -203,6 +206,56 @@ fun CustomerServiceChatDialog(
     var selectedProblemId by remember { mutableStateOf<String?>(null) }
     var inputText by remember { mutableStateOf("") }
     var isAgentTyping by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val user = com.maptanim.app.data.remote.SupabaseClient.client.auth.currentUserOrNull()
+            val userId = user?.id
+            val pastFeedback = com.maptanim.app.data.repository.ProfileRepository().getFeedbackRepliesForUser(userId)
+            if (pastFeedback.isNotEmpty()) {
+                val serverMsgs = mutableListOf<SupportChatMessage>()
+                pastFeedback.reversed().takeLast(5).forEach { item ->
+                    serverMsgs.add(
+                        SupportChatMessage(
+                            id = "user_${item.id ?: System.currentTimeMillis()}",
+                            sender = MessageSender.USER,
+                            text = if (item.subject.isNotBlank() && item.subject != "Support In-App Message") "${item.subject}: ${item.message}" else item.message,
+                            timestamp = item.createdAt?.take(10) ?: ""
+                        )
+                    )
+                    if (!item.adminReply.isNullOrBlank()) {
+                        serverMsgs.add(
+                            SupportChatMessage(
+                                id = "agent_${item.id ?: System.currentTimeMillis()}",
+                                sender = MessageSender.AGENT,
+                                text = "Admin: ${item.adminReply}",
+                                timestamp = item.resolvedAt?.take(10) ?: "",
+                                feedbackTicketId = item.id,
+                                serviceRating = item.serviceRating,
+                                wasHelpful = item.wasHelpful
+                            )
+                        )
+                    }
+                }
+                if (serverMsgs.isNotEmpty()) {
+                    messages = messages + serverMsgs
+                    delay(150)
+                    listState.animateScrollToItem(messages.size)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun rateTicket(ticketId: String, rating: Int, wasHelpful: Boolean) {
+        messages = messages.map { msg ->
+            if (msg.feedbackTicketId == ticketId) {
+                msg.copy(serviceRating = rating, wasHelpful = wasHelpful)
+            } else msg
+        }
+        coroutineScope.launch {
+            com.maptanim.app.data.repository.ProfileRepository().rateFeedbackReply(ticketId, rating, wasHelpful)
+        }
+    }
 
     fun selectProblem(problem: ProblemOption) {
         selectedProblemId = problem.id
@@ -217,7 +270,7 @@ fun CustomerServiceChatDialog(
             delay(150)
             listState.animateScrollToItem(messages.size)
             isAgentTyping = true
-            delay(500)
+            delay(400)
             isAgentTyping = false
             val agentMsg = SupportChatMessage(
                 id = "agent_${System.currentTimeMillis()}",
@@ -249,7 +302,7 @@ fun CustomerServiceChatDialog(
             delay(150)
             listState.animateScrollToItem(messages.size)
             isAgentTyping = true
-            
+
             // Dispatch live ticket to Supabase feedback table
             val isSent = try {
                 com.maptanim.app.data.repository.RepositoryProvider.userRepository.sendSupportTicket(
@@ -260,16 +313,16 @@ fun CustomerServiceChatDialog(
             } catch (_: Exception) {
                 false
             }
-            
-            delay(600)
+
+            delay(500)
             isAgentTyping = false
             val agentReply = SupportChatMessage(
                 id = "agent_${System.currentTimeMillis()}",
                 sender = MessageSender.AGENT,
                 text = if (isSent) {
-                    "Thank you for your message. Your support request has been logged and sent to the MapTanim administrative desk.\n\nOur agronomic support team reviews inquiries regularly. When an admin replies, you will receive an advisory notification in your Notifications tab."
+                    "Salamat! Naipadala na sa aming admin ang iyong mensahe. Makikita mo ang kanilang tugon sa iyong Notifications tab."
                 } else {
-                    "Your message has been received. If you are currently offline, your request will be reviewed once connection is restored. You can also reach our team directly at support@maptanim.ph."
+                    "Natanggap ang iyong mensahe. Kung offline ka sa ngayon, maipapadala ito sa server kapag nagkaroon ng koneksyon. Maaari ka ring sumulat sa support@maptanim.ph."
                 }
             )
             messages = messages + agentReply
@@ -291,10 +344,10 @@ fun CustomerServiceChatDialog(
                 .fillMaxWidth(0.92f)
                 .widthIn(max = 480.dp)
                 .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(24.dp),
-            color = Color(0xFF101912),
-            border = BorderStroke(1.2.dp, Color(0xFF2E4D3E)),
-            shadowElevation = 16.dp
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, BorderLight),
+            shadowElevation = 12.dp
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -303,7 +356,7 @@ fun CustomerServiceChatDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF162419))
+                        .background(Color.White)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -317,14 +370,14 @@ fun CustomerServiceChatDialog(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF233B29)),
+                                    .background(GreenContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SupportAgent,
                                     contentDescription = "Customer Support",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
+                                    tint = GreenPrimary,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                             // Online Indicator
@@ -332,33 +385,33 @@ fun CustomerServiceChatDialog(
                                 modifier = Modifier
                                     .size(10.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF4CAF50))
-                                    .border(1.5.dp, Color(0xFF162419), CircleShape)
+                                    .background(Color(0xFF22C55E))
+                                    .border(1.5.dp, Color.White, CircleShape)
                                     .align(Alignment.BottomEnd)
                             )
                         }
 
                         Column {
                             Text(
-                                text = "MapTanim Support Desk",
+                                text = "MapTanim Support",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = BlackPrimary
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF4CAF50))
+                                        .background(Color(0xFF22C55E))
                                 )
                                 Text(
-                                    text = "Online · Account Assistance",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFFA5D6A7),
+                                    text = "Online · Tulong sa Account at Sakahan",
+                                    fontSize = 11.5.sp,
+                                    color = BlackSecondary,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
@@ -370,18 +423,18 @@ fun CustomerServiceChatDialog(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF203324))
+                            .background(Color(0xFFF3F4F6))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close Support Chat",
-                            tint = Color.White,
+                            tint = BlackSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFF263D2E), thickness = 1.dp)
+                HorizontalDivider(color = BorderLight, thickness = 1.dp)
 
                 // ─── Chat Thread ────────────────────────────────────────────
                 LazyColumn(
@@ -389,7 +442,8 @@ fun CustomerServiceChatDialog(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .background(SurfaceWhite)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(messages, key = { it.id }) { msg ->
@@ -406,11 +460,14 @@ fun CustomerServiceChatDialog(
                                     ActionType.DISMISS -> onDismiss()
                                     null -> Unit
                                 }
+                            },
+                            onRate = { ticketId, stars, helpful ->
+                                rateTicket(ticketId, stars, helpful)
                             }
                         )
                     }
 
-                    // Problem Selection Options (always accessible or after welcome)
+                    // Problem Selection Options (FAQ tiles)
                     item {
                         Column(
                             modifier = Modifier
@@ -419,10 +476,10 @@ fun CustomerServiceChatDialog(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "SELECT YOUR ACCOUNT ISSUE:",
+                                text = "MGA KARANIWANG CONCERN",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF81C784),
+                                color = GreenPrimary,
                                 letterSpacing = 0.5.sp,
                                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
                             )
@@ -431,12 +488,13 @@ fun CustomerServiceChatDialog(
                                 val isSelected = selectedProblemId == problem.id
                                 Surface(
                                     onClick = { selectProblem(problem) },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (isSelected) Color(0xFF1E3827) else Color(0xFF142217),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) GreenContainer else Color.White,
                                     border = BorderStroke(
                                         1.dp,
-                                        if (isSelected) Color(0xFF4CAF50) else Color(0xFF2A4232)
+                                        if (isSelected) GreenPrimary else BorderLight
                                     ),
+                                    shadowElevation = if (isSelected) 0.dp else 1.dp,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -450,13 +508,13 @@ fun CustomerServiceChatDialog(
                                             modifier = Modifier
                                                 .size(34.dp)
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFF1B3323)),
+                                                .background(GreenContainer),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = problem.icon,
                                                 contentDescription = problem.title,
-                                                tint = Color(0xFFA5D6A7),
+                                                tint = GreenPrimary,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -466,20 +524,20 @@ fun CustomerServiceChatDialog(
                                                 text = problem.title,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color.White
+                                                color = BlackPrimary
                                             )
                                             Text(
                                                 text = problem.subtitle,
                                                 fontSize = 11.sp,
-                                                color = Color(0xFF9E9E9E),
+                                                color = BlackSecondary,
                                                 maxLines = 1
                                             )
                                         }
 
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = "Select",
-                                            tint = Color(0xFF81C784),
+                                            contentDescription = "Piliin",
+                                            tint = if (isSelected) GreenPrimary else BlackMuted,
                                             modifier = Modifier.size(14.dp)
                                         )
                                     }
@@ -497,18 +555,19 @@ fun CustomerServiceChatDialog(
                                 modifier = Modifier
                                     .padding(start = 4.dp, top = 4.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF162419))
+                                    .background(Color.White)
+                                    .border(BorderStroke(1.dp, BorderLight), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(12.dp),
-                                    color = Color(0xFF81C784),
+                                    color = GreenPrimary,
                                     strokeWidth = 1.5.dp
                                 )
                                 Text(
-                                    text = "Support Specialist is typing...",
+                                    text = "Nagsusulat...",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFA5D6A7),
+                                    color = BlackSecondary,
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                 )
                             }
@@ -516,13 +575,13 @@ fun CustomerServiceChatDialog(
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFF263D2E), thickness = 1.dp)
+                HorizontalDivider(color = BorderLight, thickness = 1.dp)
 
                 // ─── Input Bar ──────────────────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF162419))
+                        .background(Color.White)
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -532,19 +591,19 @@ fun CustomerServiceChatDialog(
                         onValueChange = { inputText = it },
                         placeholder = {
                             Text(
-                                text = "Describe your account problem...",
+                                text = "I-type ang iyong mensahe...",
                                 fontSize = 13.sp,
-                                color = Color(0xFF758578)
+                                color = BlackMuted
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF101912),
-                            unfocusedContainerColor = Color(0xFF101912),
+                            focusedContainerColor = Color(0xFFF3F4F6),
+                            unfocusedContainerColor = Color(0xFFF3F4F6),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = Color(0xFF81C784)
+                            focusedTextColor = BlackPrimary,
+                            unfocusedTextColor = BlackPrimary,
+                            cursorColor = GreenPrimary
                         ),
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
@@ -560,13 +619,13 @@ fun CustomerServiceChatDialog(
                             .size(42.dp)
                             .clip(CircleShape)
                             .background(
-                                if (inputText.isNotBlank()) Color(0xFF2E7D32) else Color(0xFF233527)
+                                if (inputText.isNotBlank()) GreenPrimary else Color(0xFFE5E7EB)
                             )
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send Message",
-                            tint = if (inputText.isNotBlank()) Color.White else Color(0xFF616161),
+                            contentDescription = "Ipadala",
+                            tint = if (inputText.isNotBlank()) Color.White else BlackMuted,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -579,7 +638,8 @@ fun CustomerServiceChatDialog(
 @Composable
 private fun ChatMessageItem(
     message: SupportChatMessage,
-    onActionClick: () -> Unit
+    onActionClick: () -> Unit,
+    onRate: (ticketId: String, rating: Int, wasHelpful: Boolean) -> Unit = { _, _, _ -> }
 ) {
     val isAgent = message.sender == MessageSender.AGENT
 
@@ -594,8 +654,9 @@ private fun ChatMessageItem(
                 bottomStart = if (isAgent) 4.dp else 16.dp,
                 bottomEnd = if (isAgent) 16.dp else 4.dp
             ),
-            color = if (isAgent) Color(0xFF18281C) else Color(0xFF2E7D32),
-            border = if (isAgent) BorderStroke(1.dp, Color(0xFF2B4733)) else null,
+            color = if (isAgent) Color.White else GreenPrimary,
+            border = if (isAgent) BorderStroke(1.dp, BorderLight) else null,
+            shadowElevation = if (isAgent) 1.dp else 2.dp,
             modifier = Modifier.widthIn(max = 320.dp)
         ) {
             Column(
@@ -607,25 +668,95 @@ private fun ChatMessageItem(
                         text = "MapTanim Support",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF81C784)
+                        color = GreenPrimary
                     )
                 }
 
                 Text(
                     text = message.text,
-                    fontSize = 13.sp,
-                    color = Color.White,
-                    lineHeight = 18.sp
+                    fontSize = 13.5.sp,
+                    color = if (isAgent) BlackPrimary else Color.White,
+                    lineHeight = 19.sp
                 )
+
+                // Service CSAT Rating prompt for Admin replies
+                if (isAgent && !message.feedbackTicketId.isNullOrBlank()) {
+                    if (message.serviceRating != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(GreenContainer)
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = GreenPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Nakatulong: ${message.serviceRating}/5 Stars",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GreenPrimary
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFF9FAFB))
+                                .border(BorderStroke(0.5.dp, BorderLight), RoundedCornerShape(8.dp))
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Nakatulong ba ang tugon na ito?",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BlackSecondary
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                (1..5).forEach { star ->
+                                    IconButton(
+                                        onClick = { onRate(message.feedbackTicketId, star, star >= 3) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = "$star stars",
+                                            tint = Color(0xFFFFB74D),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = "Rate",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GreenPrimary
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Optional Quick Action Button
                 if (message.quickActionText != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Button(
                         onClick = onActionClick,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50),
+                            containerColor = GreenPrimary,
                             contentColor = Color.White
                         ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -641,11 +772,12 @@ private fun ChatMessageItem(
 
                 Text(
                     text = message.timestamp,
-                    fontSize = 9.sp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 9.5.sp,
+                    color = if (isAgent) BlackMuted else Color.White.copy(alpha = 0.75f),
                     modifier = Modifier.align(Alignment.End)
                 )
             }
         }
     }
 }
+

@@ -75,14 +75,7 @@ fun CommunityChatSection(
         val member = activeChatMember!!
         val memberMessages = remember(member.id) {
             directChatMessages.getOrPut(member.id) {
-                androidx.compose.runtime.mutableStateListOf(
-                    CommunityChatMessage(
-                        sender = member.id,
-                        senderName = member.name,
-                        text = "Kumusta! Welcome to the chat. How's your crop harvest?",
-                        timestamp = "10:30 AM"
-                    )
-                )
+                androidx.compose.runtime.mutableStateListOf()
             }
         }
         DedicatedChatScreen(
@@ -521,91 +514,130 @@ private fun DedicatedChatScreen(
             .background(Color.White)
     ) {
         // ── TOP BAR: Back Navigation + Friend Info + Report ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Surface(
+            color = Color.White,
+            shadowElevation = 1.dp,
+            border = BorderStroke(1.dp, CardBorderColor),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to Friend List",
-                        tint = DeepBlack,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(getAvatarColor(member.name)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = member.name.take(1).uppercase(),
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Friend List",
+                            tint = DeepBlack,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(getAvatarColor(member.name)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = member.name.take(1).uppercase(),
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = member.name,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBlack
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(LushGreen)
+                            )
+                            Text(
+                                text = "Active Now",
+                                fontSize = 11.sp,
+                                color = LushGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                IconButton(onClick = onReport, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Flag,
+                        contentDescription = "Report User",
+                        tint = MutedText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
+        // ── MESSAGE HISTORY ──────────────────────────────────────────────────
+        if (messages.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = LushGreen,
+                        modifier = Modifier.size(40.dp)
+                    )
                     Text(
-                        text = member.name,
+                        text = "Wala pang mensahe",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = DeepBlack
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(LushGreen)
-                        )
-                        Text(
-                            text = "Active Now",
-                            fontSize = 11.sp,
-                            color = LushGreen,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Text(
+                        text = "Mag-iwan ng mensahe upang simulan ang pag-uusap kay ${member.name}.",
+                        fontSize = 12.sp,
+                        color = MutedText,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
-
-            IconButton(onClick = onReport, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Flag,
-                    contentDescription = "Report User",
-                    tint = MutedText,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-
-        HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
-
-        // ── MESSAGE HISTORY ──────────────────────────────────────────────────
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(messages) { msg ->
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(messages) { msg ->
                 val isMe = msg.sender == "me" || msg.senderName.equals(currentUserName, ignoreCase = true)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -707,4 +739,5 @@ private fun DedicatedChatScreen(
             }
         }
     }
+}
 }

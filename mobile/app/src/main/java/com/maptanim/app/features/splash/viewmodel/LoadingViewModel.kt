@@ -47,12 +47,14 @@ class LoadingViewModel : ViewModel() {
             delay(300)
 
             try {
-                kotlinx.coroutines.withTimeoutOrNull(1500L) {
+                kotlinx.coroutines.withTimeoutOrNull(5000L) {
                     val initializer = AppInitializationController()
                     initializer.initialize()
                 }
+            } catch (_: kotlinx.coroutines.CancellationException) {
+                // Handled gracefully during navigation
             } catch (e: Exception) {
-                e.printStackTrace()
+                // Offline fallback
             }
 
             // Step 2: Sync Philippine Crop Database

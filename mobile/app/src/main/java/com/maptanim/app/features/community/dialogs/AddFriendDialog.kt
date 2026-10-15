@@ -2,6 +2,7 @@ package com.maptanim.app.features.community.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,11 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import com.maptanim.app.features.community.model.getAvatarColor
 import com.maptanim.app.features.community.viewmodel.CommunityMember
 
@@ -48,7 +51,8 @@ fun AddFriendDialog(
     currentUserId: String?,
     onDismiss: () -> Unit,
     onAddFriend: (String) -> Unit,
-    onSelectFriend: (String) -> Unit
+    onSelectFriend: (String) -> Unit,
+    onMemberClick: (CommunityMember) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val friendIds = remember(friends) { friends.map { it.id }.toSet() }
@@ -215,7 +219,10 @@ fun AddFriendDialog(
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier
+                                            .weight(1f, fill = false)
+                                            .clickable { onMemberClick(member) }
                                     ) {
                                         Box(
                                             modifier = Modifier
@@ -224,12 +231,21 @@ fun AddFriendDialog(
                                                 .background(getAvatarColor(member.name)),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = member.name.take(1).uppercase(),
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp
-                                            )
+                                            if (!member.avatarUrl.isNullOrBlank()) {
+                                                AsyncImage(
+                                                    model = member.avatarUrl,
+                                                    contentDescription = member.name,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = member.name.take(1).uppercase(),
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
                                         }
                                         Column {
                                             Text(

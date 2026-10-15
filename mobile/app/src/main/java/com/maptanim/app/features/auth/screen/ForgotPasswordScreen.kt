@@ -1,5 +1,6 @@
-﻿package com.maptanim.app.features.auth.screen
+package com.maptanim.app.features.auth.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -80,22 +81,10 @@ fun ForgotPasswordScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
     ) {
-        Image(
-            painter = painterResource(R.drawable.onboarding_background),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(16.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-        )
 
         Box(
             modifier = Modifier
@@ -109,7 +98,11 @@ fun ForgotPasswordScreen(
                 modifier = Modifier
                     .width(430.dp)
                     .padding(24.dp),
-                elevation = CardDefaults.cardElevation(10.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF7FAF7)
+                ),
+                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                elevation = CardDefaults.cardElevation(8.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -120,14 +113,16 @@ fun ForgotPasswordScreen(
                     Text(
                         text = "Reset Password",
                         fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF111813)
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = "Enter your Google email to receive a password reset link.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4B5563)
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -253,10 +248,13 @@ fun ForgotPasswordScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Row {
-                        Text("Remember your password? ")
+                        Text(
+                            text = "Remember your password? ",
+                            color = Color(0xFF4B5563)
+                        )
                         Text(
                             text = "Sign In",
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF2E7D32),
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {

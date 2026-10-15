@@ -38,7 +38,7 @@ data class CropDssUiState(
     val farmId: String = "",
     val cropId: String? = null,
     val cropName: String = "Tomato",
-    val plotLabel: String = "Bed #3",
+    val plotLabel: String = "Garden Plot",
     val cropVariety: String = "Diamante Max F1",
     val soilType: SoilType = SoilType.LOAM,
     val plantingMethod: String = "Transplanting",
@@ -94,7 +94,7 @@ class CropDssManagementViewModel(
         initialGrowingApproach: String = "Organic"
     ) {
         val cName = plant?.cropName ?: plot?.cropName ?: plotRender?.cropName ?: "Tomato"
-        val pLabel = plant?.plotLabel ?: plot?.plotLabel ?: plotRender?.plotLabel ?: "Bed #3"
+        val pLabel = plant?.plotLabel ?: plot?.plotLabel ?: plotRender?.plotLabel ?: "$cName Plot"
         val variety = plant?.cropVariety ?: plot?.cropVariety ?: plotRender?.cropVariety ?: "Diamante Max F1"
         val soil = plant?.soilType ?: plot?.soilType ?: plotRender?.soilType ?: SoilType.LOAM
         val pId = plant?.id ?: plot?.id ?: plotRender?.id ?: "plot-1"

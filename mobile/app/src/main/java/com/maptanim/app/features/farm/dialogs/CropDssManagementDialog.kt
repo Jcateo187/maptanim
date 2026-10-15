@@ -291,6 +291,8 @@ fun CropDssManagementDialog(
                             CropTimelineCard(
                                 currentStage = uiState.currentStage,
                                 isExpanded = uiState.isTimelineExpanded,
+                                cropName = uiState.cropName,
+                                varietyName = uiState.cropVariety,
                                 canGoPrevious = uiState.currentStage.stageNumber > 1,
                                 canGoNext = uiState.currentStage.stageNumber < ManagementStage.entries.size,
                                 onPreviousStage = { dssViewModel.requestPreviousStage() },
